@@ -59,7 +59,6 @@
     border-left: 4px solid var(--accent);
   }
   h3 { font-size: 18px; margin: 26px 0 12px; color: var(--text); }
-  h4 { font-size: 15px; margin: 18px 0 10px; }
   p, li { color: var(--text); }
   .muted { color: var(--text-dim); font-size: 14px; }
   code {
@@ -99,9 +98,8 @@
     display: inline-block; padding: 1px 6px; border-radius: 8px;
     font-size: 10px; margin-left: 6px; font-weight: 700;
   }
-  .tag.new { background: var(--green); color: #000; }
-  .tag.live { background: var(--orange); color: #000; }
-  .tag.draft { background: var(--purple); color: #fff; }
+  .tag.live { background: var(--green); color: #000; }
+  .tag.next { background: var(--orange); color: #000; }
   .tag.archive { background: #6e7681; color: #fff; }
   .tab-content { display: none; }
   .tab-content.active { display: block; }
@@ -130,7 +128,7 @@
   }
   .skill {
     background: var(--panel); border: 1px solid var(--border);
-    border-radius: 10px; padding: 16px 18px; position: relative;
+    border-radius: 10px; padding: 16px 18px;
   }
   .skill.ok { border-left: 4px solid var(--green); }
   .skill.warn { border-left: 4px solid var(--yellow); }
@@ -156,7 +154,7 @@
   .filetree .file { color: var(--text); }
   .filetree .cmt { color: var(--text-dim); }
   .filetree .new { color: var(--green); font-weight: 600; }
-  .filetree .del { color: var(--red); text-decoration: line-through; opacity: 0.7; }
+  .filetree .gen { color: var(--purple); }
 
   /* Tables */
   table {
@@ -191,6 +189,7 @@
   .type.docs { background: rgba(88, 166, 255, 0.2); color: var(--accent); }
   .type.chore { background: rgba(139, 148, 158, 0.2); color: var(--text-dim); }
   .type.test { background: rgba(188, 140, 255, 0.2); color: var(--purple); }
+  .commit .v { font-family: monospace; background: rgba(57,211,187,.15); color: var(--cyan); padding: 1px 5px; border-radius: 3px; font-size: 11px; margin-right: 6px; }
 
   /* Pros/Cons */
   .pros-cons {
@@ -223,14 +222,12 @@
   }
   .release.done { border-top: 4px solid var(--green); }
   .release.now { border-top: 4px solid var(--orange); box-shadow: 0 0 0 2px rgba(255, 166, 87, 0.2); }
-  .release.next { border-top: 4px solid var(--purple); }
   .release.future { border-top: 4px solid var(--text-dim); opacity: 0.85; }
   .release h4 { margin: 0 0 8px; font-size: 16px; }
   .release .status-line { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
   .release ul { padding-left: 18px; margin: 8px 0 0; font-size: 13px; }
   .release li { margin: 3px 0; }
 
-  /* Quote / Info boxes */
   .quote {
     border-left: 3px solid var(--cyan);
     padding: 10px 18px; background: rgba(57, 211, 187, 0.05);
@@ -246,8 +243,16 @@
   .alert .alert-title {
     font-weight: 700; color: var(--orange); margin-bottom: 6px;
   }
+  .success-alert {
+    border-left: 3px solid var(--green);
+    padding: 12px 18px; background: rgba(63, 185, 80, 0.05);
+    border-radius: 6px; color: var(--text);
+    margin: 16px 0; font-size: 14px;
+  }
+  .success-alert .alert-title {
+    font-weight: 700; color: var(--green); margin-bottom: 6px;
+  }
 
-  /* Design diff (side-by-side) */
   .diff {
     display: grid; grid-template-columns: 1fr 1fr;
     gap: 12px; margin: 16px 0;
@@ -262,7 +267,6 @@
   .diff-side h5 { margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); }
   .diff-side.new h5 { color: var(--green); }
 
-  /* Architecture layer */
   .arch-diagram {
     background: var(--panel); border: 1px solid var(--border);
     border-radius: 12px; padding: 20px; margin: 18px 0;
@@ -272,9 +276,9 @@
     border-radius: 8px; padding: 14px 18px; margin: 10px 0;
   }
   .arch-layer.human { border-color: var(--green); background: rgba(63, 185, 80, 0.08); }
-  .arch-layer.tool-agnostic { border-color: var(--purple); background: rgba(188, 140, 255, 0.06); }
-  .arch-layer.binding { border-color: var(--cyan); background: rgba(57, 211, 187, 0.06); }
-  .arch-layer.platform { border-color: var(--accent); background: rgba(88, 166, 255, 0.06); }
+  .arch-layer.sot { border-color: var(--orange); background: rgba(255, 166, 87, 0.06); }
+  .arch-layer.binding { border-color: var(--purple); background: rgba(188, 140, 255, 0.06); }
+  .arch-layer.platform { border-color: var(--cyan); background: rgba(57, 211, 187, 0.06); }
   .arch-layer h4 { margin: 0 0 8px; font-size: 15px; }
   .badge {
     display: inline-block; padding: 2px 8px; border-radius: 4px;
@@ -284,10 +288,8 @@
   .badge.purple { background: rgba(188, 140, 255, 0.2); color: var(--purple); }
   .badge.cyan { background: rgba(57, 211, 187, 0.2); color: var(--cyan); }
   .badge.orange { background: rgba(255, 166, 87, 0.2); color: var(--orange); }
-  .badge.blue { background: rgba(88, 166, 255, 0.2); color: var(--accent); }
   .arrow-down { text-align: center; color: var(--text-dim); font-size: 18px; margin: 4px 0; }
 
-  /* Agent boxes */
   .agent-grid {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     gap: 8px; margin: 14px 0;
@@ -307,36 +309,75 @@
 <div class="container">
 
 <header>
-  <h1>Harness Engineering · v0.1.0</h1>
+  <h1>Harness Engineering · v0.2.0</h1>
   <div class="subtitle">
-    Claude Code Skills 包 · 当前实现状态与演进路线
+    Claude Code Skills 包 · 工具无关层 + 7-Agent 流水线
   </div>
   <div style="margin-top: 12px;">
     <span class="pill">v0.1.0 已交付</span>
-    <span class="pill">v0.2 设计中</span>
-    <span class="pill">v0.3 待定</span>
+    <span class="pill">v0.2.0 已交付 (NEW)</span>
+    <span class="pill">v0.3.0 设计中</span>
   </div>
 </header>
 
 <div class="tabs">
-  <button class="tab-btn active" onclick="switchTab('current', this)">当前实现 <span class="tag live">v0.1.0</span></button>
-  <button class="tab-btn" onclick="switchTab('roadmap', this)">演进路线 <span class="tag new">两个新决策点</span></button>
+  <button class="tab-btn active" onclick="switchTab('current', this)">当前实现 <span class="tag live">v0.2.0</span></button>
+  <button class="tab-btn" onclick="switchTab('roadmap', this)">演进路线 <span class="tag next">v0.3 计划</span></button>
   <button class="tab-btn" onclick="switchTab('arch', this)">完整架构</button>
   <button class="tab-btn" onclick="switchTab('history', this)">设计历史 <span class="tag archive">归档</span></button>
 </div>
 
-<!-- =================== TAB: 当前实现 =================== -->
+<!-- =================== TAB: 当前实现 v0.2 =================== -->
 <div id="tab-current" class="tab-content active">
 
-<h2>项目快照</h2>
+<h2>项目快照 (v0.2.0)</h2>
 
 <div class="stats">
-  <div class="stat"><div class="v">11</div><div class="lbl">commits 已提交</div></div>
-  <div class="stat"><div class="v">60+</div><div class="lbl">追踪文件</div></div>
+  <div class="stat"><div class="v">16</div><div class="lbl">commits 已提交</div></div>
+  <div class="stat"><div class="v">76</div><div class="lbl">追踪文件</div></div>
   <div class="stat"><div class="v">4</div><div class="lbl">Skills 已交付</div></div>
   <div class="stat"><div class="v">7</div><div class="lbl">Sub-Agents</div></div>
-  <div class="stat"><div class="v">15/15</div><div class="lbl">verify_all 通过</div></div>
-  <div class="stat"><div class="v">64/64</div><div class="lbl">test-init 通过</div></div>
+  <div class="stat"><div class="v">18/18</div><div class="lbl">verify_all PASS</div></div>
+  <div class="stat"><div class="v">86/86</div><div class="lbl">test-init PASS</div></div>
+</div>
+
+<div class="success-alert">
+  <div class="alert-title">✅ v0.2.0 已交付（你之前的反馈点 #1）</div>
+  项目工具无关层 <code>.harness/</code> 已落地。<code>.claude/</code> 和 <code>CLAUDE.md</code> 改为通过 <code>scripts/harness-sync</code> 从 <code>.harness/</code> 生成。
+  未来切换 IDE / 加 Cursor binding 时，项目知识不丢。verify_all 自动检查两层一致性。
+</div>
+
+<h2>v0.2 核心变化</h2>
+
+<div class="diff">
+  <div class="diff-side cur">
+    <h5>v0.1 — 与 Claude Code 耦合</h5>
+    <pre>your-project/
+├── .claude/             ← 直接编辑
+│   ├── agents/*.md
+│   └── skills/*/SKILL.md
+├── CLAUDE.md            ← 直接编辑
+└── docs/...</pre>
+    <p class="muted">问题：换 IDE 这套全废。</p>
+  </div>
+
+  <div class="diff-side new">
+    <h5>v0.2 — 工具无关 SOT + 生成的 binding</h5>
+    <pre>your-project/
+├── .harness/            ← 编辑这里
+│   ├── agents/*.md
+│   ├── rules/NN-*.md
+│   └── skills/*/SKILL.md
+├── .claude/             ← 生成（不编辑）
+│   ├── agents/
+│   ├── skills/
+│   └── settings.json
+├── CLAUDE.md            ← 生成（不编辑）
+├── scripts/
+│   └── harness-sync.{ps1,sh}
+└── docs/...</pre>
+    <p class="muted">收益：内容工具无关；切 IDE 无影响。</p>
+  </div>
 </div>
 
 <h2>四个 Skills 状态</h2>
@@ -345,22 +386,20 @@
   <div class="skill ok">
     <div class="skill-head">
       <span class="name">/harness-init</span>
-      <span class="status ok">✅ 可用</span>
+      <span class="status ok">✅ 可用 (v0.2 升级)</span>
     </div>
     <div class="desc">
-      新项目从零生成完整 Harness 骨架（7 agents + Rule/Skill/Script + workflow + dev-map + 任务看板 + evals）。
-      问 3 个问题（类型 / 栈 / 是否启 hook）后自动展开模板。
+      新项目生成 <code>.harness/</code> SOT + 跑 <code>harness-sync</code> 生成 <code>.claude/</code> + <code>CLAUDE.md</code>。
     </div>
   </div>
 
   <div class="skill warn">
     <div class="skill-head">
       <span class="name">/harness-adopt</span>
-      <span class="status warn">⚠️ v0.1 仅生成方案</span>
+      <span class="status warn">⚠️ v0.1+0.2 仅生成方案</span>
     </div>
     <div class="desc">
-      侦察现有项目（语言/框架/测试/CI/已有规则），生成 <code>.harness-adopt/PLAN.md</code>。
-      <b>自动应用留给 v0.2。</b>当前需手动按方案执行，或在干净目录跑 init 后选择性合并。
+      自动 apply 仍留给 v0.3。
     </div>
   </div>
 
@@ -370,8 +409,7 @@
       <span class="status ok">✅ 可用</span>
     </div>
     <div class="desc">
-      调起项目的 <code>scripts/verify_all.{ps1,sh}</code>，捕获 PASS/WARN/FAIL，
-      把结果写入当前活动任务的开发文档。
+      调起 <code>verify_all</code>。v0.2 加入 binding 一致性检查（E.4）。
     </div>
   </div>
 
@@ -381,54 +419,79 @@
       <span class="status ok">✅ 可用</span>
     </div>
     <div class="desc">
-      只读快照：哪些资产存在/缺失、baseline 状态、最近 verify 结果、活动任务、健康度分数（0-11）。
+      只读快照：哪些资产存在/缺失、baseline、最近 verify 结果、活动任务、健康度分数。
     </div>
   </div>
 </div>
 
-<h2>仓库布局（当前）</h2>
+<h2>仓库布局（v0.2 dogfood 后）</h2>
 
 <div class="filetree">
 <span class="dir">HarnessEngineering/</span>
-├── <span class="file">README.md / LICENSE / CHANGELOG.md / CONTRIBUTING.md</span>
+├── <span class="file">README.md / LICENSE / CHANGELOG.md / CONTRIBUTING.md / <span class="new">MIGRATION.md</span></span>
 ├── <span class="file">.gitignore / .gitattributes</span>
 ├── <span class="file">architecture.html</span>              <span class="cmt"># 你正在看的</span>
-├── <span class="file">install.ps1 / install.sh</span>       <span class="cmt"># 一键装到 ~/.claude/skills</span>
+├── <span class="file">install.ps1 / install.sh</span>
 │
-├── <span class="dir">skills/</span>                          <span class="cmt"># 产品本体（4 个 Skill）</span>
+├── <span class="dir">skills/</span>                          <span class="cmt"># 产品本体</span>
 │   ├── <span class="dir">harness-init/</span>
 │   │   ├── <span class="file">SKILL.md</span>
 │   │   └── <span class="dir">templates/</span>
-│   │       ├── <span class="dir">common/</span>              <span class="cmt"># 7 agents + workflow + docs + evals</span>
-│   │       ├── <span class="dir">fullstack/</span>           <span class="cmt"># overlays + verify_all + build/test/verify Skills</span>
-│   │       └── <span class="dir">backend/</span>             <span class="cmt"># 同上，但适配 Python/Node/Go</span>
+│   │       ├── <span class="dir">common/</span>
+│   │       │   ├── <span class="new">.harness/agents/</span>        <span class="cmt"># SOT（7 agents）</span>
+│   │       │   ├── <span class="new">.harness/rules/00-core.md.tmpl</span>
+│   │       │   ├── <span class="file">.claude/settings.json.tmpl</span>  <span class="cmt"># Claude Code 绑定 glue</span>
+│   │       │   ├── <span class="new">scripts/harness-sync.{ps1,sh}</span> <span class="cmt"># 分发的 binding 脚本</span>
+│   │       │   ├── <span class="file">docs/ + evals/</span>
+│   │       │   └── <span class="cmt">(no more CLAUDE.md.tmpl)</span>
+│   │       ├── <span class="dir">fullstack/</span>
+│   │       │   ├── <span class="new">.harness/rules/50-fullstack.md</span>
+│   │       │   ├── <span class="new">.harness/skills/{build,test,verify}/SKILL.md.tmpl</span>
+│   │       │   └── <span class="file">scripts/verify_all.{ps1,sh}.tmpl</span>
+│   │       └── <span class="dir">backend/</span>            <span class="cmt"># 同样的结构</span>
 │   ├── <span class="dir">harness-adopt/</span>SKILL.md
 │   ├── <span class="dir">harness-verify/</span>SKILL.md
 │   └── <span class="dir">harness-status/</span>SKILL.md
 │
-├── <span class="dir">.claude/</span>                          <span class="cmt"># 本仓库自身 dogfood</span>
-│   └── <span class="dir">agents/</span>                       <span class="cmt"># 7 个 agent 副本（与 templates 同步）</span>
-├── <span class="file">CLAUDE.md</span>                       <span class="cmt"># 本仓库自身的规则</span>
+├── <span class="new dir">.harness/</span>                      <span class="cmt"># 本仓库 SOT（dogfood）</span>
+│   ├── <span class="file">agents/</span>                       <span class="cmt"># 与 templates/common/.harness/agents 一致</span>
+│   └── <span class="file">rules/{00-core,10-self-consistency,20-documentation,30-engineering,40-locations}.md</span>
+│
+├── <span class="gen dir">.claude/</span>                       <span class="cmt"># 生成（不要编辑）</span>
+│   └── <span class="file">agents/</span>
+├── <span class="gen file">CLAUDE.md</span>                     <span class="cmt"># 生成（不要编辑）</span>
 │
 ├── <span class="dir">docs/</span>
-│   ├── <span class="file">getting-started.md</span>          <span class="cmt"># 上手指南</span>
-│   ├── <span class="file">concepts.md</span>                 <span class="cmt"># 概念解释</span>
-│   ├── <span class="file">workflow.md</span>                 <span class="cmt"># 7-Agent 流程</span>
-│   ├── <span class="file">dev-map.md</span>                  <span class="cmt"># 本仓库导航</span>
-│   └── <span class="file">tasks.md</span>                    <span class="cmt"># 任务看板</span>
+│   └── <span class="file">getting-started.md / concepts.md / workflow.md / dev-map.md / tasks.md / spec/ / features/</span>
 │
 ├── <span class="dir">scripts/</span>
-│   ├── <span class="file">verify_all.{ps1,sh}</span>         <span class="cmt"># 本仓库总验证（15 项检查）</span>
-│   ├── <span class="file">sync-self.{ps1,sh}</span>          <span class="cmt"># 同步 templates → 根 .claude/</span>
-│   ├── <span class="file">test-init.{ps1,sh}</span>          <span class="cmt"># 自动化 init 回归（64 断言）</span>
-│   └── <span class="file">baseline.json</span>
+│   ├── <span class="file">verify_all.{ps1,sh}</span>           <span class="cmt"># 18 项检查（v0.1 是 15）</span>
+│   ├── <span class="new file">harness-sync.{ps1,sh}</span>      <span class="cmt"># Layer 2：.harness/ → .claude/ + CLAUDE.md</span>
+│   ├── <span class="file">sync-self.{ps1,sh}</span>             <span class="cmt"># Layer 1：templates/ → repo SOT</span>
+│   └── <span class="file">test-init.{ps1,sh}</span>             <span class="cmt"># 86 断言（v0.1 是 64）</span>
 │
-└── <span class="dir">evals/golden-tasks.md</span>             <span class="cmt"># 5 个回归任务</span>
+└── <span class="dir">evals/golden-tasks.md</span>
 </div>
 
-<h2>11 个 Commits 历史</h2>
+<h2>两层一致性</h2>
+
+<div class="info-card">
+  <h4>🔄 Two-layer consistency</h4>
+  <p style="margin: 0;">
+    <b>Layer 1（<code>sync-self</code>）</b>：把 <code>templates/common/</code>（分发 SOT）同步到本仓库的 <code>.harness/</code> + <code>scripts/harness-sync</code>。<br>
+    <b>Layer 2（<code>harness-sync</code>）</b>：把 <code>.harness/</code> 同步到 <code>.claude/</code> + <code>CLAUDE.md</code>（Claude Code binding）。<br>
+    <code>verify_all</code> 自动检查两层。任何一层 drift → FAIL，提示跑对应的 sync 脚本。
+  </p>
+</div>
+
+<h2>16 个 Commits（含 v0.2 全部）</h2>
 
 <div class="commit-list">
+  <div class="commit"><span class="sha">3e0fe04</span><span class="msg"><span class="v">v0.2</span><span class="type docs">docs</span>update README / CHANGELOG / CONTRIBUTING / getting-started / concepts / dev-map</span></div>
+  <div class="commit"><span class="sha">9400b56</span><span class="msg"><span class="v">v0.2</span><span class="type test">test</span>cover .harness/ → .claude/ binding sync in regression (86 assertions)</span></div>
+  <div class="commit"><span class="sha">a7043a7</span><span class="msg"><span class="v">v0.2</span><span class="type feat">feat</span>migrate templates to .harness/ layout + update init flow (Phase B)</span></div>
+  <div class="commit"><span class="sha">36ba867</span><span class="msg"><span class="v">v0.2</span><span class="type feat">feat</span>introduce .harness/ tool-agnostic source-of-truth layer (Phase A)</span></div>
+  <div class="commit"><span class="sha">46d940b</span><span class="msg"><span class="type docs">docs</span>rewrite architecture.html to reflect v0.1.0 state + roadmap</span></div>
   <div class="commit"><span class="sha">fa981b9</span><span class="msg"><span class="type docs">docs</span>add CONTRIBUTING.md with development conventions</span></div>
   <div class="commit"><span class="sha">8886db5</span><span class="msg"><span class="type docs">docs</span>mark harness-adopt as scaffolding-only in v0.1.0</span></div>
   <div class="commit"><span class="sha">71d65a5</span><span class="msg"><span class="type test">test</span>automate harness-init regression (golden tasks #1, #2)</span></div>
@@ -442,55 +505,34 @@
   <div class="commit"><span class="sha">184d92c</span><span class="msg"><span class="type chore">chore</span>initial repo scaffolding</span></div>
 </div>
 
-<h2>已经能做什么 vs 还不能做什么</h2>
+<h2>已能做 vs 还做不到</h2>
 
 <div class="pros-cons">
   <div class="pros">
     <h4>✅ 已可用</h4>
     <ul>
-      <li>新项目跑 <code>/harness-init</code> 一键生成全套 Harness 骨架</li>
-      <li>7 个 Agent 角色契约就位，PM 路由 + 回退规则</li>
-      <li>verify_all 跨平台对称（PowerShell + Bash）</li>
-      <li>fullstack（Next/Nest/Postgres 等）+ backend（FastAPI/NestJS/Gin）两类模板</li>
-      <li>自动化回归（test-init.{ps1,sh}）64 断言全过</li>
-      <li>本仓库 dogfood 自身</li>
-      <li>跨平台换行符规范化（.gitattributes）</li>
-      <li>install.ps1 / install.sh 一键装到 ~/.claude/skills</li>
+      <li>新项目 <code>/harness-init</code> 生成 v0.2 两层结构</li>
+      <li>工具无关 SOT (<code>.harness/</code>) — 内容不绑 Claude Code</li>
+      <li><code>harness-sync</code> 跨平台一致性检查</li>
+      <li>rules/ 多文件合成 CLAUDE.md（00- &lt; 99-）</li>
+      <li>7-Agent 角色契约（按 v0.1 设计，未分区）</li>
+      <li>verify_all 两层一致性自动检查（18 项）</li>
+      <li>test-init 86 断言覆盖完整 init + sync 流程</li>
+      <li>本仓库 dogfood 自身（两层都跑通）</li>
+      <li>MIGRATION.md 给 v0.1 用户升级指南</li>
     </ul>
   </div>
   <div class="cons">
-    <h4>⚠️ 还做不到 / 受限</h4>
+    <h4>⚠️ 还做不到</h4>
     <ul>
-      <li>harness-adopt 只能生成方案，不能自动应用（v0.2 才有）</li>
-      <li>项目相关文件深度耦合 Claude Code（<code>.claude/</code>）— <b>v0.2 拟解耦</b></li>
-      <li>Developer 是单一 generic agent，不分项目区块 — <b>v0.3 拟分区</b></li>
-      <li>未在真实 Claude Code 会话端到端跑过 <code>/harness-init</code>（只跑了模板复制层）</li>
-      <li>未设 git remote，未发布</li>
-      <li>不支持 Cursor / Copilot 等其他 IDE（按你之前的决策，先专注 Claude Code）</li>
+      <li>harness-adopt 自动 apply（v0.3 才有）</li>
+      <li>Developer 不分区（v0.3 计划）</li>
+      <li>未在真实 Claude Code 会话端到端跑过（test-init 覆盖了模板+sync 逻辑）</li>
+      <li>未设 git remote / 未发布</li>
+      <li>不支持 Cursor / Copilot binding（架构留了位置，未实现）</li>
     </ul>
   </div>
 </div>
-
-<h2>如何上手</h2>
-
-<pre>
-# 1. 装到全局
-.\install.ps1                                # Windows
-./install.sh                                 # Unix
-
-# 2. 在空目录或现有项目目录开 Claude Code
-cd /path/to/your/project
-claude
-
-# 3. Skills 自动可用，调起
-> /harness-init                              # 新项目
-> /harness-adopt                             # 现有项目（v0.1 仅生成方案）
-> /harness-verify                            # 跑总验证
-> /harness-status                            # 看健康度
-
-# 4. 给 PM Orchestrator 派活
-> Take this task: Add CSV export to the orders page.
-</pre>
 
 </div>
 
@@ -511,25 +553,26 @@ claude
     </ul>
   </div>
 
-  <div class="release now">
-    <div class="status-line">设计中 · 你的反馈点 #1</div>
+  <div class="release done">
+    <div class="status-line">已交付 · 2026-05-15</div>
     <h4>v0.2.0 · 工具无关层</h4>
     <ul>
-      <li>新增 <code>.harness/</code> 真相源</li>
-      <li><code>.claude/</code> 改为生成的绑定层</li>
-      <li>未来可加 cursor binding</li>
-      <li>harness-adopt 自动应用</li>
+      <li>新增 <code>.harness/</code> SOT</li>
+      <li><code>harness-sync</code> binding 生成</li>
+      <li>rules/ 多文件合成 CLAUDE.md</li>
+      <li>两层 verify_all 一致性</li>
+      <li>MIGRATION 指南</li>
     </ul>
   </div>
 
-  <div class="release next">
+  <div class="release now">
     <div class="status-line">设计中 · 你的反馈点 #2</div>
     <h4>v0.3.0 · Developer 分区</h4>
     <ul>
       <li>init 时分析项目结构</li>
-      <li>动态生成分区 Developer agents</li>
+      <li>动态生成分区 Developer</li>
       <li>PM 路由到合适分区</li>
-      <li>支持并行（多脑多手）</li>
+      <li>harness-adopt 自动 apply</li>
     </ul>
   </div>
 
@@ -537,114 +580,11 @@ claude
     <div class="status-line">未来 · 待场景反馈</div>
     <h4>v0.4+ · 待定</h4>
     <ul>
-      <li>更多项目类型？</li>
-      <li>跨工具 binding 实战</li>
+      <li>Cursor binding（如果有真实需求）</li>
+      <li>更多项目类型</li>
       <li>团队级能力（Vault / Eval CI）</li>
-      <li>视项目规模需求</li>
     </ul>
   </div>
-</div>
-
-<!-- v0.2 详细设计 -->
-<h2>v0.2.0 · 工具无关层（你的反馈点 #1）</h2>
-
-<div class="alert">
-  <div class="alert-title">🎯 你提的问题</div>
-  当前设计把项目工作流（agent 定义、流程、规则、技能）放进了 <code>.claude/</code> —— 这是 Claude Code 专用目录。
-  如果以后换工具（Cursor / Copilot / 自研），这些资产就废了。<b>项目文档应该跟着 git 走，而不是绑定到某个 IDE。</b>
-</div>
-
-<h3>设计方案</h3>
-
-<div class="diff">
-  <div class="diff-side cur">
-    <h5>当前 v0.1.0 — 与 Claude Code 耦合</h5>
-    <pre>your-project/
-├── .claude/              ← Claude Code 专用
-│   ├── agents/*.md       ← 角色契约
-│   ├── skills/*/SKILL.md ← 标准操作
-│   └── settings.json
-├── CLAUDE.md             ← Claude Code 读
-└── docs/workflow.md
-    docs/dev-map.md       ← 这些已经工具无关
-    docs/tasks.md
-    docs/spec/</pre>
-  </div>
-
-  <div class="diff-side new">
-    <h5>v0.2.0 — 工具无关 + 绑定生成</h5>
-    <pre>your-project/
-├── .harness/             ← 真相源（工具无关）
-│   ├── agents/*.md       ← 角色契约（纯 Markdown）
-│   ├── skills/*/SKILL.md
-│   ├── workflow.md
-│   ├── rules/            ← 规则源
-│   │   ├── core.md
-│   │   └── stack.md
-│   └── bindings/         ← 工具绑定
-│       └── claude-code.yaml
-├── .claude/              ← 生成（可 .gitignore）
-│   ├── agents/   ← sync from .harness/
-│   ├── skills/   ← sync from .harness/
-│   └── settings.json
-├── CLAUDE.md             ← 从 .harness/rules 合成
-└── docs/...              ← 不变</pre>
-  </div>
-</div>
-
-<h3>核心变化</h3>
-
-<table>
-  <tr><th>层</th><th>角色</th><th>谁来维护</th><th>Git 行为</th></tr>
-  <tr><td><code>.harness/</code></td><td><b>真相源</b>，工具无关 Markdown / YAML</td><td>开发者直接编辑</td><td>追踪</td></tr>
-  <tr><td><code>.claude/</code></td><td>Claude Code <b>绑定层</b>（生成）</td><td>不要手改；用 <code>harness sync</code></td><td>可选追踪（建议追踪以便团队成员开箱即用，但允许 .gitignore）</td></tr>
-  <tr><td><code>CLAUDE.md</code></td><td>从 <code>.harness/rules/</code> 合成的 Claude Code 入口</td><td>不要手改</td><td>追踪</td></tr>
-  <tr><td><code>docs/</code></td><td>项目文档（工具无关）</td><td>开发者</td><td>追踪</td></tr>
-</table>
-
-<h3>新增的同步流程</h3>
-
-<pre>
-# 任何时候改了 .harness/，跑一下同步
-$ harness sync
-🔄 .harness/agents/ → .claude/agents/
-🔄 .harness/skills/ → .claude/skills/
-🔄 .harness/rules/ + workflow.md → CLAUDE.md
-✓ Synced. Claude Code will pick up changes on next session.
-
-# 未来支持 Cursor
-$ harness sync --binding=cursor
-🔄 .harness/rules/ → .cursor/rules/*.mdc
-🔄 .harness/agents/ → Cursor Composer config
-...</pre>
-
-<h3>权衡</h3>
-
-<div class="pros-cons">
-  <div class="pros">
-    <h4>✅ 收益</h4>
-    <ul>
-      <li><b>换 IDE 不丢资产</b> — 核心知识不跟 Claude Code 走</li>
-      <li>多工具共存可行（不同团队成员用不同 IDE）</li>
-      <li>角色契约、流程定义这些"项目知识"变成一等公民，与代码同等地位</li>
-      <li>未来 verify_all 可以加 <code>.harness/.claude/</code> 一致性检查（类似当前 sync-self）</li>
-    </ul>
-  </div>
-  <div class="cons">
-    <h4>❌ 代价</h4>
-    <ul>
-      <li>多一层间接：用户必须知道 "编辑 .harness/，不要直接动 .claude/"</li>
-      <li>需要 <code>harness sync</code> 命令（可做成 Skill 或 hook）</li>
-      <li>v0.1 装好的项目需要迁移（写迁移脚本）</li>
-      <li>编辑 .harness/agents/*.md 后忘 sync 容易踩坑（hook 自动 sync 可缓解）</li>
-    </ul>
-  </div>
-</div>
-
-<div class="info-card">
-  <h4>💡 实现要点</h4>
-  这其实就是把本仓库现有的"<code>templates/common/.claude/agents/</code> 是 SOT，根 <code>.claude/</code> 是副本"思路<b>下沉到用户项目层</b>。
-  本仓库已经在用类似 sync-self 机制，所以工程模式是验证过的，只需复刻到 init 模板。
 </div>
 
 <!-- v0.3 详细设计 -->
@@ -654,14 +594,13 @@ $ harness sync --binding=cursor
   <div class="alert-title">🎯 你提的问题</div>
   当前的 Developer 是单一 generic agent，不知道项目的实际分区。集成到具体项目时，
   应该由 AI 根据项目结构（前端/后端/DB/微服务……）创建多个分区 Developer，每个负责自己的部分。
-  这样 agent 才更贴合项目。
 </div>
 
 <h3>当前 vs 设计</h3>
 
 <div class="diff">
   <div class="diff-side cur">
-    <h5>v0.1 — 单一 Developer</h5>
+    <h5>v0.2 — 单一 Developer</h5>
     <div class="agent-grid">
       <div class="agent pm"><div class="role">PM</div><div class="what">路由</div></div>
       <div class="agent"><div class="role">Req Analyst</div><div class="what">需求</div></div>
@@ -671,7 +610,7 @@ $ harness sync --binding=cursor
       <div class="agent"><div class="role">Reviewer</div><div class="what">审查</div></div>
       <div class="agent"><div class="role">QA</div><div class="what">测试</div></div>
     </div>
-    <p class="muted">问题：一个 agent 既要懂前端 React，又要懂后端 NestJS，又要懂 Prisma migrations。Context 重，专业性散。</p>
+    <p class="muted">问题：context 重，专业性散。前端 React + 后端 NestJS + Prisma migrations 全压一个 agent。</p>
   </div>
 
   <div class="diff-side new">
@@ -683,67 +622,55 @@ $ harness sync --binding=cursor
       <div class="agent"><div class="role">Gate</div><div class="what">闸门</div></div>
     </div>
     <div class="agent-grid">
-      <div class="agent new dev"><div class="role">dev-frontend</div><div class="what">React / Next.js</div></div>
-      <div class="agent new dev"><div class="role">dev-backend</div><div class="what">NestJS API</div></div>
-      <div class="agent new dev"><div class="role">dev-db</div><div class="what">Prisma / migrations</div></div>
+      <div class="agent new dev"><div class="role">dev-frontend</div><div class="what">apps/web/**</div></div>
+      <div class="agent new dev"><div class="role">dev-backend</div><div class="what">apps/api/**</div></div>
+      <div class="agent new dev"><div class="role">dev-db</div><div class="what">prisma/**</div></div>
     </div>
     <div class="agent-grid">
       <div class="agent"><div class="role">Reviewer</div><div class="what">审查</div></div>
       <div class="agent"><div class="role">QA</div><div class="what">测试</div></div>
     </div>
-    <p class="muted">每个分区 Developer 只读自己负责的文件，更专注。Architect 在方案阶段就标好哪部分由哪个分区做。</p>
+    <p class="muted">分区清晰，context 聚焦，可并行（多脑多手）。</p>
   </div>
 </div>
 
 <h3>分区方案（按项目类型）</h3>
 
 <table>
-  <tr><th>项目类型</th><th>典型分区 Developer 提议</th><th>分区策略</th></tr>
+  <tr><th>项目类型</th><th>提议分区</th><th>分区策略</th></tr>
   <tr>
     <td>Fullstack (Next + Nest + Postgres)</td>
     <td><code>dev-frontend</code> / <code>dev-backend</code> / <code>dev-db</code></td>
-    <td>按 monorepo 包或顶层目录（apps/web, apps/api, prisma）</td>
+    <td>按 monorepo 包或顶层目录</td>
   </tr>
   <tr>
-    <td>Backend (微服务)</td>
-    <td>每个服务一个：<code>dev-orders</code> / <code>dev-users</code> / <code>dev-billing</code></td>
+    <td>Backend 微服务</td>
+    <td><code>dev-&lt;service-name&gt;</code> × N</td>
     <td>按 service 目录</td>
   </tr>
   <tr>
-    <td>Backend (单体 API)</td>
+    <td>Backend 单体 API</td>
     <td><code>dev-api</code> / <code>dev-services</code> / <code>dev-db</code></td>
     <td>按层（controller/service/repository）</td>
   </tr>
   <tr>
     <td>Fullstack (无明显分区)</td>
-    <td>退化为单一 <code>developer</code>（保留 v0.1 行为）</td>
+    <td>退化为单一 <code>developer</code>（v0.2 行为）</td>
     <td>不强行分区</td>
   </tr>
 </table>
 
-<h3>新工作流</h3>
+<h3>实现要点</h3>
 
-<pre>
-# init 时
-> /harness-init
-  Type? → fullstack
-  Stack? → Next.js + NestJS + Postgres
-  Detected monorepo layout: apps/web, apps/api, prisma/
-  Suggested developer partitions:
-    - dev-frontend  (owns: apps/web/**)
-    - dev-backend   (owns: apps/api/**)
-    - dev-db        (owns: prisma/**)
-  Accept? [y/edit/n]   ← 用户可以编辑
-
-# 任务派发时
-> Take this task: Add CSV export to orders page (UI + API + DB)
-
-  PM Orchestrator:
-    Architect produces 02_SOLUTION_DESIGN.md with partition assignments:
-      - dev-frontend: add button + download handler
-      - dev-backend:  add GET /api/orders/export.csv
-      - dev-db:       no migration needed
-    Dispatching in dependency order: dev-db → dev-backend → dev-frontend</pre>
+<ol>
+  <li><b>init 阶段加分区检测</b>：扫顶层目录、package.json workspaces、monorepo 配置 → 提议分区</li>
+  <li><b>分区契约</b>：每个 dev-* 的定义里写明 <code>owns: 路径 glob</code></li>
+  <li><b>Architect 升级</b>：方案阶段必须为每个 in-scope 文件指定责任 Developer</li>
+  <li><b>PM 路由</b>：按 Architect 的 partition 分配执行；支持并行（默认串行）</li>
+  <li><b>退化机制</b>：项目小 / 无明显分区 → 单一 <code>developer</code></li>
+  <li><b>verify_all 加项</b>：检查每个分区 Developer 的 owns glob 不重叠</li>
+  <li><b>v0.3 同时实现 harness-adopt 自动 apply</b>（adopt 一直是 v0.3 承诺的功能）</li>
+</ol>
 
 <h3>权衡</h3>
 
@@ -751,70 +678,30 @@ $ harness sync --binding=cursor
   <div class="pros">
     <h4>✅ 收益</h4>
     <ul>
-      <li>每个 Developer 的上下文聚焦，context 利用率提升</li>
-      <li>专业性更强（前端 dev 不需要懂 SQL migration）</li>
-      <li>潜力：跨分区并行（多脑多手）</li>
-      <li>分区即文档：dev-map 自然衍生</li>
+      <li>每个 Developer context 聚焦</li>
+      <li>专业性更强</li>
+      <li>可并行（多脑多手）</li>
+      <li>分区即文档</li>
     </ul>
   </div>
   <div class="cons">
     <h4>❌ 代价</h4>
     <ul>
-      <li>跨分区任务（如 CSV 导出）需要 Architect 显式拆解 — 多一步</li>
-      <li>分区边界要清晰，否则推诿（"那个文件应该归谁"）</li>
-      <li>小项目可能过度设计 — <b>所以要支持退化为单一 Developer</b></li>
-      <li>整套 agent 数量从 7 涨到 9-12，复杂度上升</li>
+      <li>跨分区任务需要 Architect 拆解</li>
+      <li>分区边界必须清晰</li>
+      <li>小项目可能过度设计（→ 退化机制）</li>
+      <li>agent 数量上升</li>
     </ul>
   </div>
 </div>
 
-<h3>实现要点（如果做）</h3>
-
-<ol>
-  <li><b>init 阶段加分区检测</b>：扫顶层目录、package.json workspaces、monorepo 配置 → 提议分区</li>
-  <li><b>分区契约</b>：每个 dev-* 的 SKILL.md 写明 <code>owns: 路径 glob</code></li>
-  <li><b>Architect 升级</b>：方案阶段必须为每个 in-scope 文件指定责任 Developer</li>
-  <li><b>PM 路由</b>：按 Architect 的 partition 分配执行；支持并行（默认串行）</li>
-  <li><b>退化机制</b>：项目小 / 无明显分区 → 创建单一 <code>developer</code>，等同 v0.1 行为</li>
-  <li><b>verify_all 加项</b>：检查每个分区 Developer 的 owns glob 不重叠</li>
-</ol>
-
-<!-- 决策方案 -->
-<h2>我的建议（你来定）</h2>
-
-<table>
-  <tr><th>选项</th><th>说明</th><th>工作量</th></tr>
-  <tr>
-    <td><b>A · 先做 v0.2 工具无关层，再 v0.3 Developer 分区</b></td>
-    <td>先解决"换工具会废"这个更结构性的问题，分区在工具无关基础上做更稳。</td>
-    <td>大（v0.2 大概 4-6 commits；v0.3 类似）</td>
-  </tr>
-  <tr>
-    <td>B · 先 v0.3 Developer 分区，再 v0.2 工具无关</td>
-    <td>分区收益更直接可见；但之后做工具无关时要把分区结构二次迁移。</td>
-    <td>大 + 返工</td>
-  </tr>
-  <tr>
-    <td>C · 两个一起做（v0.2+v0.3 合并发布）</td>
-    <td>一次到位，但 commit 历史会复杂，单次改动面大。</td>
-    <td>很大</td>
-  </tr>
-  <tr>
-    <td>D · 先稳 v0.1，把没端到端测过的实际跑通，再启 v0.2</td>
-    <td>把"安装 + 真实 Claude Code 跑一次"作为 v0.1.1 验证步，再启 v0.2。</td>
-    <td>小（测试为主）</td>
-  </tr>
-</table>
-
 <div class="info-card">
-  <h4>💡 我推荐 A</h4>
-  理由：
+  <h4>💡 v0.3 落地策略</h4>
   <ul>
-    <li>v0.2 解决的是"<b>方向性</b>"问题（结构性绑定），v0.3 解决的是"<b>贴合度</b>"问题（局部优化）。先把方向定准，再优化局部更稳。</li>
-    <li>v0.3 在工具无关基础上做，相当于在 <code>.harness/agents/</code> 加分区文件 + 修改 init 提议逻辑，比绑死在 <code>.claude/</code> 上做要清爽。</li>
-    <li>v0.1 已经验证了 7 agent + verify_all 的工程模式，v0.2 主要是"把这套搬到 .harness/"，工程模式不变，风险可控。</li>
+    <li>v0.2 已经把 agents 放到 <code>.harness/agents/</code>，分区 agents 就是在这里加文件 + 改 Architect 提示词，工程模式不变</li>
+    <li>分区检测逻辑加在 harness-init / harness-adopt 内</li>
+    <li>v0.3 同时把 harness-adopt 的自动 apply 实现（积压已久）</li>
   </ul>
-  但你说不算就不算，等你决策。
 </div>
 
 </div>
@@ -822,7 +709,7 @@ $ harness sync --binding=cursor
 <!-- =================== TAB: 完整架构 =================== -->
 <div id="tab-arch" class="tab-content">
 
-<h2>v0.1.0 当前架构（含 v0.2 设计预览）</h2>
+<h2>当前架构 (v0.2.0)</h2>
 
 <div class="arch-diagram">
   <div class="arch-layer human">
@@ -831,35 +718,33 @@ $ harness sync --binding=cursor
   </div>
   <div class="arrow-down">↓</div>
 
-  <div class="arch-layer tool-agnostic">
-    <h4>📁 工具无关层（v0.2 引入；v0.1 暂时合并在 .claude/） <span class="badge purple">真相源</span></h4>
+  <div class="arch-layer sot">
+    <h4>📁 工具无关 SOT — <code>.harness/</code> <span class="badge orange">直接编辑</span></h4>
     <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 8px; font-size: 13px;">
-      <div>📋 <b>.harness/agents/</b> — 7 角色契约</div>
-      <div>🛠️ <b>.harness/skills/</b> — 标准操作</div>
-      <div>📐 <b>.harness/workflow.md</b> — 流程定义</div>
-      <div>📜 <b>.harness/rules/</b> — 规则源</div>
-      <div>📋 <b>docs/spec/</b> — 项目需求</div>
-      <div>🗺️ <b>docs/dev-map.md + tasks.md</b></div>
+      <div>📋 <b>agents/</b> — 7 角色契约</div>
+      <div>📜 <b>rules/NN-*.md</b> — 规则片段</div>
+      <div>🛠️ <b>skills/</b> — 标准操作</div>
+      <div>📋 <b>docs/spec/ / dev-map / tasks</b>（也是工具无关）</div>
     </div>
   </div>
-  <div class="arrow-down">↓ harness sync</div>
+  <div class="arrow-down">↓ scripts/harness-sync</div>
 
   <div class="arch-layer binding">
-    <h4>🔌 工具绑定层 <span class="badge cyan">生成</span></h4>
+    <h4>🔌 Claude Code Binding — <code>.claude/</code> + <code>CLAUDE.md</code> <span class="badge purple">生成</span></h4>
     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 8px; font-size: 13px;">
-      <div>📁 <b>.claude/agents/</b><br><span class="muted">从 .harness/ 同步</span></div>
-      <div>📁 <b>.claude/skills/</b><br><span class="muted">从 .harness/ 同步</span></div>
+      <div>📁 <b>.claude/agents/</b><br><span class="muted">从 .harness/agents/ 同步</span></div>
+      <div>📁 <b>.claude/skills/</b><br><span class="muted">从 .harness/skills/ 同步</span></div>
       <div>📜 <b>CLAUDE.md</b><br><span class="muted">从 rules 合成</span></div>
     </div>
-    <div class="muted" style="margin-top: 8px; font-size: 12px;">未来：cursor binding / copilot binding 可加在同一层。v0.1 只实现 claude-code binding。</div>
+    <div class="muted" style="margin-top: 8px; font-size: 12px;">未来：Cursor / Copilot binding 可加在同一层，复用 .harness/ SOT。当前只有 Claude Code binding。</div>
   </div>
   <div class="arrow-down">↓ 被加载</div>
 
   <div class="arch-layer platform">
-    <h4>⚙️ Claude Code 平台 <span class="badge blue">机制层</span></h4>
+    <h4>⚙️ Claude Code 平台 <span class="badge cyan">机制层</span></h4>
     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 8px; font-size: 13px;">
       <div>🔒 Permission Mode</div>
-      <div>🤖 Sub-agents (Task tool)</div>
+      <div>🤖 Sub-agents</div>
       <div>🧠 Memory (CLAUDE.md)</div>
       <div>🪝 Hooks</div>
       <div>🛠️ Skills 机制</div>
@@ -892,20 +777,19 @@ $ harness sync --binding=cursor
   <li>PM 只做路由，绝不给专业建议</li>
   <li>Planner 输出声明式计划（JSON），不直接调用</li>
   <li>baseline 只升不降 — 测试数减少 = FAIL</li>
+  <li><b>编辑 .harness/，永不编辑 .claude/ 或 CLAUDE.md</b>（v0.2 新增）</li>
 </ul>
 
 <h2>Rule / Skill / Script 三层</h2>
 
 <table>
-  <tr><th>层</th><th>位置</th><th>性质</th><th>用法</th></tr>
-  <tr><td>Rule</td><td><code>CLAUDE.md</code></td><td>软约束（自然语言）</td><td>原则 / 红线 / always-apply ≤5 条</td></tr>
-  <tr><td>Skill</td><td><code>.claude/skills/*/SKILL.md</code></td><td>标准操作手册</td><td>编译/测试/验证等固定动作</td></tr>
+  <tr><th>层</th><th>位置（v0.2）</th><th>性质</th><th>用法</th></tr>
+  <tr><td>Rule</td><td><code>.harness/rules/NN-*.md</code></td><td>软约束（自然语言）</td><td>原则 / 红线 / 多文件合成 CLAUDE.md</td></tr>
+  <tr><td>Skill</td><td><code>.harness/skills/*/SKILL.md</code></td><td>标准操作手册</td><td>编译/测试/验证等固定动作</td></tr>
   <tr><td>Script</td><td><code>scripts/verify_all.{ps1,sh}</code></td><td>硬门禁</td><td>可机器判定的全下沉</td></tr>
 </table>
 
-<p class="muted">原则：能用机器查的就别靠 AI 记。Rule 越多越容易被忽略，越下沉越靠谱。</p>
-
-<h2>剔除的模块（按你之前决策）</h2>
+<h2>剔除模块</h2>
 
 <table>
   <tr><th>模块</th><th>什么时候才需要</th></tr>
@@ -913,7 +797,7 @@ $ harness sync --binding=cursor
   <tr><td>Token Budget 分级</td><td>Claude Code auto-compact 不够时</td></tr>
   <tr><td>4 层 Eval Pipeline + CI</td><td>团队级 / 需要 A/B 测试</td></tr>
   <tr><td>OpenTelemetry Trace</td><td>跨任务统计 / 多用户</td></tr>
-  <tr><td>多平台 (Cursor/Copilot) 同步</td><td>v0.2 工具无关层就近一步</td></tr>
+  <tr><td>多 binding 实际实现 (Cursor/Copilot)</td><td>真实场景需要时（v0.2 已留架构位置）</td></tr>
 </table>
 
 </div>
@@ -923,18 +807,14 @@ $ harness sync --binding=cursor
 
 <h2>设计演化历史</h2>
 
-<p class="muted">这一 Tab 归档了到 v0.1.0 之前的设计探索，留作参考。当前实际方案见"当前实现"Tab。</p>
-
-<h3>设计经历的几次重大决策</h3>
-
 <table>
   <tr><th>阶段</th><th>决策</th><th>放弃的方案</th></tr>
   <tr><td>初版 v1</td><td>从零自建完整 Harness 运行时</td><td>—</td></tr>
   <tr><td>v2 收敛</td><td>基于 Claude Code 机制层，只补项目应用层</td><td>放弃自建 Sandbox / Tool Registry / Vault / Trace</td></tr>
   <tr><td>v2 精简</td><td>剔除 Vault / Budget 分级 / 重型 Eval / 重型 Trace / 多平台同步</td><td>放弃团队级和企业级模块</td></tr>
-  <tr><td>v0.1 实现</td><td>聚焦 Claude Code，2 个项目模板，dogfood 自身</td><td>放弃 WPF / Unity / ML / 纯前端</td></tr>
-  <tr><td>v0.2 规划</td><td>反思 v0.1 与 Claude Code 过度耦合 → 工具无关层</td><td>—</td></tr>
-  <tr><td>v0.3 规划</td><td>反思单 Developer 不贴合项目 → 分区 Developer</td><td>—</td></tr>
+  <tr><td>v0.1.0</td><td>聚焦 Claude Code，2 个项目模板，dogfood 自身</td><td>放弃 WPF / Unity / ML / 纯前端</td></tr>
+  <tr><td><b>v0.2.0</b></td><td><b>引入 .harness/ 工具无关层 + binding sync</b></td><td>—（往前进一步）</td></tr>
+  <tr><td>v0.3 规划</td><td>Developer 分区 + harness-adopt 自动 apply</td><td>—</td></tr>
 </table>
 
 <h3>融合的四篇文章</h3>
@@ -955,19 +835,19 @@ $ harness sync --binding=cursor
   <tr><td>Token Budget 绿/黄/红/熔断</td><td>文章4</td><td>Claude Code 自带 auto-compaction 够用</td></tr>
   <tr><td>4 层 Eval Pipeline + CI</td><td>文章4</td><td>简化为金标准任务手跑 / 自动化测试脚本</td></tr>
   <tr><td>OpenTelemetry 生产 Trace</td><td>文章4</td><td>用 session transcript 即可</td></tr>
-  <tr><td>多平台同步 (Cursor / Copilot)</td><td>文章1 隐含</td><td>v0.2 工具无关层会重新引入这个方向</td></tr>
+  <tr><td>多平台同步 (Cursor / Copilot)</td><td>文章1 隐含</td><td>v0.2 工具无关层已重新引入这个方向（架构位置已留，binding 待实现）</td></tr>
   <tr><td>Vault Proxy / 三件套真解耦</td><td>文章3</td><td>Claude Code 已经提供 Permission mode</td></tr>
   <tr><td>多脑多手并行 Sandbox</td><td>文章3</td><td>v0.3 分区 Developer 部分覆盖</td></tr>
 </table>
 
 <div class="quote">
-  剔除不是"永远不做"，是"先不做"。每个 v0.X 都可以重新评估是否引入。
+  剔除不是"永远不做"，是"先不做"。v0.2 工具无关层已经把"多平台 binding"的可能性带回来了。
 </div>
 
 </div>
 
 <div style="text-align: center; margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--text-dim); font-size: 12px;">
-  Harness Engineering · v0.1.0 · 2026-05-15<br>
+  Harness Engineering · v0.2.0 · 2026-05-15<br>
   Built for personal/small-team Claude Code workflows. MIT License.
 </div>
 
