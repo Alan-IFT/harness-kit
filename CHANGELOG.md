@@ -7,15 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-05-15
+
 ### Added
 
-- **Integration test infrastructure**. `scripts/test-real-project.{ps1,sh}` now overlays harness-init templates onto two fixture projects (`tests/fixtures/todo-fullstack/`, `tests/fixtures/todo-backend/`), runs the embedded `harness-sync`, and asserts that:
-  - Existing fixture files (source, tests, package.json / pyproject.toml, .gitignore) are byte-identical after overlay (nothing clobbered).
-  - All Harness SOT + generated artifacts are present.
-  - `harness-sync --check` is clean.
-  - 64 assertions per full run; both fixtures PASS.
-- `tests/fixtures/{todo-fullstack,todo-backend}/` minimal real-shape projects (no dependencies) as permanent regression assets.
-- `verify_all` step `F.1` now requires the new script pair; step `H.1` new — checks fixture presence.
+- **Developer partitioning for fullstack projects** (resolves the original feedback that "single Developer doesn't fit real project structure"):
+  - Three new partition agents shipped in `templates/fullstack/.harness/agents/`: `dev-frontend.md.tmpl` (UI/pages/components), `dev-backend.md.tmpl` (API/services), `dev-db.md.tmpl` (schema/migrations).
+  - Each partition has explicit `Owned paths (glob)` declaring which file patterns it may touch. Out-of-scope changes raise `BLOCKED ON PARTITION` and are coordinated by PM rather than reached across.
+  - Generic `developer.md` is preserved as a fallback for ambiguous tasks. `verify_all` does not require partitions to exist.
+- **PM Orchestrator gains partition routing logic** in stage 4. It detects `.harness/agents/dev-*.md` files at start of dispatch; if found, partitioned mode is engaged; if not, single Developer mode preserves v0.3 behavior. Default dispatch order is dependency-derived (db → backend → frontend), strictly sequential unless the Architect marks partitions independent.
+- **Solution Architect must produce a `Partition assignment` section** in `02_SOLUTION_DESIGN.md` when partition agents exist. Table form: file / partition / new-or-edit / dependency. Plus an explicit dispatch order and parallelism note.
+- **harness-init asks a new question Q4** (only for fullstack): `Partitioned (recommended)` vs `Single developer`. New placeholder `{{PARTITIONED}}` available for templates (currently unused; reserved).
+- **Single mode opt-out**: if user picks single Developer mode, init deletes the partition agents after copy, leaving only the generic `developer.md`.
+- **50-fullstack rule fragment** documents the partition system at the rule level.
+
+### Tests
+
+- `test-init` now asserts: fullstack init produces all three partition agents (`dev-frontend/backend/db`) with placeholders substituted; backend init does NOT produce them. Total: 86 → 98 assertions.
+- `test-real-project` asserts the same on fixture overlays. Total: 64 → 70 assertions.
+- `verify_all` still 19/19 (no schema change; the new files inherit existing checks via templates).
+
+### Out of scope (deferred)
+
+- Backend partitioning (per-service `dev-<svc>` agents for microservices, or layer-based for monoliths). v0.5.
+- `harness-adopt` partition detection. v0.5.
+- True parallel partition dispatch (multi-brain-multi-sandbox). Future, depends on platform.
 
 ## [0.3.0] - 2026-05-15
 

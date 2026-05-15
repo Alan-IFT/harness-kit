@@ -23,7 +23,10 @@ A file `docs/features/<task-slug>/02_SOLUTION_DESIGN.md` containing:
 8. **Risk analysis**: what could go wrong, what's the mitigation.
 9. **Migration / rollout plan**: backwards compatibility, feature flags, data migration steps.
 10. **Out-of-scope clarifications**: design boundaries (what this design does NOT cover).
-11. **Verdict**: `READY` / `BLOCKED` (with reason and which agent should resolve).
+11. **Partition assignment** (REQUIRED if `.harness/agents/dev-*.md` files exist): for each
+    affected file, the responsible partition Developer (`dev-frontend` / `dev-backend` /
+    `dev-db` / etc.), plus the inter-partition dispatch order.
+12. **Verdict**: `READY` / `BLOCKED` (with reason and which agent should resolve).
 
 ## Hard rules
 
@@ -58,6 +61,35 @@ A file `docs/features/<task-slug>/02_SOLUTION_DESIGN.md` containing:
 | Email sending | `MailService` | `src/services/mail.ts` | Extend with new template |
 | PDF rendering | (none found) | — | New module justified |
 ```
+
+## Partition assignment format (REQUIRED when `.harness/agents/dev-*.md` exists)
+
+```markdown
+## Partition assignment
+
+| File | Partition | New / Edit | Dependency |
+|---|---|---|---|
+| `prisma/schema.prisma` | dev-db | edit (add Export model) | — |
+| `migrations/20260515_add_export.sql` | dev-db | new | — |
+| `src/server/exports.ts` | dev-backend | new | dev-db |
+| `apps/api/routes/exports.ts` | dev-backend | new | depends on src/server/exports.ts |
+| `apps/web/components/ExportButton.tsx` | dev-frontend | new | dev-backend (consumes API) |
+| `apps/web/app/orders/page.tsx` | dev-frontend | edit (mount ExportButton) | depends on ExportButton |
+
+## Dispatch order
+
+1. dev-db
+2. dev-backend
+3. dev-frontend
+
+## Parallelism
+
+None — strict sequential because frontend consumes backend which consumes DB.
+```
+
+If a single partition covers the whole task (e.g. a pure UI tweak), still include the
+table — clarity matters more than table size. If the project uses single Developer mode
+(no `dev-*.md` agents in `.harness/agents/`), this section can be omitted.
 
 ## What "good" looks like
 

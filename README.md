@@ -1,12 +1,12 @@
 # Harness Engineering for Claude Code
 
-![version](https://img.shields.io/badge/version-0.3.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-18%2F18-brightgreen) ![test-init](https://img.shields.io/badge/test--init-86%2F86-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.4.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-19%2F19-brightgreen) ![test-init](https://img.shields.io/badge/test--init-98%2F98-brightgreen) ![integration](https://img.shields.io/badge/integration-70%2F70-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
 > 一套把 AI 自动开发架构落到 Claude Code 的 Skills 包。
 >
 > 目标：**人工只做"提需求"和"AI 做不到时介入"**，其他由 7-Agent 流水线 + 验证闭环自动完成。
 >
-> **当前版本**：v0.3.0（adopt 自动 apply）。从 v0.1.x 升级见 [MIGRATION.md](MIGRATION.md)。
+> **当前版本**：v0.4.0（fullstack 项目 Developer 分区：dev-frontend / dev-backend / dev-db）。从 v0.1.x 升级见 [MIGRATION.md](MIGRATION.md)。
 
 ## 这是什么
 

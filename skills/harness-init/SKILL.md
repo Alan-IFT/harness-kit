@@ -40,7 +40,7 @@ they back up or run `/harness-adopt`.
 
 ### 2. Gather project info via `AskUserQuestion`
 
-Ask three questions in a single `AskUserQuestion` call:
+Ask three or four questions in a single `AskUserQuestion` call:
 
 1. **Project type** — options:
    - `Fullstack (frontend + backend + DB)`
@@ -49,6 +49,12 @@ Ask three questions in a single `AskUserQuestion` call:
 3. **Enable verify_all hook on Stop event?** — options:
    - `Yes (recommended)` — runs verify after every major change
    - `No, manual only`
+4. **Developer partitioning** (only if project type is `Fullstack` from Q1) — options:
+   - `Partitioned (recommended) — dev-frontend / dev-backend / dev-db agents` — better focus, cleaner reviews, supports cross-area tasks via Architect partition assignment
+   - `Single developer — one agent for all code` — simpler, fewer agents, fine for small projects
+
+   For backend-only projects, skip this question and use single Developer mode (backend
+   partitioning lands in v0.5).
 
 ### 3. Locate the template directory
 
@@ -67,10 +73,19 @@ Copy in this order (later layer adds to earlier; overlays do not overwrite commo
 
 1. Everything under `templates/common/` → target root.
 2. Everything under `templates/<project-type>/` → target root.
-   - Fullstack overlay adds `.harness/rules/50-fullstack.md`, `.harness/skills/{build,test,verify}/SKILL.md.tmpl`, `scripts/verify_all.{ps1,sh}.tmpl`.
+   - Fullstack overlay adds `.harness/rules/50-fullstack.md`, `.harness/skills/{build,test,verify}/SKILL.md.tmpl`, `scripts/verify_all.{ps1,sh}.tmpl`, **and** `.harness/agents/dev-{frontend,backend,db}.md.tmpl` (partition agents).
    - Backend overlay adds `.harness/rules/50-backend.md` etc.
 
 Files ending in `.tmpl` need placeholder substitution (step 5). Drop the `.tmpl` suffix on write.
+
+**After copy, apply the partitioning choice** (from Q4):
+
+- If user picked **partitioned mode** (default for fullstack): keep all partition
+  agents AND keep the generic `developer.md`. The generic one stays as a
+  fallback for tasks the architect can't cleanly assign to one partition.
+- If user picked **single mode**: delete `.harness/agents/dev-frontend.md`,
+  `.harness/agents/dev-backend.md`, `.harness/agents/dev-db.md`. Only the generic
+  `developer.md` remains.
 
 Note: templates/common contains both `.harness/` (the source of truth content) and
 `.claude/settings.json.tmpl` (Claude Code binding glue — permissions and hooks).
@@ -88,6 +103,7 @@ Replace these placeholders in any `.tmpl` file:
 | `{{STACK}}` | user's free-text answer to Q2 |
 | `{{TODAY}}` | today's date in `YYYY-MM-DD` |
 | `{{ENABLE_HOOK}}` | `true` or `false` from Q3 |
+| `{{PARTITIONED}}` | `true` or `false` from Q4 (default `false` if Q4 was skipped) |
 
 ### 6. Run the initial binding sync
 

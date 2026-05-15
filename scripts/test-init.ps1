@@ -118,6 +118,24 @@ function Test-Type {
             Assert ".harness/agents/$a.md (SOT)" { Test-Path (Join-Path $tmp ".harness/agents/$a.md") }
         }
 
+        # Partition agents: fullstack should have them, backend should not (v0.4 limitation)
+        $partitionAgents = @("dev-frontend", "dev-backend", "dev-db")
+        if ($ProjectType -eq "fullstack") {
+            foreach ($p in $partitionAgents) {
+                Assert ".harness/agents/$p.md (partition SOT)" { Test-Path (Join-Path $tmp ".harness/agents/$p.md") }
+                Assert ".harness/agents/$p.md placeholder substituted" {
+                    $content = Get-Content (Join-Path $tmp ".harness/agents/$p.md") -Raw
+                    ($content -notmatch '\{\{[A-Z_]+\}\}') -and ($content -match "test-project")
+                }
+            }
+        } else {
+            foreach ($p in $partitionAgents) {
+                Assert ".harness/agents/$p.md absent (backend has no partitions in v0.4)" {
+                    -not (Test-Path (Join-Path $tmp ".harness/agents/$p.md"))
+                }
+            }
+        }
+
         Assert ".harness/rules/00-core.md (composed base)" { Test-Path (Join-Path $tmp ".harness/rules/00-core.md") }
         Assert ".harness/rules/50-$ProjectType.md (overlay)" { Test-Path (Join-Path $tmp ".harness/rules/50-$ProjectType.md") }
 
@@ -128,6 +146,11 @@ function Test-Type {
         # === Generated artifacts (.claude/ + CLAUDE.md) ===
         foreach ($a in $agents) {
             Assert ".claude/agents/$a.md (generated)" { Test-Path (Join-Path $tmp ".claude/agents/$a.md") }
+        }
+        if ($ProjectType -eq "fullstack") {
+            foreach ($p in $partitionAgents) {
+                Assert ".claude/agents/$p.md (generated partition)" { Test-Path (Join-Path $tmp ".claude/agents/$p.md") }
+            }
         }
         foreach ($s in @("build","test","verify")) {
             Assert ".claude/skills/$s/SKILL.md (generated)" { Test-Path (Join-Path $tmp ".claude/skills/$s/SKILL.md") }

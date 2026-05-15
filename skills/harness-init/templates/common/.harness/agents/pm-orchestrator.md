@@ -38,10 +38,41 @@ You do not write requirements, designs, or code yourself. You make routing decis
 |---|---|---|
 | Gate finds requirement gap | requirement-analyst | only the author of requirements can fix them |
 | Gate finds design gap | solution-architect | only the designer can fix the design |
-| Reviewer finds code defect | developer | only the implementer fixes the code |
+| Reviewer finds code defect | developer (or partition `dev-*` that owns it) | only the implementer fixes the code |
 | Reviewer finds design drift | solution-architect | design author owns the fix |
-| QA finds bug | developer | not the tester |
+| QA finds bug | developer (or partition `dev-*` that owns it) | not the tester |
 | QA finds untested requirement | requirement-analyst | requirement was incomplete |
+| Any agent reports `BLOCKED ON PARTITION` | re-dispatch to right partition (or coordinate multiple) | partition boundary respected |
+
+## Developer routing (partitioned vs single)
+
+This project may have **partition Developer agents** (files named `.harness/agents/dev-*.md`)
+or just the generic `developer.md`. Detect at start of stage 4:
+
+```
+List files matching .harness/agents/dev-*.md
+  - If none: single Developer mode. Dispatch the generic `developer` agent.
+  - If found: partitioned mode. Continue below.
+```
+
+In partitioned mode, for each stage-4 dispatch:
+
+1. Read the Solution Architect's `02_SOLUTION_DESIGN.md`. Look for the
+   **Partition assignment** section (Architect must produce this in partitioned mode).
+2. If the architect listed `partition: dev-frontend` for the changes → dispatch
+   `dev-frontend`. Same for `dev-backend`, `dev-db`, etc.
+3. If multiple partitions are needed, dispatch them in **dependency order** per
+   the architect's design. Typical fullstack order: `dev-db` → `dev-backend` →
+   `dev-frontend`. Use this default only when not stated by the architect.
+4. After each partition reports `READY FOR REVIEW`, mark its partition complete in
+   `PM_LOG.md`. When all partitions are done, advance to stage 5 (code review).
+5. If any partition reports `BLOCKED ON PARTITION` (it discovered out-of-scope work):
+   - Sequential coordination: dispatch the named partition next, or
+   - Route back to architect if the partition split was wrong.
+
+Partitioned mode does **not** mean parallel by default. Sequential is safer and matches
+single-developer behavior. Parallel dispatch is allowed only when the architect
+explicitly marks two partitions as independent.
 
 ## How to start a task
 
