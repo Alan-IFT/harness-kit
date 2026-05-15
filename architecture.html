@@ -327,6 +327,7 @@
   <button class="tab-btn active" onclick="switchTab('current', this)">当前实现 <span class="tag live">v0.4.1</span></button>
   <button class="tab-btn" onclick="switchTab('roadmap', this)">演进路线 <span class="tag next">v0.5 计划</span></button>
   <button class="tab-btn" onclick="switchTab('arch', this)">完整架构</button>
+  <button class="tab-btn" onclick="switchTab('philosophy', this)">设计哲学 <span class="tag new">为什么不全 AI</span></button>
   <button class="tab-btn" onclick="switchTab('history', this)">设计历史 <span class="tag archive">归档</span></button>
 </div>
 
@@ -336,8 +337,8 @@
 <h2>项目快照 (v0.4.1)</h2>
 
 <div class="stats">
-  <div class="stat"><div class="v">22</div><div class="lbl">commits 已提交</div></div>
-  <div class="stat"><div class="v">3</div><div class="lbl">git tags 已打</div></div>
+  <div class="stat"><div class="v">23</div><div class="lbl">commits 已提交</div></div>
+  <div class="stat"><div class="v">4</div><div class="lbl">git tags（v0.2~v0.4.1）</div></div>
   <div class="stat"><div class="v">4</div><div class="lbl">Skills 已交付</div></div>
   <div class="stat"><div class="v">7+3</div><div class="lbl">Agents（generic + 分区）</div></div>
   <div class="stat"><div class="v">19/19</div><div class="lbl">verify_all PASS</div></div>
@@ -367,7 +368,7 @@
   项目工具无关层 <code>.harness/</code> 已落地。<code>.claude/</code> 和 <code>CLAUDE.md</code> 通过 <code>scripts/harness-sync</code> 从 <code>.harness/</code> 生成。
 </div>
 
-<h2>v0.2 核心变化</h2>
+<h2>v0.1 → v0.4.1 演化（核心变化）</h2>
 
 <div class="diff">
   <div class="diff-side cur">
@@ -444,7 +445,7 @@
   </div>
 </div>
 
-<h2>仓库布局（v0.2 dogfood 后）</h2>
+<h2>仓库布局（v0.4.1 dogfood 后）</h2>
 
 <div class="filetree">
 <span class="dir">HarnessEngineering/</span>
@@ -485,10 +486,11 @@
 │   └── <span class="file">getting-started.md / concepts.md / workflow.md / dev-map.md / tasks.md / spec/ / features/</span>
 │
 ├── <span class="dir">scripts/</span>
-│   ├── <span class="file">verify_all.{ps1,sh}</span>           <span class="cmt"># 18 项检查（v0.1 是 15）</span>
+│   ├── <span class="file">verify_all.{ps1,sh}</span>           <span class="cmt"># 19 项检查（v0.1 是 15）</span>
 │   ├── <span class="new file">harness-sync.{ps1,sh}</span>      <span class="cmt"># Layer 2：.harness/ → .claude/ + CLAUDE.md</span>
 │   ├── <span class="file">sync-self.{ps1,sh}</span>             <span class="cmt"># Layer 1：templates/ → repo SOT</span>
-│   └── <span class="file">test-init.{ps1,sh}</span>             <span class="cmt"># 86 断言（v0.1 是 64）</span>
+│   ├── <span class="file">test-init.{ps1,sh}</span>             <span class="cmt"># 98 断言（含 v0.4 分区）</span>
+│   └── <span class="new file">test-real-project.{ps1,sh}</span> <span class="cmt"># 70 断言（fixture overlay）</span>
 │
 └── <span class="dir">evals/golden-tasks.md</span>
 </div>
@@ -504,9 +506,10 @@
   </p>
 </div>
 
-<h2>22 个 Commits（含 v0.4.1 全部）</h2>
+<h2>23 个 Commits（含 v0.4.1 全部）</h2>
 
 <div class="commit-list">
+  <div class="commit"><span class="sha">9a5cb63</span><span class="msg"><span class="v">v0.4.1</span><span class="type fix">fix</span>adopt asks partition question + architecture.html catch-up</span></div>
   <div class="commit"><span class="sha">10144b6</span><span class="msg"><span class="v">v0.4</span><span class="type feat">feat</span>Developer partitioning for fullstack projects (dev-frontend/backend/db)</span></div>
   <div class="commit"><span class="sha">cea272f</span><span class="msg"><span class="type test">test</span>integration test on real-shape fixture projects (todo-fullstack, todo-backend)</span></div>
   <div class="commit"><span class="sha">16ed293</span><span class="msg"><span class="type docs">docs</span>update commit list in architecture.html</span></div>
@@ -537,25 +540,26 @@
   <div class="pros">
     <h4>✅ 已可用</h4>
     <ul>
-      <li>新项目 <code>/harness-init</code> 生成 v0.2 两层结构</li>
-      <li>工具无关 SOT (<code>.harness/</code>) — 内容不绑 Claude Code</li>
-      <li><code>harness-sync</code> 跨平台一致性检查</li>
-      <li>rules/ 多文件合成 CLAUDE.md（00- &lt; 99-）</li>
-      <li>7-Agent 角色契约（按 v0.1 设计，未分区）</li>
-      <li>verify_all 两层一致性自动检查（18 项）</li>
-      <li>test-init 86 断言覆盖完整 init + sync 流程</li>
-      <li>本仓库 dogfood 自身（两层都跑通）</li>
+      <li><code>/harness-init</code> 生成两层结构（.harness/ SOT + .claude/ binding）</li>
+      <li><code>/harness-adopt</code> 现有项目自动 apply，含冲突处理</li>
+      <li><code>/harness-verify</code> 调起总验证；<code>/harness-status</code> 健康度快照</li>
+      <li>Fullstack 项目 3 个分区 Developer：dev-frontend / dev-backend / dev-db</li>
+      <li>init 和 adopt 都支持 partitioned / single（Q4）</li>
+      <li>PM Orchestrator 按分区路由，Architect 强制 partition assignment</li>
+      <li>verify_all 19 项 / test-init 98 断言 / test-real-project 70 断言</li>
+      <li>本仓库 dogfood 两层一致性</li>
+      <li>跨平台 (PowerShell + Bash) 完全对称</li>
       <li>MIGRATION.md 给 v0.1 用户升级指南</li>
     </ul>
   </div>
   <div class="cons">
     <h4>⚠️ 还做不到</h4>
     <ul>
-      <li>harness-adopt 自动 apply（v0.3 才有）</li>
-      <li>Developer 不分区（v0.3 计划）</li>
-      <li>未在真实 Claude Code 会话端到端跑过（test-init 覆盖了模板+sync 逻辑）</li>
+      <li>Backend 分区（v0.5 — 微服务 + 单体两套）</li>
+      <li>Claude Code 会话内未真实端到端验证 PM 路由 / Architect partition table（自动化测试覆盖到模板+sync 但 LLM 行为只能真实跑）</li>
       <li>未设 git remote / 未发布</li>
-      <li>不支持 Cursor / Copilot binding（架构留了位置，未实现）</li>
+      <li>不支持 Cursor / Copilot binding（架构留了位置，等真实需求）</li>
+      <li>部分模板复制 / 占位符替换仍由代码完成（可在 v0.5+ 进一步 AI 化，见"设计哲学"tab）</li>
     </ul>
   </div>
 </div>
@@ -837,6 +841,153 @@
   <tr><td>OpenTelemetry Trace</td><td>跨任务统计 / 多用户</td></tr>
   <tr><td>多 binding 实际实现 (Cursor/Copilot)</td><td>真实场景需要时（v0.2 已留架构位置）</td></tr>
 </table>
+
+</div>
+
+<!-- =================== TAB: 设计哲学 =================== -->
+<div id="tab-philosophy" class="tab-content">
+
+<h2>为什么不一开始就完全依赖 AI？</h2>
+
+<div class="alert">
+  <div class="alert-title">🎯 你提的问题（很关键）</div>
+  现在的设计依赖代码（verify_all 脚本、harness-sync 脚本、模板复制 + 占位符替换、test-init 等）。
+  未来 AI 更新时，这些代码也要更新维护。<b>为什么不一开始就设计成"AI 完成一切"？</b>
+</div>
+
+<h3>简短答案</h3>
+
+<div class="quote">
+  我们做的是"代码 + AI"混合架构。<b>代码做机械的、可重复的工作；AI 做需要判断的工作。</b>
+  这不是因为"不敢全 AI"，而是因为某些事情代码做得更可靠、更便宜、更可测。
+  但你的反思有价值——确实有一些代码可以转 AI，会在 v0.5+ 渐进 AI 化。
+</div>
+
+<h3>当前"代码 vs AI"边界</h3>
+
+<table>
+  <tr><th>责任</th><th>谁做</th><th>为什么</th></tr>
+  <tr><td>读 SPEC，写需求文档</td><td><b>AI</b>（requirement-analyst agent）</td><td>需要语义理解，代码做不了</td></tr>
+  <tr><td>设计技术方案</td><td><b>AI</b>（solution-architect）</td><td>需要项目知识 + 判断</td></tr>
+  <tr><td>写代码</td><td><b>AI</b>（developer / dev-*）</td><td>核心智能工作</td></tr>
+  <tr><td>审查代码</td><td><b>AI</b>（code-reviewer）</td><td>需要语义比对</td></tr>
+  <tr><td>路由任务到合适 agent</td><td><b>AI</b>（pm-orchestrator）</td><td>需要读 Architect 的 partition 决策</td></tr>
+  <tr><td>合成 CLAUDE.md（rules/ 文件按名次序拼接）</td><td><b>代码</b>（harness-sync）</td><td>机械操作，每次结果应当一致</td></tr>
+  <tr><td>检查 .harness/ 与 .claude/ 一致</td><td><b>代码</b>（harness-sync --check）</td><td>byte 比对，AI 容易看走眼</td></tr>
+  <tr><td>检查仓库结构完整性</td><td><b>代码</b>（verify_all）</td><td>CI 友好；秒级执行</td></tr>
+  <tr><td>跑测试 / 编译 / lint</td><td><b>代码 + 项目工具链</b></td><td>已有工具，AI 不需要重做</td></tr>
+  <tr><td>模板复制 + 占位符替换</td><td><b>代码</b>（test-init 模拟，真实 init 走 Skill）</td><td>确定性 ↑，速度 ↑</td></tr>
+</table>
+
+<h3>"全 AI" 的代价</h3>
+
+<div class="pros-cons">
+  <div class="pros">
+    <h4>✅ 全 AI 的好处</h4>
+    <ul>
+      <li><b>代码量极少</b>：几个 Skill md 文件即可</li>
+      <li><b>AI 升级自动跟进</b>，不用维护脚本</li>
+      <li><b>跨平台无问题</b>（不依赖 PS / Bash）</li>
+      <li><b>灵活</b>，AI 根据具体项目调整</li>
+    </ul>
+  </div>
+  <div class="cons">
+    <h4>❌ 全 AI 的代价</h4>
+    <ul>
+      <li><b>失去 CI 集成</b>：CI 跑不了 Claude Code，verify 必须在会话内做</li>
+      <li><b>失去可重复性</b>：同一输入不同会话可能微妙差异，无法 byte 比对</li>
+      <li><b>失去自动化回归测试</b>：test-init / test-real-project 这种"代码验证代码"的护栏没了</li>
+      <li><b>速度慢</b>：脚本 1ms，AI 调用秒级</li>
+      <li><b>成本</b>：每次操作消耗 token</li>
+      <li><b>调试困难</b>：脚本 bug 用 print 找，AI 行为 bug 找半天</li>
+      <li><b>固化的工程知识丢了</b>：脚本是"组织的肌肉记忆"，删了就没了</li>
+    </ul>
+  </div>
+</div>
+
+<h3>设计原则：代码用于"机制层"，AI 用于"内容层"</h3>
+
+<div class="info-card">
+  <h4>💡 核心区分</h4>
+  <p style="margin: 0;">
+    <b>机制（代码）</b>：怎么把文件从 A 拷到 B，怎么判断两份是否一致，怎么跑测试。<br>
+    <b>内容（AI）</b>：写什么需求，设计什么方案，怎么实现，怎么审查。<br>
+    机制类工作有"确定正确答案"，应该用代码；内容类工作需要判断，应该用 AI。混着用会丢两边的优点。
+  </p>
+</div>
+
+<h3>OpenAI Harness Engineering 文章也是这思路</h3>
+
+<div class="quote">
+  参考资料里 OpenAI 的 Codex Harness 报告（100 万行代码 / 1500 PR / 零手写）也是"代码 harness + AI 执行"。
+  他们的 harness 里有大量脚本（linter、CI 检查、validators）。AI 在脚本框架内工作。
+  关键引用：<i>"Humans steer. Agents execute."</i>
+  这套设计跟我们的思路一致。
+</div>
+
+<h3>哪些部分以后可以转 AI（v0.5+ 候选）</h3>
+
+<table>
+  <tr><th>候选</th><th>现状</th><th>转 AI 后</th><th>权衡</th></tr>
+  <tr>
+    <td><code>harness-sync</code> 的 rules 合成逻辑</td>
+    <td>脚本按文件名排序 + cat</td>
+    <td>AI 读 rules/ 再写 CLAUDE.md</td>
+    <td>当前实现已经简单，转 AI 收益小</td>
+  </tr>
+  <tr>
+    <td>模板占位符替换</td>
+    <td>{{PROJECT_NAME}} → 用户回答，机械替换</td>
+    <td>AI 直接根据用户回答生成定制内容（不需要模板）</td>
+    <td>失去模板可审计性；得到更灵活的定制</td>
+  </tr>
+  <tr>
+    <td>项目类型侦察（adopt 用）</td>
+    <td>检查 package.json / pyproject.toml 等</td>
+    <td>AI 直接读项目结构判断</td>
+    <td>AI 已经在做这个，代码版只是辅助；可考虑全删</td>
+  </tr>
+  <tr>
+    <td>规则提取（adopt 用）</td>
+    <td>关键字 match README / CONTRIBUTING</td>
+    <td>AI 语义提取（更准）</td>
+    <td>转 AI <b>明显改善质量</b></td>
+  </tr>
+  <tr>
+    <td><code>verify_all</code> 主体</td>
+    <td>脚本检查文件存在/同步等</td>
+    <td>—（不建议转）</td>
+    <td>CI 集成必要 + 可重复性必要</td>
+  </tr>
+  <tr>
+    <td><code>test-init</code> / <code>test-real-project</code></td>
+    <td>脚本断言</td>
+    <td>—（不建议转）</td>
+    <td>自动化回归必须代码化</td>
+  </tr>
+</table>
+
+<h3>实际的演化路径</h3>
+
+<ol>
+  <li><b>当前 v0.4.x</b>：代码做机制，AI 做内容。基础打稳。</li>
+  <li><b>v0.5 候选</b>：规则提取转 AI（adopt 的弱点），其他保持。同时做 backend 分区。</li>
+  <li><b>v0.6+ 看反馈</b>：如果维护代码确实开销大、AI 越来越可靠，逐步把"代码做机制"中可转的转给 AI。<b>但永远保留 verify_all + 自动化回归</b>（这是工程底线）。</li>
+</ol>
+
+<h3>给你的决策框架</h3>
+
+<div class="info-card">
+  <h4>💡 什么时候把"代码"转成"AI"</h4>
+  <p style="margin: 0;">问这 4 个问题：</p>
+  <ol>
+    <li>这件事 <b>需要 CI 跑</b> 吗？是 → 保留代码。否 → 可转 AI。</li>
+    <li>这件事 <b>需要 byte-identical 可重复</b> 吗？是 → 保留代码。否 → 可转 AI。</li>
+    <li>这件事 <b>有判断 / 语义理解</b> 成分吗？是 → 转 AI 受益。否 → 代码更好。</li>
+    <li>这件事 <b>频率高</b> 吗（每个 commit / 每天跑多次）？是 → 代码（成本 + 速度）。否 → AI 也行。</li>
+  </ol>
+  <p style="margin-top: 8px;">3 票"转 AI"才转。当前每个保留为代码的部分都有 ≥3 票"保留"。</p>
+</div>
 
 </div>
 
