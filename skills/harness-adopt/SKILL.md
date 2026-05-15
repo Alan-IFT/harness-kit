@@ -82,6 +82,14 @@ Use `AskUserQuestion`:
 1. **Confirm project type** (default: detected) — Fullstack / Backend / Other (abort).
 2. **Stack description** (free text via "Other") — pre-fill with detected list.
 3. **Enable verify_all hook** — Yes / No.
+4. **Developer partitioning** (only if Q1 = fullstack) — Partitioned (default, recommended) / Single developer.
+   - Partitioned: ships `dev-frontend`, `dev-backend`, `dev-db` agents alongside the generic
+     `developer.md`. PM routes by partition per the Architect's assignment.
+   - Single developer: ships only generic `developer.md`. Suitable for small fullstack
+     projects where partition overhead isn't worth it.
+   - Pre-fill suggestion based on detected layout: if `apps/web/` + `apps/api/` (or similar
+     dual structure) present → recommend Partitioned. If a single flat structure with no
+     obvious split → recommend Single.
 
 ### 4. Extract rule candidates
 
@@ -107,7 +115,8 @@ Write `.harness-adopt/PLAN.md`:
 <the profile from step 2>
 
 ## Files I will add (NEW)
-- .harness/agents/*.md (7 agent contracts, copied from templates/common/.harness/agents/)
+- .harness/agents/*.md (7 generic agent contracts, copied from templates/common/.harness/agents/)
+- .harness/agents/dev-*.md (3 partition agents — fullstack only, only if Q4=Partitioned: dev-frontend, dev-backend, dev-db)
 - .harness/rules/00-core.md (composed from CLAUDE.draft.md and templates/common/.harness/rules/00-core.md.tmpl with placeholders substituted)
 - .harness/rules/50-<type>.md (overlay rules from templates/<type>/.harness/rules/)
 - .harness/skills/{build,test,verify}/SKILL.md (from templates/<type>/.harness/skills/, wired to your detected commands)
@@ -153,6 +162,14 @@ For each file in the plan:
 - **If target exists and is byte-identical**: skip.
 - **If target exists and differs and mode is "merge"**: skip (do not overwrite); log to a `.harness-adopt/CONFLICTS.md`.
 - **If target exists and differs and mode is "overwrite"**: ask via `AskUserQuestion` for this specific file: "[file]: keep existing / overwrite". Honor user's choice.
+
+**Partition handling** (Q4 from step 3):
+
+- If Q4 = Partitioned (fullstack only): copy partition agents from
+  `templates/fullstack/.harness/agents/dev-*.md.tmpl` with placeholder substitution.
+  Keep the generic `developer.md` as fallback.
+- If Q4 = Single developer: do NOT copy partition agents. Only `developer.md` is shipped.
+- Backend projects: no partition copy in v0.4 (backend partitioning is v0.5).
 
 Substitution rules (same as `/harness-init`):
 
@@ -238,6 +255,6 @@ delete it (and may want to gitignore it). Add `.harness-adopt/` to a recommended
 
 | Version | Capability |
 |---|---|
-| **0.3.0** (current) | Reconnaissance + plan + automated apply with conflict gating |
-| 0.4.0 (planned) | Developer-agent partitioning during adopt (per-folder dev-* agents) |
-| 0.5.0 (planned) | Three-way merge for `CLAUDE.md` and partial overlays; deeper rule extraction |
+| 0.3.0 | Reconnaissance + plan + automated apply with conflict gating |
+| **0.4.1** (current) | Partition Q4 (fullstack only) — copy `dev-frontend/backend/db` agents when selected |
+| 0.5.0 (planned) | Backend partitioning (microservices or layered monolith); three-way merge for `CLAUDE.md`; deeper rule extraction |

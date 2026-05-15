@@ -309,21 +309,23 @@
 <div class="container">
 
 <header>
-  <h1>Harness Engineering · v0.3.0</h1>
+  <h1>Harness Engineering · v0.4.1</h1>
   <div class="subtitle">
-    Claude Code Skills 包 · 工具无关层 + 7-Agent 流水线 + adopt 自动 apply
+    Claude Code Skills 包 · 工具无关层 + 7-Agent + adopt 自动 apply + Developer 分区
   </div>
   <div style="margin-top: 12px;">
     <span class="pill">v0.1.0 已交付</span>
-    <span class="pill">v0.2.0 已交付</span>
-    <span class="pill">v0.3.0 已交付 (NEW)</span>
-    <span class="pill">v0.4.0 设计中</span>
+    <span class="pill">v0.2.0 工具无关层</span>
+    <span class="pill">v0.3.0 adopt 自动 apply</span>
+    <span class="pill">v0.4.0 Developer 分区 (NEW)</span>
+    <span class="pill">v0.4.1 adopt 一致性 patch</span>
+    <span class="pill">v0.5.0 设计中</span>
   </div>
 </header>
 
 <div class="tabs">
-  <button class="tab-btn active" onclick="switchTab('current', this)">当前实现 <span class="tag live">v0.3.0</span></button>
-  <button class="tab-btn" onclick="switchTab('roadmap', this)">演进路线 <span class="tag next">v0.4 计划</span></button>
+  <button class="tab-btn active" onclick="switchTab('current', this)">当前实现 <span class="tag live">v0.4.1</span></button>
+  <button class="tab-btn" onclick="switchTab('roadmap', this)">演进路线 <span class="tag next">v0.5 计划</span></button>
   <button class="tab-btn" onclick="switchTab('arch', this)">完整架构</button>
   <button class="tab-btn" onclick="switchTab('history', this)">设计历史 <span class="tag archive">归档</span></button>
 </div>
@@ -331,21 +333,33 @@
 <!-- =================== TAB: 当前实现 v0.2 =================== -->
 <div id="tab-current" class="tab-content active">
 
-<h2>项目快照 (v0.3.0)</h2>
+<h2>项目快照 (v0.4.1)</h2>
 
 <div class="stats">
-  <div class="stat"><div class="v">19</div><div class="lbl">commits 已提交</div></div>
-  <div class="stat"><div class="v">78</div><div class="lbl">追踪文件</div></div>
+  <div class="stat"><div class="v">22</div><div class="lbl">commits 已提交</div></div>
+  <div class="stat"><div class="v">3</div><div class="lbl">git tags 已打</div></div>
   <div class="stat"><div class="v">4</div><div class="lbl">Skills 已交付</div></div>
-  <div class="stat"><div class="v">7</div><div class="lbl">Sub-Agents</div></div>
-  <div class="stat"><div class="v">18/18</div><div class="lbl">verify_all PASS</div></div>
-  <div class="stat"><div class="v">86/86</div><div class="lbl">test-init PASS</div></div>
+  <div class="stat"><div class="v">7+3</div><div class="lbl">Agents（generic + 分区）</div></div>
+  <div class="stat"><div class="v">19/19</div><div class="lbl">verify_all PASS</div></div>
+  <div class="stat"><div class="v">98/98</div><div class="lbl">test-init PASS</div></div>
+  <div class="stat"><div class="v">70/70</div><div class="lbl">test-real-project PASS</div></div>
+</div>
+
+<div class="success-alert">
+  <div class="alert-title">✅ v0.4.0 已交付：Developer 分区（你的反馈点 #2）</div>
+  Fullstack 项目自动获得三个分区 Developer：<code>dev-frontend</code>、<code>dev-backend</code>、<code>dev-db</code>，每个有明确的 owned-paths glob。
+  PM Orchestrator 按分区路由（默认顺序 db → backend → frontend）。Architect 在方案阶段必须为每个文件指定责任分区。
+  保留 generic <code>developer.md</code> 作为 fallback；小项目可选 single mode。
+</div>
+
+<div class="success-alert">
+  <div class="alert-title">✅ v0.4.1 一致性 patch</div>
+  <code>/harness-adopt</code> 现在也支持 partition 选项（Q4）。adopt 和 init 现在功能一致。现有 fullstack 项目接入 Harness 时能选分区或 single 模式。
 </div>
 
 <div class="success-alert">
   <div class="alert-title">✅ v0.3.0 已交付：harness-adopt 自动 apply</div>
-  <code>/harness-adopt</code> 不再是 scaffolding-only。它现在做完整流程：侦察 → 提取规则 → 生成方案 → 用户确认 → 应用（带冲突处理）→ 跑 sync → 跑 verify_all 捕获 baseline。
-  现有项目能一键接入 Harness。
+  <code>/harness-adopt</code> 做完整流程：侦察 → 提取规则 → 生成方案 → 用户确认 → 应用（带冲突处理）→ 跑 sync → 跑 verify_all 捕获 baseline。
 </div>
 
 <div class="success-alert">
@@ -490,9 +504,12 @@
   </p>
 </div>
 
-<h2>19 个 Commits（含 v0.3 全部）</h2>
+<h2>22 个 Commits（含 v0.4.1 全部）</h2>
 
 <div class="commit-list">
+  <div class="commit"><span class="sha">10144b6</span><span class="msg"><span class="v">v0.4</span><span class="type feat">feat</span>Developer partitioning for fullstack projects (dev-frontend/backend/db)</span></div>
+  <div class="commit"><span class="sha">cea272f</span><span class="msg"><span class="type test">test</span>integration test on real-shape fixture projects (todo-fullstack, todo-backend)</span></div>
+  <div class="commit"><span class="sha">16ed293</span><span class="msg"><span class="type docs">docs</span>update commit list in architecture.html</span></div>
   <div class="commit"><span class="sha">ced38ef</span><span class="msg"><span class="v">v0.3</span><span class="type feat">feat</span>/harness-adopt now applies the plan, not just writes it</span></div>
   <div class="commit"><span class="sha">90786f5</span><span class="msg"><span class="v">v0.2</span><span class="type docs">docs</span>release prep — e2e checklist + version badges (v0.2.0 tag)</span></div>
   <div class="commit"><span class="sha">db71fd4</span><span class="msg"><span class="v">v0.2</span><span class="type docs">docs</span>MIGRATION guide + update architecture.html</span></div>
@@ -585,14 +602,25 @@
     </ul>
   </div>
 
-  <div class="release now">
-    <div class="status-line">设计中 · 你的反馈点 #2</div>
-    <h4>v0.4.0 · Developer 分区</h4>
+  <div class="release done">
+    <div class="status-line">已交付 · 2026-05-15</div>
+    <h4>v0.4.x · Developer 分区</h4>
     <ul>
-      <li>init/adopt 时分析项目结构</li>
-      <li>动态生成 dev-* 分区 agents</li>
-      <li>PM 路由到合适分区</li>
-      <li>支持并行（多脑多手）</li>
+      <li>v0.4.0: fullstack 三分区 agents</li>
+      <li>v0.4.1: adopt 也加 partition Q4</li>
+      <li>PM 按分区路由</li>
+      <li>保留 generic 作 fallback</li>
+    </ul>
+  </div>
+
+  <div class="release now">
+    <div class="status-line">设计中</div>
+    <h4>v0.5.0 · Backend 分区</h4>
+    <ul>
+      <li>微服务：每 service 一个 dev-*</li>
+      <li>单体：按层 (controller/service/db)</li>
+      <li>动态生成（不是固定模板）</li>
+      <li>+ adopt 自动检测分区结构</li>
     </ul>
   </div>
 </div>

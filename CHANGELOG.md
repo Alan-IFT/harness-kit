@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-05-15
+
+### Fixed
+
+- **`/harness-adopt` now asks the partition question** (Q4) for fullstack projects, matching what `/harness-init` does. v0.4.0 only upgraded `harness-init`; `harness-adopt` was left in single-developer mode regardless of project layout — a consistency gap. v0.4.1 closes it: adopt detects fullstack layout (typically `apps/web/` + `apps/api/`), pre-fills Partitioned as the recommendation, copies the three `dev-*` partition agents when chosen, and copies only the generic `developer.md` when single mode is chosen.
+- Adopt's plan output and roadmap section updated to reference partition agents.
+
+### Changed
+
+- `architecture.html` brought current with v0.4 (was stale at v0.3).
+
 ## [0.4.0] - 2026-05-15
 
 ### Added
