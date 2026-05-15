@@ -1,0 +1,38 @@
+---
+name: build
+description: Compile and typecheck the {{PROJECT_NAME}} project. Use when the developer agent finishes coding, before running tests.
+allowed-tools: Bash, PowerShell, Read
+---
+
+# Build skill — {{PROJECT_NAME}} ({{STACK}})
+
+Standard build for this project.
+
+## Steps
+
+1. Detect package manager:
+   - `pnpm-lock.yaml` → use `pnpm`
+   - `yarn.lock` → use `yarn`
+   - else → `npm`
+2. Install (frozen lockfile):
+   ```
+   <pm> install --frozen-lockfile
+   ```
+3. Typecheck if TypeScript:
+   ```
+   <pm> exec tsc --noEmit
+   ```
+4. Build:
+   ```
+   <pm> build
+   ```
+
+## Pass criteria
+
+- Exit code 0 on every step.
+- Zero TypeScript errors.
+
+## What to do on failure
+
+- Print the error.
+- **Do not retry**. The developer agent must fix the error before re-running.

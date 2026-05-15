@@ -1,0 +1,32 @@
+---
+name: build
+description: Compile / typecheck / lint the {{PROJECT_NAME}} backend project. Use after coding, before tests.
+allowed-tools: Bash, PowerShell, Read
+---
+
+# Build skill — {{PROJECT_NAME}} ({{STACK}})
+
+## Steps by stack
+
+### Node / TypeScript (NestJS, Fastify, Express)
+1. `<pm> install --frozen-lockfile` (pm = pnpm / yarn / npm)
+2. `<pm> exec tsc --noEmit`
+3. `<pm> exec eslint .`
+
+### Python (FastAPI, Django)
+1. Install deps: `uv sync` / `poetry install --no-root` / `pip install -r requirements.txt`
+2. Lint: `ruff check .`
+3. Typecheck: `mypy .` (if mypy is configured)
+
+### Go
+1. `go build ./...`
+2. `go vet ./...`
+
+## Pass criteria
+
+- Exit 0 for every step.
+- Zero typecheck / lint errors.
+
+## Failure handling
+
+Do not retry. Developer agent must fix the cause.

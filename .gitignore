@@ -38,7 +38,7 @@ verification_history.log
 .env.local
 .env.*.local
 
-# Build output
-dist/
-build/
-out/
+# Build output (anchored to repo root; do not catch .claude/skills/build/ etc.)
+/dist/
+/build/
+/out/
