@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>AI 自动开发架构设计 · Claude Code 专用</title>
+<title>Harness Engineering · 当前状态与演进路线</title>
 <style>
   :root {
     --bg: #0f1419;
@@ -54,15 +54,12 @@
   }
   h2 {
     font-size: 24px;
-    margin: 48px 0 20px;
+    margin: 40px 0 18px;
     padding-left: 14px;
     border-left: 4px solid var(--accent);
   }
-  h3 {
-    font-size: 18px;
-    margin: 28px 0 14px;
-    color: var(--text);
-  }
+  h3 { font-size: 18px; margin: 26px 0 12px; color: var(--text); }
+  h4 { font-size: 15px; margin: 18px 0 10px; }
   p, li { color: var(--text); }
   .muted { color: var(--text-dim); font-size: 14px; }
   code {
@@ -87,431 +84,746 @@
 
   /* Tabs */
   .tabs {
-    display: flex;
-    gap: 4px;
-    margin: 28px 0 24px;
-    border-bottom: 1px solid var(--border);
-    flex-wrap: wrap;
+    display: flex; gap: 4px; margin: 28px 0 24px;
+    border-bottom: 1px solid var(--border); flex-wrap: wrap;
   }
   .tab-btn {
-    background: transparent;
-    border: none;
-    color: var(--text-dim);
-    padding: 14px 22px;
-    font-size: 15px;
-    font-weight: 500;
-    cursor: pointer;
-    border-bottom: 3px solid transparent;
-    margin-bottom: -1px;
-    transition: all 0.2s;
-    font-family: inherit;
+    background: transparent; border: none; color: var(--text-dim);
+    padding: 14px 22px; font-size: 15px; font-weight: 500;
+    cursor: pointer; border-bottom: 3px solid transparent;
+    margin-bottom: -1px; transition: all 0.2s; font-family: inherit;
   }
   .tab-btn:hover { color: var(--text); }
-  .tab-btn.active {
-    color: var(--accent);
-    border-bottom-color: var(--accent);
-  }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
   .tab-btn .tag {
-    display: inline-block;
-    padding: 1px 6px;
-    border-radius: 8px;
-    font-size: 10px;
-    margin-left: 6px;
-    font-weight: 700;
+    display: inline-block; padding: 1px 6px; border-radius: 8px;
+    font-size: 10px; margin-left: 6px; font-weight: 700;
   }
   .tag.new { background: var(--green); color: #000; }
-  .tag.recommended { background: var(--orange); color: #000; }
+  .tag.live { background: var(--orange); color: #000; }
+  .tag.draft { background: var(--purple); color: #fff; }
+  .tag.archive { background: #6e7681; color: #fff; }
   .tab-content { display: none; }
   .tab-content.active { display: block; }
 
-  /* Architecture Diagram */
-  .arch-diagram {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 24px;
-    margin: 24px 0;
+  /* Stat cards */
+  .stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px; margin: 20px 0;
   }
-  .arch-layer {
-    background: var(--panel-2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 18px 22px;
-    margin: 12px 0;
+  .stat {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px 18px;
   }
-  .arch-layer.human { border-color: var(--green); background: rgba(63, 185, 80, 0.08); }
-  .arch-layer.harness { border-color: var(--accent); background: rgba(88, 166, 255, 0.06); }
-  .arch-layer.base { border-color: var(--purple); background: rgba(188, 140, 255, 0.06); }
-  .arch-layer.platform { border-color: var(--cyan); background: rgba(57, 211, 187, 0.06); }
-  .arch-layer.project { border-color: var(--orange); background: rgba(255, 166, 87, 0.06); }
-  .arch-layer h4 {
-    margin: 0 0 10px;
-    font-size: 15px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
+  .stat .v {
+    font-size: 28px; font-weight: 700;
+    background: linear-gradient(135deg, #58a6ff, #39d3bb);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
-  .badge {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 11px;
-    font-weight: 600;
-  }
-  .badge.green { background: rgba(63, 185, 80, 0.2); color: var(--green); }
-  .badge.blue { background: rgba(88, 166, 255, 0.2); color: var(--accent); }
-  .badge.purple { background: rgba(188, 140, 255, 0.2); color: var(--purple); }
-  .badge.cyan { background: rgba(57, 211, 187, 0.2); color: var(--cyan); }
-  .badge.orange { background: rgba(255, 166, 87, 0.2); color: var(--orange); }
-  .badge.red { background: rgba(248, 81, 73, 0.2); color: var(--red); }
-  .badge.gray { background: rgba(139, 148, 158, 0.2); color: var(--text-dim); }
-  .arrow-down {
-    text-align: center;
-    color: var(--text-dim);
-    font-size: 20px;
-    margin: 4px 0;
-  }
+  .stat .lbl { color: var(--text-dim); font-size: 12px; margin-top: 4px; }
 
-  /* Module Grid */
-  .modules {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-    gap: 16px;
-    margin: 20px 0;
+  /* Skill cards */
+  .skill-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 12px; margin: 16px 0;
   }
-  .module {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 18px 20px;
-    transition: border 0.2s, transform 0.2s;
+  .skill {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px 18px; position: relative;
   }
-  .module:hover { border-color: var(--accent); transform: translateY(-2px); }
-  .module.platform { border-left: 4px solid var(--cyan); }
-  .module.project { border-left: 4px solid var(--orange); }
-  .module.removed { border-left: 4px solid var(--red); opacity: 0.6; }
-  .module .mod-head {
-    display: flex; align-items: center; gap: 10px;
-    margin-bottom: 10px;
+  .skill.ok { border-left: 4px solid var(--green); }
+  .skill.warn { border-left: 4px solid var(--yellow); }
+  .skill-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 8px;
   }
-  .module .mod-num {
-    background: linear-gradient(135deg, var(--accent), var(--purple));
-    color: #fff;
-    width: 28px; height: 28px;
-    display: flex; align-items: center; justify-content: center;
-    border-radius: 6px;
-    font-weight: 700;
-    font-size: 13px;
+  .skill .name { font-family: monospace; font-weight: 700; font-size: 14px; color: var(--accent); }
+  .skill .status { font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+  .status.ok { background: rgba(63, 185, 80, 0.2); color: var(--green); }
+  .status.warn { background: rgba(210, 153, 34, 0.2); color: var(--yellow); }
+  .skill .desc { font-size: 13px; color: var(--text-dim); }
+
+  /* File tree */
+  .filetree {
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px 20px;
+    font-family: "JetBrains Mono", Consolas, monospace;
+    font-size: 13px; line-height: 1.7; color: var(--cyan);
+    margin: 14px 0; overflow-x: auto;
   }
-  .module .mod-title { font-weight: 600; font-size: 15px; }
-  .module .mod-body { font-size: 13.5px; color: var(--text); }
-  .module .mod-body ul { padding-left: 18px; margin: 6px 0; }
-  .module .mod-body li { margin: 4px 0; }
+  .filetree .dir { color: var(--accent); font-weight: 600; }
+  .filetree .file { color: var(--text); }
+  .filetree .cmt { color: var(--text-dim); }
+  .filetree .new { color: var(--green); font-weight: 600; }
+  .filetree .del { color: var(--red); text-decoration: line-through; opacity: 0.7; }
 
   /* Tables */
   table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 14px 0;
-    background: var(--panel);
-    border-radius: 8px;
-    overflow: hidden;
-    font-size: 13.5px;
+    width: 100%; border-collapse: collapse; margin: 14px 0;
+    background: var(--panel); border-radius: 8px;
+    overflow: hidden; font-size: 13.5px;
   }
-  th, td {
-    text-align: left;
-    padding: 10px 14px;
-    border-bottom: 1px solid var(--border);
-    vertical-align: top;
-  }
-  th {
-    background: var(--panel-2);
-    font-weight: 600;
-    color: var(--accent);
-  }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { background: var(--panel-2); font-weight: 600; color: var(--accent); }
   td:first-child { color: var(--text); font-weight: 500; }
   tr:last-child td { border-bottom: none; }
   .check { color: var(--green); font-weight: 700; }
   .partial { color: var(--yellow); font-weight: 700; }
   .miss { color: var(--red); font-weight: 700; }
 
-  /* Agent Pipeline */
-  .pipeline {
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    padding: 16px 0;
-    margin: 16px 0;
+  /* Commit list */
+  .commit-list {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 0; margin: 14px 0;
   }
-  .agent-card {
-    flex: 0 0 160px;
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 14px;
-    text-align: center;
+  .commit {
+    display: grid; grid-template-columns: 90px 1fr;
+    gap: 16px; padding: 8px 18px; border-bottom: 1px solid var(--border);
+    font-size: 13px;
   }
-  .agent-card.pm { border-color: var(--orange); }
-  .agent-card.dev { border-color: var(--red); background: rgba(248, 81, 73, 0.05); }
-  .agent-card .role { font-weight: 700; font-size: 14px; margin-bottom: 6px; }
-  .agent-card .duty { font-size: 12px; color: var(--text-dim); }
-  .agent-card .model {
-    margin-top: 8px;
-    font-size: 11px;
-    padding: 2px 6px;
-    border-radius: 4px;
-    display: inline-block;
-    background: rgba(88, 166, 255, 0.15);
-    color: var(--accent);
-  }
-  .agent-card.dev .model { background: rgba(248, 81, 73, 0.15); color: var(--red); }
+  .commit:last-child { border-bottom: none; }
+  .commit .sha { color: var(--orange); font-family: monospace; }
+  .commit .msg { color: var(--text); }
+  .commit .type { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 11px; margin-right: 6px; font-weight: 600; }
+  .type.feat { background: rgba(63, 185, 80, 0.2); color: var(--green); }
+  .type.fix { background: rgba(248, 81, 73, 0.2); color: var(--red); }
+  .type.docs { background: rgba(88, 166, 255, 0.2); color: var(--accent); }
+  .type.chore { background: rgba(139, 148, 158, 0.2); color: var(--text-dim); }
+  .type.test { background: rgba(188, 140, 255, 0.2); color: var(--purple); }
 
   /* Pros/Cons */
   .pros-cons {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin: 20px 0;
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 14px; margin: 16px 0;
   }
-  @media(max-width: 800px) { .pros-cons { grid-template-columns: 1fr; } .modules{grid-template-columns:1fr;} }
-  .pros, .cons {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 18px;
+  @media(max-width: 800px) { .pros-cons { grid-template-columns: 1fr; } }
+  .pros, .cons, .info-card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px 18px;
   }
   .pros { border-left: 4px solid var(--green); }
   .cons { border-left: 4px solid var(--red); }
-  .pros h4, .cons h4 { margin: 0 0 12px; font-size: 16px; }
+  .info-card { border-left: 4px solid var(--cyan); }
+  .pros h4, .cons h4, .info-card h4 { margin: 0 0 10px; font-size: 15px; }
   .pros h4 { color: var(--green); }
   .cons h4 { color: var(--red); }
-  .pros ul, .cons ul { padding-left: 20px; margin: 0; font-size: 14px; }
-  .pros li, .cons li { margin: 6px 0; }
+  .info-card h4 { color: var(--cyan); }
 
-  /* Phase Timeline */
-  .phases {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 14px;
-    margin: 20px 0;
+  /* Roadmap */
+  .roadmap {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 12px; margin: 20px 0;
   }
-  @media(max-width: 800px) { .phases { grid-template-columns: 1fr; } }
-  .phase {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 18px;
+  @media(max-width: 900px) { .roadmap { grid-template-columns: 1fr 1fr; } }
+  @media(max-width: 500px) { .roadmap { grid-template-columns: 1fr; } }
+  .release {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px; position: relative;
   }
-  .phase.p1 { border-top: 4px solid var(--green); }
-  .phase.p2 { border-top: 4px solid var(--yellow); }
-  .phase.p3 { border-top: 4px solid var(--purple); }
-  .phase h4 { margin: 0 0 10px; font-size: 16px; }
-  .phase ul { padding-left: 18px; margin: 0; font-size: 13.5px; }
-  .phase li { margin: 4px 0; }
+  .release.done { border-top: 4px solid var(--green); }
+  .release.now { border-top: 4px solid var(--orange); box-shadow: 0 0 0 2px rgba(255, 166, 87, 0.2); }
+  .release.next { border-top: 4px solid var(--purple); }
+  .release.future { border-top: 4px solid var(--text-dim); opacity: 0.85; }
+  .release h4 { margin: 0 0 8px; font-size: 16px; }
+  .release .status-line { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .release ul { padding-left: 18px; margin: 8px 0 0; font-size: 13px; }
+  .release li { margin: 3px 0; }
 
-  /* Decision Box */
-  .decision-box {
-    background: linear-gradient(135deg, rgba(88, 166, 255, 0.1), rgba(188, 140, 255, 0.1));
-    border: 1px solid var(--accent);
-    border-radius: 12px;
-    padding: 24px;
-    margin: 40px 0 0;
-  }
-  .decision-box h3 { color: var(--accent); margin-top: 0; }
-  .decision-box ol { padding-left: 20px; }
-  .decision-box li { margin: 8px 0; }
-
-  /* Quote box */
+  /* Quote / Info boxes */
   .quote {
     border-left: 3px solid var(--cyan);
-    padding: 10px 18px;
-    background: rgba(57, 211, 187, 0.05);
-    border-radius: 6px;
-    font-style: italic;
-    color: var(--text-dim);
-    margin: 16px 0;
-  }
-  .info-box {
-    border-left: 3px solid var(--accent);
-    padding: 12px 18px;
-    background: rgba(88, 166, 255, 0.05);
-    border-radius: 6px;
-    color: var(--text);
-    margin: 16px 0;
-    font-size: 14px;
-  }
-  .info-box .info-title {
-    font-weight: 700;
-    color: var(--accent);
-    margin-bottom: 6px;
-  }
-
-  /* File tree */
-  .filetree {
-    background: var(--panel-2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 16px 20px;
-    font-family: "JetBrains Mono", Consolas, monospace;
-    font-size: 13px;
-    line-height: 1.7;
-    color: var(--cyan);
-    margin: 14px 0;
-    overflow-x: auto;
-  }
-  .filetree .dir { color: var(--accent); font-weight: 600; }
-  .filetree .file { color: var(--text); }
-  .filetree .cmt { color: var(--text-dim); }
-  .filetree .strike { text-decoration: line-through; color: var(--red); opacity: 0.6; }
-
-  /* Integration flow */
-  .int-flow {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
-    margin: 20px 0;
-  }
-  @media(max-width: 900px) { .int-flow { grid-template-columns: 1fr 1fr; } }
-  .int-step {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 16px 14px 14px;
-    position: relative;
-  }
-  .int-step .stepnum {
-    position: absolute;
-    top: -10px;
-    left: 12px;
-    background: var(--accent);
-    color: #fff;
-    width: 24px; height: 24px;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 700;
-    font-size: 12px;
-  }
-  .int-step h5 { margin: 4px 0 8px; font-size: 14px; }
-  .int-step .desc { font-size: 12.5px; color: var(--text-dim); }
-
-  /* Version Cards */
-  .version-cards {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin: 20px 0;
-  }
-  @media(max-width: 800px) { .version-cards { grid-template-columns: 1fr; } }
-  .vcard {
-    background: var(--panel);
-    border: 2px solid var(--border);
-    border-radius: 12px;
-    padding: 24px;
-  }
-  .vcard.v1 { border-color: var(--purple); }
-  .vcard.v2 { border-color: var(--green); }
-  .vcard h3 { margin-top: 0; }
-  .vcard ul { padding-left: 20px; }
-
-  /* Memory layers */
-  .mem-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin: 16px 0;
-  }
-  .mem-layer {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    padding: 10px 14px;
-    border-radius: 6px;
-    font-size: 13.5px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  .mem-layer .mem-tag {
-    flex: 0 0 60px;
-    font-weight: 700;
-    text-align: center;
-    padding: 4px 0;
-    border-radius: 4px;
-  }
-  .L1 { background: rgba(63, 185, 80, 0.2); color: var(--green); }
-  .L2 { background: rgba(57, 211, 187, 0.2); color: var(--cyan); }
-  .L3 { background: rgba(88, 166, 255, 0.2); color: var(--accent); }
-  .L4 { background: rgba(188, 140, 255, 0.2); color: var(--purple); }
-  .L5 { background: rgba(255, 166, 87, 0.2); color: var(--orange); }
-
-  /* Concept Cards */
-  .concept-card {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 18px 22px;
+    padding: 10px 18px; background: rgba(57, 211, 187, 0.05);
+    border-radius: 6px; font-style: italic; color: var(--text-dim);
     margin: 14px 0;
   }
-  .concept-card h4 {
-    margin: 0 0 10px;
-    color: var(--cyan);
-    font-size: 16px;
+  .alert {
+    border-left: 3px solid var(--orange);
+    padding: 12px 18px; background: rgba(255, 166, 87, 0.05);
+    border-radius: 6px; color: var(--text);
+    margin: 16px 0; font-size: 14px;
   }
-  .concept-card .light-vs-heavy {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-top: 12px;
+  .alert .alert-title {
+    font-weight: 700; color: var(--orange); margin-bottom: 6px;
   }
-  @media(max-width:700px) { .concept-card .light-vs-heavy { grid-template-columns: 1fr; } }
-  .concept-card .col {
-    background: var(--panel-2);
-    padding: 12px 14px;
-    border-radius: 6px;
-    font-size: 13.5px;
+
+  /* Design diff (side-by-side) */
+  .diff {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 12px; margin: 16px 0;
   }
-  .col.heavy { border-left: 3px solid var(--red); }
-  .col.light { border-left: 3px solid var(--green); }
-  .col h5 { margin: 0 0 6px; font-size: 13px; font-weight: 700; }
-  .col.heavy h5 { color: var(--red); }
-  .col.light h5 { color: var(--green); }
+  @media(max-width: 800px) { .diff { grid-template-columns: 1fr; } }
+  .diff-side {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px 16px;
+  }
+  .diff-side.cur { border-top: 3px solid var(--text-dim); }
+  .diff-side.new { border-top: 3px solid var(--green); }
+  .diff-side h5 { margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); }
+  .diff-side.new h5 { color: var(--green); }
+
+  /* Architecture layer */
+  .arch-diagram {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px; margin: 18px 0;
+  }
+  .arch-layer {
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px 18px; margin: 10px 0;
+  }
+  .arch-layer.human { border-color: var(--green); background: rgba(63, 185, 80, 0.08); }
+  .arch-layer.tool-agnostic { border-color: var(--purple); background: rgba(188, 140, 255, 0.06); }
+  .arch-layer.binding { border-color: var(--cyan); background: rgba(57, 211, 187, 0.06); }
+  .arch-layer.platform { border-color: var(--accent); background: rgba(88, 166, 255, 0.06); }
+  .arch-layer h4 { margin: 0 0 8px; font-size: 15px; }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 11px; font-weight: 600; margin-left: 6px;
+  }
+  .badge.green { background: rgba(63, 185, 80, 0.2); color: var(--green); }
+  .badge.purple { background: rgba(188, 140, 255, 0.2); color: var(--purple); }
+  .badge.cyan { background: rgba(57, 211, 187, 0.2); color: var(--cyan); }
+  .badge.orange { background: rgba(255, 166, 87, 0.2); color: var(--orange); }
+  .badge.blue { background: rgba(88, 166, 255, 0.2); color: var(--accent); }
+  .arrow-down { text-align: center; color: var(--text-dim); font-size: 18px; margin: 4px 0; }
+
+  /* Agent boxes */
+  .agent-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 8px; margin: 14px 0;
+  }
+  .agent {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 6px; padding: 10px 12px; text-align: center;
+  }
+  .agent.dev { border-color: var(--red); background: rgba(248, 81, 73, 0.06); }
+  .agent.pm { border-color: var(--orange); }
+  .agent.new { border-color: var(--green); background: rgba(63, 185, 80, 0.06); }
+  .agent .role { font-weight: 700; font-size: 13px; }
+  .agent .what { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
 </style>
 </head>
 <body>
 <div class="container">
 
 <header>
-  <h1>AI 自动开发架构设计</h1>
+  <h1>Harness Engineering · v0.1.0</h1>
   <div class="subtitle">
-    多版本可对比方案 · 目标：人工只做"提需求"和"AI 做不到时介入"
+    Claude Code Skills 包 · 当前实现状态与演进路线
   </div>
-  <div style="margin-top: 14px;">
-    <span class="pill">融合 4 篇 Harness Engineering 文章</span>
-    <span class="pill">Claude Code 专用</span>
-    <span class="pill">支持新项目 / 现有项目集成</span>
+  <div style="margin-top: 12px;">
+    <span class="pill">v0.1.0 已交付</span>
+    <span class="pill">v0.2 设计中</span>
+    <span class="pill">v0.3 待定</span>
   </div>
 </header>
 
-<!-- TABS -->
 <div class="tabs">
-  <button class="tab-btn active" onclick="switchTab('v2', this)">v2 · Claude Code 精简版 <span class="tag recommended">推荐</span></button>
-  <button class="tab-btn" onclick="switchTab('v1', this)">v1 · 自建版（保留对比）</button>
-  <button class="tab-btn" onclick="switchTab('concepts', this)">概念解释 <span class="tag new">新增</span></button>
-  <button class="tab-btn" onclick="switchTab('compare', this)">v1 vs v2 对比</button>
-  <button class="tab-btn" onclick="switchTab('integrate', this)">Bootstrap 集成器</button>
+  <button class="tab-btn active" onclick="switchTab('current', this)">当前实现 <span class="tag live">v0.1.0</span></button>
+  <button class="tab-btn" onclick="switchTab('roadmap', this)">演进路线 <span class="tag new">两个新决策点</span></button>
+  <button class="tab-btn" onclick="switchTab('arch', this)">完整架构</button>
+  <button class="tab-btn" onclick="switchTab('history', this)">设计历史 <span class="tag archive">归档</span></button>
 </div>
 
-<!-- ============================ TAB V2 ============================ -->
-<div id="tab-v2" class="tab-content active">
+<!-- =================== TAB: 当前实现 =================== -->
+<div id="tab-current" class="tab-content active">
 
-<h2>v2 · Claude Code 专用精简版</h2>
-<p class="muted">核心思路：<b>Claude Code 已经提供机制层</b>（Sandbox、Hooks、子 Agent、MCP、Memory、Skills 等），我们<b>只补"项目级应用资产"</b>。剔除个人项目用不上的复杂模块。</p>
+<h2>项目快照</h2>
 
-<div class="info-box">
-  <div class="info-title">💡 关键认知：Claude Code 提供"机制"，你写"内容"</div>
-  Claude Code 给你的是基础设施（hooks 机制、sub-agent 机制、permission 机制、MCP 机制），但每个机制具体做什么、什么内容、什么提示词，都是项目特定的，必须自己写。
+<div class="stats">
+  <div class="stat"><div class="v">11</div><div class="lbl">commits 已提交</div></div>
+  <div class="stat"><div class="v">60+</div><div class="lbl">追踪文件</div></div>
+  <div class="stat"><div class="v">4</div><div class="lbl">Skills 已交付</div></div>
+  <div class="stat"><div class="v">7</div><div class="lbl">Sub-Agents</div></div>
+  <div class="stat"><div class="v">15/15</div><div class="lbl">verify_all 通过</div></div>
+  <div class="stat"><div class="v">64/64</div><div class="lbl">test-init 通过</div></div>
 </div>
 
-<h3>分层重新划分</h3>
+<h2>四个 Skills 状态</h2>
+
+<div class="skill-grid">
+  <div class="skill ok">
+    <div class="skill-head">
+      <span class="name">/harness-init</span>
+      <span class="status ok">✅ 可用</span>
+    </div>
+    <div class="desc">
+      新项目从零生成完整 Harness 骨架（7 agents + Rule/Skill/Script + workflow + dev-map + 任务看板 + evals）。
+      问 3 个问题（类型 / 栈 / 是否启 hook）后自动展开模板。
+    </div>
+  </div>
+
+  <div class="skill warn">
+    <div class="skill-head">
+      <span class="name">/harness-adopt</span>
+      <span class="status warn">⚠️ v0.1 仅生成方案</span>
+    </div>
+    <div class="desc">
+      侦察现有项目（语言/框架/测试/CI/已有规则），生成 <code>.harness-adopt/PLAN.md</code>。
+      <b>自动应用留给 v0.2。</b>当前需手动按方案执行，或在干净目录跑 init 后选择性合并。
+    </div>
+  </div>
+
+  <div class="skill ok">
+    <div class="skill-head">
+      <span class="name">/harness-verify</span>
+      <span class="status ok">✅ 可用</span>
+    </div>
+    <div class="desc">
+      调起项目的 <code>scripts/verify_all.{ps1,sh}</code>，捕获 PASS/WARN/FAIL，
+      把结果写入当前活动任务的开发文档。
+    </div>
+  </div>
+
+  <div class="skill ok">
+    <div class="skill-head">
+      <span class="name">/harness-status</span>
+      <span class="status ok">✅ 可用</span>
+    </div>
+    <div class="desc">
+      只读快照：哪些资产存在/缺失、baseline 状态、最近 verify 结果、活动任务、健康度分数（0-11）。
+    </div>
+  </div>
+</div>
+
+<h2>仓库布局（当前）</h2>
+
+<div class="filetree">
+<span class="dir">HarnessEngineering/</span>
+├── <span class="file">README.md / LICENSE / CHANGELOG.md / CONTRIBUTING.md</span>
+├── <span class="file">.gitignore / .gitattributes</span>
+├── <span class="file">architecture.html</span>              <span class="cmt"># 你正在看的</span>
+├── <span class="file">install.ps1 / install.sh</span>       <span class="cmt"># 一键装到 ~/.claude/skills</span>
+│
+├── <span class="dir">skills/</span>                          <span class="cmt"># 产品本体（4 个 Skill）</span>
+│   ├── <span class="dir">harness-init/</span>
+│   │   ├── <span class="file">SKILL.md</span>
+│   │   └── <span class="dir">templates/</span>
+│   │       ├── <span class="dir">common/</span>              <span class="cmt"># 7 agents + workflow + docs + evals</span>
+│   │       ├── <span class="dir">fullstack/</span>           <span class="cmt"># overlays + verify_all + build/test/verify Skills</span>
+│   │       └── <span class="dir">backend/</span>             <span class="cmt"># 同上，但适配 Python/Node/Go</span>
+│   ├── <span class="dir">harness-adopt/</span>SKILL.md
+│   ├── <span class="dir">harness-verify/</span>SKILL.md
+│   └── <span class="dir">harness-status/</span>SKILL.md
+│
+├── <span class="dir">.claude/</span>                          <span class="cmt"># 本仓库自身 dogfood</span>
+│   └── <span class="dir">agents/</span>                       <span class="cmt"># 7 个 agent 副本（与 templates 同步）</span>
+├── <span class="file">CLAUDE.md</span>                       <span class="cmt"># 本仓库自身的规则</span>
+│
+├── <span class="dir">docs/</span>
+│   ├── <span class="file">getting-started.md</span>          <span class="cmt"># 上手指南</span>
+│   ├── <span class="file">concepts.md</span>                 <span class="cmt"># 概念解释</span>
+│   ├── <span class="file">workflow.md</span>                 <span class="cmt"># 7-Agent 流程</span>
+│   ├── <span class="file">dev-map.md</span>                  <span class="cmt"># 本仓库导航</span>
+│   └── <span class="file">tasks.md</span>                    <span class="cmt"># 任务看板</span>
+│
+├── <span class="dir">scripts/</span>
+│   ├── <span class="file">verify_all.{ps1,sh}</span>         <span class="cmt"># 本仓库总验证（15 项检查）</span>
+│   ├── <span class="file">sync-self.{ps1,sh}</span>          <span class="cmt"># 同步 templates → 根 .claude/</span>
+│   ├── <span class="file">test-init.{ps1,sh}</span>          <span class="cmt"># 自动化 init 回归（64 断言）</span>
+│   └── <span class="file">baseline.json</span>
+│
+└── <span class="dir">evals/golden-tasks.md</span>             <span class="cmt"># 5 个回归任务</span>
+</div>
+
+<h2>11 个 Commits 历史</h2>
+
+<div class="commit-list">
+  <div class="commit"><span class="sha">fa981b9</span><span class="msg"><span class="type docs">docs</span>add CONTRIBUTING.md with development conventions</span></div>
+  <div class="commit"><span class="sha">8886db5</span><span class="msg"><span class="type docs">docs</span>mark harness-adopt as scaffolding-only in v0.1.0</span></div>
+  <div class="commit"><span class="sha">71d65a5</span><span class="msg"><span class="type test">test</span>automate harness-init regression (golden tasks #1, #2)</span></div>
+  <div class="commit"><span class="sha">462c710</span><span class="msg"><span class="type chore">chore</span>add .gitattributes for cross-platform line endings</span></div>
+  <div class="commit"><span class="sha">6c14079</span><span class="msg"><span class="type feat">feat</span>dogfood — apply Harness to this repo itself</span></div>
+  <div class="commit"><span class="sha">b7116ac</span><span class="msg"><span class="type feat">feat</span>cross-platform installer and onboarding docs</span></div>
+  <div class="commit"><span class="sha">cd09740</span><span class="msg"><span class="type feat">feat</span>add harness-adopt, harness-verify, harness-status skills</span></div>
+  <div class="commit"><span class="sha">46c630e</span><span class="msg"><span class="type fix">fix</span>gitignore: anchor build/dist/out to repo root</span></div>
+  <div class="commit"><span class="sha">116689a</span><span class="msg"><span class="type feat">feat</span>harness-init skill with fullstack and backend templates</span></div>
+  <div class="commit"><span class="sha">f7a5242</span><span class="msg"><span class="type docs">docs</span>multi-version architecture design (HTML)</span></div>
+  <div class="commit"><span class="sha">184d92c</span><span class="msg"><span class="type chore">chore</span>initial repo scaffolding</span></div>
+</div>
+
+<h2>已经能做什么 vs 还不能做什么</h2>
+
+<div class="pros-cons">
+  <div class="pros">
+    <h4>✅ 已可用</h4>
+    <ul>
+      <li>新项目跑 <code>/harness-init</code> 一键生成全套 Harness 骨架</li>
+      <li>7 个 Agent 角色契约就位，PM 路由 + 回退规则</li>
+      <li>verify_all 跨平台对称（PowerShell + Bash）</li>
+      <li>fullstack（Next/Nest/Postgres 等）+ backend（FastAPI/NestJS/Gin）两类模板</li>
+      <li>自动化回归（test-init.{ps1,sh}）64 断言全过</li>
+      <li>本仓库 dogfood 自身</li>
+      <li>跨平台换行符规范化（.gitattributes）</li>
+      <li>install.ps1 / install.sh 一键装到 ~/.claude/skills</li>
+    </ul>
+  </div>
+  <div class="cons">
+    <h4>⚠️ 还做不到 / 受限</h4>
+    <ul>
+      <li>harness-adopt 只能生成方案，不能自动应用（v0.2 才有）</li>
+      <li>项目相关文件深度耦合 Claude Code（<code>.claude/</code>）— <b>v0.2 拟解耦</b></li>
+      <li>Developer 是单一 generic agent，不分项目区块 — <b>v0.3 拟分区</b></li>
+      <li>未在真实 Claude Code 会话端到端跑过 <code>/harness-init</code>（只跑了模板复制层）</li>
+      <li>未设 git remote，未发布</li>
+      <li>不支持 Cursor / Copilot 等其他 IDE（按你之前的决策，先专注 Claude Code）</li>
+    </ul>
+  </div>
+</div>
+
+<h2>如何上手</h2>
+
+<pre>
+# 1. 装到全局
+.\install.ps1                                # Windows
+./install.sh                                 # Unix
+
+# 2. 在空目录或现有项目目录开 Claude Code
+cd /path/to/your/project
+claude
+
+# 3. Skills 自动可用，调起
+> /harness-init                              # 新项目
+> /harness-adopt                             # 现有项目（v0.1 仅生成方案）
+> /harness-verify                            # 跑总验证
+> /harness-status                            # 看健康度
+
+# 4. 给 PM Orchestrator 派活
+> Take this task: Add CSV export to the orders page.
+</pre>
+
+</div>
+
+<!-- =================== TAB: 演进路线 =================== -->
+<div id="tab-roadmap" class="tab-content">
+
+<h2>路线总览</h2>
+
+<div class="roadmap">
+  <div class="release done">
+    <div class="status-line">已交付 · 2026-05-15</div>
+    <h4>v0.1.0 · MVP</h4>
+    <ul>
+      <li>4 skills, 2 模板类型</li>
+      <li>7 Agent + verify_all</li>
+      <li>dogfood + 自动化回归</li>
+      <li>Claude Code 专用</li>
+    </ul>
+  </div>
+
+  <div class="release now">
+    <div class="status-line">设计中 · 你的反馈点 #1</div>
+    <h4>v0.2.0 · 工具无关层</h4>
+    <ul>
+      <li>新增 <code>.harness/</code> 真相源</li>
+      <li><code>.claude/</code> 改为生成的绑定层</li>
+      <li>未来可加 cursor binding</li>
+      <li>harness-adopt 自动应用</li>
+    </ul>
+  </div>
+
+  <div class="release next">
+    <div class="status-line">设计中 · 你的反馈点 #2</div>
+    <h4>v0.3.0 · Developer 分区</h4>
+    <ul>
+      <li>init 时分析项目结构</li>
+      <li>动态生成分区 Developer agents</li>
+      <li>PM 路由到合适分区</li>
+      <li>支持并行（多脑多手）</li>
+    </ul>
+  </div>
+
+  <div class="release future">
+    <div class="status-line">未来 · 待场景反馈</div>
+    <h4>v0.4+ · 待定</h4>
+    <ul>
+      <li>更多项目类型？</li>
+      <li>跨工具 binding 实战</li>
+      <li>团队级能力（Vault / Eval CI）</li>
+      <li>视项目规模需求</li>
+    </ul>
+  </div>
+</div>
+
+<!-- v0.2 详细设计 -->
+<h2>v0.2.0 · 工具无关层（你的反馈点 #1）</h2>
+
+<div class="alert">
+  <div class="alert-title">🎯 你提的问题</div>
+  当前设计把项目工作流（agent 定义、流程、规则、技能）放进了 <code>.claude/</code> —— 这是 Claude Code 专用目录。
+  如果以后换工具（Cursor / Copilot / 自研），这些资产就废了。<b>项目文档应该跟着 git 走，而不是绑定到某个 IDE。</b>
+</div>
+
+<h3>设计方案</h3>
+
+<div class="diff">
+  <div class="diff-side cur">
+    <h5>当前 v0.1.0 — 与 Claude Code 耦合</h5>
+    <pre>your-project/
+├── .claude/              ← Claude Code 专用
+│   ├── agents/*.md       ← 角色契约
+│   ├── skills/*/SKILL.md ← 标准操作
+│   └── settings.json
+├── CLAUDE.md             ← Claude Code 读
+└── docs/workflow.md
+    docs/dev-map.md       ← 这些已经工具无关
+    docs/tasks.md
+    docs/spec/</pre>
+  </div>
+
+  <div class="diff-side new">
+    <h5>v0.2.0 — 工具无关 + 绑定生成</h5>
+    <pre>your-project/
+├── .harness/             ← 真相源（工具无关）
+│   ├── agents/*.md       ← 角色契约（纯 Markdown）
+│   ├── skills/*/SKILL.md
+│   ├── workflow.md
+│   ├── rules/            ← 规则源
+│   │   ├── core.md
+│   │   └── stack.md
+│   └── bindings/         ← 工具绑定
+│       └── claude-code.yaml
+├── .claude/              ← 生成（可 .gitignore）
+│   ├── agents/   ← sync from .harness/
+│   ├── skills/   ← sync from .harness/
+│   └── settings.json
+├── CLAUDE.md             ← 从 .harness/rules 合成
+└── docs/...              ← 不变</pre>
+  </div>
+</div>
+
+<h3>核心变化</h3>
+
+<table>
+  <tr><th>层</th><th>角色</th><th>谁来维护</th><th>Git 行为</th></tr>
+  <tr><td><code>.harness/</code></td><td><b>真相源</b>，工具无关 Markdown / YAML</td><td>开发者直接编辑</td><td>追踪</td></tr>
+  <tr><td><code>.claude/</code></td><td>Claude Code <b>绑定层</b>（生成）</td><td>不要手改；用 <code>harness sync</code></td><td>可选追踪（建议追踪以便团队成员开箱即用，但允许 .gitignore）</td></tr>
+  <tr><td><code>CLAUDE.md</code></td><td>从 <code>.harness/rules/</code> 合成的 Claude Code 入口</td><td>不要手改</td><td>追踪</td></tr>
+  <tr><td><code>docs/</code></td><td>项目文档（工具无关）</td><td>开发者</td><td>追踪</td></tr>
+</table>
+
+<h3>新增的同步流程</h3>
+
+<pre>
+# 任何时候改了 .harness/，跑一下同步
+$ harness sync
+🔄 .harness/agents/ → .claude/agents/
+🔄 .harness/skills/ → .claude/skills/
+🔄 .harness/rules/ + workflow.md → CLAUDE.md
+✓ Synced. Claude Code will pick up changes on next session.
+
+# 未来支持 Cursor
+$ harness sync --binding=cursor
+🔄 .harness/rules/ → .cursor/rules/*.mdc
+🔄 .harness/agents/ → Cursor Composer config
+...</pre>
+
+<h3>权衡</h3>
+
+<div class="pros-cons">
+  <div class="pros">
+    <h4>✅ 收益</h4>
+    <ul>
+      <li><b>换 IDE 不丢资产</b> — 核心知识不跟 Claude Code 走</li>
+      <li>多工具共存可行（不同团队成员用不同 IDE）</li>
+      <li>角色契约、流程定义这些"项目知识"变成一等公民，与代码同等地位</li>
+      <li>未来 verify_all 可以加 <code>.harness/.claude/</code> 一致性检查（类似当前 sync-self）</li>
+    </ul>
+  </div>
+  <div class="cons">
+    <h4>❌ 代价</h4>
+    <ul>
+      <li>多一层间接：用户必须知道 "编辑 .harness/，不要直接动 .claude/"</li>
+      <li>需要 <code>harness sync</code> 命令（可做成 Skill 或 hook）</li>
+      <li>v0.1 装好的项目需要迁移（写迁移脚本）</li>
+      <li>编辑 .harness/agents/*.md 后忘 sync 容易踩坑（hook 自动 sync 可缓解）</li>
+    </ul>
+  </div>
+</div>
+
+<div class="info-card">
+  <h4>💡 实现要点</h4>
+  这其实就是把本仓库现有的"<code>templates/common/.claude/agents/</code> 是 SOT，根 <code>.claude/</code> 是副本"思路<b>下沉到用户项目层</b>。
+  本仓库已经在用类似 sync-self 机制，所以工程模式是验证过的，只需复刻到 init 模板。
+</div>
+
+<!-- v0.3 详细设计 -->
+<h2>v0.3.0 · Developer 分区（你的反馈点 #2）</h2>
+
+<div class="alert">
+  <div class="alert-title">🎯 你提的问题</div>
+  当前的 Developer 是单一 generic agent，不知道项目的实际分区。集成到具体项目时，
+  应该由 AI 根据项目结构（前端/后端/DB/微服务……）创建多个分区 Developer，每个负责自己的部分。
+  这样 agent 才更贴合项目。
+</div>
+
+<h3>当前 vs 设计</h3>
+
+<div class="diff">
+  <div class="diff-side cur">
+    <h5>v0.1 — 单一 Developer</h5>
+    <div class="agent-grid">
+      <div class="agent pm"><div class="role">PM</div><div class="what">路由</div></div>
+      <div class="agent"><div class="role">Req Analyst</div><div class="what">需求</div></div>
+      <div class="agent"><div class="role">Architect</div><div class="what">方案</div></div>
+      <div class="agent"><div class="role">Gate</div><div class="what">闸门</div></div>
+      <div class="agent dev"><div class="role">Developer</div><div class="what"><b>所有代码都它写</b></div></div>
+      <div class="agent"><div class="role">Reviewer</div><div class="what">审查</div></div>
+      <div class="agent"><div class="role">QA</div><div class="what">测试</div></div>
+    </div>
+    <p class="muted">问题：一个 agent 既要懂前端 React，又要懂后端 NestJS，又要懂 Prisma migrations。Context 重，专业性散。</p>
+  </div>
+
+  <div class="diff-side new">
+    <h5>v0.3 — 分区 Developer（项目实际生成）</h5>
+    <div class="agent-grid">
+      <div class="agent pm"><div class="role">PM</div><div class="what">路由+分区识别</div></div>
+      <div class="agent"><div class="role">Req</div><div class="what">需求</div></div>
+      <div class="agent"><div class="role">Architect</div><div class="what">方案+分区拆解</div></div>
+      <div class="agent"><div class="role">Gate</div><div class="what">闸门</div></div>
+    </div>
+    <div class="agent-grid">
+      <div class="agent new dev"><div class="role">dev-frontend</div><div class="what">React / Next.js</div></div>
+      <div class="agent new dev"><div class="role">dev-backend</div><div class="what">NestJS API</div></div>
+      <div class="agent new dev"><div class="role">dev-db</div><div class="what">Prisma / migrations</div></div>
+    </div>
+    <div class="agent-grid">
+      <div class="agent"><div class="role">Reviewer</div><div class="what">审查</div></div>
+      <div class="agent"><div class="role">QA</div><div class="what">测试</div></div>
+    </div>
+    <p class="muted">每个分区 Developer 只读自己负责的文件，更专注。Architect 在方案阶段就标好哪部分由哪个分区做。</p>
+  </div>
+</div>
+
+<h3>分区方案（按项目类型）</h3>
+
+<table>
+  <tr><th>项目类型</th><th>典型分区 Developer 提议</th><th>分区策略</th></tr>
+  <tr>
+    <td>Fullstack (Next + Nest + Postgres)</td>
+    <td><code>dev-frontend</code> / <code>dev-backend</code> / <code>dev-db</code></td>
+    <td>按 monorepo 包或顶层目录（apps/web, apps/api, prisma）</td>
+  </tr>
+  <tr>
+    <td>Backend (微服务)</td>
+    <td>每个服务一个：<code>dev-orders</code> / <code>dev-users</code> / <code>dev-billing</code></td>
+    <td>按 service 目录</td>
+  </tr>
+  <tr>
+    <td>Backend (单体 API)</td>
+    <td><code>dev-api</code> / <code>dev-services</code> / <code>dev-db</code></td>
+    <td>按层（controller/service/repository）</td>
+  </tr>
+  <tr>
+    <td>Fullstack (无明显分区)</td>
+    <td>退化为单一 <code>developer</code>（保留 v0.1 行为）</td>
+    <td>不强行分区</td>
+  </tr>
+</table>
+
+<h3>新工作流</h3>
+
+<pre>
+# init 时
+> /harness-init
+  Type? → fullstack
+  Stack? → Next.js + NestJS + Postgres
+  Detected monorepo layout: apps/web, apps/api, prisma/
+  Suggested developer partitions:
+    - dev-frontend  (owns: apps/web/**)
+    - dev-backend   (owns: apps/api/**)
+    - dev-db        (owns: prisma/**)
+  Accept? [y/edit/n]   ← 用户可以编辑
+
+# 任务派发时
+> Take this task: Add CSV export to orders page (UI + API + DB)
+
+  PM Orchestrator:
+    Architect produces 02_SOLUTION_DESIGN.md with partition assignments:
+      - dev-frontend: add button + download handler
+      - dev-backend:  add GET /api/orders/export.csv
+      - dev-db:       no migration needed
+    Dispatching in dependency order: dev-db → dev-backend → dev-frontend</pre>
+
+<h3>权衡</h3>
+
+<div class="pros-cons">
+  <div class="pros">
+    <h4>✅ 收益</h4>
+    <ul>
+      <li>每个 Developer 的上下文聚焦，context 利用率提升</li>
+      <li>专业性更强（前端 dev 不需要懂 SQL migration）</li>
+      <li>潜力：跨分区并行（多脑多手）</li>
+      <li>分区即文档：dev-map 自然衍生</li>
+    </ul>
+  </div>
+  <div class="cons">
+    <h4>❌ 代价</h4>
+    <ul>
+      <li>跨分区任务（如 CSV 导出）需要 Architect 显式拆解 — 多一步</li>
+      <li>分区边界要清晰，否则推诿（"那个文件应该归谁"）</li>
+      <li>小项目可能过度设计 — <b>所以要支持退化为单一 Developer</b></li>
+      <li>整套 agent 数量从 7 涨到 9-12，复杂度上升</li>
+    </ul>
+  </div>
+</div>
+
+<h3>实现要点（如果做）</h3>
+
+<ol>
+  <li><b>init 阶段加分区检测</b>：扫顶层目录、package.json workspaces、monorepo 配置 → 提议分区</li>
+  <li><b>分区契约</b>：每个 dev-* 的 SKILL.md 写明 <code>owns: 路径 glob</code></li>
+  <li><b>Architect 升级</b>：方案阶段必须为每个 in-scope 文件指定责任 Developer</li>
+  <li><b>PM 路由</b>：按 Architect 的 partition 分配执行；支持并行（默认串行）</li>
+  <li><b>退化机制</b>：项目小 / 无明显分区 → 创建单一 <code>developer</code>，等同 v0.1 行为</li>
+  <li><b>verify_all 加项</b>：检查每个分区 Developer 的 owns glob 不重叠</li>
+</ol>
+
+<!-- 决策方案 -->
+<h2>我的建议（你来定）</h2>
+
+<table>
+  <tr><th>选项</th><th>说明</th><th>工作量</th></tr>
+  <tr>
+    <td><b>A · 先做 v0.2 工具无关层，再 v0.3 Developer 分区</b></td>
+    <td>先解决"换工具会废"这个更结构性的问题，分区在工具无关基础上做更稳。</td>
+    <td>大（v0.2 大概 4-6 commits；v0.3 类似）</td>
+  </tr>
+  <tr>
+    <td>B · 先 v0.3 Developer 分区，再 v0.2 工具无关</td>
+    <td>分区收益更直接可见；但之后做工具无关时要把分区结构二次迁移。</td>
+    <td>大 + 返工</td>
+  </tr>
+  <tr>
+    <td>C · 两个一起做（v0.2+v0.3 合并发布）</td>
+    <td>一次到位，但 commit 历史会复杂，单次改动面大。</td>
+    <td>很大</td>
+  </tr>
+  <tr>
+    <td>D · 先稳 v0.1，把没端到端测过的实际跑通，再启 v0.2</td>
+    <td>把"安装 + 真实 Claude Code 跑一次"作为 v0.1.1 验证步，再启 v0.2。</td>
+    <td>小（测试为主）</td>
+  </tr>
+</table>
+
+<div class="info-card">
+  <h4>💡 我推荐 A</h4>
+  理由：
+  <ul>
+    <li>v0.2 解决的是"<b>方向性</b>"问题（结构性绑定），v0.3 解决的是"<b>贴合度</b>"问题（局部优化）。先把方向定准，再优化局部更稳。</li>
+    <li>v0.3 在工具无关基础上做，相当于在 <code>.harness/agents/</code> 加分区文件 + 修改 init 提议逻辑，比绑死在 <code>.claude/</code> 上做要清爽。</li>
+    <li>v0.1 已经验证了 7 agent + verify_all 的工程模式，v0.2 主要是"把这套搬到 .harness/"，工程模式不变，风险可控。</li>
+  </ul>
+  但你说不算就不算，等你决策。
+</div>
+
+</div>
+
+<!-- =================== TAB: 完整架构 =================== -->
+<div id="tab-arch" class="tab-content">
+
+<h2>v0.1.0 当前架构（含 v0.2 设计预览）</h2>
+
 <div class="arch-diagram">
   <div class="arch-layer human">
     <h4>👤 人 <span class="badge green">最小介入</span></h4>
@@ -519,612 +831,144 @@
   </div>
   <div class="arrow-down">↓</div>
 
-  <div class="arch-layer project">
-    <h4>📁 Layer 1 · 项目级 Harness 应用资产 <span class="badge orange">必须自己写进仓库</span></h4>
-    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px;">
-      <div>📋 <b>SPEC 文档</b> — 需求与边界</div>
-      <div>📜 <b>CLAUDE.md 规则内容</b> — 项目纪律和底线</div>
-      <div>🛠️ <b>Skills 内容</b> — 编译/测试/验证具体步骤</div>
-      <div>🤖 <b>7 个 .claude/agents/</b> 提示词 + 角色契约</div>
-      <div>📐 <b>workflow.md</b> — 流程定义文件</div>
-      <div>✅ <b>verify_all + baseline.json</b> — 总验证脚本</div>
-      <div>🗺️ <b>dev-map.md + tasks.md</b> — 项目级索引</div>
-      <div>🧪 <b>evals/ 轻量回归集</b> — 改 Harness 后跑一遍</div>
+  <div class="arch-layer tool-agnostic">
+    <h4>📁 工具无关层（v0.2 引入；v0.1 暂时合并在 .claude/） <span class="badge purple">真相源</span></h4>
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 8px; font-size: 13px;">
+      <div>📋 <b>.harness/agents/</b> — 7 角色契约</div>
+      <div>🛠️ <b>.harness/skills/</b> — 标准操作</div>
+      <div>📐 <b>.harness/workflow.md</b> — 流程定义</div>
+      <div>📜 <b>.harness/rules/</b> — 规则源</div>
+      <div>📋 <b>docs/spec/</b> — 项目需求</div>
+      <div>🗺️ <b>docs/dev-map.md + tasks.md</b></div>
     </div>
   </div>
-  <div class="arrow-down">↓ 调用</div>
+  <div class="arrow-down">↓ harness sync</div>
+
+  <div class="arch-layer binding">
+    <h4>🔌 工具绑定层 <span class="badge cyan">生成</span></h4>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 8px; font-size: 13px;">
+      <div>📁 <b>.claude/agents/</b><br><span class="muted">从 .harness/ 同步</span></div>
+      <div>📁 <b>.claude/skills/</b><br><span class="muted">从 .harness/ 同步</span></div>
+      <div>📜 <b>CLAUDE.md</b><br><span class="muted">从 rules 合成</span></div>
+    </div>
+    <div class="muted" style="margin-top: 8px; font-size: 12px;">未来：cursor binding / copilot binding 可加在同一层。v0.1 只实现 claude-code binding。</div>
+  </div>
+  <div class="arrow-down">↓ 被加载</div>
 
   <div class="arch-layer platform">
-    <h4>⚙️ Layer 0 · Claude Code 提供的机制 <span class="badge cyan">已就绪，不用自建</span></h4>
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 8px;">
-      <div>🔒 <b>Permission Mode</b><div class="muted">default/acceptEdits/plan/bypass</div></div>
-      <div>🤖 <b>Sub-agents</b><div class="muted">.claude/agents/ + Task tool</div></div>
-      <div>🧠 <b>Memory</b><div class="muted">CLAUDE.md + session 持久化</div></div>
-      <div>🪝 <b>Hooks</b><div class="muted">settings.json 生命周期钩子</div></div>
-      <div>🛠️ <b>Skills</b><div class="muted">user-invocable skills</div></div>
-      <div>🔌 <b>MCP</b><div class="muted">原生协议支持</div></div>
-      <div>🛡️ <b>Tool 权限</b><div class="muted">allow/deny lists</div></div>
-      <div>📊 <b>Cost / Transcript</b><div class="muted">/cost · session 日志</div></div>
-      <div>♻️ <b>Auto-compaction</b><div class="muted">上下文自动压缩</div></div>
+    <h4>⚙️ Claude Code 平台 <span class="badge blue">机制层</span></h4>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 8px; font-size: 13px;">
+      <div>🔒 Permission Mode</div>
+      <div>🤖 Sub-agents (Task tool)</div>
+      <div>🧠 Memory (CLAUDE.md)</div>
+      <div>🪝 Hooks</div>
+      <div>🛠️ Skills 机制</div>
+      <div>🔌 MCP 原生</div>
+      <div>🛡️ Tool allow/deny</div>
+      <div>📊 /cost · transcript</div>
+      <div>♻️ Auto-compaction</div>
     </div>
   </div>
 </div>
 
-<h3>v2 已从方案中移除的模块（根据你的反馈）</h3>
-<div class="modules">
-  <div class="module removed">
-    <div class="mod-head"><div class="mod-title">❌ Vault / 凭证管理</div></div>
-    <div class="mod-body">个人项目用不上，<b>移除</b>。凭证用环境变量 + Claude Code permission 拦截就够。</div>
-  </div>
-  <div class="module removed">
-    <div class="mod-head"><div class="mod-title">❌ 复杂 Token Budget 分级</div></div>
-    <div class="mod-body">Claude Code 自带 auto-compaction + <code>/cost</code> + 模型选择，<b>个人项目够用</b>。<br>保留极简策略：给 Developer Agent 配最强模型，其他用默认。</div>
-  </div>
-  <div class="module removed">
-    <div class="mod-head"><div class="mod-title">❌ 重型 4 层 Eval Pipeline</div></div>
-    <div class="mod-body"><b>简化为</b>轻量回归：留 2-3 个金标准任务在 <code>evals/</code> 目录，每次大改 Rule/Skill 后手跑一遍。</div>
-  </div>
-  <div class="module removed">
-    <div class="mod-head"><div class="mod-title">❌ 生产级 Trace / 可观测系统</div></div>
-    <div class="mod-body"><b>简化为</b>：Claude Code session transcript + <code>/cost</code> 就够。等团队规模化才补 Langfuse / OpenTelemetry。</div>
-  </div>
-  <div class="module removed">
-    <div class="mod-head"><div class="mod-title">❌ 多平台同步</div></div>
-    <div class="mod-body">只支持 Claude Code，<b>移除</b> .cursor/ .github/copilot-instructions.md 同步逻辑。</div>
-  </div>
-  <div class="module removed">
-    <div class="mod-head"><div class="mod-title">❌ 重型 Tool Registry</div></div>
-    <div class="mod-body">用 Claude Code settings.json 的 allow/deny lists 替代。需要 RBAC/审计的企业场景再说。</div>
-  </div>
+<h2>7-Agent 流水线</h2>
+
+<div class="agent-grid">
+  <div class="agent pm"><div class="role">PM Orchestrator</div><div class="what">只路由不专业</div></div>
+  <div class="agent"><div class="role">Req Analyst</div><div class="what">模糊→结构化</div></div>
+  <div class="agent"><div class="role">Architect</div><div class="what">设计+复用审计</div></div>
+  <div class="agent"><div class="role">Gate</div><div class="what">8 维度审计</div></div>
+  <div class="agent dev"><div class="role">Developer</div><div class="what">唯一写代码<br>(v0.3 分区)</div></div>
+  <div class="agent"><div class="role">Reviewer</div><div class="what">6 维度审查</div></div>
+  <div class="agent"><div class="role">QA</div><div class="what">行为验证</div></div>
 </div>
 
-<h3>v2 保留的核心模块（共 9 个）</h3>
-<div class="modules">
-  <div class="module project">
-    <div class="mod-head"><div class="mod-num">1</div><div class="mod-title">SPEC 驱动</div></div>
-    <div class="mod-body">Refinement Agent 帮你磨清晰的需求文档，写进 <code>docs/spec/</code></div>
-  </div>
-  <div class="module project">
-    <div class="mod-head"><div class="mod-num">2</div><div class="mod-title">7-Agent 流水线（基于 .claude/agents/）</div></div>
-    <div class="mod-body">PM / Analyst / Architect / Gate / Developer / Reviewer / QA</div>
-  </div>
-  <div class="module project">
-    <div class="mod-head"><div class="mod-num">3</div><div class="mod-title">Rule / Skill / Script 三层</div></div>
-    <div class="mod-body">Rule → CLAUDE.md / Skill → .claude/skills/ / Script → scripts/</div>
-  </div>
-  <div class="module project">
-    <div class="mod-head"><div class="mod-num">4</div><div class="mod-title">verify_all + baseline</div></div>
-    <div class="mod-body">总验证脚本，基线只升不降，开发前后对比</div>
-  </div>
-  <div class="module project">
-    <div class="mod-head"><div class="mod-num">5</div><div class="mod-title">dev-map + 任务看板</div></div>
-    <div class="mod-body">写进 <code>docs/</code>，由对应 Agent 在工作时维护</div>
-  </div>
-  <div class="module project">
-    <div class="mod-head"><div class="mod-num">6</div><div class="mod-title">流程定义 + 角色契约</div></div>
-    <div class="mod-body"><code>workflow.md</code> + 每个 Agent 的输入/输出/阻塞条件</div>
-  </div>
-  <div class="module project">
-    <div class="mod-head"><div class="mod-num">7</div><div class="mod-title">轻量 Eval 回归</div></div>
-    <div class="mod-body">2-3 个金标准任务，大改后手跑一遍看是否还能正确完成</div>
-  </div>
-  <div class="module project">
-    <div class="mod-head"><div class="mod-num">8</div><div class="mod-title">演化机制</div></div>
-    <div class="mod-body">五类问题 → 五类改进（Rule/Skill/Agent/MCP/新组件）</div>
-  </div>
-  <div class="module project">
-    <div class="mod-head"><div class="mod-num">9</div><div class="mod-title">极简模型分配</div></div>
-    <div class="mod-body">Developer Agent 配最强模型，其他用 Claude Code 默认</div>
-  </div>
+<h3>关键纪律</h3>
+
+<ul>
+  <li>发现问题的人不能修问题（Reviewer 不改代码、Gate 不改需求）</li>
+  <li>下游不能改上游文档，只能提阻塞回退给 PM</li>
+  <li>同阶段 ≥3 次回退 → 停下来问人</li>
+  <li>PM 只做路由，绝不给专业建议</li>
+  <li>Planner 输出声明式计划（JSON），不直接调用</li>
+  <li>baseline 只升不降 — 测试数减少 = FAIL</li>
+</ul>
+
+<h2>Rule / Skill / Script 三层</h2>
+
+<table>
+  <tr><th>层</th><th>位置</th><th>性质</th><th>用法</th></tr>
+  <tr><td>Rule</td><td><code>CLAUDE.md</code></td><td>软约束（自然语言）</td><td>原则 / 红线 / always-apply ≤5 条</td></tr>
+  <tr><td>Skill</td><td><code>.claude/skills/*/SKILL.md</code></td><td>标准操作手册</td><td>编译/测试/验证等固定动作</td></tr>
+  <tr><td>Script</td><td><code>scripts/verify_all.{ps1,sh}</code></td><td>硬门禁</td><td>可机器判定的全下沉</td></tr>
+</table>
+
+<p class="muted">原则：能用机器查的就别靠 AI 记。Rule 越多越容易被忽略，越下沉越靠谱。</p>
+
+<h2>剔除的模块（按你之前决策）</h2>
+
+<table>
+  <tr><th>模块</th><th>什么时候才需要</th></tr>
+  <tr><td>Vault / 凭证保险库</td><td>团队级 / 需 RBAC</td></tr>
+  <tr><td>Token Budget 分级</td><td>Claude Code auto-compact 不够时</td></tr>
+  <tr><td>4 层 Eval Pipeline + CI</td><td>团队级 / 需要 A/B 测试</td></tr>
+  <tr><td>OpenTelemetry Trace</td><td>跨任务统计 / 多用户</td></tr>
+  <tr><td>多平台 (Cursor/Copilot) 同步</td><td>v0.2 工具无关层就近一步</td></tr>
+</table>
+
 </div>
 
-<h3>7-Agent 流水线</h3>
-<div class="pipeline">
-  <div class="agent-card pm"><div class="role">PM Orchestrator</div><div class="duty">路由/回退/记录<br><b style="color:var(--red)">严禁越界</b></div><div class="model">Haiku</div></div>
-  <div class="agent-card"><div class="role">Requirement Analyst</div><div class="duty">需求结构化</div><div class="model">Sonnet</div></div>
-  <div class="agent-card"><div class="role">Solution Architect</div><div class="duty">方案设计</div><div class="model">Sonnet</div></div>
-  <div class="agent-card"><div class="role">Gate Reviewer</div><div class="duty">开工前闸门</div><div class="model">Sonnet</div></div>
-  <div class="agent-card dev"><div class="role">Developer</div><div class="duty"><b>唯一写代码</b></div><div class="model">Opus</div></div>
-  <div class="agent-card"><div class="role">Code Reviewer</div><div class="duty">对照需求+方案审查</div><div class="model">Sonnet</div></div>
-  <div class="agent-card"><div class="role">QA Tester</div><div class="duty">设计用例+维护测试</div><div class="model">Sonnet</div></div>
-</div>
+<!-- =================== TAB: 历史 =================== -->
+<div id="tab-history" class="tab-content">
 
-<h3>v2 仓库文件结构</h3>
-<div class="filetree">
-<span class="dir">your-project/</span>
-├── <span class="dir">.claude/</span>
-│   ├── <span class="file">settings.json</span>          <span class="cmt"># hooks · permissions · model 默认</span>
-│   ├── <span class="dir">agents/</span>
-│   │   ├── <span class="file">pm-orchestrator.md</span>
-│   │   ├── <span class="file">requirement-analyst.md</span>
-│   │   ├── <span class="file">solution-architect.md</span>
-│   │   ├── <span class="file">gate-reviewer.md</span>
-│   │   ├── <span class="file">developer.md</span>
-│   │   ├── <span class="file">code-reviewer.md</span>
-│   │   └── <span class="file">qa-tester.md</span>
-│   └── <span class="dir">skills/</span>
-│       ├── <span class="file">build/SKILL.md</span>     <span class="cmt"># 编译标准动作</span>
-│       ├── <span class="file">test/SKILL.md</span>      <span class="cmt"># 测试标准动作</span>
-│       └── <span class="file">verify/SKILL.md</span>    <span class="cmt"># 事后验证标准动作</span>
-├── <span class="file">CLAUDE.md</span>                  <span class="cmt"># 项目级规则（Rule 内容）</span>
-├── <span class="dir">docs/</span>
-│   ├── <span class="dir">spec/</span>                  <span class="cmt"># SPEC 文档目录</span>
-│   ├── <span class="file">workflow.md</span>            <span class="cmt"># 7-Agent 流程定义</span>
-│   ├── <span class="file">dev-map.md</span>             <span class="cmt"># 开发导航</span>
-│   ├── <span class="file">tasks.md</span>               <span class="cmt"># 任务看板（PM 维护）</span>
-│   └── <span class="dir">features/&lt;task&gt;/</span>          <span class="cmt"># 每个任务 6 阶段文档</span>
-├── <span class="dir">scripts/</span>
-│   ├── <span class="file">verify_all.ps1</span>         <span class="cmt"># 总验证脚本</span>
-│   ├── <span class="file">baseline.json</span>          <span class="cmt"># 基线只升不降</span>
-│   └── <span class="file">workflow-check.ps1</span>     <span class="cmt"># 流程校验</span>
-└── <span class="dir">evals/</span>                       <span class="cmt"># 轻量回归任务集</span>
-    └── <span class="file">golden-tasks.md</span>
-</div>
+<h2>设计演化历史</h2>
 
-<h3>v2 落地路径（个人项目）</h3>
-<div class="phases">
-  <div class="phase p1">
-    <h4>🚀 Phase 1 · MVP <span class="badge green">1 周</span></h4>
-    <ul>
-      <li>跑 Bootstrap 生成 .claude/ 骨架</li>
-      <li>手写 SPEC + CLAUDE.md 最小规则（≤5 条）</li>
-      <li>写 verify_all 基础检查项（编译+测试+基线）</li>
-      <li>跑一次完整 7-Agent 流程</li>
-    </ul>
-  </div>
-  <div class="phase p2">
-    <h4>🔧 Phase 2 · Hardening <span class="badge orange">2~3 周</span></h4>
-    <ul>
-      <li>补全 Skills 内容（按项目栈定制）</li>
-      <li>填充 dev-map + 任务看板</li>
-      <li>加 hooks（如：保存后自动 lint）</li>
-      <li>建 evals/ 金标准任务集</li>
-      <li>需要外部能力时接 MCP（如 GitHub / 内部 Wiki）</li>
-    </ul>
-  </div>
-  <div class="phase p3">
-    <h4>🌐 Phase 3 · 可选扩展 <span class="badge gray">按需</span></h4>
-    <ul>
-      <li>团队上规模时再考虑 Vault</li>
-      <li>跨项目 Tool Registry</li>
-      <li>Langfuse 等 Trace 系统</li>
-      <li>4 层 Eval CI 化</li>
-    </ul>
-    <div class="muted" style="margin-top:8px;">个人项目大多止步 Phase 2</div>
-  </div>
-</div>
+<p class="muted">这一 Tab 归档了到 v0.1.0 之前的设计探索，留作参考。当前实际方案见"当前实现"Tab。</p>
+
+<h3>设计经历的几次重大决策</h3>
+
+<table>
+  <tr><th>阶段</th><th>决策</th><th>放弃的方案</th></tr>
+  <tr><td>初版 v1</td><td>从零自建完整 Harness 运行时</td><td>—</td></tr>
+  <tr><td>v2 收敛</td><td>基于 Claude Code 机制层，只补项目应用层</td><td>放弃自建 Sandbox / Tool Registry / Vault / Trace</td></tr>
+  <tr><td>v2 精简</td><td>剔除 Vault / Budget 分级 / 重型 Eval / 重型 Trace / 多平台同步</td><td>放弃团队级和企业级模块</td></tr>
+  <tr><td>v0.1 实现</td><td>聚焦 Claude Code，2 个项目模板，dogfood 自身</td><td>放弃 WPF / Unity / ML / 纯前端</td></tr>
+  <tr><td>v0.2 规划</td><td>反思 v0.1 与 Claude Code 过度耦合 → 工具无关层</td><td>—</td></tr>
+  <tr><td>v0.3 规划</td><td>反思单 Developer 不贴合项目 → 分区 Developer</td><td>—</td></tr>
+</table>
+
+<h3>融合的四篇文章</h3>
+
+<table>
+  <tr><th>文章</th><th>主要贡献</th></tr>
+  <tr><td>《万字干货！Harness Engineering 如何工程化落地？》（白家杰）</td><td>7-Agent / Rule-Skill-Script / dev-map / 任务看板 / 演化式落地</td></tr>
+  <tr><td>《Harness Engineering 实践心得》（白家杰）</td><td>Prompt → Context → Harness 三跃迁 / 14 项 verify_all / 五类问题五类改进</td></tr>
+  <tr><td>《深入浅出 Harness Engineering 之核心模式与理念》（张碧泉）</td><td>三件套解耦 / Vault Proxy / 五层记忆 / 做梦整理</td></tr>
+  <tr><td>《从零设计生产级 Multi-Agent Harness》（李伟山）</td><td>Orchestrator 5 项决策权 / 声明式计划 / Tool Registry / 四层 Eval / Budget 分级 / MCP 网关</td></tr>
+</table>
+
+<h3>已剔除模块的回顾</h3>
+
+<table>
+  <tr><th>模块</th><th>来源</th><th>为什么不要</th></tr>
+  <tr><td>Vault 凭证保险库</td><td>文章3</td><td>个人项目用环境变量 + permission 拦截即可</td></tr>
+  <tr><td>Token Budget 绿/黄/红/熔断</td><td>文章4</td><td>Claude Code 自带 auto-compaction 够用</td></tr>
+  <tr><td>4 层 Eval Pipeline + CI</td><td>文章4</td><td>简化为金标准任务手跑 / 自动化测试脚本</td></tr>
+  <tr><td>OpenTelemetry 生产 Trace</td><td>文章4</td><td>用 session transcript 即可</td></tr>
+  <tr><td>多平台同步 (Cursor / Copilot)</td><td>文章1 隐含</td><td>v0.2 工具无关层会重新引入这个方向</td></tr>
+  <tr><td>Vault Proxy / 三件套真解耦</td><td>文章3</td><td>Claude Code 已经提供 Permission mode</td></tr>
+  <tr><td>多脑多手并行 Sandbox</td><td>文章3</td><td>v0.3 分区 Developer 部分覆盖</td></tr>
+</table>
 
 <div class="quote">
-  v2 心态：把 Claude Code 当成"开箱即用的 Harness 运行时"，你只补"应用层资产"。
+  剔除不是"永远不做"，是"先不做"。每个 v0.X 都可以重新评估是否引入。
 </div>
 
 </div>
 
-<!-- ============================ TAB CONCEPTS ============================ -->
-<div id="tab-concepts" class="tab-content">
-
-<h2>概念解释：4 层 Eval、Trace、Token Budget 到底是什么</h2>
-<p class="muted">这里把第三篇/第四篇文章里那些"听起来很重"的概念拆开讲，并对照 Claude Code 的实际能力，告诉你"个人项目到底需不需要"。</p>
-
-<div class="concept-card">
-  <h4>① Token Budget — Claude Code 自带到什么程度？</h4>
-  <p>核心问题：Multi-Agent 容易烧钱（每个 Agent 都有 System Prompt，工具结果会塞回模型，重试历史不断膨胀），所以需要"预算管理"。</p>
-  <div class="light-vs-heavy">
-    <div class="col heavy">
-      <h5>❌ 生产级版本（文章4，过重）</h5>
-      <ul>
-        <li>按任务/Agent 分配 Token 配额</li>
-        <li>剩余预算分级降级（绿/黄/红/熔断）</li>
-        <li>不同档位模型自动路由</li>
-        <li>单位业务结果成本统计看板</li>
-        <li>预算熔断次数监控</li>
-      </ul>
-    </div>
-    <div class="col light">
-      <h5>✅ Claude Code 自带 + v2 极简</h5>
-      <ul>
-        <li><b>自带</b>：上下文 auto-compaction（接近窗口自动压缩）</li>
-        <li><b>自带</b>：<code>/cost</code> 查看本次会话累计 Token</li>
-        <li><b>自带</b>：Anthropic API 速率限制</li>
-        <li><b>v2 极简</b>：Developer Agent 配 Opus，其他配 Sonnet/Haiku</li>
-        <li><b>v2 极简</b>：CLAUDE.md 里写"重试 ≥3 次必须停"</li>
-      </ul>
-    </div>
-  </div>
-  <div class="info-box" style="margin-top: 14px;">
-    <b>结论</b>：个人项目用 Claude Code 自带 + 按角色配模型，<b>不需要</b>复杂分级降级。
-  </div>
-</div>
-
-<div class="concept-card">
-  <h4>② 4 层 Eval 评估体系 — 它到底解决什么问题？</h4>
-  <p>核心问题：传统软件改代码会跑单元测试防止退化；AI 系统改 Prompt / 改 Rule / 换模型也需要"回归测试"。</p>
-  <p>四层是：</p>
-  <table>
-    <tr><th>层</th><th>评估什么</th><th>方法</th></tr>
-    <tr><td>L1 组件</td><td>单 Agent 输出是否符合契约</td><td>JSON Schema 校验</td></tr>
-    <tr><td>L2 轨迹</td><td>工作流程是否有重复/循环/无效步骤</td><td>分析 trace（关键创新）</td></tr>
-    <tr><td>L3 任务完成度</td><td>最终结果是否达成用户目标</td><td>LLM-as-Judge + 人工抽检</td></tr>
-    <tr><td>L4 端到端</td><td>业务指标（采纳率/返工率/成本）</td><td>线上反馈</td></tr>
-  </table>
-  <div class="light-vs-heavy">
-    <div class="col heavy">
-      <h5>❌ 生产级版本（过重）</h5>
-      <ul>
-        <li>每次改 Prompt 跑 CI 回归</li>
-        <li>建 Eval 数据集（几十~几百条）</li>
-        <li>LLM-as-Judge + 规则校验 + 人工抽检三合一</li>
-        <li>A/B 测试不同模型/Prompt</li>
-        <li>采纳率/返工率/成本看板</li>
-      </ul>
-    </div>
-    <div class="col light">
-      <h5>✅ v2 极简轻量回归</h5>
-      <ul>
-        <li>在 <code>evals/golden-tasks.md</code> 留 2-3 个金标准任务</li>
-        <li>大改 Rule / Skill / Agent 提示词后手跑一遍</li>
-        <li>看是否还能正确走完 7-Agent 流水线</li>
-        <li>看 verify_all 是否通过</li>
-        <li>个人项目这就够了</li>
-      </ul>
-    </div>
-  </div>
-  <div class="info-box" style="margin-top: 14px;">
-    <b>结论</b>：个人项目用"2-3 个金标准任务手跑"代替，<b>不需要</b>建 Eval Pipeline + CI。
-  </div>
-</div>
-
-<div class="concept-card">
-  <h4>③ Trace / 可观测性 — 这是什么，Claude Code 给到哪一步？</h4>
-  <p>核心问题：Agent 出错往往不是"异常崩溃"，而是"过程偏移"——选错工具、读错记忆、误解目标、压缩丢约束。需要能"事后回看每一步"。</p>
-  <div class="light-vs-heavy">
-    <div class="col heavy">
-      <h5>❌ 生产级 Trace 系统（过重）</h5>
-      <ul>
-        <li>OpenTelemetry / Langfuse 接入</li>
-        <li>每次 LLM 调用 + 工具调用打 span</li>
-        <li>跨任务统计看板（成功率/重试率/熔断率）</li>
-        <li>失败模式聚类分析</li>
-        <li>Session 不可变事件流支持回放</li>
-        <li>跨多个 Agent 的因果链追踪</li>
-      </ul>
-    </div>
-    <div class="col light">
-      <h5>✅ Claude Code 自带 + v2 极简</h5>
-      <ul>
-        <li><b>自带</b>：session transcript（对话记录）</li>
-        <li><b>自带</b>：<code>/cost</code> 用量</li>
-        <li><b>自带</b>：每次工具调用在对话里就能看到</li>
-        <li><b>v2 加</b>：verify_all 每次跑追加到 <code>verification_history.log</code></li>
-        <li><b>v2 加</b>：每个任务 6 阶段文档天然就是 trace</li>
-      </ul>
-    </div>
-  </div>
-  <div class="info-box" style="margin-top: 14px;">
-    <b>结论</b>：个人项目看 transcript + 文档链就够。<b>不需要</b>接 Langfuse。
-  </div>
-</div>
-
-<div class="concept-card">
-  <h4>④ Claude Code 实际支持矩阵</h4>
-  <p>区分"机制层（Claude Code 提供）"和"内容层（你必须自己写）"：</p>
-  <table>
-    <tr><th>能力</th><th>Claude Code 提供机制</th><th>你需要写的内容</th></tr>
-    <tr><td>权限/沙盒</td><td><span class="check">✅ Permission mode (4 档)</span></td><td>settings.json 配 allow/deny 列表</td></tr>
-    <tr><td>子 Agent 调度</td><td><span class="check">✅ Task tool + .claude/agents/</span></td><td>7 个 Agent 的提示词、角色契约</td></tr>
-    <tr><td>Hooks 生命周期</td><td><span class="check">✅ settings.json hooks</span></td><td>具体 hook 执行什么（如保存后跑 lint）</td></tr>
-    <tr><td>MCP 集成</td><td><span class="check">✅ 原生协议支持</span></td><td>选哪些 MCP Server + 白名单到具体工具</td></tr>
-    <tr><td>Memory 基础</td><td><span class="check">✅ CLAUDE.md + session 持久化</span></td><td>CLAUDE.md 内容、auto memory 配置</td></tr>
-    <tr><td>Skills</td><td><span class="check">✅ user-invocable + plugin 机制</span></td><td>Skill 内容（编译/测试步骤）</td></tr>
-    <tr><td>上下文管理</td><td><span class="check">✅ auto-compaction</span></td><td>—</td></tr>
-    <tr><td>用量监控</td><td><span class="check">✅ /cost · transcript</span></td><td>—</td></tr>
-    <tr><td>SPEC / 需求文档</td><td><span class="miss">— 不涉及</span></td><td><b>完全是你的事</b></td></tr>
-    <tr><td>7-Agent 流程编排</td><td><span class="partial">⚠️ 机制有，纪律靠提示词</span></td><td>workflow.md + Agent 提示词里的"不越界"等纪律</td></tr>
-    <tr><td>规则内容</td><td><span class="miss">— 不涉及</span></td><td><b>CLAUDE.md 自己写</b></td></tr>
-    <tr><td>verify_all 脚本</td><td><span class="miss">— 不涉及</span></td><td><b>自己写检查项</b></td></tr>
-    <tr><td>dev-map / 任务看板</td><td><span class="miss">— 不涉及</span></td><td><b>自己写并维护</b></td></tr>
-    <tr><td>Token Budget 分级</td><td><span class="partial">⚠️ 只有会话级 auto-compact</span></td><td>v2 已剔除该模块</td></tr>
-    <tr><td>Eval / 回归</td><td><span class="miss">— 不涉及</span></td><td>v2 简化为金标准任务手跑</td></tr>
-    <tr><td>Trace / 可观测</td><td><span class="partial">⚠️ 只有 transcript</span></td><td>v2 不另建</td></tr>
-    <tr><td>Vault / 凭证</td><td><span class="miss">— 不涉及</span></td><td>v2 已剔除</td></tr>
-  </table>
-</div>
-
-</div>
-
-<!-- ============================ TAB V1 ============================ -->
-<div id="tab-v1" class="tab-content">
-
-<h2>v1 · 自建版（保留对比用）</h2>
-<p class="muted">把 Harness 当独立运行时设计，从底座完整自建。<b>不依赖 Claude Code 等 IDE 工具</b>。适合自研 AI 开发平台 / 企业级深度定制。</p>
-
-<h3>总体架构</h3>
-<div class="arch-diagram">
-  <div class="arch-layer human">
-    <h4>👤 人</h4>
-    <div class="muted">提需求 · 关键节点抽看 · 高风险确认</div>
-  </div>
-  <div class="arrow-down">↓</div>
-  <div class="arch-layer harness">
-    <h4>🎛️ Harness（四块拼图）</h4>
-    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
-      <div>① <b>约束与流程</b></div>
-      <div>② <b>反馈闭环</b></div>
-      <div>③ <b>知识库</b></div>
-      <div>④ <b>进化机制</b></div>
-    </div>
-  </div>
-  <div class="arrow-down">↓</div>
-  <div class="arch-layer base">
-    <h4>⚙️ 三件套底座（全部自建）</h4>
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
-      <div><b>🧠 Brain</b><div class="muted">模型层</div></div>
-      <div><b>🤖 Harness</b><div class="muted">无状态控制器</div></div>
-      <div><b>📦 Sandbox</b><div class="muted">隔离环境</div></div>
-    </div>
-    <div style="margin-top: 12px; padding: 10px; background: rgba(248, 81, 73, 0.1); border-radius: 6px; font-size: 13px;">
-      🔐 Vault + Proxy / Tool Registry / Token Budget 分级 / 4 层 Eval / OpenTelemetry Trace —— 全部自建
-    </div>
-  </div>
-</div>
-
-<h3>12 个模块（全套）</h3>
-<div class="modules">
-  <div class="module"><div class="mod-head"><div class="mod-num">1</div><div class="mod-title">SPEC 入口</div></div><div class="mod-body">Refinement Agent 磨需求</div></div>
-  <div class="module"><div class="mod-head"><div class="mod-num">2</div><div class="mod-title">编排层</div></div><div class="mod-body">声明式计划 + 状态机 + 5 项决策权</div></div>
-  <div class="module"><div class="mod-head"><div class="mod-num">3</div><div class="mod-title">Rule/Skill/Script 三层</div></div><div class="mod-body">自建加载 + 触发机制</div></div>
-  <div class="module"><div class="mod-head"><div class="mod-num">4</div><div class="mod-title">反馈闭环</div></div><div class="mod-body">verify_all + 基线对比</div></div>
-  <div class="module"><div class="mod-head"><div class="mod-num">5</div><div class="mod-title">知识库</div></div><div class="mod-body">dev-map + 任务看板</div></div>
-  <div class="module"><div class="mod-head"><div class="mod-num">6</div><div class="mod-title">5 层记忆 + 遗忘</div></div><div class="mod-body">自建分层存储 + 做梦 GC</div></div>
-  <div class="module"><div class="mod-head"><div class="mod-num">7</div><div class="mod-title">Tool Registry</div></div><div class="mod-body">9 项元信息 + RBAC + 审计</div></div>
-  <div class="module"><div class="mod-head"><div class="mod-num">8</div><div class="mod-title">三件套底座</div></div><div class="mod-body">Brain + Harness + Sandbox + Vault</div></div>
-  <div class="module"><div class="mod-head"><div class="mod-num">9</div><div class="mod-title">Token Budget 分级</div></div><div class="mod-body">绿/黄/红/熔断 + Model Routing</div></div>
-  <div class="module"><div class="mod-head"><div class="mod-num">10</div><div class="mod-title">4 层 Eval</div></div><div class="mod-body">组件/轨迹/完成度/端到端</div></div>
-  <div class="module"><div class="mod-head"><div class="mod-num">11</div><div class="mod-title">Trace / 可观测</div></div><div class="mod-body">OpenTelemetry + 看板</div></div>
-  <div class="module"><div class="mod-head"><div class="mod-num">12</div><div class="mod-title">演化机制</div></div><div class="mod-body">五类问题 → 五类改进</div></div>
-</div>
-
-<h3>记忆 5 层</h3>
-<div class="mem-stack">
-  <div class="mem-layer"><div class="mem-tag L1">L1</div><div><b>Working State</b> — 任务结束即丢</div></div>
-  <div class="mem-layer"><div class="mem-tag L2">L2</div><div><b>Session State</b> — Redis + TTL</div></div>
-  <div class="mem-layer"><div class="mem-tag L3">L3</div><div><b>Skill Memory</b> — SKILL.md / 仓库</div></div>
-  <div class="mem-layer"><div class="mem-tag L4">L4</div><div><b>Semantic Memory</b> — 向量库</div></div>
-  <div class="mem-layer"><div class="mem-tag L5">L5</div><div><b>Execution Log</b> — append-only</div></div>
-</div>
-
-<div class="quote">
-  v1 留作对比，<b>本项目最终选 v2</b>。
-</div>
-
-</div>
-
-<!-- ============================ TAB COMPARE ============================ -->
-<div id="tab-compare" class="tab-content">
-
-<h2>v1 vs v2 对比</h2>
-
-<div class="version-cards">
-  <div class="vcard v1">
-    <h3 style="color: var(--purple);">v1 自建版</h3>
-    <p class="muted">从底座自建完整 Harness 运行时</p>
-    <p><b>适合：</b></p>
-    <ul>
-      <li>自研 AI 开发平台 / 产品</li>
-      <li>企业级深度定制（多租户/审计/RBAC）</li>
-      <li>研究探索</li>
-    </ul>
-    <p><b>代价：</b></p>
-    <ul>
-      <li>实现 + 维护成本极高</li>
-      <li>需要多角色协同</li>
-      <li>个人开发者基本玩不动</li>
-    </ul>
-  </div>
-
-  <div class="vcard v2">
-    <h3 style="color: var(--green);">v2 Claude Code 精简版 <span class="badge orange">最终选择</span></h3>
-    <p class="muted">基于 Claude Code 机制层，只补应用层资产</p>
-    <p><b>适合：</b></p>
-    <ul>
-      <li>个人开发者 / 小团队</li>
-      <li>已经在用 Claude Code</li>
-      <li>想快速接入现有项目</li>
-      <li>不想造轮子，要直接见效</li>
-    </ul>
-    <p><b>代价：</b></p>
-    <ul>
-      <li>绑定 Claude Code 平台</li>
-      <li>大规模并发能力受限</li>
-      <li>团队规模化后部分能力要补</li>
-    </ul>
-  </div>
-</div>
-
-<h3>逐模块对比</h3>
-<table>
-  <tr><th>模块</th><th>v1（自建）</th><th>v2（Claude Code 精简）</th></tr>
-  <tr><td>Sandbox</td><td>自建容器隔离</td><td><span class="check">Claude Code permission mode</span></td></tr>
-  <tr><td>Tool 权限</td><td>Tool Registry 9 项元信息</td><td><span class="check">settings.json allow/deny</span></td></tr>
-  <tr><td>MCP 集成</td><td>自实现协议层</td><td><span class="check">原生支持</span></td></tr>
-  <tr><td>子 Agent 调度</td><td>自建状态机 + 路由</td><td><span class="check">Task tool + .claude/agents/</span></td></tr>
-  <tr><td>Hooks 生命周期</td><td>自建事件系统</td><td><span class="check">settings.json hooks</span></td></tr>
-  <tr><td>Memory 基础</td><td>自建 5 层 + 遗忘</td><td><span class="check">CLAUDE.md + session</span></td></tr>
-  <tr><td>Skills 机制</td><td>自定义注册</td><td><span class="check">user-invocable skills</span></td></tr>
-  <tr><td>上下文管理</td><td>自建压缩策略</td><td><span class="check">auto-compaction</span></td></tr>
-  <tr><td>SPEC / Rule / Skill / 7-Agent / dev-map / 任务看板 / verify_all</td><td colspan="2" style="text-align:center;color:var(--orange);">两版本都必须自己写（项目特定）</td></tr>
-  <tr><td>Vault / 凭证</td><td>自建保险库 + 代理</td><td><span class="miss">v2 已剔除（个人项目用不上）</span></td></tr>
-  <tr><td>Token Budget 分级</td><td>绿/黄/红/熔断</td><td><span class="miss">v2 极简：按角色配模型</span></td></tr>
-  <tr><td>4 层 Eval</td><td>组件/轨迹/完成度/端到端</td><td><span class="partial">v2 极简：金标准任务手跑</span></td></tr>
-  <tr><td>Trace / 可观测</td><td>OpenTelemetry + 看板</td><td><span class="partial">v2 极简：transcript + verify 日志</span></td></tr>
-  <tr><td>多脑多手并行</td><td>自建调度器</td><td><span class="miss">暂不支持</span></td></tr>
-</table>
-
-<h3>两版本共同的"必须自己写"清单</h3>
-<table>
-  <tr><th>资产</th><th>原因</th></tr>
-  <tr><td>SPEC 文档</td><td>需求是项目特定的，没有任何平台能替代</td></tr>
-  <tr><td>CLAUDE.md 规则内容</td><td>规范和工具链是项目特定的</td></tr>
-  <tr><td>7-Agent 提示词 + 角色契约</td><td>每个项目的工作流细节不同</td></tr>
-  <tr><td>workflow.md 流程定义</td><td>哪个 Agent 先跑、回退到哪是项目决定</td></tr>
-  <tr><td>verify_all 检查项</td><td>检查什么完全取决于项目栈</td></tr>
-  <tr><td>dev-map + 任务看板</td><td>项目代码结构和历史</td></tr>
-  <tr><td>Skills 内容</td><td>具体编译/测试命令是项目特定</td></tr>
-</table>
-
-</div>
-
-<!-- ============================ TAB INTEGRATE ============================ -->
-<div id="tab-integrate" class="tab-content">
-
-<h2>Bootstrap 集成器（Claude Code 专用）</h2>
-<p class="muted">让方案能落到新项目 / 现有项目。<b>只支持 Claude Code</b>。</p>
-
-<h3>Bootstrap 形态选择</h3>
-<table>
-  <tr><th>方式</th><th>说明</th><th>推荐度</th></tr>
-  <tr><td><b>Claude Code Skill</b></td><td>在 Claude Code 内 <code>/harness-init</code> 调起，无需额外工具</td><td><span class="check">★★★ 主推</span></td></tr>
-  <tr><td><b>Git 模板仓</b></td><td><code>git clone harness-template my-app</code>，最简单</td><td><span class="partial">★★ 辅助（只新项目）</span></td></tr>
-  <tr><td><b>独立 CLI</b></td><td>跨平台通用，CI 也能跑</td><td><span class="miss">★ 暂不做</span></td></tr>
-</table>
-
-<h3>新项目集成流程</h3>
-<div class="int-flow">
-  <div class="int-step">
-    <div class="stepnum">1</div>
-    <h5>跑 init Skill</h5>
-    <div class="desc">在空目录 Claude Code 内调 <code>/harness-init</code>，选项目类型</div>
-  </div>
-  <div class="int-step">
-    <div class="stepnum">2</div>
-    <h5>生成骨架</h5>
-    <div class="desc">.claude/ + CLAUDE.md + docs/ + scripts/ 一次生成；7-Agent、Skills、verify_all 全部就位</div>
-  </div>
-  <div class="int-step">
-    <div class="stepnum">3</div>
-    <h5>磨 SPEC</h5>
-    <div class="desc">立刻和 Requirement Analyst 对话磨第一份 SPEC</div>
-  </div>
-  <div class="int-step">
-    <div class="stepnum">4</div>
-    <h5>跑首个任务</h5>
-    <div class="desc">PM Orchestrator 接手，进入 7-Agent 流水线</div>
-  </div>
-</div>
-
-<h3>现有项目集成流程（无侵入）</h3>
-<div class="int-flow">
-  <div class="int-step">
-    <div class="stepnum">1</div>
-    <h5>侦察阶段</h5>
-    <div class="desc">扫描代码：识别语言/框架/构建系统/测试栈；输出项目画像</div>
-  </div>
-  <div class="int-step">
-    <div class="stepnum">2</div>
-    <h5>抽取已有约定</h5>
-    <div class="desc">从 README / 贡献指南 / 现有 CI 中提取规则候选，从代码目录推断 dev-map 初版</div>
-  </div>
-  <div class="int-step">
-    <div class="stepnum">3</div>
-    <h5>渐进注入</h5>
-    <div class="desc">只新增 .claude/ + scripts/，不动业务代码；冲突点高亮请用户确认</div>
-  </div>
-  <div class="int-step">
-    <div class="stepnum">4</div>
-    <h5>建初始基线</h5>
-    <div class="desc">跑一次 verify_all 把当前状态写入 baseline.json，从此只升不降</div>
-  </div>
-</div>
-
-<h3>Bootstrap 命令草案（在 Claude Code 内调用）</h3>
-<pre>
-# 新项目（全栈示例）
-/harness-init --type=fullstack --stack=nextjs+nestjs+postgres
-✓ 生成 .claude/agents/ 7 个 Agent 定义
-✓ 生成 .claude/skills/build|test|verify|migrate|e2e
-✓ 生成 CLAUDE.md 规则骨架（前后端契约 + 迁移规范）
-✓ 生成 scripts/verify_all.ps1（lint + test + OpenAPI 同步 + E2E）
-✓ 写入 .claude/settings.json（hooks + 模型分配）
-✓ 生成 docs/workflow.md + dev-map.md + tasks.md 空板
-→ 下一步：和 Requirement Analyst 磨 SPEC
-
-# 新项目（纯后端示例）
-/harness-init --type=backend --stack=fastapi+postgres
-✓ 生成 .claude/agents/ + skills/
-✓ 生成 CLAUDE.md（API 契约 / 错误码 / 幂等性规则）
-✓ 生成 scripts/verify_all.ps1（pytest + ruff + alembic check + 安全扫描）
-
-# 现有项目（自动侦察栈）
-/harness-adopt --dry-run
-🔍 检测到：Next.js 14 + NestJS + Prisma + Vitest + Playwright + GitHub Actions
-📋 将抽取 12 条规则候选 → CLAUDE.md
-📁 将生成 dev-map 初版（前端 app/ + 后端 src/modules/ 推断）
-🧪 verify_all 将包装现有 pnpm build / pnpm test / playwright test
-⚠️  冲突点：已有 .eslintrc（保留）、已有 workflows/（增量追加）
-→ 跑 /harness-adopt --apply 应用
-</pre>
-
-<h3>项目类型模板（仅支持全栈 / 后端）</h3>
-<div class="modules">
-  <div class="module project">
-    <div class="mod-head"><div class="mod-title">A · 全栈（前端 + 后端 + DB）</div></div>
-    <div class="mod-body">
-      <b>规则示例</b>：API 契约 / 前后端类型同步 / 数据库迁移规范 / 环境变量管理 / 错误处理统一<br>
-      <b>verify_all 检查项</b>：
-      <ul>
-        <li>前端 lint + 类型检查（tsc / eslint）</li>
-        <li>后端 lint + 单测</li>
-        <li>OpenAPI / tRPC schema 一致性</li>
-        <li>数据库迁移可回滚</li>
-        <li>E2E 烟雾测试（Playwright 关键路径）</li>
-        <li>bundle size / API 响应时间基线</li>
-      </ul>
-      <b>典型技术栈</b>：Next.js / Nuxt / Remix · NestJS / FastAPI / Express · Prisma / Drizzle / TypeORM
-    </div>
-  </div>
-  <div class="module project">
-    <div class="mod-head"><div class="mod-title">B · 纯后端 / API 服务</div></div>
-    <div class="mod-body">
-      <b>规则示例</b>：API 契约 / 错误码规范 / 日志结构化 / 数据库事务边界 / 幂等性 / 速率限制<br>
-      <b>verify_all 检查项</b>：
-      <ul>
-        <li>lint + 类型检查</li>
-        <li>单元测试 + 集成测试</li>
-        <li>OpenAPI 校验</li>
-        <li>SQL 慢查询扫描</li>
-        <li>安全扫描（依赖漏洞 / 密钥泄露）</li>
-        <li>测试覆盖率基线只升不降</li>
-      </ul>
-      <b>典型技术栈</b>：Node/TS (NestJS / Fastify) · Python (FastAPI / Django) · Go (Gin / Echo) · Rust (Axum)
-    </div>
-  </div>
-</div>
-
-<div class="info-box" style="margin-top: 14px;">
-  <div class="info-title">📌 暂不支持的项目类型</div>
-  WPF / Unity / 纯前端 / 数据 ML 流水线等，按你的需求先不做。后续如果项目类型扩展，加新模板即可。
-</div>
-
-<div class="decision-box">
-  <h3>v2 + Bootstrap 总结建议</h3>
-  <ol>
-    <li><b>采用 v2 Claude Code 精简版</b> — 不重造轮子，专注项目层资产</li>
-    <li><b>Bootstrap 用 Claude Code Skill 形态</b>（<code>/harness-init</code> + <code>/harness-adopt</code>）</li>
-    <li><b>从 Phase 1 MVP 开始</b>，1 周跑通一条端到端链路</li>
-    <li><b>个人项目止于 Phase 2</b>；Phase 3 留给团队规模化时按需补</li>
-    <li><b>剔除模块按需还能再加回来</b>（Vault / Eval / Trace 不是永远不做，是先不做）</li>
-  </ol>
-</div>
-
-</div>
-
-<!-- ============================ FOOTER ============================ -->
-<div style="text-align: center; margin-top: 60px; padding-top: 24px; border-top: 1px solid var(--border); color: var(--text-dim); font-size: 13px;">
-  融合自：<br>
-  《万字干货！Harness Engineering 如何工程化落地？》· 白家杰 · 2026-04-22<br>
-  《Harness Engineering 实践心得：如何高效驾驭 AI？》· 白家杰 · 2026-04-28<br>
-  《深入浅出 Harness Engineering 之核心模式与理念》· 张碧泉 · 2026-04-29<br>
-  《从零设计生产级 Multi-Agent Harness》· 李伟山 · 2026-05-13
+<div style="text-align: center; margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--text-dim); font-size: 12px;">
+  Harness Engineering · v0.1.0 · 2026-05-15<br>
+  Built for personal/small-team Claude Code workflows. MIT License.
 </div>
 
 </div>
