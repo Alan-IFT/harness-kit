@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Harness Engineering · 使用流程 Walkthrough</title>
+<style>
+  :root {
+    --bg: #0f1419;
+    --panel: #161b22;
+    --panel-2: #1c2128;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-dim: #8b949e;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --yellow: #d29922;
+    --red: #f85149;
+    --purple: #bc8cff;
+    --orange: #ffa657;
+    --cyan: #39d3bb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.65;
+  }
+  .container { max-width: 1100px; margin: 0 auto; padding: 40px 32px 80px; }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 28px;
+    margin-bottom: 32px;
+  }
+  h1 {
+    font-size: 30px;
+    margin: 0 0 12px;
+    background: linear-gradient(135deg, #58a6ff 0%, #bc8cff 50%, #39d3bb 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .subtitle { color: var(--text-dim); font-size: 15px; }
+
+  h2 {
+    font-size: 22px;
+    margin: 40px 0 16px;
+    padding: 0 0 4px 14px;
+    border-left: 4px solid var(--accent);
+  }
+  h2 .num {
+    display: inline-block;
+    background: var(--accent);
+    color: #000;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 13px;
+    margin-right: 10px;
+    vertical-align: middle;
+  }
+  h3 { font-size: 17px; margin: 24px 0 10px; color: var(--text); }
+  h4 { font-size: 15px; margin: 18px 0 8px; }
+  p, li { color: var(--text); font-size: 14.5px; }
+  .muted { color: var(--text-dim); font-size: 13.5px; }
+
+  code {
+    background: var(--panel-2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--orange);
+    font-family: "JetBrains Mono", Consolas, monospace;
+  }
+  pre {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    overflow-x: auto;
+    font-size: 13px;
+    color: var(--cyan);
+    font-family: "JetBrains Mono", Consolas, monospace;
+    line-height: 1.55;
+  }
+  pre code { background: transparent; padding: 0; color: inherit; }
+
+  /* Step blocks */
+  .step {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 28px;
+    margin: 24px 0;
+    position: relative;
+  }
+  .step .step-tag {
+    position: absolute;
+    top: -14px;
+    left: 24px;
+    background: linear-gradient(135deg, var(--accent), var(--purple));
+    color: #fff;
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 12px;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+  }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0;
+    background: var(--panel);
+    border-radius: 8px;
+    overflow: hidden;
+    font-size: 13.5px;
+  }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { background: var(--panel-2); font-weight: 600; color: var(--accent); }
+  td:first-child { color: var(--text); font-weight: 500; }
+  tr:last-child td { border-bottom: none; }
+
+  /* Stage timeline */
+  .stage {
+    background: var(--panel);
+    border-left: 4px solid var(--accent);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 14px 0;
+  }
+  .stage.stage-1 { border-left-color: var(--cyan); }
+  .stage.stage-2 { border-left-color: var(--accent); }
+  .stage.stage-3 { border-left-color: var(--orange); }
+  .stage.stage-4 { border-left-color: var(--red); }
+  .stage.stage-5 { border-left-color: var(--purple); }
+  .stage.stage-6 { border-left-color: var(--green); }
+  .stage.stage-7 { border-left-color: var(--accent); }
+  .stage .stage-head {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 10px;
+  }
+  .stage .stage-num {
+    background: var(--panel-2);
+    color: var(--accent);
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: monospace;
+  }
+  .stage .stage-name { font-weight: 700; font-size: 15px; }
+  .stage .stage-time { color: var(--text-dim); font-size: 12px; margin-left: auto; }
+  .stage .stage-body { font-size: 14px; }
+
+  /* Question card */
+  .q-card {
+    background: rgba(255, 166, 87, 0.08);
+    border: 1px solid var(--orange);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 12px 0;
+  }
+  .q-card .q-title {
+    color: var(--orange);
+    font-weight: 700;
+    margin-bottom: 8px;
+    font-size: 13px;
+  }
+  .q-card ul { margin: 4px 0; padding-left: 20px; font-size: 13.5px; }
+
+  /* File tree */
+  .filetree {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    font-family: "JetBrains Mono", Consolas, monospace;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--cyan);
+    margin: 12px 0;
+    overflow-x: auto;
+  }
+  .filetree .dir { color: var(--accent); font-weight: 600; }
+  .filetree .file { color: var(--text); }
+  .filetree .cmt { color: var(--text-dim); }
+  .filetree .gen { color: var(--purple); }
+  .filetree .sot { color: var(--orange); font-weight: 600; }
+
+  /* Info / alert / success */
+  .alert {
+    border-left: 3px solid var(--orange);
+    padding: 12px 18px;
+    background: rgba(255, 166, 87, 0.05);
+    border-radius: 6px;
+    color: var(--text);
+    margin: 14px 0;
+    font-size: 14px;
+  }
+  .alert .alert-title {
+    font-weight: 700;
+    color: var(--orange);
+    margin-bottom: 6px;
+  }
+  .info-card, .success-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin: 14px 0;
+    font-size: 14px;
+  }
+  .info-card { border-left: 4px solid var(--cyan); }
+  .success-card { border-left: 4px solid var(--green); }
+  .info-card h4 { color: var(--cyan); margin-top: 0; }
+  .success-card h4 { color: var(--green); margin-top: 0; }
+
+  /* TOC */
+  .toc {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 22px;
+    margin-bottom: 30px;
+    font-size: 14px;
+  }
+  .toc-title { font-weight: 700; margin-bottom: 8px; color: var(--accent); }
+  .toc a {
+    color: var(--text-dim);
+    text-decoration: none;
+    margin-right: 16px;
+    line-height: 2;
+  }
+  .toc a:hover { color: var(--accent); }
+
+  /* Inline kbd-like */
+  .kbd {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 7px;
+    font-family: monospace;
+    font-size: 13px;
+    color: var(--text);
+  }
+
+  /* Verdict labels */
+  .verdict {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    margin-left: 6px;
+  }
+  .verdict.ready { background: rgba(63, 185, 80, 0.2); color: var(--green); }
+  .verdict.approved { background: rgba(63, 185, 80, 0.2); color: var(--green); }
+  .verdict.blocked { background: rgba(248, 81, 73, 0.2); color: var(--red); }
+  .verdict.cond { background: rgba(210, 153, 34, 0.2); color: var(--yellow); }
+
+  /* Quote */
+  .quote {
+    border-left: 3px solid var(--cyan);
+    padding: 10px 18px;
+    background: rgba(57, 211, 187, 0.05);
+    border-radius: 6px;
+    font-style: italic;
+    color: var(--text-dim);
+    margin: 14px 0;
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>使用流程 Walkthrough</h1>
+  <div class="subtitle">
+    从"我刚装上 Harness"到"我用它交付了 todo-list 的 CSV 导出功能"的完整流程，配真实例子贯穿全程。
+  </div>
+</header>
+
+<div class="toc">
+  <div class="toc-title">目录</div>
+  <a href="#overview">总览</a>
+  <a href="#step1">Step 1 安装</a>
+  <a href="#step2">Step 2 项目 bootstrap</a>
+  <a href="#step3">Step 3 派发任务（完整例子）</a>
+  <a href="#step4">Step 4 日常命令</a>
+  <a href="#step5">Step 5 进化护栏</a>
+  <a href="#discipline">关键纪律</a>
+  <a href="#timing">耗时与边界</a>
+  <a href="#troubleshooting">故障排查</a>
+</div>
+
+<h2 id="overview">总览（一张图）</h2>
+
+<pre>┌─────────────────────────────────────────────────────────────────────┐
+│  一次性 (10 分钟)                                                    │
+│  ① 装 Skills → ~/.claude/skills/                                    │
+│  ② 在项目目录跑 /harness-init (新项目) 或 /harness-adopt (现有)     │
+└─────────────────────────────────────────────────────────────────────┘
+                                  ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│  日常 (每个 feature / bug)                                          │
+│  ③ 在 Claude Code 里说 "Take this task: ..."                        │
+│  ④ PM 把任务派给 7 个 Agent 走流水线                                │
+│  ⑤ 你只在 2-3 个关键节点确认（歧义答复、闸门 review、最终）         │
+│  ⑥ 任务完成 → 代码已写 + 测试已加 + 文档归档                        │
+└─────────────────────────────────────────────────────────────────────┘
+                                  ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│  系统进化 (AI 反复犯错时)                                            │
+│  ⑦ 编辑 .harness/rules/ 或 .harness/skills/ → 跑 harness-sync       │
+│  ⑧ 下次任务 AI 自动遵守新规矩                                       │
+└─────────────────────────────────────────────────────────────────────┘</pre>
+
+<!-- ====================== Step 1 ====================== -->
+<div class="step" id="step1">
+  <div class="step-tag">STEP 1 · 一次性</div>
+  <h3 style="margin-top: 8px;">装 Skills</h3>
+
+  <pre><span style="color:var(--text-dim)"># Windows</span>
+git clone &lt;repo-url&gt; ~/harness-engineering
+&amp; ~/harness-engineering/install.ps1
+
+<span style="color:var(--text-dim)"># macOS / Linux</span>
+git clone &lt;repo-url&gt; ~/harness-engineering
+~/harness-engineering/install.sh</pre>
+
+  <p>装完后 <code>~/.claude/skills/</code> 里有 4 个 skill 目录：</p>
+
+  <div class="filetree">
+~/.claude/skills/
+├── <span class="dir">harness-init/</span>
+├── <span class="dir">harness-adopt/</span>
+├── <span class="dir">harness-verify/</span>
+└── <span class="dir">harness-status/</span>
+  </div>
+
+  <p>Claude Code 任何会话都能看到 <code>/harness-init</code> 等命令。</p>
+</div>
+
+<!-- ====================== Step 2 ====================== -->
+<div class="step" id="step2">
+  <div class="step-tag">STEP 2 · 每个新项目</div>
+  <h3 style="margin-top: 8px;">场景 A：新项目 bootstrap</h3>
+
+  <pre>mkdir my-todo-app &amp;&amp; cd my-todo-app
+claude     <span style="color:var(--text-dim)"># 启动 Claude Code</span></pre>
+
+  <p>在 Claude Code 会话里：</p>
+
+  <pre>&gt; /harness-init</pre>
+
+  <p>Skill 弹出 <b>4 个问题</b>（一次性问完）：</p>
+
+  <table>
+    <tr><th>问题</th><th>选项</th><th>我们例子选</th></tr>
+    <tr><td>Project type?</td><td>Fullstack / Backend</td><td><b>Fullstack</b></td></tr>
+    <tr><td>Stack?</td><td>自由输入</td><td><b>Next.js 14 + NestJS + Prisma + Postgres</b></td></tr>
+    <tr><td>Enable verify_all hook on Stop?</td><td>Yes / No</td><td><b>Yes</b></td></tr>
+    <tr><td>Developer partitioning?</td><td>Partitioned (default) / Single</td><td><b>Partitioned</b></td></tr>
+  </table>
+
+  <p>Skill 自动做：</p>
+  <ol>
+    <li>复制模板（<code>templates/common/</code> + <code>templates/fullstack/</code>）到当前目录</li>
+    <li>占位符替换（PROJECT_NAME=my-todo-app, STACK=...）</li>
+    <li>跑 <code>scripts/harness-sync.ps1</code> 生成 <code>.claude/agents/</code>、<code>.claude/skills/</code>、<code>CLAUDE.md</code></li>
+    <li>写 <code>scripts/baseline.json</code> 初始基线（测试数=0）</li>
+    <li><code>git init -b main</code>（如果还不是 git repo）</li>
+    <li>输出汇总</li>
+  </ol>
+
+  <p>完成后你的项目结构：</p>
+
+  <div class="filetree">
+<span class="dir">my-todo-app/</span>
+├── <span class="sot dir">.harness/</span>                      <span class="cmt">← 你编辑这里（SOT）</span>
+│   ├── <span class="file">agents/</span>
+│   │   ├── pm-orchestrator.md
+│   │   ├── requirement-analyst.md
+│   │   ├── solution-architect.md
+│   │   ├── gate-reviewer.md
+│   │   ├── developer.md          <span class="cmt"># generic fallback</span>
+│   │   ├── dev-frontend.md       <span class="cmt"># 分区</span>
+│   │   ├── dev-backend.md        <span class="cmt"># 分区</span>
+│   │   ├── dev-db.md             <span class="cmt"># 分区</span>
+│   │   ├── code-reviewer.md
+│   │   └── qa-tester.md
+│   ├── <span class="file">rules/</span>
+│   │   ├── 00-core.md           <span class="cmt"># 项目规则</span>
+│   │   └── 50-fullstack.md      <span class="cmt"># fullstack 专属</span>
+│   └── <span class="file">skills/</span>
+│       ├── build/SKILL.md
+│       ├── test/SKILL.md
+│       └── verify/SKILL.md
+│
+├── <span class="gen dir">.claude/</span>                       <span class="cmt">← 生成（不要编辑）</span>
+│   ├── agents/      <span class="cmt"># 与 .harness/agents/ 一致</span>
+│   ├── skills/
+│   └── settings.json
+├── <span class="gen file">CLAUDE.md</span>                     <span class="cmt">← 从 .harness/rules/ 合成</span>
+│
+├── <span class="dir">docs/</span>
+│   ├── workflow.md
+│   ├── spec/README.md
+│   ├── dev-map.md                 <span class="cmt"># 空模板，AI 在工作中填充</span>
+│   ├── tasks.md                   <span class="cmt"># 空看板</span>
+│   └── features/                  <span class="cmt"># 每个任务一个子目录</span>
+│
+├── <span class="dir">scripts/</span>
+│   ├── verify_all.{ps1,sh}
+│   ├── harness-sync.{ps1,sh}
+│   └── baseline.json              <span class="cmt"># test_count: 0</span>
+│
+└── <span class="dir">evals/golden-tasks.md</span>
+  </div>
+
+  <div class="success-card">
+    这就是骨架。还没有业务代码 — 只有 Harness 资产。
+  </div>
+
+  <h3>场景 B：现有项目（已有代码）</h3>
+
+  <pre>cd my-existing-project
+claude
+&gt; /harness-adopt</pre>
+
+  <p>Skill 会：</p>
+  <ol>
+    <li><b>侦察</b> — 扫包文件、测试配置、CI、README/CONTRIBUTING 找规范候选</li>
+    <li><b>询问</b> — 同 init 的 4 个问题，但 pre-fill 检测到的值</li>
+    <li><b>写方案</b> — <code>.harness-adopt/PLAN.md</code>，列要加什么、冲突在哪</li>
+    <li><b>等你确认</b> — "Apply this plan? [yes / no / show plan]"</li>
+    <li><b>应用</b> — 不修改任何现有文件，只新增</li>
+    <li><b>跑 verify_all 捕获 baseline</b> — 当前测试数作为基线（不从 0 开始）</li>
+  </ol>
+</div>
+
+<!-- ====================== Step 3 ====================== -->
+<div class="step" id="step3">
+  <div class="step-tag">STEP 3 · 日常派任务（完整例子）</div>
+  <h3 style="margin-top: 8px;">具体功能：导出所有 todos 为 CSV 文件</h3>
+
+  <p>在 Claude Code 会话里说一句话：</p>
+
+  <pre>&gt; Take this task: Add a CSV export button to the todo list page that downloads all todos.</pre>
+
+  <p>PM Orchestrator 接到任务。<b>接下来都是 AI 做的，你只在卡点确认</b>。</p>
+
+  <!-- Stage 1 -->
+  <div class="stage stage-1">
+    <div class="stage-head">
+      <span class="stage-num">Stage 1</span>
+      <span class="stage-name">requirement-analyst — 需求分析</span>
+      <span class="stage-time">~2-3 min</span>
+    </div>
+    <div class="stage-body">
+      <p>PM 调起 Requirement Analyst。Analyst 做：</p>
+      <ol>
+        <li>创建 <code>docs/features/csv-export-todos/INPUT.md</code>（保留你的原话）</li>
+        <li>读 <code>docs/tasks.md</code>（任务看板）— 空的，无历史</li>
+        <li>读 <code>docs/spec/</code>（无具体 spec）</li>
+        <li>写 <code>01_REQUIREMENT_ANALYSIS.md</code>，识别出 <b>3 个歧义</b></li>
+      </ol>
+
+      <div class="q-card">
+        <div class="q-title">📋 你被询问（AskUserQuestion UI 弹出）</div>
+        <ol>
+          <li>CSV 应该包含哪些字段？ [A] id, text, done &nbsp; <b>[B] id, text, done, created_at ←选</b> &nbsp; [C] 其他</li>
+          <li>包含已完成 todos 吗？ <b>[A] 全部 ←选</b> &nbsp; [B] 仅未完成 &nbsp; [C] 让用户选</li>
+          <li>文件名格式？ <b>[A] todos-2026-05-15.csv ←选</b> &nbsp; [B] todos.csv &nbsp; [C] todos-{用户输入}.csv</li>
+        </ol>
+      </div>
+
+      <p>Analyst 完成需求文档，<span class="verdict ready">READY</span></p>
+
+      <p class="muted">文档输出（节选）：</p>
+      <pre>## Goal
+Allow users to download all their todos as a CSV file with one click.
+
+## Acceptance criteria
+- AC-1: button renders on /todos page, accessible (aria-label).
+- AC-2: click results in a Content-Disposition: attachment response.
+- AC-3: file mime type is text/csv.
+- AC-4: filename matches todos-YYYY-MM-DD.csv pattern.
+- AC-5: row order matches client-side created_at desc.</pre>
+    </div>
+  </div>
+
+  <!-- Stage 2 -->
+  <div class="stage stage-2">
+    <div class="stage-head">
+      <span class="stage-num">Stage 2</span>
+      <span class="stage-name">solution-architect — 方案设计</span>
+      <span class="stage-time">~3-5 min</span>
+    </div>
+    <div class="stage-body">
+      <p>Architect 做：</p>
+      <ol>
+        <li>读需求文档</li>
+        <li><b>读代码</b> — grep <code>todos</code> 找现有实现</li>
+        <li>读 <code>docs/dev-map.md</code>（空，但能从目录推断）</li>
+        <li>写 <code>02_SOLUTION_DESIGN.md</code></li>
+      </ol>
+
+      <p>关键章节（v0.4+ 强制要求）— <b>Partition assignment 表</b>：</p>
+
+      <table>
+        <tr><th>File</th><th>Partition</th><th>Action</th><th>Dep</th></tr>
+        <tr><td>apps/api/src/todos/todos.service.ts</td><td><b>dev-backend</b></td><td>edit (加 listForExport)</td><td>—</td></tr>
+        <tr><td>apps/api/src/todos/todos.controller.ts</td><td><b>dev-backend</b></td><td>edit (加 GET endpoint)</td><td>depends on service</td></tr>
+        <tr><td>apps/web/src/lib/csv.ts</td><td><b>dev-frontend</b></td><td>new</td><td>—</td></tr>
+        <tr><td>apps/web/src/components/ExportButton.tsx</td><td><b>dev-frontend</b></td><td>new</td><td>depends on csv.ts</td></tr>
+        <tr><td>apps/web/src/app/todos/page.tsx</td><td><b>dev-frontend</b></td><td>edit (挂载 button)</td><td>depends on ExportButton</td></tr>
+      </table>
+
+      <p><b>Dispatch order</b>: 1) dev-backend &nbsp; 2) dev-frontend &nbsp; (无 schema 变更，dev-db 不参与)</p>
+      <p><b>Parallelism</b>: None — frontend consumes backend's new endpoint.</p>
+
+      <p><span class="verdict ready">READY</span></p>
+    </div>
+  </div>
+
+  <!-- Stage 3 -->
+  <div class="stage stage-3">
+    <div class="stage-head">
+      <span class="stage-num">Stage 3</span>
+      <span class="stage-name">gate-reviewer — 闸门审查</span>
+      <span class="stage-time">~2 min</span>
+    </div>
+    <div class="stage-body">
+      <p>Gate Reviewer 做 <b>8 维度审计</b>：</p>
+      <table>
+        <tr><th>维度</th><th>结论</th></tr>
+        <tr><td>需求完整性</td><td>PASS — 所有 AC 可测</td></tr>
+        <tr><td>设计完整性</td><td>PASS</td></tr>
+        <tr><td>复用正确性</td><td>PASS — <code>todosService.list()</code> 确实存在（gate 实际打开文件验证）</td></tr>
+        <tr><td>风险覆盖</td><td><b>WARN</b> — 大 todo list 内存压力未提；建议加默认 limit=10000</td></tr>
+        <tr><td>迁移安全</td><td>PASS — 无 schema 变更</td></tr>
+        <tr><td>边界处理</td><td>PASS</td></tr>
+        <tr><td>测试可行性</td><td>PASS</td></tr>
+        <tr><td>分区清晰</td><td>PASS</td></tr>
+      </table>
+
+      <p><span class="verdict cond">APPROVED WITH CONDITION</span>: 加默认 limit=10000，超出则警告（不强制 fail）</p>
+      <p>PM 决策：把 condition 写进 design 备注，advance to dev。</p>
+    </div>
+  </div>
+
+  <!-- Stage 4 -->
+  <div class="stage stage-4">
+    <div class="stage-head">
+      <span class="stage-num">Stage 4</span>
+      <span class="stage-name">派分区开发（按 Architect 指定的顺序）</span>
+      <span class="stage-time">~10-20 min</span>
+    </div>
+    <div class="stage-body">
+      <h4>4a · dev-backend 接手</h4>
+      <ol>
+        <li>读 01-03 文档 + CLAUDE.md</li>
+        <li>读 <code>apps/api/src/todos/todos.service.ts</code>（既有代码）</li>
+        <li>跑 verify_all 捕获 baseline</li>
+        <li>实现：</li>
+      </ol>
+      <pre><span style="color:var(--text-dim)">// apps/api/src/todos/todos.service.ts</span>
+async listForExport(limit: number = 10000): Promise&lt;Todo[]&gt; {
+  return this.prisma.todo.findMany({
+    take: limit,
+    orderBy: { createdAt: 'desc' },
+  });
+}
+<span style="color:var(--text-dim)">// apps/api/src/todos/todos.controller.ts</span>
+@Get('export.csv')
+async exportCsv(@Res() res: Response) {
+  const todos = await this.todosService.listForExport();
+  const filename = `todos-${new Date().toISOString().slice(0, 10)}.csv`;
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.send(this.toCsv(todos));
+}</pre>
+      <ol start="5">
+        <li>加单测覆盖 <code>listForExport</code></li>
+        <li>跑 verify_all → PASS</li>
+        <li>写 <code>04a_DEVELOPMENT_backend.md</code></li>
+      </ol>
+      <p><span class="verdict ready">READY FOR REVIEW (backend partition complete)</span></p>
+
+      <h4 style="margin-top: 20px;">4b · dev-frontend 接手</h4>
+      <pre><span style="color:var(--text-dim)">// apps/web/src/lib/csv.ts (no deps)</span>
+export function downloadCsv(filename: string, csv: string) {
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+<span style="color:var(--text-dim)">// apps/web/src/components/ExportButton.tsx</span>
+export function ExportButton() {
+  const handleClick = async () =&gt; {
+    const res = await fetch('/api/todos/export.csv');
+    const csv = await res.text();
+    const filename = `todos-${new Date().toISOString().slice(0, 10)}.csv`;
+    downloadCsv(filename, csv);
+  };
+  return &lt;button onClick={handleClick} aria-label="Export todos"&gt;Export CSV&lt;/button&gt;;
+}</pre>
+      <p>加测试 + 跑 verify_all → PASS → <code>04b_DEVELOPMENT_frontend.md</code></p>
+      <p><span class="verdict ready">READY FOR REVIEW (frontend partition complete)</span></p>
+
+      <p>PM 标记两个 partition 都 complete → advance to stage 5。</p>
+    </div>
+  </div>
+
+  <!-- Stage 5 -->
+  <div class="stage stage-5">
+    <div class="stage-head">
+      <span class="stage-num">Stage 5</span>
+      <span class="stage-name">code-reviewer — 代码审查</span>
+      <span class="stage-time">~3-5 min</span>
+    </div>
+    <div class="stage-body">
+      <p>6 维度审查，关键是<b>对照需求每条 AC</b>：</p>
+      <table>
+        <tr><th>Criterion</th><th>Implementation</th><th>Status</th></tr>
+        <tr><td>AC-1 button renders, accessible</td><td><code>page.tsx:14</code>, <code>ExportButton:6 aria-label</code></td><td>✅</td></tr>
+        <tr><td>AC-2 Content-Disposition: attachment</td><td><code>controller:32</code></td><td>✅</td></tr>
+        <tr><td>AC-3 text/csv mime</td><td><code>controller:31</code></td><td>✅</td></tr>
+        <tr><td>AC-4 filename pattern</td><td><code>controller:34</code>, <code>ExportButton:11</code></td><td>✅</td></tr>
+        <tr><td>AC-5 row order created_at desc</td><td><code>service:42 orderBy: { createdAt: 'desc' }</code></td><td>✅</td></tr>
+      </table>
+
+      <p>Findings:</p>
+      <ul>
+        <li>MINOR [PERF]: <code>listForExport</code> 在内存里返回所有行。当前规模 OK；标记到 v0.6 看是否要 streaming。</li>
+        <li>NIT [STYLE]: <code>csv.ts</code> 用 named export 而不是 default。</li>
+      </ul>
+
+      <p><span class="verdict approved">APPROVED (0 CRITICAL / 0 MAJOR / 1 MINOR / 1 NIT)</span></p>
+    </div>
+  </div>
+
+  <!-- Stage 6 -->
+  <div class="stage stage-6">
+    <div class="stage-head">
+      <span class="stage-num">Stage 6</span>
+      <span class="stage-name">qa-tester — 测试验证</span>
+      <span class="stage-time">~3-5 min</span>
+    </div>
+    <div class="stage-body">
+      <ol>
+        <li>加测试覆盖每条 AC：
+          <ul>
+            <li><code>GET /api/todos/export.csv returns text/csv</code></li>
+            <li><code>CSV contains expected columns</code></li>
+            <li><code>filename matches date pattern</code></li>
+            <li><code>empty list returns header-only CSV</code> (boundary)</li>
+            <li><code>large list (10000 todos) succeeds</code> (perf check)</li>
+          </ul>
+        </li>
+        <li>跑 verify_all → PASS</li>
+        <li>更新 <code>scripts/baseline.json</code>：test_count 从 38 升到 <b>43</b></li>
+        <li>写 <code>06_TEST_REPORT.md</code></li>
+      </ol>
+      <p><span class="verdict approved">APPROVED FOR DELIVERY</span></p>
+    </div>
+  </div>
+
+  <!-- Stage 7 -->
+  <div class="stage stage-7">
+    <div class="stage-head">
+      <span class="stage-num">Stage 7</span>
+      <span class="stage-name">pm-orchestrator — 收尾</span>
+      <span class="stage-time">~1 min</span>
+    </div>
+    <div class="stage-body">
+      <p>PM 写 <code>07_DELIVERY.md</code>：</p>
+      <pre># Delivery Summary
+- Task: csv-export-todos
+- Stages: 7 (no rollbacks)
+- Final verify_all: PASS
+- Baseline: test_count 38 → 43 (+5)
+- Files changed: 6 (5 new, 1 edit)
+- Outstanding risks: large-list perf (MINOR, flagged for v0.6)</pre>
+
+      <p>更新 <code>docs/tasks.md</code>：</p>
+      <pre>## Completed tasks
+| T-001 | csv-export-todos | Delivered | 2026-05-15 | docs/features/csv-export-todos/ |</pre>
+
+      <p>如果引入新模块，PM 还会更新 <code>docs/dev-map.md</code>。</p>
+    </div>
+  </div>
+
+  <div class="success-card">
+    <h4>✅ 任务完成</h4>
+    <p>你只回答了 <b>3 个问题</b>（需求阶段的 AskUserQuestion）。代码、测试、文档、基线 — 全部写好。</p>
+  </div>
+</div>
+
+<!-- ====================== Step 4 ====================== -->
+<div class="step" id="step4">
+  <div class="step-tag">STEP 4 · 日常其他命令</div>
+
+  <h3 style="margin-top: 8px;"><code>/harness-verify</code> — 验仓库健康</h3>
+  <pre>&gt; /harness-verify
+verify_all: PASS
+  19 checks: 19 PASS, 0 WARN, 0 FAIL
+  Baseline: test_count 43
+  Last run: just now</pre>
+
+  <h3><code>/harness-status</code> — 健康度快照</h3>
+  <pre>&gt; /harness-status
+
+Health: 11/11
+Assets:
+  ✓ CLAUDE.md present
+  ✓ docs/workflow.md present
+  ...
+Baseline:
+  test_count: 43 (was 38)
+  last_updated: 2026-05-15
+Active tasks: (none)
+Recent (last 5):
+  T-001 csv-export-todos  Delivered  2026-05-15</pre>
+</div>
+
+<!-- ====================== Step 5 ====================== -->
+<div class="step" id="step5">
+  <div class="step-tag">STEP 5 · AI 反复犯错时</div>
+  <h3 style="margin-top: 8px;">改 Harness（不是重新跑任务）</h3>
+
+  <div class="alert">
+    <div class="alert-title">⚠️ 关键心态</div>
+    AI 犯了同一个错 2-3 次 → <b>不要让它再试一遍</b>。补一条护栏，让下次自动避免。
+  </div>
+
+  <p>假设 AI 反复直接 <code>import { PrismaClient }</code>，而你的项目要求用 <code>PrismaService</code>。</p>
+
+  <h4>1. 编辑 <code>.harness/rules/80-internal.md</code>（新文件，80- 表示项目特定）</h4>
+  <pre>## Internal API conventions
+
+- Never `import { PrismaClient }` directly. Use `PrismaService`
+  from `@/services/prisma`. PrismaService manages connection
+  pooling and ensures clean shutdown.</pre>
+
+  <h4>2. 同步 binding</h4>
+  <pre>pwsh scripts/harness-sync.ps1</pre>
+  <p>现在 <code>CLAUDE.md</code> 自动包含了这条规则。</p>
+
+  <h4>3. （可选，更稳）加机器检查到 verify_all</h4>
+  <pre>Step "X.1" "No direct PrismaClient import" {
+    $hits = git grep -E "from '@prisma/client'" -- 'src/**/*.ts' ':!src/services/prisma.ts'
+    if ($hits) { throw "Direct PrismaClient import in:`n$hits" }
+}</pre>
+
+  <p>跑 verify_all 确认新检查通过。</p>
+
+  <div class="success-card">
+    下次 AI 工作时：会读到新规则；即使忘了，verify_all 拦它；同一个错不会再犯。
+  </div>
+</div>
+
+<!-- ====================== Discipline ====================== -->
+<h2 id="discipline">关键纪律（系统自动强制）</h2>
+
+<table>
+  <tr><th>纪律</th><th>谁强制</th></tr>
+  <tr><td>编辑 <code>.harness/</code>，不编辑 <code>.claude/</code> 或 <code>CLAUDE.md</code></td><td>verify_all step E.2</td></tr>
+  <tr><td>测试数只能升不能降</td><td>scripts/baseline.json 比较</td></tr>
+  <tr><td>发现问题的人不能修问题（Reviewer 不改代码，Gate 不改需求）</td><td>PM 的回退路由规则</td></tr>
+  <tr><td>下游不能改上游文档（只能提阻塞回退）</td><td>PM 提示词</td></tr>
+  <tr><td>同阶段回退 ≥3 次 → 停下来问人</td><td>PM 自动停</td></tr>
+  <tr><td>PM 只做路由，不做专业判断</td><td>PM 提示词</td></tr>
+  <tr><td>分区 agent 越界 → BLOCKED ON PARTITION</td><td>每个 dev-* 的提示词</td></tr>
+</table>
+
+<!-- ====================== Timing ====================== -->
+<h2 id="timing">耗时与边界</h2>
+
+<h3>一个完整任务大概多久？</h3>
+
+<table>
+  <tr><th>任务规模</th><th>你回答问题次数</th><th>AI 总耗时</th></tr>
+  <tr><td>单文件 typo 修复</td><td>0</td><td>&lt;5 min</td></tr>
+  <tr><td>单模块小功能（如 CSV export）</td><td>2-3</td><td>20-40 min</td></tr>
+  <tr><td>跨分区中型功能（新 entity + API + UI）</td><td>3-5</td><td>1-2 hours</td></tr>
+  <tr><td>跨服务大改</td><td>5-10</td><td>半天</td></tr>
+</table>
+
+<p>时间主要花在：AI 读上下文 + 写文档（每 stage 1-3 min）· AI 写代码 + 调试（dev stage 5-15 min）· 跑 verify_all（每次 30s - 5 min）· 你回答 AskUserQuestion（你的时间）。</p>
+
+<h3>不会发生什么（安全边界）</h3>
+
+<div class="info-card">
+  <ul>
+    <li><b>不会</b>自动 push 到 git remote — 这是你的决定</li>
+    <li><b>不会</b>自动跑 <code>npm install</code> 或装新依赖 — adopt 流程明确避免</li>
+    <li><b>不会</b>碰生产数据库 — dev-db 硬规则</li>
+    <li><b>不会</b>修改 <code>.github/workflows/</code> — adopt 流程明确避免</li>
+    <li><b>不会</b>绕过 verify_all — 没办法绕，是 hard gate</li>
+    <li><b>不会</b>编辑你的 README 或 CONTRIBUTING — adopt 只读这些</li>
+    <li><b>不会</b>修改 <code>.harness-adopt/PLAN.md</code> 之外的任何东西在 user 同意前</li>
+  </ul>
+</div>
+
+<!-- ====================== Troubleshooting ====================== -->
+<h2 id="troubleshooting">故障排查</h2>
+
+<table>
+  <tr><th>问题</th><th>怎么办</th></tr>
+  <tr><td>AI 回滚 ≥3 次到同一 stage</td><td>PM 自动停，问你；说明需求或设计有内在矛盾</td></tr>
+  <tr><td>verify_all 失败看不懂</td><td>看 <code>scripts/verification_history.log</code>；E.* 步骤说明在 dev-map</td></tr>
+  <tr><td><code>.harness/</code> 和 <code>.claude/</code> 不一致</td><td><code>pwsh scripts/harness-sync.ps1</code></td></tr>
+  <tr><td>改完 Harness 不知道是否破坏什么</td><td>跑 <code>scripts/test-init.ps1</code> + <code>scripts/test-real-project.ps1</code></td></tr>
+  <tr><td>Skills 在 Claude Code 里找不到</td><td><code>~/.claude/skills/harness-init/SKILL.md</code> 是否存在；重启 Claude Code</td></tr>
+  <tr><td>CLAUDE.md 改完不见效</td><td>你改的是生成的副本；要改 <code>.harness/rules/</code> + 跑 sync</td></tr>
+</table>
+
+<div class="quote">
+  这套系统的核心：你提需求，AI 走流水线交付；AI 反复犯错时，你补护栏，下次自动避免。
+  护栏只表达一次，之后每行代码都被自动守护。
+</div>
+
+<div style="text-align: center; margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--text-dim); font-size: 12px;">
+  Harness Engineering · v0.5.0 walkthrough<br>
+  See also: <a href="../architecture.html" style="color: var(--accent);">architecture.html</a> · <a href="workflow.md" style="color: var(--accent);">workflow.md</a> · <a href="concepts.md" style="color: var(--accent);">concepts.md</a>
+</div>
+
+</div>
+</body>
+</html>

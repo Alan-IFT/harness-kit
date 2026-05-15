@@ -100,7 +100,7 @@ Take this task: Add CSV export to the orders page.
 
 详细使用见 [docs/getting-started.md](docs/getting-started.md)。
 
-完整流程 + 真实例子（todo-list CSV 导出，贯穿 7 个 stage）：见 [docs/walkthrough.md](docs/walkthrough.md)。
+**完整流程 + 真实例子**（todo-list CSV 导出，贯穿 7 个 stage，可视化）：浏览器打开 [docs/walkthrough.html](docs/walkthrough.html)。
 
 ## 架构
 
