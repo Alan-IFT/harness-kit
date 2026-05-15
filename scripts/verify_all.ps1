@@ -123,8 +123,8 @@ Step "E.3" "evals/golden-tasks.md present" {
 }
 
 # F. Symmetry (PowerShell <-> Bash pairs)
-Step "F.1" "verify_all and sync-self exist in both .ps1 and .sh" {
-    foreach ($pair in @("verify_all", "sync-self")) {
+Step "F.1" "verify_all, sync-self, test-init exist in both .ps1 and .sh" {
+    foreach ($pair in @("verify_all", "sync-self", "test-init")) {
         if (-not (Test-Path "scripts/$pair.ps1")) { throw "Missing scripts/$pair.ps1" }
         if (-not (Test-Path "scripts/$pair.sh")) { throw "Missing scripts/$pair.sh" }
     }

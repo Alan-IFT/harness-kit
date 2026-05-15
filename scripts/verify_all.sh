@@ -102,7 +102,7 @@ done
 
 # F.1 — script symmetry
 missing_sym=""
-for pair in verify_all sync-self; do
+for pair in verify_all sync-self test-init; do
     [[ -f "scripts/$pair.ps1" ]] || missing_sym="$missing_sym scripts/$pair.ps1"
     [[ -f "scripts/$pair.sh" ]] || missing_sym="$missing_sym scripts/$pair.sh"
 done

@@ -11,31 +11,42 @@ Personal-project scale — keep this list short and focused. If you need more, y
 
 ## Tasks
 
-### Golden #1 — harness-init creates a clean fullstack skeleton
+### Golden #1 & #2 — harness-init creates clean fullstack & backend skeletons
 
-**How to run**:
+**Automated** — run [`scripts/test-init.ps1`](../scripts/test-init.ps1) (Windows) or
+[`scripts/test-init.sh`](../scripts/test-init.sh) (Unix). The script:
+
+- Creates a temp dir.
+- Simulates `/harness-init`: copies common + project-type templates, substitutes
+  the 5 placeholders, applies `.append` overlay to CLAUDE.md, removes `.tmpl`/`.append` suffixes.
+- Runs ~32 assertions per project type (64 total).
+- Cleans up.
+
 ```powershell
-$tmp = New-Item -ItemType Directory -Path (Join-Path $env:TEMP "harness-test-$(Get-Random)") -Force
-Push-Location $tmp
-# In a fresh Claude Code session:
-#   /harness-init   (type=fullstack, stack=Next.js+NestJS, hook=No)
-Pop-Location
-Remove-Item -Recurse -Force $tmp
+# Run both project types (default)
+.\scripts\test-init.ps1
+
+# Or a single type
+.\scripts\test-init.ps1 -Type fullstack
+.\scripts\test-init.ps1 -Type backend
+
+# Keep the temp dir for manual inspection
+.\scripts\test-init.ps1 -KeepTemp
 ```
 
-**Expected**:
-- `.claude/agents/` has all 7 files.
-- `CLAUDE.md` exists with the fullstack overlay sections.
-- `scripts/verify_all.ps1` and `.sh` both exist.
-- `scripts/baseline.json` exists with zero counts.
-- `docs/workflow.md`, `dev-map.md`, `tasks.md`, `spec/README.md`, `evals/golden-tasks.md` exist.
-- No `.tmpl` or `.append` files leaked into the result.
+```bash
+./scripts/test-init.sh
+./scripts/test-init.sh --type fullstack
+./scripts/test-init.sh --keep
+```
 
-### Golden #2 — harness-init creates a clean backend skeleton
+**Expected**: `PASS: 64 / FAIL: 0`. Exits non-zero on any failure.
 
-Same as #1 but `type=backend`, `stack=FastAPI+Postgres`. CLAUDE.md should have the backend overlay.
+Verifies (per type): all 7 agents copied, 3 stack skills (build/test/verify), settings.json,
+CLAUDE.md with overlay, docs (workflow/dev-map/tasks/spec), evals, verify_all cross-platform,
+placeholder substitution worked, no `.tmpl`/`.append` leaked.
 
-### Golden #3 — verify_all FAILs if root .claude/agents/ drifts from templates
+### Golden #3 — verify_all FAILs if root .claude/agents/ drifts from templates (manual)
 
 **Setup**:
 1. Edit `.claude/agents/developer.md` and add a junk line.
@@ -48,7 +59,7 @@ Same as #1 but `type=backend`, `stack=FastAPI+Postgres`. CLAUDE.md should have t
 .\scripts\sync-self.ps1
 ```
 
-### Golden #4 — install.ps1 dry-run shows the plan without writing
+### Golden #4 — install.ps1 dry-run shows the plan without writing (manual)
 
 **How to run**:
 ```powershell
@@ -57,7 +68,7 @@ Same as #1 but `type=backend`, `stack=FastAPI+Postgres`. CLAUDE.md should have t
 
 **Expected**: lists 4 skills, prints `[dry-run] Would copy ...` lines, exits cleanly. No file is created at `~/.claude/skills/`.
 
-### Golden #5 — install.ps1 and install.sh produce identical layouts
+### Golden #5 — install.ps1 and install.sh produce identical layouts (manual)
 
 Run each on a fresh `--dry-run` and diff their reported plans. Differences should be only OS-specific (path separators, etc.), not skill names or behaviors.
 
@@ -67,4 +78,4 @@ Run each on a fresh `--dry-run` and diff their reported plans. Differences shoul
 
 | Date | What changed | Goldens re-run | Result |
 |---|---|---|---|
-| 2026-05-15 | Initial release | #1–#5 (manual) | Pending |
+| 2026-05-15 | Initial release | #1, #2 via test-init.ps1 | 64/64 PASS |
