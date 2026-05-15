@@ -83,8 +83,8 @@ Step "C.2" "Skill frontmatter sanity" {
 }
 
 # D. Templates
-Step "D.1" "All template agents present in templates/common/.claude/agents" {
-    $tplAgents = "skills/harness-init/templates/common/.claude/agents"
+Step "D.1" "All template agents present in templates/common/.harness/agents" {
+    $tplAgents = "skills/harness-init/templates/common/.harness/agents"
     foreach ($a in @("pm-orchestrator","requirement-analyst","solution-architect","gate-reviewer","developer","code-reviewer","qa-tester")) {
         if (-not (Test-Path "$tplAgents/$a.md")) { throw "Missing template agent: $a" }
     }
@@ -106,25 +106,47 @@ Step "D.2" "Placeholders limited to documented set" {
     if ($bad.Count -gt 0) { throw "Unknown placeholders:`n$($bad -join "`n")" }
 }
 
-# E. Self-consistency (dogfood)
-Step "E.1" "Root .claude/agents/ matches templates/common/.claude/agents/" {
+# E. Self-consistency (dogfood — two layers)
+# Layer 1: templates/common/ → repo .harness/ + scripts/harness-sync
+Step "E.1" "Layer 1: .harness/ matches templates/common/.harness/" {
     & (Join-Path $PSScriptRoot "sync-self.ps1") -Check
-    if ($LASTEXITCODE -ne 0) { throw "Self-template drift detected — run scripts/sync-self.ps1 to fix" }
+    if ($LASTEXITCODE -ne 0) { throw "Layer 1 drift — run scripts/sync-self.ps1 to fix" }
 }
 
-Step "E.2" "Project rules present" {
-    foreach ($f in @("CLAUDE.md", "docs/workflow.md", "docs/dev-map.md", "docs/tasks.md", "docs/getting-started.md", "docs/concepts.md")) {
+# Layer 2: .harness/ → .claude/ + CLAUDE.md (binding)
+Step "E.2" "Layer 2: .claude/ and CLAUDE.md generated from .harness/" {
+    & (Join-Path $PSScriptRoot "harness-sync.ps1") -Check
+    if ($LASTEXITCODE -ne 0) { throw "Layer 2 drift — run scripts/harness-sync.ps1 to fix" }
+}
+
+Step "E.3" "Project rule sources present (.harness/rules + 7 agents)" {
+    foreach ($f in @(".harness/agents/pm-orchestrator.md", ".harness/agents/developer.md")) {
+        if (-not (Test-Path $f)) { throw "Missing $f" }
+    }
+    $rules = Get-ChildItem -Path ".harness/rules" -Filter "*.md" -File -ErrorAction SilentlyContinue
+    if ($rules.Count -lt 1) { throw "No .harness/rules/*.md files found" }
+}
+
+Step "E.4" "Generated artifacts present (CLAUDE.md, .claude/agents/)" {
+    foreach ($f in @("CLAUDE.md")) {
+        if (-not (Test-Path $f)) { throw "Missing $f (run harness-sync)" }
+    }
+    if (-not (Test-Path ".claude/agents")) { throw "Missing .claude/agents/ (run harness-sync)" }
+}
+
+Step "E.5" "Docs present" {
+    foreach ($f in @("docs/workflow.md", "docs/dev-map.md", "docs/tasks.md", "docs/getting-started.md", "docs/concepts.md")) {
         if (-not (Test-Path $f)) { throw "Missing $f" }
     }
 }
 
-Step "E.3" "evals/golden-tasks.md present" {
+Step "E.6" "evals/golden-tasks.md present" {
     if (-not (Test-Path "evals/golden-tasks.md")) { throw "Missing evals/golden-tasks.md" }
 }
 
 # F. Symmetry (PowerShell <-> Bash pairs)
-Step "F.1" "verify_all, sync-self, test-init exist in both .ps1 and .sh" {
-    foreach ($pair in @("verify_all", "sync-self", "test-init")) {
+Step "F.1" "verify_all, sync-self, harness-sync, test-init exist in both .ps1 and .sh" {
+    foreach ($pair in @("verify_all", "sync-self", "harness-sync", "test-init")) {
         if (-not (Test-Path "scripts/$pair.ps1")) { throw "Missing scripts/$pair.ps1" }
         if (-not (Test-Path "scripts/$pair.sh")) { throw "Missing scripts/$pair.sh" }
     }

@@ -64,7 +64,7 @@ done < <(find skills -name SKILL.md -type f)
 [[ -z "$bad" ]] && step "C.2" "Skill frontmatter sanity" "PASS" || step "C.2" "Skill frontmatter sanity" "FAIL" "$(echo -e $bad)"
 
 # D.1 — template agents
-tpl_dir="skills/harness-init/templates/common/.claude/agents"
+tpl_dir="skills/harness-init/templates/common/.harness/agents"
 missing_a=""
 for a in pm-orchestrator requirement-analyst solution-architect gate-reviewer developer code-reviewer qa-tester; do
     [[ -f "$tpl_dir/$a.md" ]] || missing_a="$missing_a $a"
@@ -83,26 +83,47 @@ while IFS= read -r f; do
 done < <(find skills/harness-init/templates -type f \( -name '*.tmpl' -o -name '*.append' \))
 [[ -z "$bad_ph" ]] && step "D.2" "Placeholders documented" "PASS" || step "D.2" "Placeholders documented" "FAIL" "$(echo -e $bad_ph)"
 
-# E.1 — self-template consistency
+# E.1 — Layer 1: templates/common/ → repo .harness/ + harness-sync
 if bash "$repo_root/scripts/sync-self.sh" --check &>/dev/null; then
-    step "E.1" "Root .claude/agents matches templates" "PASS"
+    step "E.1" "Layer 1: .harness/ matches templates/common/.harness/" "PASS"
 else
-    step "E.1" "Root .claude/agents matches templates" "FAIL" "Run scripts/sync-self.sh to fix"
+    step "E.1" "Layer 1: .harness/ matches templates/common/.harness/" "FAIL" "Run scripts/sync-self.sh"
 fi
 
-# E.2 — project rules
+# E.2 — Layer 2: .harness/ → .claude/ + CLAUDE.md
+if bash "$repo_root/scripts/harness-sync.sh" --check &>/dev/null; then
+    step "E.2" "Layer 2: .claude/ and CLAUDE.md generated from .harness/" "PASS"
+else
+    step "E.2" "Layer 2: .claude/ and CLAUDE.md generated from .harness/" "FAIL" "Run scripts/harness-sync.sh"
+fi
+
+# E.3 — rule sources present
+missing_e3=""
+for f in .harness/agents/pm-orchestrator.md .harness/agents/developer.md; do
+    [[ -f "$f" ]] || missing_e3="$missing_e3 $f"
+done
+rule_count=$(find .harness/rules -name '*.md' -type f 2>/dev/null | wc -l)
+[[ -z "$missing_e3" ]] && (( rule_count >= 1 )) && step "E.3" "Rule sources present" "PASS" || step "E.3" "Rule sources present" "FAIL" "missing:$missing_e3 rules_count=$rule_count"
+
+# E.4 — generated artifacts
+gen_missing=""
+[[ -f CLAUDE.md ]] || gen_missing="$gen_missing CLAUDE.md"
+[[ -d .claude/agents ]] || gen_missing="$gen_missing .claude/agents"
+[[ -z "$gen_missing" ]] && step "E.4" "Generated artifacts present" "PASS" || step "E.4" "Generated artifacts present" "FAIL" "missing:$gen_missing (run harness-sync)"
+
+# E.5 — docs
 missing_p=""
-for f in CLAUDE.md docs/workflow.md docs/dev-map.md docs/tasks.md docs/getting-started.md docs/concepts.md; do
+for f in docs/workflow.md docs/dev-map.md docs/tasks.md docs/getting-started.md docs/concepts.md; do
     [[ -f "$f" ]] || missing_p="$missing_p $f"
 done
-[[ -z "$missing_p" ]] && step "E.2" "Project rules present" "PASS" || step "E.2" "Project rules present" "FAIL" "missing:$missing_p"
+[[ -z "$missing_p" ]] && step "E.5" "Docs present" "PASS" || step "E.5" "Docs present" "FAIL" "missing:$missing_p"
 
-# E.3 — evals
-[[ -f "evals/golden-tasks.md" ]] && step "E.3" "evals/golden-tasks.md present" "PASS" || step "E.3" "evals/golden-tasks.md present" "FAIL"
+# E.6 — evals
+[[ -f "evals/golden-tasks.md" ]] && step "E.6" "evals/golden-tasks.md present" "PASS" || step "E.6" "evals/golden-tasks.md present" "FAIL"
 
 # F.1 — script symmetry
 missing_sym=""
-for pair in verify_all sync-self test-init; do
+for pair in verify_all sync-self harness-sync test-init; do
     [[ -f "scripts/$pair.ps1" ]] || missing_sym="$missing_sym scripts/$pair.ps1"
     [[ -f "scripts/$pair.sh" ]] || missing_sym="$missing_sym scripts/$pair.sh"
 done

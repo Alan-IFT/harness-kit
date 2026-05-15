@@ -1,65 +1,101 @@
-# sync-self.ps1
-# Sync the source-of-truth agent definitions from
-#   skills/harness-init/templates/common/.claude/agents/
-# to
-#   .claude/agents/
+# sync-self.ps1 — Repo-specific dogfood sync.
 #
-# Run this after editing any agent file in either location.
-# The verify_all script enforces these two are byte-identical.
+# This repo distributes templates/common/ as the source of truth for user projects.
+# It also dogfoods that content in its own .harness/ and scripts/. This script
+# keeps the two in sync (Layer 1).
+#
+# Synchronizes (templates/common/ → repo root):
+#   .harness/agents/*.md             → .harness/agents/*.md
+#   scripts/harness-sync.ps1         → scripts/harness-sync.ps1
+#   scripts/harness-sync.sh          → scripts/harness-sync.sh
+#
+# Run before commit if you've edited any of the above. verify_all step E.1 FAILs
+# on drift.
+#
+# Usage:
+#   .\scripts\sync-self.ps1            # do the sync
+#   .\scripts\sync-self.ps1 -Check     # report drift only; exit 0 if in sync, 1 otherwise
 
 [CmdletBinding()]
 param([switch]$Check)
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path $PSScriptRoot -Parent
-$source = Join-Path $repoRoot "skills/harness-init/templates/common/.claude/agents"
-$target = Join-Path $repoRoot ".claude/agents"
+$templateCommon = Join-Path $repoRoot "skills/harness-init/templates/common"
 
-if (-not (Test-Path $source)) {
-    Write-Error "Source folder missing: $source"
+if (-not (Test-Path $templateCommon)) {
+    Write-Error "templates/common/ not found at $templateCommon"
     exit 1
 }
-if (-not (Test-Path $target)) {
-    New-Item -ItemType Directory -Path $target -Force | Out-Null
-}
 
-$sourceFiles = Get-ChildItem -Path $source -Filter "*.md" -File
+# Mapping: source (under templates/common/) → target (under repo root)
+$mappings = @(
+    @{ from = ".harness/agents"; to = ".harness/agents"; type = "dir-of-md" }
+    @{ from = "scripts/harness-sync.ps1"; to = "scripts/harness-sync.ps1"; type = "file" }
+    @{ from = "scripts/harness-sync.sh"; to = "scripts/harness-sync.sh"; type = "file" }
+)
+
 $drift = @()
 
-foreach ($f in $sourceFiles) {
-    $dst = Join-Path $target $f.Name
-    $copy = $true
-
+function Sync-File($src, $dst) {
+    $needsCopy = $true
     if (Test-Path $dst) {
-        $srcHash = (Get-FileHash $f.FullName -Algorithm SHA256).Hash
+        $srcHash = (Get-FileHash $src -Algorithm SHA256).Hash
         $dstHash = (Get-FileHash $dst -Algorithm SHA256).Hash
-        if ($srcHash -eq $dstHash) {
-            $copy = $false
-        } else {
-            $drift += $f.Name
-        }
-    } else {
-        $drift += $f.Name
+        if ($srcHash -eq $dstHash) { $needsCopy = $false }
     }
+    return $needsCopy
+}
 
-    if ($Check) {
-        # Read-only: just report drift, don't write
+foreach ($m in $mappings) {
+    $src = Join-Path $templateCommon $m.from
+    $dst = Join-Path $repoRoot $m.to
+
+    if (-not (Test-Path $src)) {
+        Write-Host "WARN: source missing: $src" -ForegroundColor Yellow
         continue
     }
 
-    if ($copy) {
-        Copy-Item -Path $f.FullName -Destination $dst -Force
-        Write-Host "Synced $($f.Name)" -ForegroundColor Green
-    }
-}
-
-# Check for orphans in target (files at root that aren't in source)
-$targetFiles = Get-ChildItem -Path $target -Filter "*.md" -File
-foreach ($f in $targetFiles) {
-    $src = Join-Path $source $f.Name
-    if (-not (Test-Path $src)) {
-        Write-Host "WARN: orphan in target: $($f.Name)" -ForegroundColor Yellow
-        $drift += "(orphan) $($f.Name)"
+    if ($m.type -eq "file") {
+        if (Sync-File $src $dst) {
+            $drift += $m.to
+            if (-not $Check) {
+                $dstDir = Split-Path $dst -Parent
+                if (-not (Test-Path $dstDir)) { New-Item -ItemType Directory -Path $dstDir -Force | Out-Null }
+                Copy-Item -Path $src -Destination $dst -Force
+                Write-Host "Synced $($m.to)" -ForegroundColor Green
+            }
+        }
+    } elseif ($m.type -eq "dir-of-md") {
+        if (-not (Test-Path $dst)) {
+            if ($Check) {
+                $drift += "$($m.to) (missing)"
+            } else {
+                New-Item -ItemType Directory -Path $dst -Force | Out-Null
+            }
+        }
+        Get-ChildItem -Path $src -Filter "*.md" -File | ForEach-Object {
+            $fileDst = Join-Path $dst $_.Name
+            if (Sync-File $_.FullName $fileDst) {
+                $drift += "$($m.to)/$($_.Name)"
+                if (-not $Check) {
+                    Copy-Item -Path $_.FullName -Destination $fileDst -Force
+                    Write-Host "Synced $($m.to)/$($_.Name)" -ForegroundColor Green
+                }
+            }
+        }
+        # Orphan check: files at dst not in src
+        if (Test-Path $dst) {
+            Get-ChildItem -Path $dst -Filter "*.md" -File | ForEach-Object {
+                if (-not (Test-Path (Join-Path $src $_.Name))) {
+                    $drift += "$($m.to)/$($_.Name) (orphan)"
+                    if (-not $Check) {
+                        Remove-Item $_.FullName -Force
+                        Write-Host "Removed orphan $($m.to)/$($_.Name)" -ForegroundColor Yellow
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -74,5 +110,9 @@ if ($Check) {
     }
 }
 
-Write-Host ""
-Write-Host "Sync complete." -ForegroundColor Cyan
+if ($drift.Count -eq 0) {
+    Write-Host "Already in sync." -ForegroundColor Green
+} else {
+    Write-Host ""
+    Write-Host "Sync-self complete." -ForegroundColor Cyan
+}
