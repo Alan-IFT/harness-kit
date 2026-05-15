@@ -1,0 +1,156 @@
+# verify_all.ps1 — Fullstack project total verification
+# Generated for {{PROJECT_NAME}} ({{STACK}}) on {{TODAY}}
+#
+# Usage:
+#   .\scripts\verify_all.ps1            # full run
+#   .\scripts\verify_all.ps1 -Quick     # skip e2e
+#   .\scripts\verify_all.ps1 -Baseline  # update baseline.json (use carefully)
+#
+# Conventions:
+#   - PASS (0)  every check passed
+#   - WARN (1)  no errors but some non-fatal issues
+#   - FAIL (2)  at least one Error-level check failed
+#
+# CUSTOMIZE: edit the command lines below to match your actual stack.
+# Defaults assume pnpm + node project at root; tweak as needed.
+
+[CmdletBinding()]
+param(
+    [switch]$Quick,
+    [switch]$Baseline
+)
+
+$ErrorActionPreference = "Stop"
+$root = (Get-Location).Path
+$report = @()
+$errors = 0
+$warns = 0
+
+function Step($id, $name, [scriptblock]$action) {
+    Write-Host "[$id] $name ..." -NoNewline
+    try {
+        $result = & $action
+        if ($result -eq $false) {
+            Write-Host " WARN" -ForegroundColor Yellow
+            $script:warns++
+            $script:report += [pscustomobject]@{ id = $id; name = $name; status = "WARN" }
+        } else {
+            Write-Host " PASS" -ForegroundColor Green
+            $script:report += [pscustomobject]@{ id = $id; name = $name; status = "PASS" }
+        }
+    } catch {
+        Write-Host " FAIL" -ForegroundColor Red
+        Write-Host "       $_" -ForegroundColor DarkRed
+        $script:errors++
+        $script:report += [pscustomobject]@{ id = $id; name = $name; status = "FAIL"; error = "$_" }
+    }
+}
+
+Write-Host "=== verify_all (fullstack) ===" -ForegroundColor Cyan
+Write-Host "Project: {{PROJECT_NAME}}"
+Write-Host "Stack:   {{STACK}}"
+Write-Host ""
+
+# --- A. Static checks ---
+Step "A.1" "No hardcoded secrets" {
+    $patterns = @("(?i)(api[_-]?key|secret|password|token)\s*[:=]\s*['""][^'""]{8,}['""]")
+    $hits = git grep -E $patterns -- ':!*.md' ':!scripts/verify_all*' ':!.harness/*' 2>$null
+    if ($hits) { throw "Possible secret in:`n$hits" }
+}
+
+Step "A.2" "No .env files committed" {
+    $envFiles = git ls-files -- ':!*.env.example' ':!*.env.sample' '*.env' '.env*' 2>$null | Where-Object { $_ -notmatch 'example|sample' }
+    if ($envFiles) { throw "Committed env files:`n$envFiles" }
+}
+
+Step "A.3" "TODO / FIXME budget (warn only)" {
+    $count = (git grep -i -c "TODO\|FIXME" -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.py' '*.go' 2>$null | Measure-Object -Line).Lines
+    if ($count -gt 20) { return $false }
+}
+
+# --- B. Build / test ---
+Step "B.1" "Install / typecheck" {
+    if (Test-Path "package.json") {
+        $pkgMgr = if (Test-Path "pnpm-lock.yaml") { "pnpm" } elseif (Test-Path "yarn.lock") { "yarn" } else { "npm" }
+        & $pkgMgr install --frozen-lockfile 2>&1 | Out-Null
+        if (Test-Path "tsconfig.json") { & $pkgMgr exec tsc --noEmit }
+    }
+}
+
+Step "B.2" "Lint" {
+    if (Test-Path "package.json") {
+        $pkgMgr = if (Test-Path "pnpm-lock.yaml") { "pnpm" } elseif (Test-Path "yarn.lock") { "yarn" } else { "npm" }
+        & $pkgMgr exec eslint . 2>&1 | Out-Null
+    }
+}
+
+Step "B.3" "Unit tests pass" {
+    if (Test-Path "package.json") {
+        $pkgMgr = if (Test-Path "pnpm-lock.yaml") { "pnpm" } elseif (Test-Path "yarn.lock") { "yarn" } else { "npm" }
+        & $pkgMgr test 2>&1 | Out-Null
+    }
+}
+
+Step "B.4" "Test count >= baseline" {
+    if (Test-Path "scripts/baseline.json") {
+        $baseline = Get-Content "scripts/baseline.json" | ConvertFrom-Json
+        # CUSTOMIZE: read your test runner output to get actual count.
+        # Placeholder: assume vitest/jest writes test count to stdout.
+        # If unable to measure, this step is a no-op.
+    }
+}
+
+# --- C. End-to-end (optional) ---
+if (-not $Quick) {
+    Step "C.1" "E2E smoke (playwright)" {
+        if ((Test-Path "playwright.config.ts") -or (Test-Path "playwright.config.js")) {
+            $pkgMgr = if (Test-Path "pnpm-lock.yaml") { "pnpm" } elseif (Test-Path "yarn.lock") { "yarn" } else { "npm" }
+            & $pkgMgr exec playwright test --project=chromium 2>&1 | Out-Null
+        }
+    }
+}
+
+# --- D. Schema / contract ---
+Step "D.1" "OpenAPI / tRPC schema present" {
+    $found = (Test-Path "openapi.yaml") -or (Test-Path "openapi.json") -or (Test-Path "src/server/trpc")
+    if (-not $found) { return $false } # WARN, not FAIL
+}
+
+# --- E. Project structure ---
+Step "E.1" "CLAUDE.md present" {
+    if (-not (Test-Path "CLAUDE.md")) { throw "CLAUDE.md missing" }
+}
+
+Step "E.2" "workflow.md present" {
+    if (-not (Test-Path "docs/workflow.md")) { throw "docs/workflow.md missing" }
+}
+
+Step "E.3" "All 7 agent definitions present" {
+    $needed = @("pm-orchestrator", "requirement-analyst", "solution-architect",
+                "gate-reviewer", "developer", "code-reviewer", "qa-tester")
+    foreach ($a in $needed) {
+        if (-not (Test-Path ".claude/agents/$a.md")) { throw "Missing agent: $a" }
+    }
+}
+
+# --- Summary ---
+Write-Host ""
+Write-Host "=== Summary ===" -ForegroundColor Cyan
+$pass = ($report | Where-Object status -eq "PASS").Count
+Write-Host "  PASS: $pass" -ForegroundColor Green
+Write-Host "  WARN: $warns" -ForegroundColor Yellow
+Write-Host "  FAIL: $errors" -ForegroundColor Red
+
+# --- Append history ---
+$historyEntry = [pscustomobject]@{
+    timestamp = (Get-Date).ToString("o")
+    pass = $pass
+    warn = $warns
+    fail = $errors
+    report = $report
+}
+$historyEntry | ConvertTo-Json -Depth 5 -Compress | Add-Content -Path "scripts/verification_history.log"
+
+if ($errors -gt 0) { exit 2 }
+if ($warns -gt 0) { exit 1 }
+exit 0

@@ -1,0 +1,148 @@
+# verify_all.ps1 — Backend project total verification
+# Generated for {{PROJECT_NAME}} ({{STACK}}) on {{TODAY}}
+#
+# CUSTOMIZE: edit command lines to match your stack.
+# Supports Node/TS (NestJS/Fastify), Python (FastAPI/Django), Go.
+
+[CmdletBinding()]
+param(
+    [switch]$Quick,
+    [switch]$Baseline
+)
+
+$ErrorActionPreference = "Stop"
+$report = @()
+$errors = 0
+$warns = 0
+
+function Step($id, $name, [scriptblock]$action) {
+    Write-Host "[$id] $name ..." -NoNewline
+    try {
+        $result = & $action
+        if ($result -eq $false) {
+            Write-Host " WARN" -ForegroundColor Yellow
+            $script:warns++
+            $script:report += [pscustomobject]@{ id = $id; name = $name; status = "WARN" }
+        } else {
+            Write-Host " PASS" -ForegroundColor Green
+            $script:report += [pscustomobject]@{ id = $id; name = $name; status = "PASS" }
+        }
+    } catch {
+        Write-Host " FAIL" -ForegroundColor Red
+        Write-Host "       $_" -ForegroundColor DarkRed
+        $script:errors++
+        $script:report += [pscustomobject]@{ id = $id; name = $name; status = "FAIL"; error = "$_" }
+    }
+}
+
+function Detect-Stack {
+    if (Test-Path "pyproject.toml") { return "python" }
+    if (Test-Path "go.mod") { return "go" }
+    if (Test-Path "Cargo.toml") { return "rust" }
+    if (Test-Path "package.json") { return "node" }
+    return "unknown"
+}
+
+$stack = Detect-Stack
+Write-Host "=== verify_all (backend) ===" -ForegroundColor Cyan
+Write-Host "Project: {{PROJECT_NAME}}"
+Write-Host "Stack:   {{STACK}} (detected: $stack)"
+Write-Host ""
+
+# --- A. Security / hygiene ---
+Step "A.1" "No hardcoded secrets" {
+    $hits = git grep -E "(?i)(api[_-]?key|secret|password|token)\s*[:=]\s*['""][^'""]{8,}['""]" -- ':!*.md' ':!scripts/verify_all*' 2>$null
+    if ($hits) { throw "Possible secret:`n$hits" }
+}
+
+Step "A.2" "No .env files committed" {
+    $envFiles = git ls-files -- '*.env' '.env*' 2>$null | Where-Object { $_ -notmatch 'example|sample' }
+    if ($envFiles) { throw "Committed env files:`n$envFiles" }
+}
+
+# --- B. Build / test ---
+switch ($stack) {
+    "node" {
+        Step "B.1" "Install / typecheck" {
+            $pm = if (Test-Path "pnpm-lock.yaml") { "pnpm" } elseif (Test-Path "yarn.lock") { "yarn" } else { "npm" }
+            & $pm install --frozen-lockfile 2>&1 | Out-Null
+            if (Test-Path "tsconfig.json") { & $pm exec tsc --noEmit }
+        }
+        Step "B.2" "Lint" {
+            $pm = if (Test-Path "pnpm-lock.yaml") { "pnpm" } elseif (Test-Path "yarn.lock") { "yarn" } else { "npm" }
+            & $pm exec eslint . 2>&1 | Out-Null
+        }
+        Step "B.3" "Unit tests" {
+            $pm = if (Test-Path "pnpm-lock.yaml") { "pnpm" } elseif (Test-Path "yarn.lock") { "yarn" } else { "npm" }
+            & $pm test 2>&1 | Out-Null
+        }
+    }
+    "python" {
+        Step "B.1" "Dependency lock" {
+            if (Test-Path "uv.lock") { & uv sync 2>&1 | Out-Null }
+            elseif (Test-Path "poetry.lock") { & poetry install --no-root 2>&1 | Out-Null }
+            else { & pip install -r requirements.txt 2>&1 | Out-Null }
+        }
+        Step "B.2" "Lint (ruff)" {
+            if (Get-Command ruff -ErrorAction SilentlyContinue) { & ruff check . }
+        }
+        Step "B.3" "Type check (mypy)" {
+            if (Get-Command mypy -ErrorAction SilentlyContinue) { & mypy . 2>&1 | Out-Null } else { return $false }
+        }
+        Step "B.4" "Unit tests (pytest)" {
+            & pytest -q 2>&1 | Out-Null
+        }
+    }
+    "go" {
+        Step "B.1" "Build" { & go build ./... 2>&1 | Out-Null }
+        Step "B.2" "Vet" { & go vet ./... 2>&1 | Out-Null }
+        Step "B.3" "Unit tests" { & go test ./... 2>&1 | Out-Null }
+    }
+    default {
+        Step "B.1" "Build / test" { throw "Unknown stack — please customize verify_all.ps1" }
+    }
+}
+
+# --- C. Database / migrations ---
+Step "C.1" "Migrations reversible (warn if irreversible patterns)" {
+    $patterns = @("DROP\s+COLUMN", "DROP\s+TABLE", "TRUNCATE")
+    $hits = git grep -E -i $patterns -- 'migrations/*' 'src/migrations/*' 2>$null
+    if ($hits) { return $false }  # WARN
+}
+
+# --- D. Project structure ---
+Step "D.1" "CLAUDE.md present" {
+    if (-not (Test-Path "CLAUDE.md")) { throw "CLAUDE.md missing" }
+}
+
+Step "D.2" "workflow.md present" {
+    if (-not (Test-Path "docs/workflow.md")) { throw "docs/workflow.md missing" }
+}
+
+Step "D.3" "All 7 agent definitions present" {
+    $needed = @("pm-orchestrator", "requirement-analyst", "solution-architect",
+                "gate-reviewer", "developer", "code-reviewer", "qa-tester")
+    foreach ($a in $needed) {
+        if (-not (Test-Path ".claude/agents/$a.md")) { throw "Missing agent: $a" }
+    }
+}
+
+# --- Summary ---
+Write-Host ""
+Write-Host "=== Summary ===" -ForegroundColor Cyan
+$pass = ($report | Where-Object status -eq "PASS").Count
+Write-Host "  PASS: $pass" -ForegroundColor Green
+Write-Host "  WARN: $warns" -ForegroundColor Yellow
+Write-Host "  FAIL: $errors" -ForegroundColor Red
+
+# Append history
+$historyEntry = [pscustomobject]@{
+    timestamp = (Get-Date).ToString("o")
+    pass = $pass; warn = $warns; fail = $errors
+    report = $report
+}
+$historyEntry | ConvertTo-Json -Depth 5 -Compress | Add-Content -Path "scripts/verification_history.log"
+
+if ($errors -gt 0) { exit 2 }
+if ($warns -gt 0) { exit 1 }
+exit 0

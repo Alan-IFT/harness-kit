@@ -1,0 +1,22 @@
+---
+name: verify
+description: Run scripts/verify_all - the single hard gate for backend task completion. Returns PASS / WARN / FAIL.
+allowed-tools: Bash, PowerShell, Read
+---
+
+# Verify skill — {{PROJECT_NAME}} backend
+
+Single entry: `scripts/verify_all.*` (PowerShell or Bash, auto-detect stack).
+
+## Steps
+
+1. Windows: `pwsh -File scripts/verify_all.ps1`
+   Unix: `bash scripts/verify_all.sh`
+2. Read exit code (0/1/2 = PASS/WARN/FAIL).
+3. Save full output to the current task's `04_DEVELOPMENT.md`.
+
+## Hard rules
+
+- Never modify `verify_all.*` to make a check pass.
+- Never delete a check to bypass it.
+- On FAIL → route back to developer.

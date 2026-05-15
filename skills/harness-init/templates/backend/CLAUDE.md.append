@@ -1,0 +1,29 @@
+
+---
+
+## Backend-specific rules
+
+### API
+- Every endpoint has a typed schema (OpenAPI / Pydantic / Zod / Go struct tags).
+- Response envelopes are consistent across endpoints (use a shared error format).
+- Idempotent operations are marked as such (PUT / DELETE / specific POSTs with idempotency keys).
+
+### Database
+- All schema changes via migrations. Never raw SQL in code paths that "happen to alter schema".
+- Migrations reversible; irreversible ones need user confirmation.
+- N+1 query: any loop that queries the DB → batch or join, no exceptions.
+
+### Errors / Logs
+- Errors thrown across module boundaries are typed (custom error classes).
+- Logs are structured (JSON for production), with request ID context.
+- No `print` / `console.log` left in code; use the logger.
+
+### Security
+- Input validation at every API entry point. Use the schema; don't trust client.
+- Secrets via env, never in code or config files.
+- Auth checks at the route layer **and** at the service layer (defense in depth).
+
+### Performance
+- Long operations behind a queue, not blocking HTTP.
+- DB indexes on every column used in WHERE / JOIN.
+- Sensible default timeouts on every outbound call.

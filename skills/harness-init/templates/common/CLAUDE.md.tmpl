@@ -1,0 +1,49 @@
+# {{PROJECT_NAME}} — Project Rules
+
+> Project type: **{{PROJECT_TYPE}}** · Stack: **{{STACK}}** · Initialized: {{TODAY}}
+>
+> These rules apply to every Claude Code session on this repo. Keep them short and load-bearing.
+> When a rule can be checked by `scripts/verify_all`, it lives there instead of here.
+
+## How this project is developed
+
+This repo uses the **Harness 7-agent pipeline**. Read `docs/workflow.md` before starting work.
+
+- New feature or bug? → ask the PM Orchestrator to take it.
+- Never skip the pipeline for non-trivial changes (>10 lines or any logic).
+- Trivial changes (typo, comment, single-line fix) can skip agents but **must still pass `verify_all`**.
+
+## Hard rules (red lines)
+
+1. **No silent design drift.** If implementation must deviate from approved design, flag it in `04_DEVELOPMENT.md` as `DESIGN DRIFT`.
+2. **Downstream cannot edit upstream documents.** If you see a defect upstream, propose a rollback via PM.
+3. **Tests only go up.** Never delete tests to make `verify_all` pass. Obsolete tests need PM approval to remove.
+4. **No secrets in code.** Use `.env` / environment variables; verify_all scans for hardcoded keys.
+5. **No production-destructive actions** (drop table, force push to main, delete branches) without explicit user confirmation.
+6. **Run verify_all before declaring done.** "It compiles" is not done.
+
+## Style / convention
+
+- Code style is enforced by lint config in the repo (`eslint`, `ruff`, `gofmt`, etc.). Do not bypass.
+- Commit messages: imperative mood, ≤72 char first line, body explains the why.
+- File names: existing project convention overrides any default — match what's already there.
+
+## What lives where
+
+| Need | Look here |
+|---|---|
+| Project structure / where things go | `docs/dev-map.md` |
+| What's currently being worked on | `docs/tasks.md` |
+| Per-task documents | `docs/features/<task-slug>/` |
+| Project SPECs / requirements | `docs/spec/` |
+| The 7-agent pipeline definition | `docs/workflow.md` |
+| Standard build/test/verify commands | `.claude/skills/` |
+| Total verification | `scripts/verify_all.{ps1,sh}` |
+| Test count baseline | `scripts/baseline.json` |
+| Regression task set | `evals/golden-tasks.md` |
+
+## When in doubt
+
+- Read `docs/dev-map.md` first — it tells you which files own which feature.
+- Check `docs/tasks.md` for related historical work before starting new work.
+- If a rule conflicts with the situation, **stop and ask the user**, don't improvise.

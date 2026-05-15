@@ -1,0 +1,158 @@
+#!/usr/bin/env bash
+# verify_all.sh — Fullstack project total verification
+# Generated for {{PROJECT_NAME}} ({{STACK}}) on {{TODAY}}
+#
+# Usage:
+#   ./scripts/verify_all.sh          # full run
+#   ./scripts/verify_all.sh --quick  # skip e2e
+#
+# Exit codes:
+#   0  PASS
+#   1  WARN
+#   2  FAIL
+#
+# CUSTOMIZE: edit the command lines below to match your actual stack.
+
+set -uo pipefail
+
+QUICK=false
+for arg in "$@"; do
+    case $arg in
+        --quick) QUICK=true ;;
+    esac
+done
+
+errors=0
+warns=0
+declare -a report
+
+step() {
+    local id="$1" name="$2" status="$3" detail="${4:-}"
+    if [[ "$status" == "PASS" ]]; then
+        echo "[$id] $name ... PASS"
+    elif [[ "$status" == "WARN" ]]; then
+        echo "[$id] $name ... WARN"
+        ((warns++))
+    else
+        echo "[$id] $name ... FAIL"
+        [[ -n "$detail" ]] && echo "      $detail"
+        ((errors++))
+    fi
+    report+=("$id|$name|$status")
+}
+
+pkgmgr() {
+    if [[ -f pnpm-lock.yaml ]]; then echo pnpm
+    elif [[ -f yarn.lock ]]; then echo yarn
+    else echo npm
+    fi
+}
+
+echo "=== verify_all (fullstack) ==="
+echo "Project: {{PROJECT_NAME}}"
+echo "Stack:   {{STACK}}"
+echo ""
+
+# A.1 — secrets scan
+if git grep -E "(api[_-]?key|secret|password|token)[[:space:]]*[:=][[:space:]]*[\"'][^\"']{8,}[\"']" \
+    -- ':!*.md' ':!scripts/verify_all*' ':!.harness/*' &>/dev/null; then
+    step "A.1" "No hardcoded secrets" "FAIL" "see git grep results above"
+else
+    step "A.1" "No hardcoded secrets" "PASS"
+fi
+
+# A.2 — no .env committed
+env_committed=$(git ls-files '*.env' '.env*' 2>/dev/null | grep -vE 'example|sample' || true)
+if [[ -n "$env_committed" ]]; then
+    step "A.2" "No .env files committed" "FAIL" "$env_committed"
+else
+    step "A.2" "No .env files committed" "PASS"
+fi
+
+# A.3 — TODO/FIXME budget
+todo_count=$(git grep -ic "TODO\|FIXME" -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.py' '*.go' 2>/dev/null | awk -F: '{s+=$2} END {print s+0}')
+if (( todo_count > 20 )); then
+    step "A.3" "TODO/FIXME budget" "WARN" "$todo_count items (limit 20)"
+else
+    step "A.3" "TODO/FIXME budget" "PASS"
+fi
+
+# B.1 — install + typecheck
+if [[ -f package.json ]]; then
+    PM=$(pkgmgr)
+    if $PM install --frozen-lockfile &>/dev/null && \
+       { [[ ! -f tsconfig.json ]] || $PM exec tsc --noEmit &>/dev/null; }; then
+        step "B.1" "Install / typecheck" "PASS"
+    else
+        step "B.1" "Install / typecheck" "FAIL"
+    fi
+else
+    step "B.1" "Install / typecheck" "PASS"
+fi
+
+# B.2 — lint
+if [[ -f package.json ]]; then
+    PM=$(pkgmgr)
+    if $PM exec eslint . &>/dev/null; then
+        step "B.2" "Lint" "PASS"
+    else
+        step "B.2" "Lint" "FAIL"
+    fi
+fi
+
+# B.3 — tests
+if [[ -f package.json ]]; then
+    PM=$(pkgmgr)
+    if $PM test &>/dev/null; then
+        step "B.3" "Unit tests pass" "PASS"
+    else
+        step "B.3" "Unit tests pass" "FAIL"
+    fi
+fi
+
+# C.1 — e2e (optional)
+if [[ "$QUICK" == "false" ]] && [[ -f playwright.config.ts || -f playwright.config.js ]]; then
+    PM=$(pkgmgr)
+    if $PM exec playwright test --project=chromium &>/dev/null; then
+        step "C.1" "E2E smoke (playwright)" "PASS"
+    else
+        step "C.1" "E2E smoke (playwright)" "FAIL"
+    fi
+fi
+
+# D.1 — schema present
+if [[ -f openapi.yaml || -f openapi.json || -d src/server/trpc ]]; then
+    step "D.1" "OpenAPI / tRPC schema present" "PASS"
+else
+    step "D.1" "OpenAPI / tRPC schema present" "WARN" "no API schema found"
+fi
+
+# E.1-3 — project structure
+[[ -f CLAUDE.md ]] && step "E.1" "CLAUDE.md present" "PASS" || step "E.1" "CLAUDE.md present" "FAIL"
+[[ -f docs/workflow.md ]] && step "E.2" "workflow.md present" "PASS" || step "E.2" "workflow.md present" "FAIL"
+
+missing_agent=""
+for a in pm-orchestrator requirement-analyst solution-architect gate-reviewer developer code-reviewer qa-tester; do
+    [[ -f ".claude/agents/$a.md" ]] || missing_agent="$missing_agent $a"
+done
+if [[ -z "$missing_agent" ]]; then
+    step "E.3" "All 7 agent definitions present" "PASS"
+else
+    step "E.3" "All 7 agent definitions present" "FAIL" "Missing:$missing_agent"
+fi
+
+# Summary
+echo ""
+echo "=== Summary ==="
+pass_count=$(printf '%s\n' "${report[@]}" | grep -c PASS || true)
+echo "  PASS: $pass_count"
+echo "  WARN: $warns"
+echo "  FAIL: $errors"
+
+# History
+ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+printf '{"timestamp":"%s","pass":%d,"warn":%d,"fail":%d}\n' "$ts" "$pass_count" "$warns" "$errors" >> scripts/verification_history.log
+
+(( errors > 0 )) && exit 2
+(( warns > 0 )) && exit 1
+exit 0

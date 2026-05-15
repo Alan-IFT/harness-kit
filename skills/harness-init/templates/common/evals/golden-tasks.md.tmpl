@@ -1,0 +1,59 @@
+# Golden Tasks — Lightweight Regression Set
+
+> A handful of representative tasks that are known to flow correctly through the 7-agent pipeline.
+> **Re-run these manually after any major change to** CLAUDE.md, agents, workflow, or skills.
+>
+> Personal-project scale: 2-5 tasks is enough. Don't build a CI eval pipeline unless team-scale.
+
+## How to use
+
+After changing Harness assets, in Claude Code:
+
+```
+Re-run golden task #1 and confirm the pipeline produces the same delivery shape.
+```
+
+Then visually scan:
+
+- Did each stage produce a document?
+- Did rollback routing work when expected?
+- Did `verify_all` PASS at the end?
+- Did the task complete in similar number of stages as last time?
+
+If the answer to any is "no" → diagnose which Harness asset changed introduced the regression.
+
+## Tasks
+
+### Golden #1 — Trivial addition
+
+**Description**: Add a constant `MAX_RETRIES = 3` to `src/config.ts`.
+
+**Expected shape**:
+- Lightweight flow (PM may skip Gate).
+- Developer makes change, verify_all passes, reviewer notes "trivial, no concerns", QA notes "no behavior change", delivery.
+
+### Golden #2 — Bug fix with regression test
+
+**Description**: Add a unit test that reproduces (and fixes if needed) handling of empty array input to one existing function.
+
+**Expected shape**:
+- Full pipeline.
+- Requirement Analyst notes the boundary condition.
+- Developer adds test that fails on current code, then fixes.
+- QA confirms test count went up.
+
+### Golden #3 — (add as you build the project)
+
+(empty)
+
+### Golden #4 — (add as you build the project)
+
+(empty)
+
+---
+
+After each change to Harness assets, log here:
+
+| Date | What changed | Goldens re-run | Result |
+|---|---|---|---|
+| {{TODAY}} | Initial setup | — | — |

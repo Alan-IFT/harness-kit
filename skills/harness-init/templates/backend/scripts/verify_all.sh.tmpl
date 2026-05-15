@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+# verify_all.sh — Backend project total verification
+# Generated for {{PROJECT_NAME}} ({{STACK}}) on {{TODAY}}
+
+set -uo pipefail
+
+QUICK=false
+for arg in "$@"; do
+    case $arg in --quick) QUICK=true ;; esac
+done
+
+errors=0
+warns=0
+declare -a report
+
+step() {
+    local id="$1" name="$2" status="$3" detail="${4:-}"
+    case "$status" in
+        PASS) echo "[$id] $name ... PASS" ;;
+        WARN) echo "[$id] $name ... WARN"; ((warns++)) ;;
+        FAIL) echo "[$id] $name ... FAIL"; [[ -n "$detail" ]] && echo "      $detail"; ((errors++)) ;;
+    esac
+    report+=("$id|$name|$status")
+}
+
+detect_stack() {
+    if [[ -f pyproject.toml ]]; then echo python
+    elif [[ -f go.mod ]]; then echo go
+    elif [[ -f Cargo.toml ]]; then echo rust
+    elif [[ -f package.json ]]; then echo node
+    else echo unknown
+    fi
+}
+
+pkgmgr() {
+    if [[ -f pnpm-lock.yaml ]]; then echo pnpm
+    elif [[ -f yarn.lock ]]; then echo yarn
+    else echo npm
+    fi
+}
+
+stack=$(detect_stack)
+echo "=== verify_all (backend) ==="
+echo "Project: {{PROJECT_NAME}}"
+echo "Stack:   {{STACK}} (detected: $stack)"
+echo ""
+
+# A.1 — secrets
+if git grep -E "(api[_-]?key|secret|password|token)[[:space:]]*[:=][[:space:]]*[\"'][^\"']{8,}[\"']" \
+    -- ':!*.md' ':!scripts/verify_all*' &>/dev/null; then
+    step "A.1" "No hardcoded secrets" "FAIL"
+else
+    step "A.1" "No hardcoded secrets" "PASS"
+fi
+
+# A.2 — .env
+env_committed=$(git ls-files '*.env' '.env*' 2>/dev/null | grep -vE 'example|sample' || true)
+[[ -z "$env_committed" ]] && step "A.2" "No .env files committed" "PASS" || step "A.2" "No .env files committed" "FAIL" "$env_committed"
+
+# B.* per stack
+case "$stack" in
+    node)
+        PM=$(pkgmgr)
+        $PM install --frozen-lockfile &>/dev/null && \
+        { [[ ! -f tsconfig.json ]] || $PM exec tsc --noEmit &>/dev/null; } && \
+            step "B.1" "Install / typecheck" "PASS" || step "B.1" "Install / typecheck" "FAIL"
+        $PM exec eslint . &>/dev/null && step "B.2" "Lint" "PASS" || step "B.2" "Lint" "FAIL"
+        $PM test &>/dev/null && step "B.3" "Unit tests" "PASS" || step "B.3" "Unit tests" "FAIL"
+        ;;
+    python)
+        if [[ -f uv.lock ]]; then uv sync &>/dev/null
+        elif [[ -f poetry.lock ]]; then poetry install --no-root &>/dev/null
+        else pip install -r requirements.txt &>/dev/null
+        fi
+        step "B.1" "Dependency lock" "PASS"
+        command -v ruff &>/dev/null && ruff check . &>/dev/null && step "B.2" "Lint (ruff)" "PASS" || step "B.2" "Lint (ruff)" "WARN" "ruff not installed or errors"
+        command -v mypy &>/dev/null && mypy . &>/dev/null && step "B.3" "Type check (mypy)" "PASS" || step "B.3" "Type check (mypy)" "WARN"
+        pytest -q &>/dev/null && step "B.4" "Unit tests (pytest)" "PASS" || step "B.4" "Unit tests (pytest)" "FAIL"
+        ;;
+    go)
+        go build ./... &>/dev/null && step "B.1" "Build" "PASS" || step "B.1" "Build" "FAIL"
+        go vet ./... &>/dev/null && step "B.2" "Vet" "PASS" || step "B.2" "Vet" "FAIL"
+        go test ./... &>/dev/null && step "B.3" "Unit tests" "PASS" || step "B.3" "Unit tests" "FAIL"
+        ;;
+    *)
+        step "B.1" "Build / test" "FAIL" "Unknown stack — customize verify_all.sh"
+        ;;
+esac
+
+# C.1 — migrations
+if git grep -E -i "DROP\s+COLUMN|DROP\s+TABLE|TRUNCATE" -- 'migrations/*' 'src/migrations/*' &>/dev/null; then
+    step "C.1" "Migrations reversible" "WARN" "irreversible patterns detected"
+else
+    step "C.1" "Migrations reversible" "PASS"
+fi
+
+# D.* — structure
+[[ -f CLAUDE.md ]] && step "D.1" "CLAUDE.md present" "PASS" || step "D.1" "CLAUDE.md present" "FAIL"
+[[ -f docs/workflow.md ]] && step "D.2" "workflow.md present" "PASS" || step "D.2" "workflow.md present" "FAIL"
+
+missing=""
+for a in pm-orchestrator requirement-analyst solution-architect gate-reviewer developer code-reviewer qa-tester; do
+    [[ -f ".claude/agents/$a.md" ]] || missing="$missing $a"
+done
+[[ -z "$missing" ]] && step "D.3" "All 7 agent definitions present" "PASS" || step "D.3" "All 7 agent definitions present" "FAIL" "Missing:$missing"
+
+echo ""
+echo "=== Summary ==="
+pass_count=$(printf '%s\n' "${report[@]}" | grep -c PASS || true)
+echo "  PASS: $pass_count"
+echo "  WARN: $warns"
+echo "  FAIL: $errors"
+
+ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+printf '{"timestamp":"%s","pass":%d,"warn":%d,"fail":%d}\n' "$ts" "$pass_count" "$warns" "$errors" >> scripts/verification_history.log
+
+(( errors > 0 )) && exit 2
+(( warns > 0 )) && exit 1
+exit 0

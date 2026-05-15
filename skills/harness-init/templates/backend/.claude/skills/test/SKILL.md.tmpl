@@ -1,0 +1,29 @@
+---
+name: test
+description: Run unit + integration tests for {{PROJECT_NAME}} backend. Use after build passes.
+allowed-tools: Bash, PowerShell, Read
+---
+
+# Test skill — {{PROJECT_NAME}} ({{STACK}})
+
+## Steps by stack
+
+| Stack | Command |
+|---|---|
+| Node / TypeScript | `<pm> test` |
+| Python (pytest) | `pytest -q` |
+| Go | `go test ./...` |
+
+## Pass criteria
+
+- All tests pass.
+- Test count >= baseline (`scripts/baseline.json`).
+
+## Coverage (if configured)
+
+Coverage delta is informational. **Coverage decrease is a WARN, not a FAIL.**
+But if coverage decrease coincides with a feature addition, investigate.
+
+## Flake handling
+
+Same as fullstack: 9/10 = flake = MAJOR defect.
