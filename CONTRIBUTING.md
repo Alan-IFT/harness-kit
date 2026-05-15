@@ -19,30 +19,51 @@ pwsh -File scripts/verify_all.ps1     # Windows
 bash scripts/verify_all.sh            # Unix
 ```
 
-Expected output: 15 PASS / 0 WARN / 0 FAIL.
+Expected output: 18 PASS / 0 WARN / 0 FAIL.
 
-## Source-of-truth principle
+## Two-layer model (v0.2+)
 
-The **canonical** location for the 7 agent definitions is:
+This repo uses two layers of consistency:
 
 ```
-skills/harness-init/templates/common/.claude/agents/*.md
+[Layer 1: sync-self]                 [Layer 2: harness-sync]
+templates/common/  ─────────────►   .harness/  ─────────────►   .claude/ + CLAUDE.md
+  (distribution SOT)                  (repo SOT)                  (binding artifacts;
+                                                                   never hand-edit)
 ```
 
-The root `.claude/agents/*.md` is a **byte-identical copy** so this repo can
-dogfood itself. If you edit one, run `sync-self` before committing:
+- **Layer 1 (sync-self)** keeps `templates/common/.harness/agents/` and
+  `templates/common/scripts/harness-sync.{ps1,sh}` byte-identical with the repo's
+  `.harness/agents/` and `scripts/harness-sync.{ps1,sh}` copies. Verifies that what
+  we ship to users matches what we use ourselves.
+- **Layer 2 (harness-sync)** generates `.claude/agents/`, `.claude/skills/`, and
+  `CLAUDE.md` from `.harness/`. The same script ships to user projects so the
+  binding contract is reusable.
+
+`verify_all` enforces both layers (E.1 + E.2) and FAILs on drift. Run sync before commit.
+
+## What to edit, what NOT to edit
+
+| Layer | Edit | Never edit (generated) |
+|---|---|---|
+| Layer 1 (distribution SOT) | `skills/harness-init/templates/common/.harness/` and `templates/common/scripts/` | — |
+| Layer 2 (repo SOT, dogfooded) | `.harness/agents/` and `.harness/rules/` | `.claude/agents/`, `CLAUDE.md` |
+
+After editing Layer 1:
 
 ```powershell
-.\scripts\sync-self.ps1     # syncs source-of-truth → root copy
-.\scripts\sync-self.ps1 -Check   # report drift, no writes
+.\scripts\sync-self.ps1               # Layer 1 → Layer 2
+.\scripts\harness-sync.ps1            # Layer 2 → bindings
 ```
 
-```bash
-./scripts/sync-self.sh
-./scripts/sync-self.sh --check
+After editing Layer 2 only (just changing repo behavior, not the distributed template):
+
+```powershell
+.\scripts\harness-sync.ps1
 ```
 
-`verify_all` step `E.1` will FAIL if the two ever drift.
+`verify_all` calls both `sync-self --check` and `harness-sync --check` internally, so
+forgetting either will get caught.
 
 ## Adding or changing a skill
 
@@ -59,22 +80,22 @@ Rules for skills:
 1. **Frontmatter is mandatory.** Must have `name:` and `description:`. verify_all checks this.
 2. **`description` is what Claude Code uses to decide when to invoke.** Be specific about *when to use* and *when not to use*. First sentence is the most important.
 3. **`allowed-tools` is the strictest necessary subset.** Don't grant Bash if Read is enough.
-4. **Test it** by running it in Claude Code at least once before committing. For init/template flows, also add coverage to `scripts/test-init.{ps1,sh}`.
+4. **Test it** by running it in Claude Code at least once before committing. For init/template flows, also extend `scripts/test-init.{ps1,sh}`.
 
 After adding a skill:
 
 - Update `README.md` "Quick start" section.
 - Update `CHANGELOG.md` under `[Unreleased]`.
-- Update `install.ps1` and `install.sh` `$skills`/`skills` array.
+- Update `install.ps1` and `install.sh` skills array.
 - verify_all checks all of the above; will FAIL on missing.
 
 ## Adding a project type template
 
 Project types live under `skills/harness-init/templates/<type>/`:
 
-- `CLAUDE.md.append` — appended to the common CLAUDE.md.
+- `.harness/rules/50-<type>.md` — overlay rules appended to the generated CLAUDE.md.
+- `.harness/skills/{build,test,verify}/SKILL.md.tmpl` — stack-specific procedures.
 - `scripts/verify_all.{ps1,sh}.tmpl` — type-specific verification.
-- `.claude/skills/{build,test,verify}/SKILL.md.tmpl` — stack-specific procedures.
 
 Rules:
 
@@ -82,25 +103,26 @@ Rules:
    `{{PROJECT_NAME}}`, `{{PROJECT_TYPE}}`, `{{STACK}}`, `{{TODAY}}`, `{{ENABLE_HOOK}}`.
    verify_all step `D.2` enforces this whitelist.
 2. **Extend `scripts/test-init.{ps1,sh}`** with a `test_type` call for the new type.
-3. **Add a section** in `docs/dev-map.md` under "Top-level layout" → `templates/`.
+3. **Add a section** in `docs/dev-map.md` under the templates layout.
 4. **Update CHANGELOG** under `[Unreleased]`.
+5. **Rule fragment naming**: use `NN-name.md` with 50–79 for project-type overlays. Filename order determines composition order in CLAUDE.md.
 
 ## Changing an agent definition
 
-Edit `skills/harness-init/templates/common/.claude/agents/<agent>.md`. Then:
+Edit `skills/harness-init/templates/common/.harness/agents/<agent>.md`. Then:
 
 ```bash
-./scripts/sync-self.sh    # propagate to root .claude/agents/
-./scripts/verify_all.sh   # confirm E.1 passes
+./scripts/sync-self.sh        # Layer 1 → Layer 2
+./scripts/harness-sync.sh     # Layer 2 → bindings (regenerates this repo's .claude/agents/)
+./scripts/verify_all.sh       # confirm E.1 and E.2 pass
 ```
 
-Re-run golden tasks #1 and #2 via `test-init.{ps1,sh}` if you changed the agent's
-declared frontmatter or core contract — the regression captures the role of each
-agent in the generated project.
+Re-run `test-init.{ps1,sh}` if you changed the agent's declared frontmatter or core
+contract — the regression captures the role of each agent in the generated project.
 
 ## Commit messages
 
-Format:
+Format (Conventional Commits):
 
 ```
 type(scope): one-line summary in imperative mood (≤72 chars)
