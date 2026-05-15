@@ -1,12 +1,18 @@
 ---
 name: harness-adopt
-description: Adopt Harness Engineering into an existing project. Scans the repo, extracts conventions, proposes a Harness skeleton without overwriting existing code. Use for projects that already have code but no Harness setup.
+description: Adopt Harness Engineering into an existing project. v0.1.0 is scaffolding-only - it reconnoiters and writes a plan; full apply is in v0.2.0. Use the plan as a manual checklist for now.
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, AskUserQuestion, TodoWrite
 ---
 
 # /harness-adopt
 
-Non-invasively add Harness to a project that already has code, tests, and CI.
+Non-invasively propose how to add Harness to a project that already has code.
+
+> **Status: v0.1.0 — scaffolding only.**
+> This skill currently performs reconnaissance and writes `.harness-adopt/PLAN.md`
+> describing what would be added. The actual file copy and merge logic is
+> deferred to v0.2.0. For now, treat the plan as a checklist and apply manually
+> (or use `/harness-init` in a clean sibling folder and merge selectively).
 
 ## When to invoke
 
@@ -114,13 +120,20 @@ Apply the plan above? [yes / no / show diff]
 
 If yes → execute step 7. If no → leave `.harness-adopt/` for review and stop.
 
-### 7. Apply
+### 7. Apply — DEFERRED TO v0.2.0
 
-Copy files into place using the same template logic as `/harness-init` (substitute `{{PROJECT_NAME}}`, `{{STACK}}`, `{{TODAY}}`). Source templates from the installed skill (`~/.claude/skills/harness-init/templates/`).
+In v0.1.0, **stop here**. Tell the user:
 
-After copying:
-- Run `scripts/verify_all` once to capture **current** state into baseline.
-- Print success report identical to harness-init's step 9.
+> The plan is written to `.harness-adopt/PLAN.md`. The automated apply step is
+> not in v0.1.0. To proceed:
+>
+> Option A — manual: follow the plan as a checklist, copying files from the
+> harness-init template directory.
+>
+> Option B — clean sibling: run `/harness-init` in a fresh folder with the same
+> type/stack, then selectively merge files into your existing repo.
+>
+> The full automated apply lands in v0.2.0.
 
 ## Hard rules
 
@@ -134,8 +147,18 @@ After copying:
 - Don't extract rules and then assert them — present as a draft, user reviews.
 - Don't generate dev-map from imagination; only from actual folder structure.
 
-## Limitations of this v0.1.0
+## Limitations of v0.1.0 (will improve in v0.2.0)
 
+- **No automated apply.** Only reconnaissance + plan generation. Manual application required.
 - Stack-detection covers Node/Python/Go basics; exotic stacks may need manual edits.
 - Rule extraction is keyword-based, not semantic; expect to refine the draft.
 - No deep code analysis; reuse audit will come on first agent run.
+- No `.gitignore` merge — if the user has existing ignore patterns, the plan flags overlap but does not resolve.
+
+## Roadmap
+
+| Version | Capability |
+|---|---|
+| **0.1.0** (current) | Reconnaissance + plan writing |
+| 0.2.0 (planned) | Automated apply with conflict resolution |
+| 0.3.0 (planned) | Two-way merge for existing `CLAUDE.md` / `.claude/` |

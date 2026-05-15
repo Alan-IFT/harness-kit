@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial release as Claude Code Skills package.
 - Four skills:
   - `harness-init`: bootstrap new project with full Harness skeleton (7 agents, CLAUDE.md, workflow, verify_all, evals).
-  - `harness-adopt`: scaffold for adopting Harness in existing projects (stub, scans repo and proposes config).
+  - `harness-adopt`: **scaffolding-only in 0.1.0** — reconnoiters the repo and writes `.harness-adopt/PLAN.md` for manual application. Automated apply ships in 0.2.0.
   - `harness-verify`: run the project's verify_all script and report PASS/WARN/FAIL.
   - `harness-status`: show current Harness asset health (which files present, baseline state, last verify result).
 - Project type templates: fullstack (Next.js / NestJS / Postgres style) and backend (FastAPI / NestJS / Gin style).

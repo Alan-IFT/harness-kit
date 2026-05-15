@@ -9,10 +9,10 @@
 把 Harness Engineering（Rule / Skill / Script / Multi-Agent / 验证闭环 / 知识库 / 演化）方法论
 封装成 Claude Code 可直接调用的 Skills，让你能在任何全栈或后端项目里：
 
-- `/harness-init` — 给新项目从零生成 Harness 骨架
-- `/harness-adopt` — 给现有项目无侵入接入 Harness
-- `/harness-verify` — 跑总验证脚本（编译 + 测试 + 规则扫描 + 基线对比）
-- `/harness-status` — 查看项目当前 Harness 健康度
+- `/harness-init` — 给新项目从零生成 Harness 骨架 ✅ **可用**
+- `/harness-adopt` — 给现有项目无侵入接入 Harness ⚠️ **v0.1 仅生成方案，需手动应用；v0.2 自动化**
+- `/harness-verify` — 跑总验证脚本（编译 + 测试 + 规则扫描 + 基线对比） ✅
+- `/harness-status` — 查看项目当前 Harness 健康度 ✅
 
 骨架包含：
 
