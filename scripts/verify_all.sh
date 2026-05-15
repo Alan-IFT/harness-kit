@@ -123,7 +123,7 @@ done
 
 # F.1 — script symmetry
 missing_sym=""
-for pair in verify_all sync-self harness-sync test-init; do
+for pair in verify_all sync-self harness-sync test-init test-real-project; do
     [[ -f "scripts/$pair.ps1" ]] || missing_sym="$missing_sym scripts/$pair.ps1"
     [[ -f "scripts/$pair.sh" ]] || missing_sym="$missing_sym scripts/$pair.sh"
 done
@@ -136,6 +136,14 @@ for s in harness-init harness-adopt harness-verify harness-status; do
     grep -q "$s" <<< "$readme" || miss_r="$miss_r $s"
 done
 [[ -z "$miss_r" ]] && step "G.1" "README references all skills" "PASS" || step "G.1" "README references all skills" "FAIL" "missing:$miss_r"
+
+# H.1 — fixtures
+missing_fix=""
+for f in tests/fixtures/todo-fullstack/package.json tests/fixtures/todo-fullstack/src/server.ts \
+         tests/fixtures/todo-backend/pyproject.toml tests/fixtures/todo-backend/src/main.py; do
+    [[ -f "$f" ]] || missing_fix="$missing_fix $f"
+done
+[[ -z "$missing_fix" ]] && step "H.1" "Test fixtures present" "PASS" || step "H.1" "Test fixtures present" "FAIL" "missing:$missing_fix"
 
 # G.2 — CHANGELOG mentions skills
 cl=$(cat CHANGELOG.md)

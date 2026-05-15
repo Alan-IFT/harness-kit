@@ -11,6 +11,25 @@ Personal-project scale — keep this list short and focused. If you need more, y
 
 ## Tasks
 
+### Golden #0 — Integration on real project shape (`test-real-project`)
+
+**Automated** — run [`scripts/test-real-project.ps1`](../scripts/test-real-project.ps1) or `.sh`.
+
+```powershell
+.\scripts\test-real-project.ps1
+```
+
+```bash
+./scripts/test-real-project.sh
+```
+
+Overlays templates onto `tests/fixtures/todo-fullstack/` and `tests/fixtures/todo-backend/`
+(real project shapes with `package.json`/`pyproject.toml`, source, tests, .gitignore) and
+asserts the overlay doesn't damage existing files and produces a working Harness layout.
+
+**Expected**: `PASS: 64 / FAIL: 0`. This complements Golden #1/#2 (which run on empty dirs)
+by catching integration bugs that only show up on non-empty projects.
+
 ### Golden #1 & #2 — harness-init creates clean fullstack & backend skeletons
 
 **Automated** — run [`scripts/test-init.ps1`](../scripts/test-init.ps1) (Windows) or
@@ -78,4 +97,5 @@ Run each on a fresh `--dry-run` and diff their reported plans. Differences shoul
 
 | Date | What changed | Goldens re-run | Result |
 |---|---|---|---|
-| 2026-05-15 | Initial release | #1, #2 via test-init.ps1 | 64/64 PASS |
+| 2026-05-15 | Initial release (v0.1.0) | #1, #2 via test-init.ps1 | 64/64 PASS |
+| 2026-05-15 | v0.2.0 + v0.3.0 + integration tests | #0 via test-real-project; #1, #2 via test-init | 64+86 PASS |

@@ -1,0 +1,31 @@
+# Test Fixtures
+
+Minimal real-shape projects used by `scripts/test-real-project.{ps1,sh}` to verify
+that Harness assets (templates, harness-sync, verify_all) work correctly when
+overlaid onto a project that already has code.
+
+Each fixture is intentionally tiny (no dependencies, no node_modules) so the
+integration test can run in seconds without network access.
+
+## Available fixtures
+
+| Fixture | Purpose |
+|---|---|
+| `todo-fullstack/` | Minimal Next.js-ish frontend + Express-ish backend + TypeScript |
+| `todo-backend/`   | Minimal FastAPI-ish Python service with pytest |
+
+## What integration test does
+
+For each fixture (or one selected via `--type`):
+
+1. Copy fixture to a temp dir.
+2. Overlay the harness-init templates (common + project-type) with placeholder substitution.
+3. Run the project's own `scripts/harness-sync` to generate `.claude/` + `CLAUDE.md`.
+4. Assert that:
+   - Existing fixture files are intact (package.json, tsconfig.json, src/, etc).
+   - All Harness SOT and generated artifacts are present.
+   - `harness-sync --check` reports clean.
+   - The `.gitignore` from the fixture is preserved (not overwritten by adoption).
+5. Clean up.
+
+This catches integration bugs that `test-init` (which works on an empty dir) cannot.

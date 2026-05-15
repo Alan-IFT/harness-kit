@@ -145,8 +145,8 @@ Step "E.6" "evals/golden-tasks.md present" {
 }
 
 # F. Symmetry (PowerShell <-> Bash pairs)
-Step "F.1" "verify_all, sync-self, harness-sync, test-init exist in both .ps1 and .sh" {
-    foreach ($pair in @("verify_all", "sync-self", "harness-sync", "test-init")) {
+Step "F.1" "verify_all, sync-self, harness-sync, test-init, test-real-project exist in both .ps1 and .sh" {
+    foreach ($pair in @("verify_all", "sync-self", "harness-sync", "test-init", "test-real-project")) {
         if (-not (Test-Path "scripts/$pair.ps1")) { throw "Missing scripts/$pair.ps1" }
         if (-not (Test-Path "scripts/$pair.sh")) { throw "Missing scripts/$pair.sh" }
     }
@@ -162,6 +162,15 @@ Step "G.1" "README references all 4 skills" {
     $readme = Get-Content "README.md" -Raw
     foreach ($s in @("harness-init", "harness-adopt", "harness-verify", "harness-status")) {
         if ($readme -notmatch [regex]::Escape($s)) { throw "README missing skill mention: $s" }
+    }
+}
+
+Step "H.1" "Test fixtures present (todo-fullstack + todo-backend)" {
+    foreach ($f in @("tests/fixtures/todo-fullstack/package.json",
+                     "tests/fixtures/todo-fullstack/src/server.ts",
+                     "tests/fixtures/todo-backend/pyproject.toml",
+                     "tests/fixtures/todo-backend/src/main.py")) {
+        if (-not (Test-Path $f)) { throw "Missing fixture file: $f" }
     }
 }
 

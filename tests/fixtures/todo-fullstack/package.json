@@ -1,0 +1,13 @@
+{
+  "name": "todo-fullstack",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -b",
+    "test": "node --test tests/",
+    "lint": "echo 'lint placeholder'",
+    "start": "node dist/server.js"
+  },
+  "description": "Minimal fullstack todo list fixture for Harness integration tests."
+}

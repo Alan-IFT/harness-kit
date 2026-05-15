@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Integration test infrastructure**. `scripts/test-real-project.{ps1,sh}` now overlays harness-init templates onto two fixture projects (`tests/fixtures/todo-fullstack/`, `tests/fixtures/todo-backend/`), runs the embedded `harness-sync`, and asserts that:
+  - Existing fixture files (source, tests, package.json / pyproject.toml, .gitignore) are byte-identical after overlay (nothing clobbered).
+  - All Harness SOT + generated artifacts are present.
+  - `harness-sync --check` is clean.
+  - 64 assertions per full run; both fixtures PASS.
+- `tests/fixtures/{todo-fullstack,todo-backend}/` minimal real-shape projects (no dependencies) as permanent regression assets.
+- `verify_all` step `F.1` now requires the new script pair; step `H.1` new — checks fixture presence.
+
 ## [0.3.0] - 2026-05-15
 
 ### Added

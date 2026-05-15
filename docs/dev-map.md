@@ -58,8 +58,14 @@ HarnessEngineering/
 │   ├── verify_all.{ps1,sh}             ← Total verification (tooling project flavor)
 │   ├── harness-sync.{ps1,sh}           ← Layer 2: .harness/ → .claude/ + CLAUDE.md
 │   ├── sync-self.{ps1,sh}              ← Layer 1: templates/common/ → repo SOT
-│   ├── test-init.{ps1,sh}              ← Automated init+sync regression
+│   ├── test-init.{ps1,sh}              ← Init+sync regression on EMPTY dir (86 assertions)
+│   ├── test-real-project.{ps1,sh}      ← Integration regression on REAL fixture (64 assertions)
 │   └── baseline.json                   ← Test/asset baseline
+│
+├── tests/
+│   └── fixtures/                       ← Minimal real-shape projects for integration tests
+│       ├── todo-fullstack/             ← Node + TS + node:test
+│       └── todo-backend/               ← Python + pytest
 │
 ├── architecture.html                    ← Visual architecture overview
 ├── install.ps1 / install.sh             ← One-command installer
