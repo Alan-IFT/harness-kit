@@ -1,20 +1,20 @@
 # Harness Engineering for Claude Code
 
-![version](https://img.shields.io/badge/version-0.2.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-18%2F18-brightgreen) ![test-init](https://img.shields.io/badge/test--init-86%2F86-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.3.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-18%2F18-brightgreen) ![test-init](https://img.shields.io/badge/test--init-86%2F86-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
 > 一套把 AI 自动开发架构落到 Claude Code 的 Skills 包。
 >
 > 目标：**人工只做"提需求"和"AI 做不到时介入"**，其他由 7-Agent 流水线 + 验证闭环自动完成。
 >
-> **当前版本**：v0.2.0（工具无关 `.harness/` 层 + binding 生成）。升级见 [MIGRATION.md](MIGRATION.md)。
+> **当前版本**：v0.3.0（adopt 自动 apply）。从 v0.1.x 升级见 [MIGRATION.md](MIGRATION.md)。
 
 ## 这是什么
 
 把 Harness Engineering（Rule / Skill / Script / Multi-Agent / 验证闭环 / 知识库 / 演化）方法论
 封装成 Claude Code 可直接调用的 Skills，让你能在任何全栈或后端项目里：
 
-- `/harness-init` — 给新项目从零生成 Harness 骨架 ✅ **可用**
-- `/harness-adopt` — 给现有项目无侵入接入 Harness ⚠️ **v0.1 仅生成方案；v0.2 自动化**
+- `/harness-init` — 给新项目从零生成 Harness 骨架 ✅
+- `/harness-adopt` — 给现有项目无侵入接入 Harness ✅ **v0.3 自动 apply**
 - `/harness-verify` — 跑总验证脚本（编译 + 测试 + 规则扫描 + 基线对比） ✅
 - `/harness-status` — 查看项目当前 Harness 健康度 ✅
 

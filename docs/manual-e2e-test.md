@@ -172,18 +172,26 @@ package.json yet). That's expected; structural checks (E.* steps) should PASS.
 last verify result, active tasks (should show the one from B.5 if you ran it),
 and a health score.
 
-## E. /harness-adopt on an existing project
+## E. /harness-adopt on an existing project (v0.3+ automated apply)
 
-> v0.1.x / 0.2.x: this skill only writes a plan; no automatic apply. v0.3 changes
-> this. Re-run this section after v0.3.
-
-For now:
-
-1. `cd` into any existing project with code (e.g. a real repo).
+1. `cd` into any existing project with code (e.g. a real repo, ideally one you
+   don't mind a *.harness-adopt/* folder appearing in for the test).
 2. `/harness-adopt`
-3. **Expected**: scans the repo, writes `.harness-adopt/PLAN.md` with detected
-   stack and proposed additions. Does NOT modify any existing files.
-4. Delete `.harness-adopt/` after inspection.
+3. **Expected reconnaissance phase**:
+   - Lists detected languages / frameworks / test runners / CI / existing docs.
+   - Asks via AskUserQuestion to confirm: project type, stack, enable verify hook.
+4. **Expected plan phase**:
+   - Writes `.harness-adopt/PLAN.md` and `.harness-adopt/CLAUDE.draft.md`.
+   - Asks "Apply this plan? [yes / no / show full plan]".
+5. Pick "no" the first time and review the plan. Then re-run and pick "yes":
+   - All new files appear in `.harness/`, `.claude/`, `scripts/`, `docs/`, `evals/`.
+   - **No existing source code, tests, or configs are modified.**
+   - If your project already had `CLAUDE.md` or `.harness/`: merge mode skips
+     conflicts, overwrite mode prompts per-file.
+   - `harness-sync` runs automatically; `verify_all` runs to capture baseline.
+6. Inspect `.harness-adopt/CONFLICTS.md` (if it exists) and decide on conflicts.
+7. Try a task to validate.
+8. Cleanup: optionally delete `.harness-adopt/` and add it to `.gitignore`.
 
 ## F. Sign-off
 

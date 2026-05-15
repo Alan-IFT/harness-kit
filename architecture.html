@@ -309,20 +309,21 @@
 <div class="container">
 
 <header>
-  <h1>Harness Engineering · v0.2.0</h1>
+  <h1>Harness Engineering · v0.3.0</h1>
   <div class="subtitle">
-    Claude Code Skills 包 · 工具无关层 + 7-Agent 流水线
+    Claude Code Skills 包 · 工具无关层 + 7-Agent 流水线 + adopt 自动 apply
   </div>
   <div style="margin-top: 12px;">
     <span class="pill">v0.1.0 已交付</span>
-    <span class="pill">v0.2.0 已交付 (NEW)</span>
-    <span class="pill">v0.3.0 设计中</span>
+    <span class="pill">v0.2.0 已交付</span>
+    <span class="pill">v0.3.0 已交付 (NEW)</span>
+    <span class="pill">v0.4.0 设计中</span>
   </div>
 </header>
 
 <div class="tabs">
-  <button class="tab-btn active" onclick="switchTab('current', this)">当前实现 <span class="tag live">v0.2.0</span></button>
-  <button class="tab-btn" onclick="switchTab('roadmap', this)">演进路线 <span class="tag next">v0.3 计划</span></button>
+  <button class="tab-btn active" onclick="switchTab('current', this)">当前实现 <span class="tag live">v0.3.0</span></button>
+  <button class="tab-btn" onclick="switchTab('roadmap', this)">演进路线 <span class="tag next">v0.4 计划</span></button>
   <button class="tab-btn" onclick="switchTab('arch', this)">完整架构</button>
   <button class="tab-btn" onclick="switchTab('history', this)">设计历史 <span class="tag archive">归档</span></button>
 </div>
@@ -330,11 +331,11 @@
 <!-- =================== TAB: 当前实现 v0.2 =================== -->
 <div id="tab-current" class="tab-content active">
 
-<h2>项目快照 (v0.2.0)</h2>
+<h2>项目快照 (v0.3.0)</h2>
 
 <div class="stats">
-  <div class="stat"><div class="v">16</div><div class="lbl">commits 已提交</div></div>
-  <div class="stat"><div class="v">76</div><div class="lbl">追踪文件</div></div>
+  <div class="stat"><div class="v">19</div><div class="lbl">commits 已提交</div></div>
+  <div class="stat"><div class="v">78</div><div class="lbl">追踪文件</div></div>
   <div class="stat"><div class="v">4</div><div class="lbl">Skills 已交付</div></div>
   <div class="stat"><div class="v">7</div><div class="lbl">Sub-Agents</div></div>
   <div class="stat"><div class="v">18/18</div><div class="lbl">verify_all PASS</div></div>
@@ -342,9 +343,14 @@
 </div>
 
 <div class="success-alert">
-  <div class="alert-title">✅ v0.2.0 已交付（你之前的反馈点 #1）</div>
-  项目工具无关层 <code>.harness/</code> 已落地。<code>.claude/</code> 和 <code>CLAUDE.md</code> 改为通过 <code>scripts/harness-sync</code> 从 <code>.harness/</code> 生成。
-  未来切换 IDE / 加 Cursor binding 时，项目知识不丢。verify_all 自动检查两层一致性。
+  <div class="alert-title">✅ v0.3.0 已交付：harness-adopt 自动 apply</div>
+  <code>/harness-adopt</code> 不再是 scaffolding-only。它现在做完整流程：侦察 → 提取规则 → 生成方案 → 用户确认 → 应用（带冲突处理）→ 跑 sync → 跑 verify_all 捕获 baseline。
+  现有项目能一键接入 Harness。
+</div>
+
+<div class="success-alert">
+  <div class="alert-title">✅ v0.2.0 已交付（你的反馈点 #1）</div>
+  项目工具无关层 <code>.harness/</code> 已落地。<code>.claude/</code> 和 <code>CLAUDE.md</code> 通过 <code>scripts/harness-sync</code> 从 <code>.harness/</code> 生成。
 </div>
 
 <h2>v0.2 核心变化</h2>
@@ -393,13 +399,13 @@
     </div>
   </div>
 
-  <div class="skill warn">
+  <div class="skill ok">
     <div class="skill-head">
       <span class="name">/harness-adopt</span>
-      <span class="status warn">⚠️ v0.1+0.2 仅生成方案</span>
+      <span class="status ok">✅ 可用 (v0.3 升级)</span>
     </div>
     <div class="desc">
-      自动 apply 仍留给 v0.3。
+      现有项目：侦察栈 → 抽取规则 → 提议方案 → 用户确认 → 自动 apply（带冲突处理）→ 跑 sync + verify_all 捕获 baseline。
     </div>
   </div>
 
@@ -565,24 +571,25 @@
     </ul>
   </div>
 
-  <div class="release now">
-    <div class="status-line">设计中 · 你的反馈点 #2</div>
-    <h4>v0.3.0 · Developer 分区</h4>
+  <div class="release done">
+    <div class="status-line">已交付 · 2026-05-15</div>
+    <h4>v0.3.0 · adopt 自动 apply</h4>
     <ul>
-      <li>init 时分析项目结构</li>
-      <li>动态生成分区 Developer</li>
-      <li>PM 路由到合适分区</li>
-      <li>harness-adopt 自动 apply</li>
+      <li>侦察 + 提议方案</li>
+      <li>用户确认后自动 apply</li>
+      <li>冲突处理（cancel/merge/overwrite）</li>
+      <li>baseline 捕获现有状态</li>
     </ul>
   </div>
 
-  <div class="release future">
-    <div class="status-line">未来 · 待场景反馈</div>
-    <h4>v0.4+ · 待定</h4>
+  <div class="release now">
+    <div class="status-line">设计中 · 你的反馈点 #2</div>
+    <h4>v0.4.0 · Developer 分区</h4>
     <ul>
-      <li>Cursor binding（如果有真实需求）</li>
-      <li>更多项目类型</li>
-      <li>团队级能力（Vault / Eval CI）</li>
+      <li>init/adopt 时分析项目结构</li>
+      <li>动态生成 dev-* 分区 agents</li>
+      <li>PM 路由到合适分区</li>
+      <li>支持并行（多脑多手）</li>
     </ul>
   </div>
 </div>
