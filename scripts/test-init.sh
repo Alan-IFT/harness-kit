@@ -95,17 +95,16 @@ test_type() {
         assert ".harness/agents/$a.md (SOT)" "[[ -f '$tmp/.harness/agents/$a.md' ]]"
     done
 
-    # Partition agents: fullstack has dev-*, backend does not (v0.4)
+    # Partition agents: both fullstack and backend have them in v0.5
     if [[ "$project_type" == "fullstack" ]]; then
-        for p in dev-frontend dev-backend dev-db; do
-            assert ".harness/agents/$p.md (partition SOT)" "[[ -f '$tmp/.harness/agents/$p.md' ]]"
-            assert ".harness/agents/$p.md placeholder substituted" "! grep -qE '\{\{[A-Z_]+\}\}' '$tmp/.harness/agents/$p.md' && grep -q 'test-project' '$tmp/.harness/agents/$p.md'"
-        done
+        partition_agents="dev-frontend dev-backend dev-db"
     else
-        for p in dev-frontend dev-backend dev-db; do
-            assert ".harness/agents/$p.md absent (backend has no partitions in v0.4)" "[[ ! -f '$tmp/.harness/agents/$p.md' ]]"
-        done
+        partition_agents="dev-api dev-services dev-db"
     fi
+    for p in $partition_agents; do
+        assert ".harness/agents/$p.md (partition SOT)" "[[ -f '$tmp/.harness/agents/$p.md' ]]"
+        assert ".harness/agents/$p.md placeholder substituted" "! grep -qE '\{\{[A-Z_]+\}\}' '$tmp/.harness/agents/$p.md' && grep -q 'test-project' '$tmp/.harness/agents/$p.md'"
+    done
     assert ".harness/rules/00-core.md (composed base)" "[[ -f '$tmp/.harness/rules/00-core.md' ]]"
     assert ".harness/rules/50-$project_type.md (overlay)" "[[ -f '$tmp/.harness/rules/50-$project_type.md' ]]"
     for s in build test verify; do
@@ -116,11 +115,9 @@ test_type() {
     for a in pm-orchestrator requirement-analyst solution-architect gate-reviewer developer code-reviewer qa-tester; do
         assert ".claude/agents/$a.md (generated)" "[[ -f '$tmp/.claude/agents/$a.md' ]]"
     done
-    if [[ "$project_type" == "fullstack" ]]; then
-        for p in dev-frontend dev-backend dev-db; do
-            assert ".claude/agents/$p.md (generated partition)" "[[ -f '$tmp/.claude/agents/$p.md' ]]"
-        done
-    fi
+    for p in $partition_agents; do
+        assert ".claude/agents/$p.md (generated partition)" "[[ -f '$tmp/.claude/agents/$p.md' ]]"
+    done
     for s in build test verify; do
         assert ".claude/skills/$s/SKILL.md (generated)" "[[ -f '$tmp/.claude/skills/$s/SKILL.md' ]]"
     done

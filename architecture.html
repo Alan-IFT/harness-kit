@@ -309,23 +309,23 @@
 <div class="container">
 
 <header>
-  <h1>Harness Engineering · v0.4.1</h1>
+  <h1>Harness Engineering · v0.5.0</h1>
   <div class="subtitle">
-    Claude Code Skills 包 · 工具无关层 + 7-Agent + adopt 自动 apply + Developer 分区
+    Claude Code Skills 包 · 工具无关层 + 7-Agent + adopt 自动 apply + Developer 分区（fullstack + backend）
   </div>
   <div style="margin-top: 12px;">
     <span class="pill">v0.1.0 已交付</span>
     <span class="pill">v0.2.0 工具无关层</span>
     <span class="pill">v0.3.0 adopt 自动 apply</span>
-    <span class="pill">v0.4.0 Developer 分区 (NEW)</span>
-    <span class="pill">v0.4.1 adopt 一致性 patch</span>
-    <span class="pill">v0.5.0 设计中</span>
+    <span class="pill">v0.4.x fullstack 分区</span>
+    <span class="pill">v0.5.0 backend 分区 (NEW)</span>
+    <span class="pill">v0.6.0 设计中</span>
   </div>
 </header>
 
 <div class="tabs">
-  <button class="tab-btn active" onclick="switchTab('current', this)">当前实现 <span class="tag live">v0.4.1</span></button>
-  <button class="tab-btn" onclick="switchTab('roadmap', this)">演进路线 <span class="tag next">v0.5 计划</span></button>
+  <button class="tab-btn active" onclick="switchTab('current', this)">当前实现 <span class="tag live">v0.5.0</span></button>
+  <button class="tab-btn" onclick="switchTab('roadmap', this)">演进路线 <span class="tag next">v0.6 计划</span></button>
   <button class="tab-btn" onclick="switchTab('arch', this)">完整架构</button>
   <button class="tab-btn" onclick="switchTab('philosophy', this)">设计哲学 <span class="tag new">为什么不全 AI</span></button>
   <button class="tab-btn" onclick="switchTab('history', this)">设计历史 <span class="tag archive">归档</span></button>
@@ -334,23 +334,28 @@
 <!-- =================== TAB: 当前实现 v0.2 =================== -->
 <div id="tab-current" class="tab-content active">
 
-<h2>项目快照 (v0.4.1)</h2>
+<h2>项目快照 (v0.5.0)</h2>
 
 <div class="stats">
-  <div class="stat"><div class="v">23</div><div class="lbl">commits 已提交</div></div>
-  <div class="stat"><div class="v">4</div><div class="lbl">git tags（v0.2~v0.4.1）</div></div>
+  <div class="stat"><div class="v">25</div><div class="lbl">commits 已提交</div></div>
+  <div class="stat"><div class="v">5</div><div class="lbl">git tags（v0.2~v0.5.0）</div></div>
   <div class="stat"><div class="v">4</div><div class="lbl">Skills 已交付</div></div>
   <div class="stat"><div class="v">7+3</div><div class="lbl">Agents（generic + 分区）</div></div>
   <div class="stat"><div class="v">19/19</div><div class="lbl">verify_all PASS</div></div>
-  <div class="stat"><div class="v">98/98</div><div class="lbl">test-init PASS</div></div>
-  <div class="stat"><div class="v">70/70</div><div class="lbl">test-real-project PASS</div></div>
+  <div class="stat"><div class="v">104/104</div><div class="lbl">test-init PASS</div></div>
+  <div class="stat"><div class="v">76/76</div><div class="lbl">test-real-project PASS</div></div>
 </div>
 
 <div class="success-alert">
-  <div class="alert-title">✅ v0.4.0 已交付：Developer 分区（你的反馈点 #2）</div>
-  Fullstack 项目自动获得三个分区 Developer：<code>dev-frontend</code>、<code>dev-backend</code>、<code>dev-db</code>，每个有明确的 owned-paths glob。
+  <div class="alert-title">✅ v0.5.0 已交付：Backend 分区（反馈点 #2 完整覆盖）</div>
+  Backend 项目也自动获得三个分区 Developer：<code>dev-api</code>（路由/契约）、<code>dev-services</code>（业务逻辑）、<code>dev-db</code>（持久层）。
+  与 v0.4 fullstack 分区对称。PM 按 db → services → api 顺序路由。init 和 adopt 都支持。
+</div>
+
+<div class="success-alert">
+  <div class="alert-title">✅ v0.4.0 已交付：Fullstack Developer 分区</div>
+  Fullstack 项目分区 Developer：<code>dev-frontend</code>、<code>dev-backend</code>、<code>dev-db</code>，每个有明确的 owned-paths glob。
   PM Orchestrator 按分区路由（默认顺序 db → backend → frontend）。Architect 在方案阶段必须为每个文件指定责任分区。
-  保留 generic <code>developer.md</code> 作为 fallback；小项目可选 single mode。
 </div>
 
 <div class="success-alert">
@@ -506,9 +511,11 @@
   </p>
 </div>
 
-<h2>23 个 Commits（含 v0.4.1 全部）</h2>
+<h2>25 个 Commits（含 v0.5.0 全部）</h2>
 
 <div class="commit-list">
+  <div class="commit"><span class="sha">v0.5</span><span class="msg"><span class="v">v0.5</span><span class="type feat">feat</span>Backend Developer partitioning (dev-api/services/db; mirrors v0.4 fullstack)</span></div>
+  <div class="commit"><span class="sha">7a8678e</span><span class="msg"><span class="type docs">docs</span>architecture.html catch-up + design philosophy tab</span></div>
   <div class="commit"><span class="sha">9a5cb63</span><span class="msg"><span class="v">v0.4.1</span><span class="type fix">fix</span>adopt asks partition question + architecture.html catch-up</span></div>
   <div class="commit"><span class="sha">10144b6</span><span class="msg"><span class="v">v0.4</span><span class="type feat">feat</span>Developer partitioning for fullstack projects (dev-frontend/backend/db)</span></div>
   <div class="commit"><span class="sha">cea272f</span><span class="msg"><span class="type test">test</span>integration test on real-shape fixture projects (todo-fullstack, todo-backend)</span></div>
@@ -608,7 +615,7 @@
 
   <div class="release done">
     <div class="status-line">已交付 · 2026-05-15</div>
-    <h4>v0.4.x · Developer 分区</h4>
+    <h4>v0.4.x · Fullstack 分区</h4>
     <ul>
       <li>v0.4.0: fullstack 三分区 agents</li>
       <li>v0.4.1: adopt 也加 partition Q4</li>
@@ -617,14 +624,25 @@
     </ul>
   </div>
 
-  <div class="release now">
-    <div class="status-line">设计中</div>
+  <div class="release done">
+    <div class="status-line">已交付 · 2026-05-15</div>
     <h4>v0.5.0 · Backend 分区</h4>
     <ul>
-      <li>微服务：每 service 一个 dev-*</li>
-      <li>单体：按层 (controller/service/db)</li>
-      <li>动态生成（不是固定模板）</li>
-      <li>+ adopt 自动检测分区结构</li>
+      <li>三层分区：dev-api / dev-services / dev-db</li>
+      <li>与 fullstack 对称（同 PM 路由模式）</li>
+      <li>init/adopt 都支持 Q4</li>
+      <li>反馈点 #2 完整覆盖</li>
+    </ul>
+  </div>
+
+  <div class="release now">
+    <div class="status-line">设计中</div>
+    <h4>v0.6.0 · 微服务 + AI 化</h4>
+    <ul>
+      <li>微服务专属分区（每 service 独立 dev-*）</li>
+      <li>adopt 规则提取 AI 化（语义 > 关键字）</li>
+      <li>三方合并 CLAUDE.md</li>
+      <li>看真实使用反馈决定优先级</li>
     </ul>
   </div>
 </div>

@@ -82,14 +82,22 @@ Use `AskUserQuestion`:
 1. **Confirm project type** (default: detected) — Fullstack / Backend / Other (abort).
 2. **Stack description** (free text via "Other") — pre-fill with detected list.
 3. **Enable verify_all hook** — Yes / No.
-4. **Developer partitioning** (only if Q1 = fullstack) — Partitioned (default, recommended) / Single developer.
-   - Partitioned: ships `dev-frontend`, `dev-backend`, `dev-db` agents alongside the generic
-     `developer.md`. PM routes by partition per the Architect's assignment.
-   - Single developer: ships only generic `developer.md`. Suitable for small fullstack
-     projects where partition overhead isn't worth it.
-   - Pre-fill suggestion based on detected layout: if `apps/web/` + `apps/api/` (or similar
-     dual structure) present → recommend Partitioned. If a single flat structure with no
-     obvious split → recommend Single.
+4. **Developer partitioning** — options depend on Q1:
+
+   For **Fullstack**: Partitioned (default) / Single developer.
+   - Partitioned: ships `dev-frontend`, `dev-backend`, `dev-db` agents alongside
+     the generic `developer.md`.
+   - Single developer: ships only generic `developer.md`.
+   - Pre-fill: `apps/web/` + `apps/api/` (or similar dual structure) → recommend
+     Partitioned. Flat structure → Single.
+
+   For **Backend**: Partitioned (default) / Single developer.
+   - Partitioned: ships `dev-api`, `dev-services`, `dev-db` agents alongside the
+     generic `developer.md`.
+   - Single developer: ships only generic `developer.md`.
+   - Pre-fill: presence of `src/routes/` + `src/services/` + `migrations/`
+     (or `src/controllers/` + `src/services/` + `src/repositories/`) → recommend
+     Partitioned. Flat single-folder project → Single.
 
 ### 4. Extract rule candidates
 
@@ -116,7 +124,9 @@ Write `.harness-adopt/PLAN.md`:
 
 ## Files I will add (NEW)
 - .harness/agents/*.md (7 generic agent contracts, copied from templates/common/.harness/agents/)
-- .harness/agents/dev-*.md (3 partition agents — fullstack only, only if Q4=Partitioned: dev-frontend, dev-backend, dev-db)
+- .harness/agents/dev-*.md (3 partition agents, only if Q4=Partitioned):
+  - Fullstack: dev-frontend, dev-backend, dev-db
+  - Backend:   dev-api, dev-services, dev-db
 - .harness/rules/00-core.md (composed from CLAUDE.draft.md and templates/common/.harness/rules/00-core.md.tmpl with placeholders substituted)
 - .harness/rules/50-<type>.md (overlay rules from templates/<type>/.harness/rules/)
 - .harness/skills/{build,test,verify}/SKILL.md (from templates/<type>/.harness/skills/, wired to your detected commands)
@@ -165,11 +175,12 @@ For each file in the plan:
 
 **Partition handling** (Q4 from step 3):
 
-- If Q4 = Partitioned (fullstack only): copy partition agents from
-  `templates/fullstack/.harness/agents/dev-*.md.tmpl` with placeholder substitution.
+- If Q4 = Partitioned: copy partition agents from
+  `templates/<type>/.harness/agents/dev-*.md.tmpl` with placeholder substitution:
+  - Fullstack: `dev-frontend`, `dev-backend`, `dev-db`
+  - Backend:   `dev-api`, `dev-services`, `dev-db`
   Keep the generic `developer.md` as fallback.
 - If Q4 = Single developer: do NOT copy partition agents. Only `developer.md` is shipped.
-- Backend projects: no partition copy in v0.4 (backend partitioning is v0.5).
 
 Substitution rules (same as `/harness-init`):
 
@@ -256,5 +267,6 @@ delete it (and may want to gitignore it). Add `.harness-adopt/` to a recommended
 | Version | Capability |
 |---|---|
 | 0.3.0 | Reconnaissance + plan + automated apply with conflict gating |
-| **0.4.1** (current) | Partition Q4 (fullstack only) — copy `dev-frontend/backend/db` agents when selected |
-| 0.5.0 (planned) | Backend partitioning (microservices or layered monolith); three-way merge for `CLAUDE.md`; deeper rule extraction |
+| 0.4.1 | Partition Q4 (fullstack only) — copy `dev-frontend/backend/db` agents |
+| **0.5.0** (current) | Backend partitioning (`dev-api/services/db`) symmetric with fullstack |
+| 0.6.0 (planned) | Microservice-aware partitioning (per-service agents); three-way merge for `CLAUDE.md`; semantic rule extraction (AI instead of keyword) |

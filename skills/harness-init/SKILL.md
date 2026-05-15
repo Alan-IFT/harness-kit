@@ -49,12 +49,15 @@ Ask three or four questions in a single `AskUserQuestion` call:
 3. **Enable verify_all hook on Stop event?** — options:
    - `Yes (recommended)` — runs verify after every major change
    - `No, manual only`
-4. **Developer partitioning** (only if project type is `Fullstack` from Q1) — options:
-   - `Partitioned (recommended) — dev-frontend / dev-backend / dev-db agents` — better focus, cleaner reviews, supports cross-area tasks via Architect partition assignment
+4. **Developer partitioning** — options depend on Q1:
+
+   For **Fullstack**:
+   - `Partitioned (recommended) — dev-frontend / dev-backend / dev-db agents` — better focus, cleaner reviews, cross-area tasks via Architect partition assignment
    - `Single developer — one agent for all code` — simpler, fewer agents, fine for small projects
 
-   For backend-only projects, skip this question and use single Developer mode (backend
-   partitioning lands in v0.5).
+   For **Backend** (v0.5+):
+   - `Partitioned (recommended) — dev-api / dev-services / dev-db agents` — three-layer split (HTTP boundary / business logic / persistence), supports clean coordination per Architect's design
+   - `Single developer — one agent for all code` — fine for small/flat backend projects without a layered architecture
 
 ### 3. Locate the template directory
 
@@ -80,12 +83,14 @@ Files ending in `.tmpl` need placeholder substitution (step 5). Drop the `.tmpl`
 
 **After copy, apply the partitioning choice** (from Q4):
 
-- If user picked **partitioned mode** (default for fullstack): keep all partition
-  agents AND keep the generic `developer.md`. The generic one stays as a
-  fallback for tasks the architect can't cleanly assign to one partition.
-- If user picked **single mode**: delete `.harness/agents/dev-frontend.md`,
-  `.harness/agents/dev-backend.md`, `.harness/agents/dev-db.md`. Only the generic
-  `developer.md` remains.
+- If user picked **partitioned mode**: keep all partition agents AND keep the
+  generic `developer.md`. The generic one stays as a fallback for tasks the
+  architect can't cleanly assign to one partition.
+- If user picked **single mode**: delete the project-type-specific partition
+  agents from `.harness/agents/`:
+  - Fullstack: `dev-frontend.md`, `dev-backend.md`, `dev-db.md`
+  - Backend: `dev-api.md`, `dev-services.md`, `dev-db.md`
+  - Only the generic `developer.md` remains.
 
 Note: templates/common contains both `.harness/` (the source of truth content) and
 `.claude/settings.json.tmpl` (Claude Code binding glue — permissions and hooks).

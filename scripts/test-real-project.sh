@@ -135,11 +135,14 @@ test_fixture() {
         assert ".claude/agents/$a.md (generated)" "[[ -f '$tmp/.claude/agents/$a.md' ]]"
     done
     if [[ "$project_type" == "fullstack" ]]; then
-        for p in dev-frontend dev-backend dev-db; do
-            assert ".harness/agents/$p.md (partition)" "[[ -f '$tmp/.harness/agents/$p.md' ]]"
-            assert ".claude/agents/$p.md (generated)" "[[ -f '$tmp/.claude/agents/$p.md' ]]"
-        done
+        real_partitions="dev-frontend dev-backend dev-db"
+    else
+        real_partitions="dev-api dev-services dev-db"
     fi
+    for p in $real_partitions; do
+        assert ".harness/agents/$p.md (partition)" "[[ -f '$tmp/.harness/agents/$p.md' ]]"
+        assert ".claude/agents/$p.md (generated)" "[[ -f '$tmp/.claude/agents/$p.md' ]]"
+    done
     assert ".harness/rules/00-core.md" "[[ -f '$tmp/.harness/rules/00-core.md' ]]"
     assert ".harness/rules/50-$project_type.md" "[[ -f '$tmp/.harness/rules/50-$project_type.md' ]]"
     assert "CLAUDE.md (generated)" "[[ -f '$tmp/CLAUDE.md' ]]"

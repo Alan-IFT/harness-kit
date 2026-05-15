@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-05-15
+
+### Added
+
+- **Backend Developer partitioning** (symmetric with v0.4 fullstack partitioning):
+  - Three new partition agents under `templates/backend/.harness/agents/`:
+    `dev-api.md.tmpl` (route handlers / contracts / middleware),
+    `dev-services.md.tmpl` (business logic / domain / orchestration),
+    `dev-db.md.tmpl` (schema / migrations / ORM / repositories).
+  - Each has explicit `Owned paths (glob)` plus partition rules — out-of-scope
+    changes raise `BLOCKED ON PARTITION`.
+  - The Architect's `Partition assignment` table now applies to backend projects
+    too. Default dispatch order: dev-db → dev-services → dev-api.
+- **`harness-init` Q4 now offered for backend projects** (was fullstack-only). Choices:
+  Partitioned (recommended) vs Single developer. Single-mode opt-out works identically
+  to fullstack.
+- **`harness-adopt` Q4 mirrors init for backend**, with pre-fill suggestion based on
+  detected layout (presence of `src/routes/` + `src/services/` + `migrations/` —
+  or controller/service/repository pattern — recommends Partitioned).
+- `50-backend.md` documents the partition system at the rule level.
+
+### Tests
+
+- `test-init`: 98 → **104** assertions (+6 backend partition checks). Both fullstack
+  and backend projects now produce 3 partition agents under partitioned mode.
+- `test-real-project`: 70 → **76** assertions (+6).
+- `verify_all`: 19/19 unchanged (new files inherit existing checks).
+
+### Resolves user feedback #2 fully
+
+v0.4 covered fullstack partitioning. v0.5 covers backend symmetrically. Both
+project types now have project-shape-aware Developer agents instead of a single
+generic developer for all code.
+
+### Out of scope (deferred)
+
+- Microservice-specific partitioning (per-service `dev-<svc>` agents). Needs more
+  thought about how to dynamically generate per-service agents from project structure.
+  Currently a single-monolith-with-layers default. → v0.6 or later.
+- Semantic rule extraction in `harness-adopt` (currently keyword-based). → v0.6.
+
 ## [0.4.1] - 2026-05-15
 
 ### Fixed

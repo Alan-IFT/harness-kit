@@ -134,11 +134,14 @@ function Test-Fixture {
             Assert ".harness/agents/$a.md" { Test-Path (Join-Path $tmp ".harness/agents/$a.md") }
             Assert ".claude/agents/$a.md (generated)" { Test-Path (Join-Path $tmp ".claude/agents/$a.md") }
         }
-        if ($ProjectType -eq "fullstack") {
-            foreach ($p in @("dev-frontend","dev-backend","dev-db")) {
-                Assert ".harness/agents/$p.md (partition)" { Test-Path (Join-Path $tmp ".harness/agents/$p.md") }
-                Assert ".claude/agents/$p.md (generated)" { Test-Path (Join-Path $tmp ".claude/agents/$p.md") }
-            }
+        $partitionAgents = if ($ProjectType -eq "fullstack") {
+            @("dev-frontend","dev-backend","dev-db")
+        } else {
+            @("dev-api","dev-services","dev-db")
+        }
+        foreach ($p in $partitionAgents) {
+            Assert ".harness/agents/$p.md (partition)" { Test-Path (Join-Path $tmp ".harness/agents/$p.md") }
+            Assert ".claude/agents/$p.md (generated)" { Test-Path (Join-Path $tmp ".claude/agents/$p.md") }
         }
         Assert ".harness/rules/00-core.md" { Test-Path (Join-Path $tmp ".harness/rules/00-core.md") }
         Assert ".harness/rules/50-$ProjectType.md" { Test-Path (Join-Path $tmp ".harness/rules/50-$ProjectType.md") }
