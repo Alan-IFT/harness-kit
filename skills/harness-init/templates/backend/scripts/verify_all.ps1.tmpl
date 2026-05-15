@@ -119,12 +119,18 @@ Step "D.2" "workflow.md present" {
     if (-not (Test-Path "docs/workflow.md")) { throw "docs/workflow.md missing" }
 }
 
-Step "D.3" "All 7 agent definitions present" {
+Step "D.3" "All 7 agent definitions present in .harness/agents/" {
     $needed = @("pm-orchestrator", "requirement-analyst", "solution-architect",
                 "gate-reviewer", "developer", "code-reviewer", "qa-tester")
     foreach ($a in $needed) {
-        if (-not (Test-Path ".claude/agents/$a.md")) { throw "Missing agent: $a" }
+        if (-not (Test-Path ".harness/agents/$a.md")) { throw "Missing agent: .harness/agents/$a.md" }
     }
+}
+
+Step "D.4" "Binding in sync (.harness/ → .claude/ + CLAUDE.md)" {
+    if (-not (Test-Path "scripts/harness-sync.ps1")) { throw "scripts/harness-sync.ps1 missing" }
+    & "scripts/harness-sync.ps1" -Check
+    if ($LASTEXITCODE -ne 0) { throw "Binding drift — run scripts/harness-sync.ps1 to fix" }
 }
 
 # --- Summary ---

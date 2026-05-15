@@ -100,9 +100,15 @@ fi
 
 missing=""
 for a in pm-orchestrator requirement-analyst solution-architect gate-reviewer developer code-reviewer qa-tester; do
-    [[ -f ".claude/agents/$a.md" ]] || missing="$missing $a"
+    [[ -f ".harness/agents/$a.md" ]] || missing="$missing $a"
 done
-[[ -z "$missing" ]] && step "D.3" "All 7 agent definitions present" "PASS" || step "D.3" "All 7 agent definitions present" "FAIL" "Missing:$missing"
+[[ -z "$missing" ]] && step "D.3" "All 7 agents in .harness/agents/" "PASS" || step "D.3" "All 7 agents in .harness/agents/" "FAIL" "Missing:$missing"
+
+if [[ -f scripts/harness-sync.sh ]] && bash scripts/harness-sync.sh --check &>/dev/null; then
+    step "D.4" "Binding in sync (.harness/ → .claude/ + CLAUDE.md)" "PASS"
+else
+    step "D.4" "Binding in sync (.harness/ → .claude/ + CLAUDE.md)" "FAIL" "Run scripts/harness-sync.sh"
+fi
 
 echo ""
 echo "=== Summary ==="

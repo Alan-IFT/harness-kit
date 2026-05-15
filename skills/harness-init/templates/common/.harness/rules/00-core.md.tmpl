@@ -2,8 +2,8 @@
 
 > Project type: **{{PROJECT_TYPE}}** · Stack: **{{STACK}}** · Initialized: {{TODAY}}
 >
-> These rules apply to every Claude Code session on this repo. Keep them short and load-bearing.
-> When a rule can be checked by `scripts/verify_all`, it lives there instead of here.
+> This file is **generated** from `.harness/rules/*.md` via `scripts/harness-sync.{ps1,sh}`.
+> Edit `.harness/rules/*.md` and re-run sync. Do not edit `CLAUDE.md` directly.
 
 ## How this project is developed
 
@@ -21,6 +21,7 @@ This repo uses the **Harness 7-agent pipeline**. Read `docs/workflow.md` before 
 4. **No secrets in code.** Use `.env` / environment variables; verify_all scans for hardcoded keys.
 5. **No production-destructive actions** (drop table, force push to main, delete branches) without explicit user confirmation.
 6. **Run verify_all before declaring done.** "It compiles" is not done.
+7. **Edit `.harness/`, not `.claude/` or `CLAUDE.md`.** The latter two are generated. Edit a rule under `.harness/rules/`, an agent under `.harness/agents/`, or a skill under `.harness/skills/`, then run `scripts/harness-sync` (PowerShell or Bash). `verify_all` enforces this.
 
 ## Style / convention
 
@@ -30,14 +31,18 @@ This repo uses the **Harness 7-agent pipeline**. Read `docs/workflow.md` before 
 
 ## What lives where
 
-| Need | Look here |
+| Need | Look at |
 |---|---|
 | Project structure / where things go | `docs/dev-map.md` |
 | What's currently being worked on | `docs/tasks.md` |
 | Per-task documents | `docs/features/<task-slug>/` |
 | Project SPECs / requirements | `docs/spec/` |
 | The 7-agent pipeline definition | `docs/workflow.md` |
-| Standard build/test/verify commands | `.claude/skills/` |
+| Agent role definitions (SOURCE OF TRUTH) | `.harness/agents/` |
+| Project rule fragments (SOURCE OF TRUTH) | `.harness/rules/` |
+| Build/test/verify procedures (SOURCE OF TRUTH) | `.harness/skills/` |
+| Claude Code binding (generated; do not edit) | `.claude/` + `CLAUDE.md` |
+| Tool binding sync (`.harness/` → `.claude/` + `CLAUDE.md`) | `scripts/harness-sync.{ps1,sh}` |
 | Total verification | `scripts/verify_all.{ps1,sh}` |
 | Test count baseline | `scripts/baseline.json` |
 | Regression task set | `evals/golden-tasks.md` |

@@ -1,4 +1,3 @@
-
 ---
 
 ## Fullstack-specific rules
