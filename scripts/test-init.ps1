@@ -1,15 +1,17 @@
-# test-init.ps1 — Automated regression for /harness-init's template copy logic
+# test-init.ps1 — Automated regression for /harness-init (v0.2)
 #
-# Simulates what /harness-init does (template discovery, file copy, placeholder
-# substitution, .tmpl/.append handling) in a temp directory, then asserts the
-# result has the expected shape. Cleans up automatically.
+# Simulates a full init in a temp directory:
+#   1. Copy common + project-type templates with placeholder substitution
+#      (.tmpl files; no .append handling — v0.2 doesn't use .append).
+#   2. Run the project's own harness-sync to generate .claude/ + CLAUDE.md.
+#   3. Assert the resulting structure.
 #
-# Implements Golden Tasks #1 (fullstack) and #2 (backend) from evals/golden-tasks.md.
+# Implements Golden Tasks #1 (fullstack) and #2 (backend).
 #
 # Usage:
-#   .\scripts\test-init.ps1               # both project types
+#   .\scripts\test-init.ps1              # both project types
 #   .\scripts\test-init.ps1 -Type fullstack
-#   .\scripts\test-init.ps1 -KeepTemp     # don't delete the temp dir at the end
+#   .\scripts\test-init.ps1 -KeepTemp    # leave temp dir for inspection
 
 [CmdletBinding()]
 param(
@@ -41,7 +43,7 @@ function Assert($name, [scriptblock]$check) {
     }
 }
 
-function Copy-Template {
+function Copy-TemplateLayer {
     param(
         [string]$Source,
         [string]$Target,
@@ -52,20 +54,11 @@ function Copy-Template {
     Get-ChildItem -Path $Source -Recurse -File | ForEach-Object {
         $rel = $_.FullName.Substring($Source.Length).TrimStart('\','/')
         $destRel = $rel
+        $needsSubst = $false
 
-        # .tmpl files become real files with placeholder substitution
         if ($destRel.EndsWith(".tmpl")) {
             $destRel = $destRel.Substring(0, $destRel.Length - 5)
             $needsSubst = $true
-        } elseif ($destRel.EndsWith(".append")) {
-            # Append to base CLAUDE.md
-            $baseFile = Join-Path $Target "CLAUDE.md"
-            if (Test-Path $baseFile) {
-                Add-Content -Path $baseFile -Value (Get-Content $_.FullName -Raw)
-            }
-            return
-        } else {
-            $needsSubst = $false
         }
 
         $destPath = Join-Path $Target $destRel
@@ -79,7 +72,6 @@ function Copy-Template {
             foreach ($k in $Vars.Keys) {
                 $content = $content -replace [regex]::Escape("{{$k}}"), $Vars[$k]
             }
-            # Substitute the substitution result back into the file
             [System.IO.File]::WriteAllText($destPath, $content)
         } else {
             Copy-Item -Path $_.FullName -Destination $destPath -Force
@@ -105,60 +97,69 @@ function Test-Type {
             "ENABLE_HOOK"  = "false"
         }
 
-        Copy-Template -Source (Join-Path $templateRoot "common") -Target $tmp -Vars $vars
-        Copy-Template -Source (Join-Path $templateRoot $ProjectType) -Target $tmp -Vars $vars
+        # 1) copy templates (common, then overlay)
+        Copy-TemplateLayer -Source (Join-Path $templateRoot "common") -Target $tmp -Vars $vars
+        Copy-TemplateLayer -Source (Join-Path $templateRoot $ProjectType) -Target $tmp -Vars $vars
 
-        # === Assertions ===
+        # 2) run the embedded harness-sync to generate .claude/ + CLAUDE.md
+        $syncScript = Join-Path $tmp "scripts/harness-sync.ps1"
+        Assert "harness-sync.ps1 was distributed" { Test-Path $syncScript }
+        if (Test-Path $syncScript) {
+            $env:HARNESS_TEST = "1"  # not used currently but reserved
+            & pwsh -File $syncScript | Out-Null
+            $syncExit = $LASTEXITCODE
+            Assert "harness-sync exited cleanly" { $syncExit -eq 0 }
+        }
 
-        # All 7 agents present
+        # === Source-of-truth (.harness/) assertions ===
         $agents = @("pm-orchestrator","requirement-analyst","solution-architect",
                     "gate-reviewer","developer","code-reviewer","qa-tester")
         foreach ($a in $agents) {
-            Assert "agent: $a.md" { Test-Path (Join-Path $tmp ".claude/agents/$a.md") }
+            Assert ".harness/agents/$a.md (SOT)" { Test-Path (Join-Path $tmp ".harness/agents/$a.md") }
         }
 
-        # 3 stack skills
+        Assert ".harness/rules/00-core.md (composed base)" { Test-Path (Join-Path $tmp ".harness/rules/00-core.md") }
+        Assert ".harness/rules/50-$ProjectType.md (overlay)" { Test-Path (Join-Path $tmp ".harness/rules/50-$ProjectType.md") }
+
         foreach ($s in @("build","test","verify")) {
-            Assert "skill: $s/SKILL.md" { Test-Path (Join-Path $tmp ".claude/skills/$s/SKILL.md") }
-            Assert "skill: $s/SKILL.md.tmpl removed" { -not (Test-Path (Join-Path $tmp ".claude/skills/$s/SKILL.md.tmpl")) }
+            Assert ".harness/skills/$s/SKILL.md (SOT)" { Test-Path (Join-Path $tmp ".harness/skills/$s/SKILL.md") }
         }
 
-        # Settings + rules
-        Assert "settings.json (no .tmpl suffix)" { Test-Path (Join-Path $tmp ".claude/settings.json") }
-        Assert "CLAUDE.md present" { Test-Path (Join-Path $tmp "CLAUDE.md") }
-        Assert "CLAUDE.md.tmpl removed" { -not (Test-Path (Join-Path $tmp "CLAUDE.md.tmpl")) }
+        # === Generated artifacts (.claude/ + CLAUDE.md) ===
+        foreach ($a in $agents) {
+            Assert ".claude/agents/$a.md (generated)" { Test-Path (Join-Path $tmp ".claude/agents/$a.md") }
+        }
+        foreach ($s in @("build","test","verify")) {
+            Assert ".claude/skills/$s/SKILL.md (generated)" { Test-Path (Join-Path $tmp ".claude/skills/$s/SKILL.md") }
+        }
+        Assert ".claude/settings.json (direct binding artifact)" { Test-Path (Join-Path $tmp ".claude/settings.json") }
+        Assert "CLAUDE.md (generated)" { Test-Path (Join-Path $tmp "CLAUDE.md") }
 
-        # Append worked (project-type overlay)
-        Assert "CLAUDE.md contains overlay marker" {
-            $content = Get-Content (Join-Path $tmp "CLAUDE.md") -Raw
-            $content -match "$ProjectType-specific rules"
+        # === Content correctness ===
+        Assert "CLAUDE.md has generated marker" {
+            (Get-Content (Join-Path $tmp "CLAUDE.md") -Raw) -match "THIS FILE IS GENERATED"
+        }
+        Assert "CLAUDE.md contains overlay marker for $ProjectType" {
+            (Get-Content (Join-Path $tmp "CLAUDE.md") -Raw) -match "$ProjectType-specific rules"
+        }
+        Assert "PROJECT_NAME substituted into rules" {
+            (Get-Content (Join-Path $tmp ".harness/rules/00-core.md") -Raw) -match "test-project"
+        }
+        Assert "TODAY substituted into rules" {
+            (Get-Content (Join-Path $tmp ".harness/rules/00-core.md") -Raw) -match $today
+        }
+        Assert "STACK substituted into rules" {
+            (Get-Content (Join-Path $tmp ".harness/rules/00-core.md") -Raw) -match [regex]::Escape($Stack)
         }
 
-        # Docs
-        Assert "docs/workflow.md" { Test-Path (Join-Path $tmp "docs/workflow.md") }
-        Assert "docs/dev-map.md" { Test-Path (Join-Path $tmp "docs/dev-map.md") }
-        Assert "docs/tasks.md" { Test-Path (Join-Path $tmp "docs/tasks.md") }
-        Assert "docs/spec/README.md" { Test-Path (Join-Path $tmp "docs/spec/README.md") }
-
-        # Evals
-        Assert "evals/golden-tasks.md" { Test-Path (Join-Path $tmp "evals/golden-tasks.md") }
-
-        # Scripts (both PowerShell + Bash)
-        Assert "scripts/verify_all.ps1" { Test-Path (Join-Path $tmp "scripts/verify_all.ps1") }
-        Assert "scripts/verify_all.sh"  { Test-Path (Join-Path $tmp "scripts/verify_all.sh") }
-        Assert "scripts/verify_all.ps1.tmpl removed" { -not (Test-Path (Join-Path $tmp "scripts/verify_all.ps1.tmpl")) }
-        Assert "scripts/verify_all.sh.tmpl removed"  { -not (Test-Path (Join-Path $tmp "scripts/verify_all.sh.tmpl")) }
-
-        # Placeholder substitution worked
-        Assert "PROJECT_NAME substituted in CLAUDE.md" {
-            (Get-Content (Join-Path $tmp "CLAUDE.md") -Raw) -match "test-project"
+        # === Docs / scripts / evals ===
+        foreach ($f in @("docs/workflow.md","docs/dev-map.md","docs/tasks.md","docs/spec/README.md",
+                         "evals/golden-tasks.md","scripts/verify_all.ps1","scripts/verify_all.sh",
+                         "scripts/harness-sync.sh")) {
+            Assert "$f present" { Test-Path (Join-Path $tmp $f) }
         }
-        Assert "TODAY substituted in CLAUDE.md" {
-            (Get-Content (Join-Path $tmp "CLAUDE.md") -Raw) -match $today
-        }
-        Assert "STACK substituted in CLAUDE.md" {
-            (Get-Content (Join-Path $tmp "CLAUDE.md") -Raw) -match [regex]::Escape($Stack)
-        }
+
+        # === Cleanliness ===
         Assert "no unresolved placeholders anywhere" {
             $bad = @()
             Get-ChildItem -Path $tmp -Recurse -File | Where-Object {
@@ -170,17 +171,22 @@ function Test-Type {
             if ($bad.Count -gt 0) { throw "unresolved placeholders in:`n$($bad -join "`n")" }
             $true
         }
-
-        # No .tmpl or .append leaked through
-        Assert "no .tmpl files leaked to output" {
+        Assert "no .tmpl files leaked" {
             $leaked = Get-ChildItem -Path $tmp -Recurse -Filter "*.tmpl" -File
             if ($leaked) { throw "leaked: $($leaked.FullName -join ', ')" }
             $true
         }
-        Assert "no .append files leaked to output" {
+        Assert "no .append files anywhere (v0.2 removed them)" {
             $leaked = Get-ChildItem -Path $tmp -Recurse -Filter "*.append" -File
-            if ($leaked) { throw "leaked: $($leaked.FullName -join ', ')" }
+            if ($leaked) { throw "found: $($leaked.FullName -join ', ')" }
             $true
+        }
+
+        # === Layer 2 binding consistency right after init ===
+        Assert "harness-sync --check is clean after init" {
+            $check = Join-Path $tmp "scripts/harness-sync.ps1"
+            & pwsh -File $check -Check | Out-Null
+            $LASTEXITCODE -eq 0
         }
 
     } finally {
@@ -193,7 +199,7 @@ function Test-Type {
     }
 }
 
-Write-Host "=== test-init: simulating /harness-init template copy ===" -ForegroundColor Cyan
+Write-Host "=== test-init: simulating /harness-init flow (v0.2) ===" -ForegroundColor Cyan
 Write-Host "Repo: $repoRoot"
 
 if ($Type -in @("both", "fullstack")) {

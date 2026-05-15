@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test-init.sh — Automated regression for /harness-init template copy logic.
+# test-init.sh — Automated regression for /harness-init (v0.2)
 # Mirror of scripts/test-init.ps1. See that file for full doc.
 
 set -uo pipefail
@@ -36,9 +36,7 @@ assert() {
 
 substitute() {
     local file="$1" project_name="$2" project_type="$3" stack="$4"
-    # macOS sed wants -i ''; GNU sed wants -i. Use a temp file for portability.
-    local tmp
-    tmp=$(mktemp)
+    local tmp; tmp=$(mktemp)
     sed \
         -e "s|{{PROJECT_NAME}}|$project_name|g" \
         -e "s|{{PROJECT_TYPE}}|$project_type|g" \
@@ -49,13 +47,11 @@ substitute() {
     mv "$tmp" "$file"
 }
 
-copy_template() {
+copy_layer() {
     local source="$1" target="$2" project_name="$3" project_type="$4" stack="$5"
-
     [[ -d "$source" ]] || { echo "source missing: $source" >&2; exit 1; }
 
-    # First, handle .tmpl and regular files (skip .append for now)
-    find "$source" -type f ! -name "*.append" | while read -r f; do
+    find "$source" -type f | while read -r f; do
         rel="${f#$source/}"
         if [[ "$rel" == *.tmpl ]]; then
             dest_rel="${rel%.tmpl}"
@@ -69,13 +65,6 @@ copy_template() {
             cp "$f" "$dest"
         fi
     done
-
-    # Then handle .append files (append to existing CLAUDE.md)
-    find "$source" -type f -name "*.append" | while read -r f; do
-        if [[ -f "$target/CLAUDE.md" ]]; then
-            cat "$f" >> "$target/CLAUDE.md"
-        fi
-    done
 }
 
 test_type() {
@@ -83,55 +72,75 @@ test_type() {
     echo ""
     echo "=== Testing: $project_type ($stack) ==="
 
-    local tmp
-    tmp=$(mktemp -d -t harness-test-XXXXXX)
+    local tmp; tmp=$(mktemp -d -t harness-test-XXXXXX)
 
-    copy_template "$template_root/common" "$tmp" "test-project" "$project_type" "$stack"
-    copy_template "$template_root/$project_type" "$tmp" "test-project" "$project_type" "$stack"
+    copy_layer "$template_root/common" "$tmp" "test-project" "$project_type" "$stack"
+    copy_layer "$template_root/$project_type" "$tmp" "test-project" "$project_type" "$stack"
 
-    # === Assertions ===
-    for a in pm-orchestrator requirement-analyst solution-architect gate-reviewer developer code-reviewer qa-tester; do
-        assert "agent: $a.md" "[[ -f '$tmp/.claude/agents/$a.md' ]]"
-    done
-
-    for s in build test verify; do
-        assert "skill: $s/SKILL.md" "[[ -f '$tmp/.claude/skills/$s/SKILL.md' ]]"
-        assert "skill: $s/SKILL.md.tmpl removed" "[[ ! -f '$tmp/.claude/skills/$s/SKILL.md.tmpl' ]]"
-    done
-
-    assert "settings.json (no .tmpl suffix)" "[[ -f '$tmp/.claude/settings.json' ]]"
-    assert "CLAUDE.md present" "[[ -f '$tmp/CLAUDE.md' ]]"
-    assert "CLAUDE.md.tmpl removed" "[[ ! -f '$tmp/CLAUDE.md.tmpl' ]]"
-    assert "CLAUDE.md contains overlay marker" "grep -q '$project_type-specific rules' '$tmp/CLAUDE.md'"
-
-    assert "docs/workflow.md" "[[ -f '$tmp/docs/workflow.md' ]]"
-    assert "docs/dev-map.md" "[[ -f '$tmp/docs/dev-map.md' ]]"
-    assert "docs/tasks.md" "[[ -f '$tmp/docs/tasks.md' ]]"
-    assert "docs/spec/README.md" "[[ -f '$tmp/docs/spec/README.md' ]]"
-    assert "evals/golden-tasks.md" "[[ -f '$tmp/evals/golden-tasks.md' ]]"
-    assert "scripts/verify_all.ps1" "[[ -f '$tmp/scripts/verify_all.ps1' ]]"
-    assert "scripts/verify_all.sh"  "[[ -f '$tmp/scripts/verify_all.sh' ]]"
-    assert "scripts/verify_all.ps1.tmpl removed" "[[ ! -f '$tmp/scripts/verify_all.ps1.tmpl' ]]"
-    assert "scripts/verify_all.sh.tmpl removed"  "[[ ! -f '$tmp/scripts/verify_all.sh.tmpl' ]]"
-
-    assert "PROJECT_NAME substituted" "grep -q 'test-project' '$tmp/CLAUDE.md'"
-    assert "TODAY substituted" "grep -q '$today' '$tmp/CLAUDE.md'"
-    assert "STACK substituted" "grep -qF '$stack' '$tmp/CLAUDE.md'"
-
-    if grep -rE '\{\{[A-Z_]+\}\}' "$tmp" --include="*.md" --include="*.json" --include="*.sh" --include="*.ps1" &>/dev/null; then
-        echo "  FAIL  no unresolved placeholders anywhere" >&2
-        ((fail++))
-        failures+=("unresolved placeholders")
-    else
-        echo "  PASS  no unresolved placeholders anywhere"
-        ((pass++))
+    # Run embedded harness-sync to generate .claude/ + CLAUDE.md
+    assert "harness-sync.sh was distributed" "[[ -f '$tmp/scripts/harness-sync.sh' ]]"
+    if [[ -f "$tmp/scripts/harness-sync.sh" ]]; then
+        if bash "$tmp/scripts/harness-sync.sh" &>/dev/null; then
+            echo "  PASS  harness-sync exited cleanly"
+            ((pass++))
+        else
+            echo "  FAIL  harness-sync exited cleanly" >&2
+            ((fail++))
+            failures+=("harness-sync exit nonzero")
+        fi
     fi
 
-    leaked=$(find "$tmp" -name "*.tmpl" -type f 2>/dev/null)
-    [[ -z "$leaked" ]] && { echo "  PASS  no .tmpl leaked"; ((pass++)); } || { echo "  FAIL  leaked: $leaked" >&2; ((fail++)); }
+    # SOT (.harness/) assertions
+    for a in pm-orchestrator requirement-analyst solution-architect gate-reviewer developer code-reviewer qa-tester; do
+        assert ".harness/agents/$a.md (SOT)" "[[ -f '$tmp/.harness/agents/$a.md' ]]"
+    done
+    assert ".harness/rules/00-core.md (composed base)" "[[ -f '$tmp/.harness/rules/00-core.md' ]]"
+    assert ".harness/rules/50-$project_type.md (overlay)" "[[ -f '$tmp/.harness/rules/50-$project_type.md' ]]"
+    for s in build test verify; do
+        assert ".harness/skills/$s/SKILL.md (SOT)" "[[ -f '$tmp/.harness/skills/$s/SKILL.md' ]]"
+    done
 
+    # Generated artifacts
+    for a in pm-orchestrator requirement-analyst solution-architect gate-reviewer developer code-reviewer qa-tester; do
+        assert ".claude/agents/$a.md (generated)" "[[ -f '$tmp/.claude/agents/$a.md' ]]"
+    done
+    for s in build test verify; do
+        assert ".claude/skills/$s/SKILL.md (generated)" "[[ -f '$tmp/.claude/skills/$s/SKILL.md' ]]"
+    done
+    assert ".claude/settings.json (direct binding artifact)" "[[ -f '$tmp/.claude/settings.json' ]]"
+    assert "CLAUDE.md (generated)" "[[ -f '$tmp/CLAUDE.md' ]]"
+
+    # Content correctness
+    assert "CLAUDE.md has generated marker" "grep -q 'THIS FILE IS GENERATED' '$tmp/CLAUDE.md'"
+    assert "CLAUDE.md contains overlay marker for $project_type" "grep -q '$project_type-specific rules' '$tmp/CLAUDE.md'"
+    assert "PROJECT_NAME substituted into rules" "grep -q 'test-project' '$tmp/.harness/rules/00-core.md'"
+    assert "TODAY substituted into rules" "grep -q '$today' '$tmp/.harness/rules/00-core.md'"
+    assert "STACK substituted into rules" "grep -qF '$stack' '$tmp/.harness/rules/00-core.md'"
+
+    # Docs / scripts / evals
+    for f in docs/workflow.md docs/dev-map.md docs/tasks.md docs/spec/README.md evals/golden-tasks.md scripts/verify_all.ps1 scripts/verify_all.sh scripts/harness-sync.ps1; do
+        assert "$f present" "[[ -f '$tmp/$f' ]]"
+    done
+
+    # Cleanliness
+    if grep -rE '\{\{[A-Z_]+\}\}' "$tmp" --include="*.md" --include="*.json" --include="*.sh" --include="*.ps1" &>/dev/null; then
+        echo "  FAIL  no unresolved placeholders anywhere" >&2
+        ((fail++)); failures+=("unresolved placeholders")
+    else
+        echo "  PASS  no unresolved placeholders anywhere"; ((pass++))
+    fi
+    leaked=$(find "$tmp" -name "*.tmpl" -type f 2>/dev/null)
+    [[ -z "$leaked" ]] && { echo "  PASS  no .tmpl files leaked"; ((pass++)); } || { echo "  FAIL  leaked: $leaked" >&2; ((fail++)); }
     leaked=$(find "$tmp" -name "*.append" -type f 2>/dev/null)
-    [[ -z "$leaked" ]] && { echo "  PASS  no .append leaked"; ((pass++)); } || { echo "  FAIL  leaked: $leaked" >&2; ((fail++)); }
+    [[ -z "$leaked" ]] && { echo "  PASS  no .append files anywhere (v0.2 removed them)"; ((pass++)); } || { echo "  FAIL  found: $leaked" >&2; ((fail++)); }
+
+    # Binding consistency right after init
+    if bash "$tmp/scripts/harness-sync.sh" --check &>/dev/null; then
+        echo "  PASS  harness-sync --check is clean after init"; ((pass++))
+    else
+        echo "  FAIL  harness-sync --check is clean after init" >&2; ((fail++))
+        failures+=("binding drift right after init")
+    fi
 
     if [[ "$KEEP" == true ]]; then
         echo ""
@@ -141,7 +150,7 @@ test_type() {
     fi
 }
 
-echo "=== test-init: simulating /harness-init template copy ==="
+echo "=== test-init: simulating /harness-init flow (v0.2) ==="
 echo "Repo: $repo_root"
 
 if [[ "$TYPE" == "both" || "$TYPE" == "fullstack" ]]; then
