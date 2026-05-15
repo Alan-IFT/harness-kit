@@ -1,0 +1,43 @@
+# Line endings — repo-wide consistency across Windows / macOS / Linux.
+#
+# Default: auto-detect text files, store with LF in repo.
+* text=auto eol=lf
+
+# Windows-native scripts: must keep CRLF on checkout.
+*.ps1   text eol=crlf
+*.psm1  text eol=crlf
+*.psd1  text eol=crlf
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+
+# Unix shell scripts: must keep LF.
+*.sh    text eol=lf
+
+# Markdown / docs / source: normalized to LF.
+*.md    text eol=lf
+*.json  text eol=lf
+*.yaml  text eol=lf
+*.yml   text eol=lf
+*.html  text eol=lf
+*.css   text eol=lf
+*.js    text eol=lf
+*.ts    text eol=lf
+*.py    text eol=lf
+*.go    text eol=lf
+
+# Templates inherit the eol of the target language; default to LF.
+*.tmpl   text eol=lf
+*.append text eol=lf
+
+# Binary — never touch.
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.ico    binary
+*.pdf    binary
+*.zip    binary
+*.tar.gz binary
+
+# Exclude refs folder entirely from git's attention.
+参考/** -text
