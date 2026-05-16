@@ -2,7 +2,7 @@
 
 [English](README.md) · **简体中文**
 
-![version](https://img.shields.io/badge/version-0.8.1-blue) ![verify_all](https://img.shields.io/badge/verify__all-19%2F19-brightgreen) ![test-init](https://img.shields.io/badge/test--init-108%2F108-brightgreen) ![integration](https://img.shields.io/badge/integration-78%2F78-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.9.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-19%2F19-brightgreen) ![test-init](https://img.shields.io/badge/test--init-108%2F108-brightgreen) ![integration](https://img.shields.io/badge/integration-78%2F78-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
 > **Claude Code 的 Harness Engineering 工具包** — 一个 Claude Code Plugin（4 个 skills + 项目模板），把"有纪律的 AI 驱动开发"带到全栈和后端项目里。
 >
@@ -21,11 +21,9 @@ init 之后，每个非琐碎任务流经 **7-Agent 流水线**：PM Orchestrato
 
 ## 谁适合用
 
-- 写**全栈**（前端 + 后端 + DB）或**纯后端**（API 服务）项目
-- 主用 **Claude Code**（也支持 GitHub Copilot 共存 / 切换）
-- 想让 AI 处理有纪律的部分（需求、设计、代码、评审、测试、文档），自己专注方向
-
-暂不支持：WPF、Unity、纯前端、ML 流水线。
+- 任何能从有纪律的 AI 驱动开发中受益的项目。**全栈**（前端 + 后端 + DB）和**纯后端**（API 服务）有**一等公民预设**。其他栈（CLI、库、移动端、ML 流水线、嵌入式、WPF/Unity/桌面、纯前端）走 **Other / Generic** 路径 — `.harness/` 骨架默认就有；首次使用时 PM 和 AI 会根据你的项目实际情况裁剪 rules / 分区 agents / `verify_all`。
+- 主用 **Claude Code**（也支持 GitHub Copilot 共存 / 切换）。
+- 想让 AI 处理有纪律的部分（需求、设计、代码、评审、测试、文档），自己专注方向。
 
 ## 安装
 
@@ -80,10 +78,10 @@ claude
 ```
 
 5 个问题（`AskUserQuestion` 弹窗）：
-1. 项目类型 — Fullstack / Backend
-2. 技术栈 — 自由文本（如 "Next.js + NestJS + Postgres"）
+1. 项目类型 — Fullstack / Backend / Other-Generic（CLI、库、移动、ML、嵌入式 等）
+2. 技术栈 — 自由文本（如 "Next.js + NestJS + Postgres"、"Rust CLI tool"、"PyTorch 训练流水线"）
 3. 启用 `verify_all` Stop hook — Yes / No
-4. Developer 分区 — Partitioned（默认）/ Single
+4. Developer 分区 — Partitioned（默认）/ Single（Other-Generic 跳过此问题，首次任务时 AI 分析后再决定）
 5. 项目输出语言 — English（默认）/ 中文
 
 ~30 秒后你的项目里就有：
@@ -117,6 +115,8 @@ PM Orchestrator 接手，跑完 7 个 stage，在 `docs/features/<slug>/` 下产
 ```
 
 你编辑一个地方，两个 binding 自动同步。`verify_all` 检测漂移，drift 时 FAIL。
+
+**v0.9+：连 sync 都不用自己跑。** Stop hook（在 `.claude/settings.json`）会在每次 Claude Code session 结束时自动跑 `harness-sync`。更进一步：让 AI 帮你编辑 `.harness/` — "加一条规则：禁止用 `MessageBox.Show`"、"为 `apps/mobile/` 加一个 Developer 分区" — AI 选对文件、编辑，Stop hook 同步。你只在想编辑时才编辑。
 
 ### 项目级语言策略
 
@@ -229,7 +229,9 @@ Markdown 文档：
 | 0.6.x | 已交付 | 改名 harness-kit；Plugin marketplace 打包 |
 | 0.7.x | 已交付 | i18n（en/zh）+ 项目级输出语言策略；Copilot rules binding |
 | 0.8.x | 已交付 | 跨工具切换协议；生成文件可见 warning |
-| 0.9+ | 规划中 | Copilot 自定义 agent binding；`/harness-handoff` 和 `/harness-resume` 自动化；微服务专属分区；adopt 中的语义规则提取 |
+| 0.9.0 | 已交付 | 自动 sync via Stop hook（无需手动跑 `harness-sync`）；"Other / Generic" 项目类型，任何栈现在都能用 |
+| 0.10 | 规划中 | **AI 原生 init**：AI 读项目描述（和已有代码，如果有的话）后生成自定义 overlay — 不用预设选项、不用预设分区形态 |
+| 0.11+ | 规划中 | Copilot 自定义 agent binding；`/harness-handoff` 和 `/harness-resume` 自动化；adopt 中的语义规则提取 |
 
 ## 设计原则
 

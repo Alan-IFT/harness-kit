@@ -2,7 +2,7 @@
 
 **English** · [简体中文](README.zh-CN.md)
 
-![version](https://img.shields.io/badge/version-0.8.1-blue) ![verify_all](https://img.shields.io/badge/verify__all-19%2F19-brightgreen) ![test-init](https://img.shields.io/badge/test--init-108%2F108-brightgreen) ![integration](https://img.shields.io/badge/integration-78%2F78-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.9.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-19%2F19-brightgreen) ![test-init](https://img.shields.io/badge/test--init-108%2F108-brightgreen) ![integration](https://img.shields.io/badge/integration-78%2F78-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
 > **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (4 skills + project templates) that brings disciplined AI-driven development to fullstack and backend projects.
 >
@@ -21,11 +21,9 @@ After init, every non-trivial task flows through a **7-agent pipeline**: PM Orch
 
 ## Who this is for
 
-- Builds **fullstack** (frontend + backend + DB) or **backend** (API service) projects
-- Uses **Claude Code** as the primary AI dev tool (GitHub Copilot supported as fallback / co-existence)
-- Wants AI to handle the disciplined parts (requirements, design, code, review, test, docs) while you focus on direction
-
-Not yet supported: WPF, Unity, pure frontend, ML pipelines.
+- Any project that benefits from disciplined AI-driven development. **First-class presets** exist for **fullstack** (frontend + backend + DB) and **backend** (API service). Other stacks (CLI, library, mobile, ML pipeline, embedded, WPF/Unity/desktop, pure frontend) use the **Other / Generic** path — `.harness/` skeleton ships out of the box; the PM and AI tailor rules / partition agents / `verify_all` to your project on first use.
+- Uses **Claude Code** as the primary AI dev tool (GitHub Copilot supported as fallback / co-existence).
+- Wants AI to handle the disciplined parts (requirements, design, code, review, test, docs) while you focus on direction.
 
 ## Install
 
@@ -80,10 +78,10 @@ In Claude Code:
 ```
 
 Five questions (`AskUserQuestion` popup):
-1. Project type — Fullstack / Backend
-2. Stack — free text (e.g. "Next.js + NestJS + Postgres")
+1. Project type — Fullstack / Backend / Other-Generic (CLI, library, mobile, ML, embedded, etc.)
+2. Stack — free text (e.g. "Next.js + NestJS + Postgres", "Rust CLI tool", "PyTorch training pipeline")
 3. Enable `verify_all` Stop hook — Yes / No
-4. Developer partitioning — Partitioned (default) / Single
+4. Developer partitioning — Partitioned (default) / Single (skipped for Other-Generic — AI assigns on first task)
 5. Project output language — English (default) / 中文
 
 In ~30 seconds your project has:
@@ -117,6 +115,8 @@ PM Orchestrator picks it up, routes through 7 stages, produces 6 stage documents
 ```
 
 You edit one place. Two binding artifacts stay in sync automatically. `verify_all` detects drift and fails the build.
+
+**v0.9+: you don't even run sync manually.** A Stop hook (in `.claude/settings.json`) auto-runs `harness-sync` at the end of every Claude Code session. Even better: ask AI to edit `.harness/` for you — "Add a rule: never use `MessageBox.Show`", "Add a Developer partition for `apps/mobile/`" — AI picks the right file, edits, the Stop hook syncs. You only edit prose if you want to.
 
 ### Project-wide language policy
 
@@ -229,7 +229,9 @@ Markdown docs:
 | 0.6.x | done | Project renamed to harness-kit; plugin marketplace packaging |
 | 0.7.x | done | i18n (en/zh) + project-wide output-language policy; Copilot rules binding |
 | 0.8.x | done | Cross-tool handoff protocol; visible generated-file warnings |
-| 0.9+ | planned | Copilot custom-agent binding; `/harness-handoff` and `/harness-resume` automation; microservice-specific partitioning; semantic rule extraction in adopt |
+| 0.9.0 | done | Auto-sync via Stop hook (no manual `harness-sync` needed); "Other / Generic" project type so any stack works today |
+| 0.10 | planned | **AI-native init**: AI reads project description (and existing code if any) and generates custom overlay — no preset selection, no preset partition shape |
+| 0.11+ | planned | Copilot custom-agent binding; `/harness-handoff` and `/harness-resume` automation; semantic rule extraction in adopt |
 
 ## Design principles
 

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings",
+  "_comment": "Dogfood: this repo uses the same Stop-hook auto-sync that harness-init ships to new projects (v0.9.0).",
+  "permissions": {
+    "allow": [
+      "Bash(pwsh:*)",
+      "Bash(bash scripts/harness-sync.sh:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ],
+    "deny": [
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(rm -rf /:*)"
+    ]
+  },
+  "hooks": {
+    "_doc_sync_hook": "Auto-runs harness-sync at session end so .harness/ edits flow to CLAUDE.md + .github/copilot-instructions.md without manual sync. On macOS/Linux without pwsh, change to: bash scripts/harness-sync.sh",
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh -File scripts/harness-sync.ps1"
+          }
+        ]
+      }
+    ]
+  }
+}

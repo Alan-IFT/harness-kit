@@ -43,9 +43,10 @@ they back up or run `/harness-adopt`.
 Ask **five questions** in a single `AskUserQuestion` call:
 
 1. **Project type** — options:
-   - `Fullstack (frontend + backend + DB)`
-   - `Backend / API service`
-2. **Primary language / framework stack** — free text via "Other" option (e.g. "Next.js + NestJS + Postgres" or "FastAPI + Postgres").
+   - `Fullstack (frontend + backend + DB)` — copies fullstack overlay (partition agents, fullstack rules, verify_all preset for Node/web stacks).
+   - `Backend / API service` — copies backend overlay (api/services/db partitions, backend rules, multi-stack verify_all).
+   - `Other / Generic` — **for everything else** (CLI tool, library, mobile, ML pipeline, embedded, etc.). Only common assets are copied; no project-type overlay. You and the AI will refine `.harness/rules/00-core.md` and `verify_all` to fit your project. **v0.10 will make this path AI-native: AI analyzes your project description and generates a custom overlay automatically.**
+2. **Primary language / framework stack** — free text via "Other" option (e.g. "Next.js + NestJS + Postgres", "FastAPI + Postgres", "Rust CLI tool", "PyTorch training pipeline").
 3. **Enable verify_all hook on Stop event?** — options:
    - `Yes (recommended)` — runs verify after every major change
    - `No, manual only`
@@ -58,6 +59,9 @@ Ask **five questions** in a single `AskUserQuestion` call:
    For **Backend** (v0.5+):
    - `Partitioned (recommended) — dev-api / dev-services / dev-db agents` — three-layer split (HTTP boundary / business logic / persistence), supports clean coordination per Architect's design
    - `Single developer — one agent for all code` — fine for small/flat backend projects without a layered architecture
+
+   For **Other / Generic**:
+   - Skip this question. Defaults to single developer. The PM or the user can ask AI later to "add partition agents for X" — AI will create custom `.harness/agents/dev-*.md` based on the actual project layout. **v0.10 will offer this analysis as an init-time step automatically.**
 
 5. **Project output language** — this is a **project-wide policy**, not just doc language. Options:
    - `English (default)` — **All AI output in this project will be in English**. That includes: chat replies, agent-to-agent hand-offs, every per-task document (`01_REQUIREMENT_ANALYSIS.md` through `07_DELIVERY.md`, `PM_LOG.md`), updates to `tasks.md` / `dev-map.md`, error messages, status reports. Even if the user writes in another language, AI responds in English.
@@ -85,6 +89,7 @@ Copy in this order (later layer overwrites earlier):
 2. Everything under `templates/<project-type>/` → target root.
    - Fullstack overlay adds `.harness/rules/50-fullstack.md`, `.harness/skills/{build,test,verify}/SKILL.md.tmpl`, `scripts/verify_all.{ps1,sh}.tmpl`, **and** `.harness/agents/dev-{frontend,backend,db}.md.tmpl` (partition agents).
    - Backend overlay adds `.harness/rules/50-backend.md` etc.
+   - **Other / Generic**: skip this step. No overlay applied. The project gets only `common/` content. After init, the PM or the user can ask AI to "look at the project and propose what rules / partition agents / verify_all checks should apply" — AI reads existing code (or the user's description), then generates `.harness/rules/50-project.md`, optional `.harness/agents/dev-*.md`, and customizes `verify_all` accordingly.
 3. **If Q5 ≠ English**, apply the language overlay:
    - Copy everything under `templates/i18n/<lang>/common/` → target root (overwrites the English files).
    - Copy everything under `templates/i18n/<lang>/<project-type>/` → target root.

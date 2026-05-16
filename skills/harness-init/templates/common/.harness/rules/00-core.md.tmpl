@@ -36,7 +36,12 @@ This repo uses the **Harness 7-agent pipeline**. Read `docs/workflow.md` before 
 4. **No secrets in code.** Use `.env` / environment variables; verify_all scans for hardcoded keys.
 5. **No production-destructive actions** (drop table, force push to main, delete branches) without explicit user confirmation.
 6. **Run verify_all before declaring done.** "It compiles" is not done.
-7. **Edit `.harness/`, not `.claude/` or `CLAUDE.md`.** The latter two are generated. Edit a rule under `.harness/rules/`, an agent under `.harness/agents/`, or a skill under `.harness/skills/`, then run `scripts/harness-sync` (PowerShell or Bash). `verify_all` enforces this.
+7. **Edit `.harness/`, not `.claude/` or `CLAUDE.md`.** The latter two are generated. A Stop hook auto-runs `scripts/harness-sync` at the end of every session, so manual sync is rarely needed. `verify_all` catches any drift if the hook didn't run.
+8. **Prefer asking the AI to edit `.harness/` rather than editing it yourself.** Examples:
+   - "Add a rule: never use `MessageBox.Show`." → AI picks the right `.harness/rules/NN-*.md` (or creates a new one), edits it, the Stop hook syncs.
+   - "Add a Developer partition for `apps/mobile/`." → AI creates `.harness/agents/dev-mobile.md` with correct owned-paths.
+   - "Tighten the Architect to require an ADR file for new modules." → AI edits `.harness/agents/solution-architect.md` accordingly.
+   This is the AI-driven path: human asks, AI edits, hooks sync. Editing files by hand is fine when convenient, but not required.
 
 ## Style / convention
 

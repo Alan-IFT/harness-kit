@@ -36,7 +36,12 @@
 4. **代码里不能有 secret。** 用 `.env` / 环境变量；verify_all 会扫描硬编码 key。
 5. **不允许未确认的生产破坏性操作**（drop table、force push main、删分支）。
 6. **声明完成前必须跑 verify_all。** "能编译"不等于完成。
-7. **编辑 `.harness/`，不编辑 `.claude/` 或 `CLAUDE.md`。** 后两者是生成的。改规则到 `.harness/rules/`、改 agent 到 `.harness/agents/`、改 skill 到 `.harness/skills/`，然后跑 `scripts/harness-sync`（PowerShell 或 Bash）。`verify_all` 会强制检查。
+7. **编辑 `.harness/`，不编辑 `.claude/` 或 `CLAUDE.md`。** 后两者是生成的。Stop hook 会在每次 session 结束时自动跑 `scripts/harness-sync`，所以手动 sync 很少需要。如果 hook 没跑成功，`verify_all` 会拦下漂移。
+8. **优先让 AI 帮你编辑 `.harness/`，而不是自己手编。** 例：
+   - "加一条规则：禁止用 `MessageBox.Show`。" → AI 选合适的 `.harness/rules/NN-*.md`（或新建一个），编辑，Stop hook 同步。
+   - "为 `apps/mobile/` 加一个 Developer 分区。" → AI 在 `.harness/agents/dev-mobile.md` 写正确的 owned-paths。
+   - "把 Architect 收紧成新模块必须有 ADR 文件。" → AI 编辑 `.harness/agents/solution-architect.md`。
+   这是 AI 驱动的路径：人提，AI 编辑，hooks 同步。**自己动手编辑也可以**，但**不是必须**。
 
 ## 风格 / 约定
 

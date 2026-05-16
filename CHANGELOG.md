@@ -7,6 +7,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-05-16
+
+### Added — Auto-sync via Stop hook, "Other / Generic" project type
+
+Triggered by user reflection on the v0.8.x state:
+1. "Theoretically I shouldn't have to edit any docs — humans should only describe requirements in chat; never edit docs or code by hand."
+2. "The project should apply to all tech stacks, not just fullstack and backend."
+3. "Developer partitioning should be analyzed from actual project state, not preset constraints — presets lose the flexibility and precision AI-driven analysis would give."
+
+This release takes the **low-risk, high-value subset** of those reflections; v0.10 will land full AI-native init.
+
+#### 1. Auto-sync via Stop hook (eliminates the "forgot to sync" friction)
+
+`templates/common/.claude/settings.json.tmpl` now ships with a `Stop` hook that runs `pwsh -File scripts/harness-sync.ps1` at the end of every Claude Code session. So:
+
+- You edit `.harness/rules/*.md` (or ask AI to).
+- Session ends → harness-sync runs → `CLAUDE.md` and `.github/copilot-instructions.md` regenerate.
+- No manual command. No "I forgot to sync." `verify_all` still catches drift if the hook didn't fire.
+
+On macOS/Linux without PowerShell Core (`pwsh`), users change the command to `bash scripts/harness-sync.sh`. A `_doc_sync_hook` comment in the settings explains both paths.
+
+Permissions added: `Bash(pwsh:*)` and `Bash(bash scripts/harness-sync.sh:*)`.
+
+Hard rule #7 in `.harness/rules/00-core.md` updated to reflect that manual sync is rarely needed. **New hard rule #8** ("Prefer asking the AI to edit `.harness/` rather than editing it yourself") makes the AI-driven editing path explicit, with examples.
+
+#### 2. "Other / Generic" project type
+
+`harness-init` Q1 (project type) now has **three options** instead of two:
+- `Fullstack (frontend + backend + DB)` — copies fullstack overlay
+- `Backend / API service` — copies backend overlay
+- `Other / Generic` — **for everything else** (CLI tool, library, mobile, ML pipeline, embedded, etc.). Only common assets copied; no project-type overlay. Q4 (partitioning) is skipped — defaults to single developer. After init, the PM or the user can ask AI to "look at the project and propose what rules / partition agents / verify_all checks should apply" — AI reads existing code (or the user's description), then generates `.harness/rules/50-project.md`, optional `.harness/agents/dev-*.md`, and customizes `verify_all`.
+
+This makes the project usable for any stack today, without waiting for v0.10. The trade-off: Generic projects don't get a pre-tuned `verify_all` — the user (or AI on the user's request) wires up build/test/lint commands once.
+
+#### 3. Roadmap signal: v0.10 = AI-native init
+
+`SKILL.md` Q1 and Q4 explicitly call out that v0.10 will analyze the user's project (description + existing code if any) and **generate a custom overlay automatically** — no preset selection from a fixed list of project types, no preset partition shape.
+
+### Changed
+
+- `skills/harness-init/SKILL.md` — Q1, Q4, Step 4 (Copy template files) updated for the three-option flow.
+- `skills/harness-init/templates/common/.claude/settings.json.tmpl` — Stop hook + `pwsh` / `bash` permissions added.
+- `skills/harness-init/templates/common/.harness/rules/00-core.md.tmpl` — rule #7 updated, rule #8 added.
+- `skills/harness-init/templates/i18n/zh/common/.harness/rules/00-core.md.tmpl` — Chinese counterpart updated to match.
+- Dogfood: this repo's `.claude/settings.json`, `CLAUDE.md`, and `.harness/rules/00-core.md` regenerated via `sync-self` + `harness-sync`.
+
+### Tests
+
+- test-init: 108/108 PASS.
+- test-real-project: 78/78 PASS.
+- verify_all: 19/19 PASS.
+
 ## [0.8.1] - 2026-05-16
 
 ### Fixed — Visible "GENERATED FILE" warning on synced artifacts
