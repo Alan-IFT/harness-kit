@@ -69,6 +69,10 @@ sync_file "$template_common/scripts/install-hooks.sh"  "$repo_root/scripts/insta
 sync_file "$template_common/scripts/archive-task.ps1" "$repo_root/scripts/archive-task.ps1" "scripts/archive-task.ps1"
 sync_file "$template_common/scripts/archive-task.sh"  "$repo_root/scripts/archive-task.sh"  "scripts/archive-task.sh"
 
+# Mapping 5: guard-rm scripts (PreToolUse safety hook)
+sync_file "$template_common/scripts/guard-rm.ps1" "$repo_root/scripts/guard-rm.ps1" "scripts/guard-rm.ps1"
+sync_file "$template_common/scripts/guard-rm.sh"  "$repo_root/scripts/guard-rm.sh"  "scripts/guard-rm.sh"
+
 if [[ "$CHECK" == true ]]; then
     if (( ${#drift[@]} > 0 )); then
         echo "Drift detected:" >&2

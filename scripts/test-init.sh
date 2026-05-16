@@ -34,9 +34,18 @@ assert() {
     fi
 }
 
+# NOTE: -NoProfile on Windows mirrors harness-init/SKILL.md step 5 rule.
+# Without it, every Bash tool call eats $PROFILE startup cost (NFR-Perf).
+# See 06_TEST_REPORT.md D-3 (3.7s p50 → 10ms with -NoProfile).
 case "${OSTYPE:-}" in
-    msys*|cygwin*|win32) SYNC_COMMAND="pwsh -File scripts/harness-sync.ps1" ;;
-    *) SYNC_COMMAND="bash scripts/harness-sync.sh" ;;
+    msys*|cygwin*|win32)
+        SYNC_COMMAND="pwsh -NoProfile -File scripts/harness-sync.ps1"
+        GUARD_COMMAND="pwsh -NoProfile -File scripts/guard-rm.ps1"
+        ;;
+    *)
+        SYNC_COMMAND="bash scripts/harness-sync.sh"
+        GUARD_COMMAND="bash scripts/guard-rm.sh"
+        ;;
 esac
 
 substitute() {
@@ -49,6 +58,7 @@ substitute() {
         -e "s|{{TODAY}}|$today|g" \
         -e "s|{{ENABLE_HOOK}}|false|g" \
         -e "s|{{SYNC_COMMAND}}|$SYNC_COMMAND|g" \
+        -e "s|{{GUARD_COMMAND}}|$GUARD_COMMAND|g" \
         "$file" > "$tmp"
     mv "$tmp" "$file"
 }
@@ -177,6 +187,69 @@ test_type() {
     [[ -z "$leaked" ]] && { echo "  PASS  no .tmpl files leaked"; ((pass++)); } || { echo "  FAIL  leaked: $leaked" >&2; ((fail++)); }
     leaked=$(find "$tmp" -name "*.append" -type f 2>/dev/null)
     [[ -z "$leaked" ]] && { echo "  PASS  no .append files anywhere (v0.2 removed them)"; ((pass++)); } || { echo "  FAIL  found: $leaked" >&2; ((fail++)); }
+
+    # Guard-rm + PreToolUse hook wired (v0.15+).
+    # Five assertions per project type to match test-init.ps1's granularity
+    # (177 total across the 3 project types).
+    assert "scripts/guard-rm.ps1 present after init" "[[ -f '$tmp/scripts/guard-rm.ps1' ]]"
+    assert "scripts/guard-rm.sh present after init" "[[ -f '$tmp/scripts/guard-rm.sh' ]]"
+    # Probe python3 with a real invocation — Windows can have a Microsoft Store
+    # stub that satisfies `command -v` but exits non-zero on real run.
+    init_have_python=0
+    if command -v python3 >/dev/null 2>&1; then
+        if echo '' | python3 -c 'pass' >/dev/null 2>&1; then init_have_python=1; fi
+    fi
+    if (( init_have_python == 1 )); then
+        # JSON parses
+        if python3 -c "import json; json.load(open('$tmp/.claude/settings.json'))" 2>/dev/null; then
+            echo "  PASS  .claude/settings.json parses as JSON"; ((pass++))
+        else
+            echo "  FAIL  .claude/settings.json parses as JSON" >&2
+            ((fail++)); failures+=("settings.json JSON parse")
+        fi
+        # matcher == Bash
+        if python3 -c "
+import json
+d=json.load(open('$tmp/.claude/settings.json'))
+assert d['hooks']['PreToolUse'][0]['matcher']=='Bash'
+" 2>/dev/null; then
+            echo "  PASS  .claude/settings.json PreToolUse[0].matcher == 'Bash'"; ((pass++))
+        else
+            echo "  FAIL  .claude/settings.json PreToolUse[0].matcher == 'Bash'" >&2
+            ((fail++)); failures+=("settings.json matcher")
+        fi
+        # command references guard-rm
+        if python3 -c "
+import json
+d=json.load(open('$tmp/.claude/settings.json'))
+assert 'guard-rm' in d['hooks']['PreToolUse'][0]['hooks'][0]['command']
+" 2>/dev/null; then
+            echo "  PASS  .claude/settings.json PreToolUse command references guard-rm"; ((pass++))
+        else
+            echo "  FAIL  .claude/settings.json PreToolUse command references guard-rm" >&2
+            ((fail++)); failures+=("settings.json guard-rm command")
+        fi
+    else
+        # Grep fallback — three separate assertions to match the PS granularity.
+        if grep -q '"PreToolUse"' "$tmp/.claude/settings.json"; then
+            echo "  PASS  .claude/settings.json parses as JSON (grep: has PreToolUse key)"; ((pass++))
+        else
+            echo "  FAIL  .claude/settings.json parses as JSON" >&2
+            ((fail++)); failures+=("settings.json JSON parse")
+        fi
+        if grep -q '"matcher"[[:space:]]*:[[:space:]]*"Bash"' "$tmp/.claude/settings.json"; then
+            echo "  PASS  .claude/settings.json PreToolUse[0].matcher == 'Bash' (grep)"; ((pass++))
+        else
+            echo "  FAIL  .claude/settings.json PreToolUse[0].matcher == 'Bash'" >&2
+            ((fail++)); failures+=("settings.json matcher")
+        fi
+        if grep -qE 'guard-rm\.(ps1|sh)' "$tmp/.claude/settings.json"; then
+            echo "  PASS  .claude/settings.json PreToolUse command references guard-rm (grep)"; ((pass++))
+        else
+            echo "  FAIL  .claude/settings.json PreToolUse command references guard-rm" >&2
+            ((fail++)); failures+=("settings.json guard-rm command")
+        fi
+    fi
 
     # Binding consistency right after init
     if bash "$tmp/scripts/harness-sync.sh" --check &>/dev/null; then

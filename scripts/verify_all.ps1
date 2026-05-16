@@ -91,7 +91,7 @@ Step "D.1" "All template agents present in templates/common/.harness/agents" {
 }
 
 Step "D.2" "Placeholders limited to documented set" {
-    $allowed = @("{{PROJECT_NAME}}", "{{PROJECT_TYPE}}", "{{STACK}}", "{{TODAY}}", "{{ENABLE_HOOK}}", "{{SYNC_COMMAND}}")
+    $allowed = @("{{PROJECT_NAME}}", "{{PROJECT_TYPE}}", "{{STACK}}", "{{TODAY}}", "{{ENABLE_HOOK}}", "{{SYNC_COMMAND}}", "{{GUARD_COMMAND}}")
     $tmplFiles = Get-ChildItem skills/harness-init/templates -Recurse -File | Where-Object {
         $_.Name -match '\.(tmpl|append)$'
     }
@@ -190,7 +190,27 @@ Step "F.1" "verify_all, sync-self, harness-sync, test-init, test-real-project ex
     }
 }
 
-# (F.2 removed v0.14.x — was a literal duplicate of B.2; Bash never had it.)
+# F.2 — Guard-rm scripts and PreToolUse wiring present (v0.15+)
+Step "F.2" "Guard-rm scripts and PreToolUse wiring present" {
+    foreach ($f in @("scripts/guard-rm.ps1", "scripts/guard-rm.sh",
+                     "skills/harness-init/templates/common/scripts/guard-rm.ps1",
+                     "skills/harness-init/templates/common/scripts/guard-rm.sh")) {
+        if (-not (Test-Path $f)) { throw "Missing $f" }
+    }
+    # Dogfood .claude/settings.json must JSON-parse and have a PreToolUse hook calling guard-rm
+    $settings = Get-Content ".claude/settings.json" -Raw | ConvertFrom-Json
+    $pre = $settings.hooks.PreToolUse
+    if (-not $pre -or $pre.Count -lt 1) { throw ".claude/settings.json missing hooks.PreToolUse[]" }
+    $first = $pre[0]
+    if ($first.matcher -ne "Bash") { throw ".claude/settings.json PreToolUse[0].matcher should be 'Bash', got '$($first.matcher)'" }
+    if (-not $first.hooks -or $first.hooks.Count -lt 1) { throw ".claude/settings.json PreToolUse[0].hooks missing" }
+    $cmd = $first.hooks[0].command
+    if ($cmd -notmatch 'guard-rm\.(ps1|sh)') { throw ".claude/settings.json PreToolUse command does not reference guard-rm: $cmd" }
+    # Template settings.json.tmpl must contain {{GUARD_COMMAND}} and PreToolUse
+    $tmpl = Get-Content "skills/harness-init/templates/common/.claude/settings.json.tmpl" -Raw
+    if ($tmpl -notmatch [regex]::Escape("{{GUARD_COMMAND}}")) { throw "template settings.json.tmpl missing {{GUARD_COMMAND}}" }
+    if ($tmpl -notmatch "PreToolUse") { throw "template settings.json.tmpl missing PreToolUse block" }
+}
 
 # G. Documentation hygiene
 Step "G.1" "README references all 9 skills" {

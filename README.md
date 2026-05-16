@@ -2,7 +2,7 @@
 
 **English** · [简体中文](README.zh-CN.md)
 
-![version](https://img.shields.io/badge/version-0.14.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-26%2F26-brightgreen) ![test-init](https://img.shields.io/badge/test--init-162%2F162-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.15.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-27%2F27-brightgreen) ![test-init](https://img.shields.io/badge/test--init-177%2F177-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
 > **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (9 skills + project templates) that brings disciplined AI-driven development to fullstack and backend projects.
 >
@@ -154,8 +154,8 @@ Hit Claude Code's rate limit mid-task? Switch to GitHub Copilot in VS Code and k
 
 ### Three layers of regression testing
 
-- `verify_all` (26 checks) — repo health
-- `test-init` (162 assertions) — init template logic on empty dirs
+- `verify_all` (27 checks) — repo health
+- `test-init` (177 assertions) — init template logic on empty dirs
 - `test-real-project` (82 assertions) — overlay onto real fixtures (todo-fullstack, todo-backend)
 
 Every commit must pass all three. `test-init` and `test-real-project` exercise the generated project's structure end-to-end with no network needed.
@@ -251,7 +251,8 @@ Markdown docs:
 | 0.12.0 | done | **Generic project type** is now a first-class overlay (parallel to fullstack/backend) — closes the Other-Generic gap. New `templates/generic/` with `50-generic.md` rule stub + minimal `verify_all` skeleton. Test-init now exercises 3 project types (+33 assertions). |
 | 0.13.0 | done | **Mid-task intervention protocol** (`/harness-kit:harness-intervene`): single-shot `.harness/intervention.md` signal file (STOP / REDIRECT / SKIP / NOTE) that PM consumes at every stage boundary. First user-facing addition since v0.12. |
 | 0.14.0 | done | **Document size policy**: numeric caps for 8 document classes (rules / agents / per-task docs / insight-index / tasks.md) + WARN-level size checks in `verify_all` (I.1-I.5 here, F.1-F.6 in user-project templates). "Reference, don't paste" + always-archive-task discipline. |
-| 0.15+ | planned | True **AI-native init** (AI analyzes user description + existing code, generates custom 50-*.md and partition agents); supervisor agent observing pipeline progress |
+| 0.15.0 | done | **AI safety guardrails**: cross-platform `guard-rm.{ps1,sh}` PreToolUse hook blocks destructive commands (`rm` / `Remove-Item` / `find -delete` / nested `pwsh -c`) targeting paths outside the project root; per-call override via `HARNESS_ALLOW_OUTSIDE_RM=1`. New `.harness/rules/75-safety-hook.md`. Plus D1+D2 docs: AI tool flow modes (Claude Code auto-dispatch / Copilot manual / Copilot opt-in "continuous mode" with HARD STOP after Gate Review) and an explicit Claude-Code-sub-agent-dispatch callout. verify_all 26 → 27 (new F.2). |
+| 0.16+ | planned | True **AI-native init** (AI analyzes user description + existing code, generates custom 50-*.md and partition agents); supervisor agent observing pipeline progress |
 
 ## Design principles
 

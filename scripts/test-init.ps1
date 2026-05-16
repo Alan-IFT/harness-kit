@@ -89,18 +89,27 @@ function Test-Type {
     New-Item -ItemType Directory -Path $tmp -Force | Out-Null
 
     try {
+        # NOTE: -NoProfile on Windows mirrors harness-init/SKILL.md step 5 rule.
+        # Without it, every Bash tool call eats $PROFILE startup cost (NFR-Perf).
+        # See 06_TEST_REPORT.md D-3 (3.7s p50 → 10ms with -NoProfile).
         $syncCmd = if ($IsWindows -or $env:OS -eq "Windows_NT") {
-            "pwsh -File scripts/harness-sync.ps1"
+            "pwsh -NoProfile -File scripts/harness-sync.ps1"
         } else {
             "bash scripts/harness-sync.sh"
         }
+        $guardCmd = if ($IsWindows -or $env:OS -eq "Windows_NT") {
+            "pwsh -NoProfile -File scripts/guard-rm.ps1"
+        } else {
+            "bash scripts/guard-rm.sh"
+        }
         $vars = @{
-            "PROJECT_NAME" = "test-project"
-            "PROJECT_TYPE" = $ProjectType
-            "STACK"        = $Stack
-            "TODAY"        = $today
-            "ENABLE_HOOK"  = "false"
-            "SYNC_COMMAND" = $syncCmd
+            "PROJECT_NAME"  = "test-project"
+            "PROJECT_TYPE"  = $ProjectType
+            "STACK"         = $Stack
+            "TODAY"         = $today
+            "ENABLE_HOOK"   = "false"
+            "SYNC_COMMAND"  = $syncCmd
+            "GUARD_COMMAND" = $guardCmd
         }
 
         # 1) copy templates (common, then overlay)
@@ -238,6 +247,22 @@ function Test-Type {
             $leaked = Get-ChildItem -Path $tmp -Recurse -Filter "*.append" -File
             if ($leaked) { throw "found: $($leaked.FullName -join ', ')" }
             $true
+        }
+
+        # === Guard-rm + PreToolUse hook wired (v0.15+) ===
+        Assert "scripts/guard-rm.ps1 present after init" { Test-Path (Join-Path $tmp "scripts/guard-rm.ps1") }
+        Assert "scripts/guard-rm.sh present after init" { Test-Path (Join-Path $tmp "scripts/guard-rm.sh") }
+        Assert ".claude/settings.json parses as JSON" {
+            $raw = Get-Content (Join-Path $tmp ".claude/settings.json") -Raw
+            $null -ne ($raw | ConvertFrom-Json)
+        }
+        Assert ".claude/settings.json PreToolUse[0].matcher == 'Bash'" {
+            $s = Get-Content (Join-Path $tmp ".claude/settings.json") -Raw | ConvertFrom-Json
+            $s.hooks.PreToolUse[0].matcher -eq "Bash"
+        }
+        Assert ".claude/settings.json PreToolUse command references guard-rm" {
+            $s = Get-Content (Join-Path $tmp ".claude/settings.json") -Raw | ConvertFrom-Json
+            $s.hooks.PreToolUse[0].hooks[0].command -match 'guard-rm\.(ps1|sh)'
         }
 
         # === Layer 2 binding consistency right after init ===

@@ -19,19 +19,20 @@
 
 ## Verify before declaring done
 
-`scripts/verify_all` checks (26 items at v0.14, all must PASS — count grows with releases):
+`scripts/verify_all` checks (27 items at v0.15, all must PASS — count grows with releases):
 
 - No secrets / committed env files
 - `参考/` not tracked
 - Required scaffolding present (README, LICENSE, CHANGELOG, CONTRIBUTING, installers)
 - All 9 skills present with valid frontmatter
 - All 7 template agents present
-- Placeholder whitelist enforced (5 allowed)
+- Placeholder whitelist enforced (7 allowed)
 - `.harness/agents/` matches `templates/common/.harness/agents/` (Layer 1)
 - `.claude/agents/` + `.claude/skills/` match `.harness/` (Layer 2 binding)
 - AI-GUIDE.md ↔ `.harness/rules/*.md` indexed both directions (no drift)
 - Project rules / docs / evals present
 - Script pairs (.ps1 + .sh) for verify_all / harness-sync / sync-self / test-init / test-real-project
+- Guard-rm scripts + `.claude/settings.json` PreToolUse wiring (F.2, v0.15+; FAIL if missing)
 - README and CHANGELOG reference all skills
 - Version stamps consistent across `plugin.json` / `marketplace.json` / both README badges (G.3, v0.14.x+; FAIL on drift)
 - `.harness/intervention.md` not tracked (ephemeral file; v0.13+)

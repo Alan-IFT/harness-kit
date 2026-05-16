@@ -10,6 +10,10 @@
 #   scripts/harness-sync.sh          → scripts/harness-sync.sh
 #   scripts/install-hooks.ps1        → scripts/install-hooks.ps1
 #   scripts/install-hooks.sh         → scripts/install-hooks.sh
+#   scripts/archive-task.ps1         → scripts/archive-task.ps1
+#   scripts/archive-task.sh          → scripts/archive-task.sh
+#   scripts/guard-rm.ps1             → scripts/guard-rm.ps1
+#   scripts/guard-rm.sh              → scripts/guard-rm.sh
 #
 # Run before commit if you've edited any of the above. verify_all step E.1 FAILs
 # on drift.
@@ -39,6 +43,8 @@ $mappings = @(
     @{ from = "scripts/install-hooks.sh"; to = "scripts/install-hooks.sh"; type = "file" }
     @{ from = "scripts/archive-task.ps1"; to = "scripts/archive-task.ps1"; type = "file" }
     @{ from = "scripts/archive-task.sh"; to = "scripts/archive-task.sh"; type = "file" }
+    @{ from = "scripts/guard-rm.ps1"; to = "scripts/guard-rm.ps1"; type = "file" }
+    @{ from = "scripts/guard-rm.sh"; to = "scripts/guard-rm.sh"; type = "file" }
 )
 
 $drift = @()

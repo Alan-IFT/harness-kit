@@ -76,7 +76,7 @@ bad_ph=""
 while IFS= read -r f; do
     while IFS= read -r ph; do
         case "$ph" in
-            "{{PROJECT_NAME}}"|"{{PROJECT_TYPE}}"|"{{STACK}}"|"{{TODAY}}"|"{{ENABLE_HOOK}}"|"{{SYNC_COMMAND}}") ;;
+            "{{PROJECT_NAME}}"|"{{PROJECT_TYPE}}"|"{{STACK}}"|"{{TODAY}}"|"{{ENABLE_HOOK}}"|"{{SYNC_COMMAND}}"|"{{GUARD_COMMAND}}") ;;
             *) bad_ph="$bad_ph\n$f: $ph" ;;
         esac
     done < <(grep -oE '\{\{[A-Z_]+\}\}' "$f" | sort -u)
@@ -180,6 +180,42 @@ for pair in verify_all sync-self harness-sync test-init test-real-project; do
     [[ -f "scripts/$pair.sh" ]] || missing_sym="$missing_sym scripts/$pair.sh"
 done
 [[ -z "$missing_sym" ]] && step "F.1" "Script pairs (.ps1 + .sh) present" "PASS" || step "F.1" "Script pairs present" "FAIL" "missing:$missing_sym"
+
+# F.2 — Guard-rm scripts and PreToolUse wiring present (v0.15+)
+f2_problems=""
+for f in scripts/guard-rm.ps1 scripts/guard-rm.sh \
+         skills/harness-init/templates/common/scripts/guard-rm.ps1 \
+         skills/harness-init/templates/common/scripts/guard-rm.sh; do
+    [[ -f "$f" ]] || f2_problems="$f2_problems missing:$f"
+done
+# Dogfood .claude/settings.json must contain a PreToolUse hook calling guard-rm.
+# Use grep heuristic (avoid jq dependency); mirrors G.3's grep approach.
+if [[ -f .claude/settings.json ]]; then
+    if ! grep -q '"PreToolUse"' .claude/settings.json; then
+        f2_problems="$f2_problems .claude/settings.json:no_PreToolUse"
+    fi
+    if ! grep -q '"matcher"[[:space:]]*:[[:space:]]*"Bash"' .claude/settings.json; then
+        f2_problems="$f2_problems .claude/settings.json:no_Bash_matcher"
+    fi
+    if ! grep -qE 'guard-rm\.(ps1|sh)' .claude/settings.json; then
+        f2_problems="$f2_problems .claude/settings.json:no_guard-rm_command"
+    fi
+else
+    f2_problems="$f2_problems missing:.claude/settings.json"
+fi
+# Template .claude/settings.json.tmpl must have {{GUARD_COMMAND}} + PreToolUse
+tmpl=skills/harness-init/templates/common/.claude/settings.json.tmpl
+if [[ -f "$tmpl" ]]; then
+    grep -q '{{GUARD_COMMAND}}' "$tmpl" || f2_problems="$f2_problems $tmpl:no_GUARD_COMMAND_placeholder"
+    grep -q 'PreToolUse' "$tmpl" || f2_problems="$f2_problems $tmpl:no_PreToolUse"
+else
+    f2_problems="$f2_problems missing:$tmpl"
+fi
+if [[ -z "$f2_problems" ]]; then
+    step "F.2" "Guard-rm scripts and PreToolUse wiring present" "PASS"
+else
+    step "F.2" "Guard-rm scripts and PreToolUse wiring present" "FAIL" "$f2_problems"
+fi
 
 # G.1 — README mentions skills
 readme=$(cat README.md)

@@ -4,15 +4,16 @@
 
 ## Active tasks
 
-| ID | Slug | Stage | Started | Doc folder |
-|---|---|---|---|---|
-| _(none yet)_ | | | | |
+| ID | Slug | Stage | Mode | Started | Doc folder |
+|---|---|---|---|---|---|
+| _(none)_ | | | | | |
 
 ## Completed tasks
 
 | ID | Slug | Outcome | Completed | Doc folder |
 |---|---|---|---|---|
 | T-000 | initial-bootstrap | Delivered | 2026-05-15 | _(bootstrap, no docs/features/ folder)_ |
+| T-001 | ai-safety-guardrails | Delivered v0.15.0 (1 rollback) | 2026-05-17 | `docs/features/_archived/ai-safety-guardrails/` |
 
 ## Notes
 

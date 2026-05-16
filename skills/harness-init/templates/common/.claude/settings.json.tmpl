@@ -42,6 +42,18 @@
           }
         ]
       }
+    ],
+    "_guard_hook": "PreToolUse hook below auto-runs guard-rm before every Bash tool call. Blocks destructive commands targeting paths outside this project root. Override per-call with HARNESS_ALLOW_OUTSIDE_RM=1. See .harness/rules/75-safety-hook.md to fully disable.",
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{GUARD_COMMAND}}"
+          }
+        ]
+      }
     ]
   }
 }

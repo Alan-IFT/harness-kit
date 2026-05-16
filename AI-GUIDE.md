@@ -27,11 +27,12 @@ Stack: Markdown (skills, agent definitions, docs) + PowerShell + Bash (verify_al
 - **`.harness/rules/60-tool-handoff.md`** (**when switching Claude Code ↔ Copilot or other tools**): state lives in files, doc-sync responsibility for non-Claude tools
 - **`.harness/rules/65-intervention.md`** (**when running, observing, or redirecting any `/harness*` task**): `.harness/intervention.md` is a single-shot signal file (STOP / REDIRECT / SKIP / NOTE) that PM consumes at every stage boundary
 - **`.harness/rules/70-doc-size.md`** (**when adding or reviewing long-lived docs, or when `verify_all` flags an `I.*` WARN**): soft caps on AI-GUIDE / rules / agents / insight-index / tasks.md / per-task docs; "reference don't paste" + PM_LOG compaction + always-archive discipline
+- **`.harness/rules/75-safety-hook.md`** (**when running, observing, or disabling the destructive-command guardrail**): `PreToolUse` hook on Bash tool calls; blocks destructive commands targeting paths outside the `.git/` ancestor of cwd; override `HARNESS_ALLOW_OUTSIDE_RM=1`.
 
 **Memory layer**:
 - **`.harness/insight-index.md`** — ≤30 evidence-backed lines of project-specific facts. Read at task start; append at task end (only with evidence). Never edit other people's lines.
 
-Before declaring any task complete, run `scripts/verify_all` and confirm all PASS checks are green (26/26 at v0.14; check count grows with releases) — this is the gate, not a rule fragment.
+Before declaring any task complete, run `scripts/verify_all` and confirm all PASS checks are green (27/27 at v0.15; check count grows with releases) — this is the gate, not a rule fragment.
 
 If you add a new fragment to `.harness/rules/`, append a line above with its filename, a 1-line description, and the trigger condition.
 
@@ -41,6 +42,16 @@ Full contracts in `.harness/agents/<name>.md`. Read on demand when assuming or d
 
 - `pm-orchestrator` — takes new tasks, routes
 - `requirement-analyst` → `solution-architect` → `gate-reviewer` → `developer` → `code-reviewer` → `qa-tester`
+
+**Claude Code sub-agent dispatch — already implemented.** PM Orchestrator uses Claude Code's `Task` tool to spawn each downstream role in its own context; see `.harness/agents/pm-orchestrator.md` line 4 + lines ~108-129 for the exact contract and the dispatch call sites. Copilot and other tools have no equivalent API, so they fall back to one-role-at-a-time manual role-play (the user names the next role).
+
+## AI tool flow modes
+
+Three flows are supported, picked by the tool the user is in:
+
+- **Claude Code automatic sub-agent dispatch** (default for Claude Code): PM Orchestrator hands off through stages 1 → 7 via the `Task` tool; no user intervention required between stages.
+- **Copilot / Cursor manual one-role-at-a-time** (default for those tools): Copilot reads `.harness/agents/<role>.md`, plays exactly that role, stops at the stage boundary, asks the user to "switch to next agent". One stage per user turn.
+- **Copilot opt-in continuous mode**: the user types the activation phrase `continuous mode` (English) or `走全流程` (Chinese) in a plain user turn; Copilot then self-dispatches through stages 1 → 2 → 3, **STOPs unconditionally after Gate Review** (regardless of verdict), and waits for the user's "continue" before proceeding to stages 4-7. Continuous mode resets at every chat-session boundary. See `.harness/rules/60-tool-handoff.md` for the activation contract.
 
 ## Project documents
 
@@ -53,9 +64,9 @@ Full contracts in `.harness/agents/<name>.md`. Read on demand when assuming or d
 
 ## Scripts (the moving parts)
 
-- `scripts/verify_all.{ps1,sh}` — total verification (26 checks at v0.14, including I.1-I.5 doc-size WARN guards). **Must PASS before declaring done.**
+- `scripts/verify_all.{ps1,sh}` — total verification (27 checks at v0.15, including I.1-I.5 doc-size WARN guards + F.2 guard-rm wiring). **Must PASS before declaring done.**
 - `scripts/harness-sync.{ps1,sh}` — copy `.harness/agents/` + `.harness/skills/` to `.claude/`. v0.10 narrow scope.
-- `scripts/sync-self.{ps1,sh}` — keep this repo's dogfood `.harness/agents/` + 4 script pairs (harness-sync, install-hooks, archive-task) byte-identical with `templates/common/`. **Does NOT sync `.harness/rules/` — those are bespoke per repo.**
+- `scripts/sync-self.{ps1,sh}` — keep this repo's dogfood `.harness/agents/` + 4 script pairs (harness-sync, install-hooks, archive-task, guard-rm) byte-identical with `templates/common/`. **Does NOT sync `.harness/rules/` — those are bespoke per repo.**
 - `scripts/install-hooks.{ps1,sh}` — one-shot installer for `.git/hooks/pre-commit` (runs `harness-sync --check`).
 - `scripts/archive-task.{ps1,sh}` — archive a completed task: harvest `## Insight` section from 07_DELIVERY.md to `.harness/insight-index.md`, move 7 stage docs to `docs/features/_archived/<task>/`, rotate old insights to `docs/features/_archived/insight-history.md` if >30 lines.
 - `scripts/test-init.{ps1,sh}` — regression for `/harness-init` on empty dirs.

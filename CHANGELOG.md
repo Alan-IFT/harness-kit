@@ -48,6 +48,54 @@ Root cause: `test-init.{ps1,sh}` only asserted that the `50-<type>.md` overlay w
 
 Why test the inverse rather than running `verify_all` post-init: the user-project `verify_all` has many checks (build tooling, baselines, etc.) that depend on stack-specific state. Running it inside `test-init` would either be flaky or require heavy fixture setup. A targeted inverse-of-E.5 check buys 90% of the safety for ~10 lines of code per shell.
 
+## [0.15.0] - 2026-05-16
+
+### Added — AI safety guardrails (D1 + D2 + D3)
+
+Ship one cohesive set of guardrails for harness-kit and every project that installs it. Three coordinated deliverables under one minor version bump:
+
+**D3 — Destructive-command guardrail hook (the real feature)**
+
+- **`scripts/guard-rm.{ps1,sh}`** (new, cross-platform pair) — a `PreToolUse` hook script that intercepts every Claude Code Bash tool call and blocks the call when ANY destructive verb (`rm` / `rmdir` / `unlink` / `Remove-Item` / `del` / `erase` / `Clear-RecycleBin` / `shred` / `srm` / `find … -delete`) targets a path that resolves OUTSIDE the nearest `.git/` ancestor of cwd. Nested `pwsh -c "<cmd>"` / `powershell -Command "<cmd>"` are re-tokenized and the same rules apply (max depth 2; deeper nesting → BLOCK with parse-failure message). Inside-repo deletions (`rm -rf node_modules`, `rm -rf build/`) are allowed by design.
+- **Override**: `HARNESS_ALLOW_OUTSIDE_RM=1` set for a single bash invocation (or `$env:HARNESS_ALLOW_OUTSIDE_RM=1` in PowerShell). Per-call and visible — cannot be persisted in any committed file.
+- **`.claude/settings.json`** (dogfood) + **`skills/harness-init/templates/common/.claude/settings.json.tmpl`** — new `hooks.PreToolUse[]` block with `matcher: "Bash"` pointing at the guard. Template uses the new `{{GUARD_COMMAND}}` placeholder (Windows → `pwsh -File scripts/guard-rm.ps1`; macOS/Linux → `bash scripts/guard-rm.sh`).
+- **`.harness/rules/75-safety-hook.md`** (new dogfood + template + zh overlay) — contract, override path, disable path, failure modes, boundaries.
+- **`scripts/sync-self.{ps1,sh}`** — guard-rm pair added to the mirror set (4 script pairs total: harness-sync, install-hooks, archive-task, guard-rm).
+- **`scripts/verify_all.{ps1,sh}` F.2** (new check, FAIL-level) — asserts both guard scripts exist in dogfood AND in `templates/common/scripts/`; `.claude/settings.json` JSON-parses, has `hooks.PreToolUse[0].matcher == "Bash"`, and the command references `guard-rm.{ps1,sh}`; template `.claude/settings.json.tmpl` contains `{{GUARD_COMMAND}}` + `PreToolUse`. Brings the total from 26 → 27 checks.
+- **`scripts/test-init.{ps1,sh}`** — five new assertions per project type (3 types × 5 = +15) covering guard-rm script presence and PreToolUse wiring in the rendered fixture. test-init pass count: 162 → 177.
+- **`scripts/test-guard-rm.{ps1,sh}`** + **`evals/guard-rm-cases.md`** — fixture-driven driver exercising 11 input/expected pairs (BLOCK / ALLOW + override). NOT added to `verify_all` (out of scope v0.15); runs on demand.
+- **`skills/harness-init/SKILL.md`** — step 5 placeholder table adds `{{GUARD_COMMAND}}`; step 8 mentions the always-on guard; step 11 output references `scripts/guard-rm.{ps1,sh}`.
+- **`skills/harness-adopt/SKILL.md`** — step 5 plan lists the new files; step 6 specifies the JSON-merge logic for `.claude/settings.json` (preserve existing keys; append PreToolUse if absent; flag conflict if a matcher==`Bash` entry already exists pointing elsewhere).
+- **`skills/harness-status/SKILL.md`** — three new required-asset rows; new `### 3b. Sub-agent dispatch / safety hook` block; health score denominator 11 → 12 with `+1` for installed-and-wired guard.
+
+**D1 — Copilot continuous mode (opt-in)**
+
+- **`AI-GUIDE.md`** (dogfood + en template + zh template) — new "AI tool flow modes" section enumerating the three supported flows.
+- **`.harness/rules/60-tool-handoff.md`** (dogfood + en template + zh template) — new "Copilot continuous mode (opt-in)" subsection: activation phrase `continuous mode` (English) or `走全流程` (Chinese), self-dispatch through stages 1 → 2 → 3, **HARD STOP after Gate Review regardless of verdict**, reset at every chat-session boundary.
+- **`.github/copilot-instructions.md`** (dogfood + en template + zh template) — third red line amended: "One role at a time **unless the user has explicitly enabled continuous mode** (see `60-tool-handoff.md`)".
+
+**D2 — Claude Code sub-agent dispatch documentation callout**
+
+- **`AI-GUIDE.md`** (dogfood + en template + zh template) — new one-paragraph "Claude Code sub-agent dispatch — already implemented" callout under the existing Agents section, citing `.harness/agents/pm-orchestrator.md` line 4 + lines ~108-129 as evidence.
+- **`skills/harness-status/SKILL.md`** — new `Sub-agent dispatch: enabled (Claude Code via Task tool) | n/a (other tools)` line in §3b.
+
+### Changed
+
+- **`AI-GUIDE.md`** (dogfood) — check-count claims `26/26` → `27/27` (lines 34 + 56), and `+ 4 script pairs (harness-sync, install-hooks, archive-task)` corrected to `+ 4 script pairs (harness-sync, install-hooks, archive-task, guard-rm)` (the count was already wrong pre-v0.15 — listed 3, said 4; adding guard-rm makes both accurate).
+- **`.harness/rules/40-locations.md`** — `26 items at v0.14` → `27 items at v0.15`; `Placeholder whitelist enforced (5 allowed)` → `(7 allowed)` (was already off — actual count was 6 pre-v0.15; adding `{{GUARD_COMMAND}}` makes it 7); new F.2 line.
+- **`scripts/verify_all.{ps1,sh}` D.2** — `{{GUARD_COMMAND}}` added to both whitelists (per insight 2026-05-16: any new placeholder must be added to BOTH or D.2 fails).
+
+### Synced
+
+- `scripts/sync-self.{ps1,sh}` mirrored `scripts/guard-rm.{ps1,sh}` from `templates/common/scripts/` to dogfood (byte-identity per E.1 gate).
+
+### Notes on backwards compatibility
+
+- Dogfood (this repo): `.claude/settings.json` gains the `PreToolUse` block additively; `Stop` and `permissions` are untouched.
+- Existing `/harness-init` users (pre-v0.15 projects): not auto-migrated; re-run `/harness-adopt` to get the guard (merge prompt preserves existing settings).
+- New `/harness-init` users (v0.15+): get the guard automatically; no opt-in question.
+- `harness-sync` scope is unchanged — it does NOT touch `.claude/settings.json` (intentional carve-out; settings.json is per-project, lifecycle differs).
+
 ## [0.14.0] - 2026-05-16
 
 ### Added — Document size policy (long-term context-bloat guardrail)

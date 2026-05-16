@@ -36,10 +36,15 @@ harness-kit/
 │   ├── agents/                         ← byte-copy of templates/common/.harness/agents/
 │   └── rules/                          ← repo-specific rule fragments
 │       ├── 00-core.md
+│       ├── 05-insight-index.md
 │       ├── 10-self-consistency.md
 │       ├── 20-documentation.md
 │       ├── 30-engineering.md
-│       └── 40-locations.md
+│       ├── 40-locations.md
+│       ├── 60-tool-handoff.md
+│       ├── 65-intervention.md
+│       ├── 70-doc-size.md
+│       └── 75-safety-hook.md           ← Destructive-command guard (v0.15+)
 │
 ├── .claude/                             ← Generated (Claude Code binding)
 │   └── agents/                         ← from .harness/agents/ via harness-sync
@@ -55,11 +60,15 @@ harness-kit/
 │   └── features/                       ← Per-task documents
 │
 ├── scripts/
-│   ├── verify_all.{ps1,sh}             ← Total verification (tooling project flavor)
+│   ├── verify_all.{ps1,sh}             ← Total verification (27 checks at v0.15)
 │   ├── harness-sync.{ps1,sh}           ← Layer 2: .harness/ → .claude/ + CLAUDE.md
 │   ├── sync-self.{ps1,sh}              ← Layer 1: templates/common/ → repo SOT
-│   ├── test-init.{ps1,sh}              ← Init+sync regression on EMPTY dir (86 assertions)
-│   ├── test-real-project.{ps1,sh}      ← Integration regression on REAL fixture (64 assertions)
+│   ├── test-init.{ps1,sh}              ← Init+sync regression on EMPTY dir (177 assertions at v0.15)
+│   ├── test-real-project.{ps1,sh}      ← Integration regression on REAL fixture (82 assertions)
+│   ├── install-hooks.{ps1,sh}          ← One-shot git pre-commit installer
+│   ├── archive-task.{ps1,sh}           ← Insight-harvest + stage-doc archive
+│   ├── guard-rm.{ps1,sh}               ← Destructive-command PreToolUse guard (v0.15+)
+│   ├── test-guard-rm.{ps1,sh}          ← Driver for evals/guard-rm-cases.md (on-demand, not in verify_all)
 │   └── baseline.json                   ← Test/asset baseline
 │
 ├── tests/
@@ -110,8 +119,10 @@ Both layers are checked by `scripts/verify_all` and FAIL on drift.
 - **Source of truth principle**: edit `.harness/`, never the generated `.claude/` or `CLAUDE.md`.
 - **Templates are SOT for distribution**: edit `skills/harness-init/templates/common/.harness/`, run `sync-self`, then `harness-sync` for the dogfooded copy. (verify_all enforces both.)
 - **Symmetric scripts**: every `.ps1` has a matching `.sh`. Behavior must match.
-- **Template placeholders**: only the five documented in `skills/harness-init/SKILL.md`:
-  `{{PROJECT_NAME}}`, `{{PROJECT_TYPE}}`, `{{STACK}}`, `{{TODAY}}`, `{{ENABLE_HOOK}}`.
+- **Template placeholders**: only the seven documented in `skills/harness-init/SKILL.md`:
+  `{{PROJECT_NAME}}`, `{{PROJECT_TYPE}}`, `{{STACK}}`, `{{TODAY}}`, `{{ENABLE_HOOK}}`,
+  `{{SYNC_COMMAND}}`, `{{GUARD_COMMAND}}`. Any new placeholder MUST also be added to
+  the D.2 whitelist in BOTH `scripts/verify_all.ps1` AND `scripts/verify_all.sh`.
 - **Markdown style**: ATX headings, ordered lists for sequences, tables for matrices, fenced code with language tag.
 - **Rule fragments**: name them `NN-topic.md` where NN is a 2-digit sort prefix. The fragments are composed by filename order. Use 00-19 for core, 20-49 for cross-cutting topics, 50-79 for project-type overlays, 80+ for project-specific.
 

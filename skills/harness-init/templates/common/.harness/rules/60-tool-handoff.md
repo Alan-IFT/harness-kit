@@ -77,6 +77,32 @@ switching IDE, end of session:
   user (who'll usually switch back to Claude Code for PM routing, or
   manually tell you to assume the next role).
 
+### Copilot continuous mode (opt-in)
+
+Default Copilot flow is one role at a time. A user can opt into a bounded
+self-dispatching flow with an explicit phrase.
+
+- **Activation phrase**: the user types `continuous mode` (English) **or**
+  `走全流程` (Chinese) in a plain user turn — not in a code block, not in a
+  quoted context, not inferred. The phrase must appear verbatim in the user's
+  prose.
+- **What it enables**: while in continuous mode, Copilot self-dispatches
+  through stages 1 → 2 → 3, picking up the next role's `.harness/agents/`
+  contract at each stage boundary. Each stage's output document is still
+  written to `docs/features/<task-slug>/` before advancing.
+- **HARD STOP after Gate Review** (stage 3): Copilot stops unconditionally
+  after writing `03_GATE_REVIEW.md`, regardless of the Gate verdict
+  (APPROVED / APPROVED WITH CONDITIONS / REVISE / REJECT). It then asks the
+  user "Continue to stages 4-7?" and waits for an explicit "continue"
+  before proceeding. This stop is non-negotiable — it is the human
+  sanity-check moment that justifies the autonomy.
+- **Session boundary**: continuous mode is reset at every new chat session.
+  Copilot does NOT carry over continuous mode across sessions; it re-prompts
+  the user on the next session if they want it again.
+- **Why not default**: Copilot is a manual-control tool by design. Making
+  multi-stage self-dispatch opt-in keeps the user's intent explicit and
+  prevents silent autonomy creep.
+
 ### Doc-sync responsibility when not on Claude Code
 
 The Stop hook above is **Claude-Code-specific** — it does NOT fire for

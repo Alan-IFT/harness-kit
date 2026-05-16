@@ -41,6 +41,26 @@
 - **Claude Code**：PM Orchestrator 是路由 agent。它读 PM_LOG，派 sub-agents。完整 7-stage 流水线是原生能力。`.claude/settings.json` 里的 Stop hook 会在 session 结束时自动跑 `scripts/harness-sync`，所以 `.harness/` 的编辑会自动流到 `CLAUDE.md` + `.github/copilot-instructions.md`，用户什么都不用做。
 - **GitHub Copilot**：没有 sub-agent 派发。你（Copilot）按协议指向扮演哪个角色。**一次只扮演一个角色**。完成你的 stage 后停下来，让用户"switch to next agent" — **不要悄悄换成另一个角色继续**。跨 stage 交接经过用户（通常用户会切回 Claude Code 让 PM 路由，或者手动告诉你扮演下一角色）。
 
+### Copilot 连续模式（可选）
+
+Copilot 默认是一次一个角色。用户可以用一个明确短语切换到一种有边界的自派发流。
+
+- **激活短语**：用户在普通发言里输入 `continuous mode`（英文）**或**
+  `走全流程`（中文）—— 不能在代码块里，不能在引号 / 引用上下文里，不能被推断。
+  短语必须**原样出现在用户的散文里**。
+- **它启用什么**：连续模式下，Copilot 自动接力 1 → 2 → 3 阶段，每个阶段边界
+  按 `.harness/agents/` 里下一个角色的契约切换。每个 stage 的产出文档照常先
+  写到 `docs/features/<task-slug>/` 再进下一阶段。
+- **Gate Review 之后硬性 STOP**（stage 3）：写完 `03_GATE_REVIEW.md` 后
+  Copilot **无条件停下**，无论 Gate 判决是什么（APPROVED / APPROVED WITH
+  CONDITIONS / REVISE / REJECT）。然后问用户 "Continue to stages 4-7?"
+  等用户明确说 "continue" 才进 4-7 阶段。这个 STOP 不可协商 ——
+  它是这种自动度交换的人工 sanity check 时刻。
+- **会话边界**：连续模式在每次新会话开始时**重置**。Copilot 不跨会话保留
+  这个状态；下次会话如果用户还想走，Copilot 重新询问激活。
+- **为什么不默认开**：Copilot 本来就是 manual-control 工具。让多 stage
+  自派发显式 opt-in，保证用户意图清晰，防止悄悄的自动化蔓延。
+
 ### 非 Claude Code 工具的文档同步责任
 
 上面的 Stop hook 是 **Claude Code 专属** — Copilot、Cursor、手工编辑都不会触发它。如果你（Copilot 或任何非 Claude Code 的 AI）编辑了 `.harness/` 下的任何文件，有两种同样有效的方式来防止 `CLAUDE.md` 和 `.github/copilot-instructions.md` 过时：

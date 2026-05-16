@@ -136,7 +136,8 @@ Replace these placeholders in any `.tmpl` file:
 | `{{ENABLE_HOOK}}` | `true` or `false` from Q3 |
 | `{{PARTITIONED}}` | `true` or `false` from Q4 (default `false` if Q4 was skipped) |
 | `{{LANG}}` | `en` (default) or `zh` from Q5 |
-| `{{SYNC_COMMAND}}` | OS-detected harness-sync invocation for the Stop hook. **Windows** → `pwsh -File scripts/harness-sync.ps1`. **macOS / Linux** → `bash scripts/harness-sync.sh`. Detect via `$IsWindows` (PowerShell) or `[[ "$OSTYPE" == "msys"* \|\| "$OSTYPE" == "cygwin"* \|\| "$OSTYPE" == "win32" ]]` (bash). Used only in `.claude/settings.json`. |
+| `{{SYNC_COMMAND}}` | OS-detected harness-sync invocation for the Stop hook. **Windows** → `pwsh -NoProfile -File scripts/harness-sync.ps1`. **macOS / Linux** → `bash scripts/harness-sync.sh`. Detect via `$IsWindows` (PowerShell) or `[[ "$OSTYPE" == "msys"* \|\| "$OSTYPE" == "cygwin"* \|\| "$OSTYPE" == "win32" ]]` (bash). Used only in `.claude/settings.json`. The Windows `-NoProfile` flag avoids loading the user's `$PROFILE` on every hook invocation (measured 3-4s → 10ms in QA 06_TEST_REPORT.md D-3). |
+| `{{GUARD_COMMAND}}` | OS-detected guard-rm invocation for the PreToolUse hook (destructive-command safety, v0.15+). **Windows** → `pwsh -NoProfile -File scripts/guard-rm.ps1`. **macOS / Linux** → `bash scripts/guard-rm.sh`. Mirror the same OS detection used for `{{SYNC_COMMAND}}`. Used only in `.claude/settings.json`. See `.harness/rules/75-safety-hook.md` for the contract. The Windows `-NoProfile` flag is essential here — without it, every Bash tool call eats the user's `$PROFILE` startup cost (NFR-Perf was violated in QA testing; see 06_TEST_REPORT.md D-3). |
 
 ### 6. Run the initial binding sync
 
@@ -188,6 +189,12 @@ If Q3 = `No, manual only`, skip this step. The Stop hook in
 (it does no harm if Claude Code is never used); only the pre-commit hook
 is conditional on Q3.
 
+**Note on the safety guard (v0.15+)**: `scripts/guard-rm.{ps1,sh}` is shipped
+via the `templates/common/scripts/` copy in step 4, and the PreToolUse hook in
+`.claude/settings.json` is wired with `{{GUARD_COMMAND}}` substituted in step 5.
+No separate installer step is needed — the guard is always on after init. The
+disable path is documented in `.harness/rules/75-safety-hook.md`.
+
 ### 9. Write the initial SPEC stub
 
 Create `docs/spec/README.md` if missing (the template usually provides one).
@@ -237,6 +244,7 @@ Scripts:
   scripts/
     verify_all.{ps1,sh}    — total verification gate
     harness-sync.{ps1,sh}  — binding sync (.harness/ → .claude/ + CLAUDE.md)
+    guard-rm.{ps1,sh}      — destructive-command safety hook (PreToolUse; v0.15+)
     baseline.json
   evals/golden-tasks.md    — regression task set
 

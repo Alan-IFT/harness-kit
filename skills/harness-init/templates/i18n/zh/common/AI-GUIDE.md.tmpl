@@ -24,6 +24,7 @@
 - **`.harness/rules/60-tool-handoff.md`**（**切 Claude Code ↔ Copilot 时**）：状态在文件、不在记忆
 - **`.harness/rules/65-intervention.md`**（**跑、观察、调整任何 `/harness*` 任务时**）：`.harness/intervention.md` 是单次信号文件（STOP / REDIRECT / SKIP / NOTE），PM 在每次阶段切换时消费
 - **`.harness/rules/70-doc-size.md`**（**添加/评审长存文档时，或 `verify_all` 报 `F.*` WARN 时**）：AI-GUIDE / rules / agents / insight-index / tasks.md / 每任务文档的软上限；"引用不要粘贴" + PM_LOG 压缩 + 强制 archive-task
+- **`.harness/rules/75-safety-hook.md`**（**运行、观察、或禁用破坏性命令防护时**）：Bash 工具调用的 `PreToolUse` hook；阻断目标路径解析到 cwd 的 `.git/` 祖先之外的破坏性命令；override `HARNESS_ALLOW_OUTSIDE_RM=1`。
 
 如果新加片段，在上面追加一行：文件名 + 1 行描述 + 触发条件。
 
@@ -49,6 +50,16 @@
 - `qa-tester` — 写 `06_TEST_REPORT.md`
 
 Claude Code 用户用 Task tool 派发；Copilot 用户读 agent 文件自己扮演（一次一个角色）。
+
+**Claude Code 子 agent 派发 —— 已实现。** PM Orchestrator 用 Claude Code 的 `Task` 工具把每个下游角色派到独立 context 里；详见 `.harness/agents/pm-orchestrator.md` 的派发契约。Copilot 和其他工具没有等价 API，所以回落到"一次一个角色"的手工扮演（由用户点名下一个角色）。
+
+## AI 工具流模式
+
+支持三种流，按用户用的工具自动选：
+
+- **Claude Code 自动子 agent 派发**（Claude Code 默认）：PM Orchestrator 通过 `Task` 工具把 1 → 7 阶段自动接力；阶段之间不需要人工介入。
+- **Copilot / Cursor 一次一个角色**（这些工具默认）：Copilot 读 `.harness/agents/<role>.md`，严格扮演那个角色，停在阶段边界，让用户"switch to next agent"。一轮对话只跑一个 stage。
+- **Copilot 可选的连续模式**：用户在一个普通发言里输入激活短语 `continuous mode`（英文）或 `走全流程`（中文）；之后 Copilot 自动跑完 1 → 2 → 3 阶段，**Gate Review 之后无条件 STOP**（无论判决如何），等用户说"continue"才继续 4-7 阶段。连续模式在每次新会话开始时重置。激活契约详见 `.harness/rules/60-tool-handoff.md`。
 
 ## 项目文档
 

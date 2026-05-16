@@ -28,6 +28,9 @@ Check each of these and report concisely:
 | verify_all script | `scripts/verify_all.ps1` or `.sh` | ? |
 | Baseline | `scripts/baseline.json` | ? |
 | Golden tasks | `evals/golden-tasks.md` | ? |
+| Guard-rm script (ps1) | `scripts/guard-rm.ps1` | ? |
+| Guard-rm script (sh) | `scripts/guard-rm.sh` | ? |
+| PreToolUse hook | `.claude/settings.json` (has `hooks.PreToolUse` array referencing guard-rm) | ? |
 
 ### 2. Baseline state
 
@@ -54,6 +57,24 @@ Last verify: 2026-06-01T14:32:11Z
   Result: PASSED WITH WARNINGS
 ```
 
+### 3b. Sub-agent dispatch / safety hook
+
+```
+Sub-agent dispatch:  enabled (Claude Code via Task tool) | n/a (other tools)
+Safety hook:         enabled (guard-rm wired in PreToolUse) | DISABLED — .claude/settings.json has no PreToolUse for Bash | scripts missing
+```
+
+The "Sub-agent dispatch" line is constant — Claude Code is the only tool with
+programmatic dispatch (`Task` tool). Other tools always show `n/a`. The
+"Safety hook" value is computed by parsing `.claude/settings.json`:
+
+- `enabled` if `hooks.PreToolUse[*].matcher == "Bash"` AND its first hook's
+  `command` references `guard-rm.{ps1,sh}` AND both `scripts/guard-rm.ps1` and
+  `scripts/guard-rm.sh` exist.
+- `DISABLED — .claude/settings.json has no PreToolUse for Bash` if the array
+  is absent or no Bash matcher exists.
+- `scripts missing` if the wiring is present but the script files are gone.
+
 ### 4. Active tasks
 
 Read `docs/tasks.md` and list any task whose stage is not `done` or `delivery`:
@@ -72,13 +93,14 @@ From `docs/tasks.md`, list the last 5 `done` tasks with date.
 
 Compute a quick score:
 
-- All 12 required assets present → +6 health points
+- All 15 required assets present → +6 health points
 - Baseline exists and is recent (< 30 days) → +2
 - Last verify PASS → +2
 - No active tasks blocked > 3 days → +1
-- Total possible: 11
+- PreToolUse guard hook installed and points at existing guard-rm scripts → +1
+- Total possible: 12
 
-Report as e.g. `Health: 9/11 — minor gaps in dev-map and evals.`
+Report as e.g. `Health: 10/12 — minor gaps in dev-map and evals.`
 
 ### 7. Suggestions
 
