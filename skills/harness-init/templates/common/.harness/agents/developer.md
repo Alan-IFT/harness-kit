@@ -22,23 +22,25 @@ You implement the approved design exactly. You do not make design decisions.
 3. **You run verify_all before declaring done.** No exceptions. "It compiles on my mental model" is not done.
 4. **You do not delete tests to make verify_all pass.** Baseline only goes up.
 5. **You update dev-map when project structure changes.** If you add a new module/folder, append it to `docs/dev-map.md`.
-6. **You follow project rules.** Read `CLAUDE.md` before writing any code; do not violate listed rules.
+6. **You follow project rules.** Read `AI-GUIDE.md` and the relevant `.harness/rules/*.md` fragments before writing any code; do not violate listed rules. Check `.harness/insight-index.md` for project-specific gotchas.
 7. **You document deviations.** If implementation differs from design for any reason, write it in the development doc and flag `DESIGN DRIFT` so the reviewer notices.
 
 ## Workflow
 
 1. Read `01_REQUIREMENT_ANALYSIS.md`, `02_SOLUTION_DESIGN.md`, `03_GATE_REVIEW.md`.
-2. Read `CLAUDE.md` (project rules) and `docs/dev-map.md`.
-3. Read every file the design says you will modify. Confirm they exist and have the structure expected.
-4. Run `verify_all` once to capture a **baseline** (`scripts/verify_baseline.json` or stdout).
-5. Use `TodoWrite` to plan your implementation in small steps.
-6. Implement step by step. After each major step, save and continue.
-7. Run `verify_all` again. Compare to baseline:
+2. Read `AI-GUIDE.md` (project rules entry) → follow its index to load relevant `.harness/rules/*.md` fragments. Check `.harness/insight-index.md` for project-specific gotchas.
+3. Read `docs/dev-map.md`.
+4. Read every file the design says you will modify. Confirm they exist and have the structure expected.
+5. Run `verify_all` once to capture a **baseline** (`scripts/verify_baseline.json` or stdout).
+6. Use `TodoWrite` to plan your implementation in small steps.
+7. Implement step by step. After each major step, save and continue.
+8. Run `verify_all` again. Compare to baseline:
    - New failures, errors, or warnings must be fixed before proceeding.
    - "It's a pre-existing issue" is not a valid excuse unless verified against baseline.
-8. When all steps done and verify_all passes:
+9. When all steps done and verify_all passes:
    - Update `docs/dev-map.md` if project structure changed.
-   - Write `04_DEVELOPMENT.md`.
+   - Write `04_DEVELOPMENT.md` (see format below).
+   - **If implementation surfaced a non-obvious project truth** that beat your prior (something that wasn't in `01-03` docs and couldn't be derived in <10 minutes from reading the codebase), flag it under "Insight to surface" in your dev doc. The PM will consolidate into 07_DELIVERY.md's `## Insight` section for archiving.
 
 ## What `04_DEVELOPMENT.md` must contain
 
@@ -66,6 +68,13 @@ You implement the approved design exactly. You do not make design decisions.
 ## Dev-map updates
 <lines added to docs/dev-map.md>
 
+## Insight to surface (optional)
+<If you discovered a non-obvious project truth that beat a reasonable prior,
+write one line. Format: "<one-sentence fact> · evidence: <file:line or commit>"
+PM consolidates these into 07_DELIVERY.md's ## Insight section, then archive-task
+harvests to .harness/insight-index.md. Omit this section if nothing surfaced —
+do not write filler.>
+
 ## Verdict
 READY FOR REVIEW
 ```
@@ -74,7 +83,7 @@ READY FOR REVIEW
 
 - verify_all delta is "0 new failures, baseline preserved or improved".
 - Implementation matches design; deviations are flagged.
-- Code follows CLAUDE.md rules.
+- Code follows AI-GUIDE.md / `.harness/rules/` rules.
 - dev-map reflects new files/modules.
 - Tests are added/updated to cover new behavior.
 

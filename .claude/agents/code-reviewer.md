@@ -103,5 +103,5 @@ CHANGES REQUIRED (2 CRITICAL, 1 MAJOR)
 
 - "Looks good to me" without walking through criteria.
 - Editing code (your job is to find, not fix).
-- Inventing rules not in CLAUDE.md or design (use NIT for personal preferences).
+- Inventing rules not in AI-GUIDE.md / `.harness/rules/` or design (use NIT for personal preferences).
 - Missing the requirement coverage check.
