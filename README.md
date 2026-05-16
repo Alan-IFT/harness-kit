@@ -1,89 +1,48 @@
 # Harness Kit
 
-![version](https://img.shields.io/badge/version-0.6.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-19%2F19-brightgreen) ![test-init](https://img.shields.io/badge/test--init-104%2F104-brightgreen) ![integration](https://img.shields.io/badge/integration-76%2F76-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+**English** · [简体中文](README.zh-CN.md)
 
-> **Harness Engineering 工具包 for Claude Code** — 一组 Skills + 项目模板，把"AI 自动开发"方法论落到你的项目里。
+![version](https://img.shields.io/badge/version-0.8.1-blue) ![verify_all](https://img.shields.io/badge/verify__all-19%2F19-brightgreen) ![test-init](https://img.shields.io/badge/test--init-108%2F108-brightgreen) ![integration](https://img.shields.io/badge/integration-78%2F78-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+
+> **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (4 skills + project templates) that brings disciplined AI-driven development to fullstack and backend projects.
 >
-> 目标：**人工只做"提需求"和"AI 做不到时介入"**，其他由 7-Agent 流水线 + 验证闭环自动完成。
->
-> **当前版本**：v0.6.0（重命名 harness-kit + Claude Code Plugin 打包；安装一行命令）。从 v0.1.x 升级见 [MIGRATION.md](MIGRATION.md)。
+> **Goal**: humans only do "describe the requirement" and "step in when AI can't"; everything else — 7-agent pipeline, verify gates, structured documents — runs automatically.
 
-## 这是什么
+## What's inside
 
-把 Harness Engineering（Rule / Skill / Script / Multi-Agent / 验证闭环 / 知识库 / 演化）方法论
-封装成 Claude Code 可直接调用的 Skills，让你能在任何全栈或后端项目里：
+This is a Claude Code Plugin packaging that gives any project four AI skills:
 
-- `/harness-init` — 给新项目从零生成 Harness 骨架 ✅
-- `/harness-adopt` — 给现有项目无侵入接入 Harness ✅
-- `/harness-verify` — 跑总验证脚本（编译 + 测试 + 规则扫描 + 基线对比） ✅
-- `/harness-status` — 查看项目当前 Harness 健康度 ✅
+- `/harness-kit:harness-init` — bootstrap Harness skeleton in a new project (asks 5 questions, generates `.harness/` + `.claude/` + docs in ~30s)
+- `/harness-kit:harness-adopt` — non-invasively add Harness to an existing project (detects stack, extracts conventions, prompts before applying)
+- `/harness-kit:harness-verify` — run total verification (compile + test + rule scan + baseline diff)
+- `/harness-kit:harness-status` — health snapshot (which assets present, baseline, last verify, active tasks)
 
-### 与 GitHub Copilot 共存（v0.7.1+）
+After init, every non-trivial task flows through a **7-agent pipeline**: PM Orchestrator → Requirement Analyst → Solution Architect → Gate Reviewer → Developer (or partition `dev-*`) → Code Reviewer → QA Tester → Delivery.
 
-同一个项目里可以同时用 Claude Code 和 GitHub Copilot。`harness-sync` 从单一 `.harness/rules/` 同时生成两份 binding：
-- `CLAUDE.md`（Claude Code 读）
-- `.github/copilot-instructions.md`（Copilot 读）
+## Who this is for
 
-Output language 规则、项目规则、约定对两个工具都生效。但**7-Agent 流水线和 sub-agents 是 Claude Code 独有**（Copilot 不支持 sub-agent 派发），Copilot 用户拿到的是规则层面的指导。
+- Builds **fullstack** (frontend + backend + DB) or **backend** (API service) projects
+- Uses **Claude Code** as the primary AI dev tool (GitHub Copilot supported as fallback / co-existence)
+- Wants AI to handle the disciplined parts (requirements, design, code, review, test, docs) while you focus on direction
 
-### 工具切换（Claude Code ↔ Copilot）— v0.8.0+
+Not yet supported: WPF, Unity, pure frontend, ML pipelines.
 
-典型场景：Claude Code 5 小时额度用完，临时切到 Copilot 继续，额度恢复后切回 Claude Code。
+## Install
 
-**这是支持的**。核心机制是任务状态全部持久化在文件里（`docs/tasks.md` + `docs/features/<task>/01..07.md` + `PM_LOG.md`），切工具时不丢上下文。`.harness/rules/60-tool-handoff.md` 写明切换协议，两个工具的 binding（CLAUDE.md / copilot-instructions.md）都包含。
+### Option 1 — Claude Code Plugin Marketplace (recommended)
 
-**用户操作**：
-
-1. Claude Code 里说一句 "正在交接到 Copilot"。当前 agent 写 PARTIAL.md（如果中途）+ 更新 PM_LOG + tasks.md。
-2. 切到 VS Code + Copilot。说 "Continue task T-XXX"。Copilot 读 copilot-instructions.md 找到切换协议、读现有 docs/、扮演下一个 role 推进。
-3. Claude Code 额度恢复后回来。PM Orchestrator 自动从同一组文件 resume。
-
-详见 `.harness/rules/60-tool-handoff.md`（init/adopt 之后生成的项目里）。
-
-### 两层模型（v0.2+）
-
-项目里有两层资产：
-
-```
-.harness/        ← 你编辑这里（工具无关源真相）
-  agents/        ← 7 个 sub-agent 角色契约
-  rules/         ← 拆分的规则片段（00-core / 50-overlay …）
-  skills/        ← 编译/测试/验证标准操作
-     │
-     │ scripts/harness-sync 同步
-     ▼
-.claude/         ← 自动生成（Claude Code 绑定层）
-CLAUDE.md        ← 自动合成（不要直接编辑）
-```
-
-**核心规矩**：编辑 `.harness/`，不编辑 `.claude/` 或 `CLAUDE.md`。后者由 `harness-sync` 重新生成，
-`verify_all` 自动检查一致性。
-
-**好处**：项目知识不再绑定 Claude Code。未来你想换 IDE / 加 Cursor binding，只需写新 binding，
-内容不动。
-
-## 谁适合用
-
-- 主要写 **全栈** 或 **纯后端** 项目
-- 主要用 **Claude Code** 做 AI 辅助开发
-- 想最大化 AI 自主完成度，但又要可控、可维护
-
-暂不支持：WPF / Unity / 纯前端 / 数据 ML 流水线。
-
-## 安装
-
-### 方式 1（推荐）：Claude Code Plugin marketplace
-
-在任何 Claude Code 会话内：
+Inside any Claude Code session:
 
 ```
 /plugin marketplace add Alan-IFT/harness-kit
 /plugin install harness-kit@harness-kit-marketplace
 ```
 
-Claude Code 官方路径，版本可控、可审计、可升级。装完后 skill 命令路径为 `/harness-kit:harness-init` 等。
+Official, versioned, auditable. Skills appear namespaced as `/harness-kit:harness-init`, etc.
 
-### 方式 2：一行命令安装 skills（无需 plugin 系统）
+### Option 2 — One-line curl / PowerShell
+
+For users not on Plugin system, or for global skills install:
 
 ```bash
 # macOS / Linux
@@ -91,121 +50,202 @@ curl -fsSL https://raw.githubusercontent.com/Alan-IFT/harness-kit/main/install.s
 ```
 
 ```powershell
-# Windows PowerShell
+# Windows
 iwr -useb https://raw.githubusercontent.com/Alan-IFT/harness-kit/main/install.ps1 | iex
 ```
 
-脚本自动从 GitHub 拉取并复制 skills 到 `~/.claude/skills/`，所有项目可用。命令路径为 `/harness-init` 等（无 namespace）。
+Self-contained: the script clones the repo into a temp dir and copies skills into `~/.claude/skills/`. Skills then callable as `/harness-init`, etc. (no namespace).
 
-### 方式 3：本地 clone + 手动安装（开发模式）
+### Option 3 — Local clone (dev mode)
 
 ```bash
 git clone https://github.com/Alan-IFT/harness-kit ~/harness-kit
-~/harness-kit/install.sh                    # 或 Windows: install.ps1
-~/harness-kit/install.sh --project .        # 只装到当前项目
-~/harness-kit/install.sh --dry-run          # 预览不写
-~/harness-kit/install.sh --uninstall        # 卸载
+~/harness-kit/install.sh                  # or install.ps1
+~/harness-kit/install.sh --project .      # project-local install
+~/harness-kit/install.sh --dry-run        # preview only
+~/harness-kit/install.sh --uninstall      # remove
 ```
 
-## 快速上手
+## Quick start
 
-```
-# 在 Claude Code 内
-/harness-init
-```
-
-Skill 会问你：
-1. 项目类型？（全栈 / 后端）
-2. 技术栈？（如：Next.js + NestJS + Postgres）
-3. 是否启用 verify_all hook？
-
-然后自动：
-1. 在 `.harness/` 生成 7 个 agent、规则片段、skills
-2. 把 `.claude/settings.json` 写入（Claude Code binding glue）
-3. 跑 `scripts/harness-sync` 生成 `.claude/agents/` `.claude/skills/` 和 `CLAUDE.md`
-4. 创建 `docs/`（workflow / spec / dev-map / tasks）+ `evals/` + `scripts/`（verify_all、baseline）
-
-下一步直接和 PM Orchestrator 派活：
-
-```
-Take this task: Add CSV export to the orders page.
+```bash
+mkdir my-app && cd my-app
+claude
 ```
 
-详细使用见 [docs/getting-started.md](docs/getting-started.md)。
-
-**完整流程 + 真实例子**（todo-list CSV 导出，贯穿 7 个 stage，可视化）：浏览器打开 [docs/walkthrough.html](docs/walkthrough.html)。
-
-## 架构
-
-完整架构设计：[architecture.html](architecture.html)（浏览器打开查看可视化）
-
-核心思路：
+In Claude Code:
 
 ```
-人 → 提需求
-    ↓
-Layer 2（项目工具无关层，本仓库提供模板）
-  .harness/{agents, rules, skills}
-    ↓ harness-sync
-Layer 1（Claude Code 绑定层，生成）
-  .claude/{agents, skills, settings.json} + CLAUDE.md
-    ↓
-Layer 0（Claude Code 平台机制，已就绪）
-  Permission · Sub-agents · Hooks · MCP · Memory · Skills · Auto-compaction · /cost
+/harness-kit:harness-init
 ```
 
-详见 [docs/concepts.md](docs/concepts.md)。
+Five questions (`AskUserQuestion` popup):
+1. Project type — Fullstack / Backend
+2. Stack — free text (e.g. "Next.js + NestJS + Postgres")
+3. Enable `verify_all` Stop hook — Yes / No
+4. Developer partitioning — Partitioned (default) / Single
+5. Project output language — English (default) / 中文
 
-## 仓库结构
+In ~30 seconds your project has:
+- `.harness/` (tool-agnostic source of truth: agents, rules, skills)
+- `.claude/` (generated Claude Code binding)
+- `.github/copilot-instructions.md` (generated Copilot binding)
+- `CLAUDE.md` (generated, the rules Claude Code reads)
+- `docs/` (workflow, dev-map, tasks, spec)
+- `scripts/` (verify_all, harness-sync, baseline)
+- `evals/` (golden regression tasks)
+
+Now describe a task:
 
 ```
-harness-engineering/
-├── skills/                     # Claude Code Skills（核心产物）
-│   ├── harness-init/
-│   │   ├── SKILL.md
-│   │   └── templates/         # 项目模板：common / fullstack / backend
+Take this task: Add a CSV export button to the orders page.
+```
+
+PM Orchestrator picks it up, routes through 7 stages, produces 6 stage documents under `docs/features/<slug>/`, writes code, runs verify_all, hands you a finished feature.
+
+## Key features
+
+### Tool-agnostic source of truth
+
+```
+.harness/rules/*.md     ← edit this (single source of truth)
+       │
+       │  harness-sync generates ↓
+       │
+       ├──> CLAUDE.md                            (Claude Code reads)
+       └──> .github/copilot-instructions.md      (Copilot reads)
+```
+
+You edit one place. Two binding artifacts stay in sync automatically. `verify_all` detects drift and fails the build.
+
+### Project-wide language policy
+
+A Chinese team picks `中文` at init — every AI output across the project is in Chinese: chat replies, agent hand-offs, per-task documents, status reports, error messages. Even if you write in another language, AI responds in Chinese. The policy is enforced via a top-level `Output language` section in CLAUDE.md.
+
+English projects work the same way: nothing leaks in another language.
+
+### Developer partitioning
+
+Fullstack: `dev-frontend` / `dev-backend` / `dev-db` agents, each with owned-paths glob. The Solution Architect produces a partition assignment table; PM dispatches in dependency order (db → backend → frontend by default). Out-of-partition changes raise `BLOCKED ON PARTITION` and PM routes properly.
+
+Backend: same idea, three layers — `dev-api` / `dev-services` / `dev-db`.
+
+Single developer mode available for small projects.
+
+### Cross-tool handoff (Claude Code ↔ Copilot)
+
+Hit Claude Code's rate limit mid-task? Switch to GitHub Copilot in VS Code and keep going. Switch back when quota refreshes. All task state lives in files (`docs/tasks.md`, `docs/features/<task>/`, `PM_LOG.md`), not in chat memory — so resume is just reading those files. Both tools' bindings include `.harness/rules/60-tool-handoff.md` which defines the resume protocol.
+
+### Three layers of regression testing
+
+- `verify_all` (19 checks) — repo health
+- `test-init` (108 assertions) — init template logic on empty dirs
+- `test-real-project` (78 assertions) — overlay onto real fixtures (todo-fullstack, todo-backend)
+
+Every commit must pass all three. `test-init` and `test-real-project` exercise the generated project's structure end-to-end with no network needed.
+
+### Dogfooded
+
+This repo is itself developed under Harness Kit. The same 7-agent pipeline that ships to users governs work here. The same `.harness/rules/` source produces this repo's `CLAUDE.md` and `.github/copilot-instructions.md`. If we can't develop this repo with it, we shouldn't ship it.
+
+## Repository layout
+
+```
+harness-kit/
+├── skills/                       Claude Code Skills (the product)
+│   ├── harness-init/             Bootstrap skill + templates
+│   │   └── templates/
+│   │       ├── common/           Shared assets (7 agents, base rules, docs, evals)
+│   │       ├── fullstack/        Fullstack overlay (partition agents, overlay rules)
+│   │       ├── backend/          Backend overlay
+│   │       └── i18n/zh/          Chinese translation overlay
 │   ├── harness-adopt/
 │   ├── harness-verify/
 │   └── harness-status/
-├── .harness/                  # 本仓库自身的工具无关 SOT（dogfood）
-│   ├── agents/                # 与 templates/common/.harness/agents/ 一致
-│   └── rules/                 # 本仓库规则片段
-├── .claude/                   # 生成（不要编辑）
-├── CLAUDE.md                  # 生成（不要编辑）
+│
+├── .claude-plugin/               Claude Code plugin manifests
+│   ├── plugin.json
+│   └── marketplace.json
+│
+├── .harness/                     This repo's SOT (dogfood)
+│   ├── agents/                   Byte-copy of templates/common/.harness/agents/
+│   └── rules/                    Project-specific rule fragments
+├── .claude/                      Generated; do not edit
+├── CLAUDE.md                     Generated; do not edit
+├── .github/copilot-instructions.md  Generated; do not edit
+│
 ├── scripts/
-│   ├── verify_all.{ps1,sh}    # 总验证
-│   ├── harness-sync.{ps1,sh}  # .harness/ → .claude/ + CLAUDE.md
-│   ├── sync-self.{ps1,sh}     # templates/ → 本仓库 SOT
-│   ├── test-init.{ps1,sh}     # init 自动化回归（86 断言）
-│   └── baseline.json
-├── docs/                       # 文档
+│   ├── verify_all.{ps1,sh}       Total verification
+│   ├── harness-sync.{ps1,sh}     .harness/ → CLAUDE.md + .github/copilot-instructions.md
+│   ├── sync-self.{ps1,sh}        templates/common/ → repo SOT
+│   ├── test-init.{ps1,sh}        Init regression
+│   └── test-real-project.{ps1,sh}  Integration regression
+│
+├── tests/fixtures/               Minimal real-shape projects for integration
+│
+├── docs/
 │   ├── getting-started.md
+│   ├── concepts.md
 │   ├── workflow.md
 │   ├── dev-map.md
-│   └── concepts.md
-├── architecture.html           # 完整架构设计（HTML 可视化）
-├── install.ps1                 # Windows 安装脚本
-├── install.sh                  # Unix 安装脚本
-├── CONTRIBUTING.md
+│   ├── walkthrough.html          Visual walkthrough
+│   └── manual-e2e-test.md
+│
+├── architecture.html             Visual architecture overview
+├── install.ps1 / install.sh      One-line installers
+├── README.md (this file)
+├── README.zh-CN.md
 ├── CHANGELOG.md
-└── LICENSE
+├── CONTRIBUTING.md
+├── MIGRATION.md                  v0.1.x → v0.5+ upgrade
+└── LICENSE                       MIT
 ```
 
-## 设计原则
+## Documentation
 
-1. **不重造 Claude Code 已有的能力**（Sandbox / Hooks / Sub-agents / MCP / Memory）
-2. **机制层 vs 内容层分离**：平台给机制，本仓库给内容
-3. **工具无关层 vs 绑定层分离**：`.harness/` 是真相源，`.claude/` 是生成产物
-4. **演化式落地**：MVP → Hardening → Scale，不一次到位
-5. **基线只升不降**：测试数量、规则覆盖率永远不准退步
-6. **发现问题的人不能修问题**：Reviewer 不改代码，Gate 不改需求
-7. **下游不能改上游文档**：只能提阻塞回退给 PM
-8. **PM 只做路由，不做专业判断**
+Open these in a browser for the best experience:
 
-## 贡献 & 反馈
+- **[architecture.html](architecture.html)** — visualized architecture, design decisions, evolution history
+- **[docs/walkthrough.html](docs/walkthrough.html)** — full user flow walked through with a real todo-list example, every stage shown
 
-issues / PRs 欢迎。详见 [CONTRIBUTING.md](CONTRIBUTING.md) 和 [CHANGELOG.md](CHANGELOG.md)。
+Markdown docs:
+
+- [docs/getting-started.md](docs/getting-started.md) — quick onboarding
+- [docs/concepts.md](docs/concepts.md) — why each piece exists
+- [docs/workflow.md](docs/workflow.md) — full 7-agent pipeline
+- [docs/manual-e2e-test.md](docs/manual-e2e-test.md) — manual end-to-end test checklist
+- [CONTRIBUTING.md](CONTRIBUTING.md) — development workflow for contributors
+- [MIGRATION.md](MIGRATION.md) — upgrade path for older harness-engineering projects
+
+## Roadmap
+
+| Version | Status | Highlights |
+|---|---|---|
+| 0.1.0 | done | MVP: 4 skills, 7 agents, dogfood |
+| 0.2.0 | done | Tool-agnostic `.harness/` SOT layer |
+| 0.3.0 | done | `/harness-adopt` automated apply |
+| 0.4.x | done | Fullstack Developer partitioning |
+| 0.5.0 | done | Backend Developer partitioning |
+| 0.6.x | done | Project renamed to harness-kit; plugin marketplace packaging |
+| 0.7.x | done | i18n (en/zh) + project-wide output-language policy; Copilot rules binding |
+| 0.8.x | done | Cross-tool handoff protocol; visible generated-file warnings |
+| 0.9+ | planned | Copilot custom-agent binding; `/harness-handoff` and `/harness-resume` automation; microservice-specific partitioning; semantic rule extraction in adopt |
+
+## Design principles
+
+1. **Don't reinvent platform mechanisms** — Sandbox, Hooks, Sub-agents, MCP, Memory are Claude Code's job
+2. **Mechanism vs content** — platform gives mechanism, this repo gives content
+3. **Tool-agnostic SOT vs binding layer** — `.harness/` is truth; `.claude/`, `CLAUDE.md`, `.github/copilot-instructions.md` are generated
+4. **Evolutionary delivery** — MVP → Hardening → Scale, not big-bang
+5. **Baseline only goes up** — test counts, rule coverage never regress silently
+6. **Finder doesn't fix** — Reviewer can't edit code, Gate can't edit requirements
+7. **Downstream can't edit upstream** — only propose rollback via PM
+8. **PM only routes** — never makes professional judgments
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). PRs and issues welcome.
 
 ## License
 
-MIT
+[MIT](LICENSE)
