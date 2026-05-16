@@ -138,6 +138,40 @@ Step "E.4" "Bootstrap files present and point to AI-GUIDE.md" {
     if (-not (Test-Path ".claude/agents")) { throw "Missing .claude/agents/ (run harness-sync)" }
 }
 
+Step "E.4b" "AI-GUIDE.md indexes every .harness/rules/*.md (and vice versa)" {
+    if (-not (Test-Path "AI-GUIDE.md")) { throw "AI-GUIDE.md missing (E.4 should have caught this)" }
+    if (-not (Test-Path ".harness/rules")) { return "SKIP" }
+    $guide = Get-Content "AI-GUIDE.md" -Raw
+    $actualRules = Get-ChildItem -Path ".harness/rules" -Filter "*.md" -File | ForEach-Object { $_.Name }
+
+    $missingFromGuide = @()
+    foreach ($rule in $actualRules) {
+        # Look for ".harness/rules/<filename>" in AI-GUIDE.md
+        if ($guide -notmatch [regex]::Escape(".harness/rules/$rule")) {
+            $missingFromGuide += $rule
+        }
+    }
+
+    # Reverse: every .harness/rules/<name>.md mentioned in AI-GUIDE.md must exist
+    $referencedRules = [regex]::Matches($guide, '\.harness/rules/([0-9A-Za-z_\-]+\.md)') |
+        ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
+    $missingFromDisk = @()
+    foreach ($ref in $referencedRules) {
+        if (-not (Test-Path ".harness/rules/$ref")) {
+            $missingFromDisk += $ref
+        }
+    }
+
+    $problems = @()
+    if ($missingFromGuide.Count -gt 0) {
+        $problems += "Rules NOT indexed in AI-GUIDE.md:`n  $($missingFromGuide -join "`n  ")"
+    }
+    if ($missingFromDisk.Count -gt 0) {
+        $problems += "AI-GUIDE.md references non-existent rules:`n  $($missingFromDisk -join "`n  ")"
+    }
+    if ($problems.Count -gt 0) { throw ($problems -join "`n`n") }
+}
+
 Step "E.5" "Docs present" {
     foreach ($f in @("docs/workflow.md", "docs/dev-map.md", "docs/tasks.md", "docs/getting-started.md", "docs/concepts.md")) {
         if (-not (Test-Path $f)) { throw "Missing $f" }

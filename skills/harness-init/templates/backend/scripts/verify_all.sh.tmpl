@@ -184,9 +184,32 @@ else
     step "D.4" "Binding in sync (.harness/ -> .claude/)" "FAIL" "Run scripts/harness-sync.sh"
 fi
 
-# D.5 — Adversarial tests section required in every 06_TEST_REPORT.md
+# D.5 — AI-GUIDE.md indexes every .harness/rules/*.md (and vice versa)
+if [[ ! -f AI-GUIDE.md || ! -d .harness/rules ]]; then
+    step "D.5" "AI-GUIDE.md indexes every .harness/rules/*.md" "SKIP"
+else
+    d5_problems=""
+    while IFS= read -r r; do
+        name=$(basename "$r")
+        if ! grep -qF ".harness/rules/$name" AI-GUIDE.md; then
+            d5_problems="$d5_problems\nNot indexed: $name"
+        fi
+    done < <(find .harness/rules -maxdepth 1 -name '*.md' -type f)
+    while IFS= read -r ref; do
+        if [[ ! -f ".harness/rules/$ref" ]]; then
+            d5_problems="$d5_problems\nReferences non-existent: .harness/rules/$ref"
+        fi
+    done < <(grep -oE '\.harness/rules/[0-9A-Za-z_\-]+\.md' AI-GUIDE.md | sed 's|\.harness/rules/||' | sort -u)
+    if [[ -z "$d5_problems" ]]; then
+        step "D.5" "AI-GUIDE.md indexes every .harness/rules/*.md" "PASS"
+    else
+        step "D.5" "AI-GUIDE.md indexes every .harness/rules/*.md" "FAIL" "$(echo -e $d5_problems)"
+    fi
+fi
+
+# D.6 — Adversarial tests section required in every 06_TEST_REPORT.md
 if [[ ! -d docs/features ]]; then
-    step "D.5" "Adversarial tests section in completed task reports" "SKIP"
+    step "D.6" "Adversarial tests section in completed task reports" "SKIP"
 else
     bad_reports=""
     while IFS= read -r r; do
@@ -195,9 +218,9 @@ else
         fi
     done < <(find docs/features -name '06_TEST_REPORT.md' -type f 2>/dev/null)
     if [[ -z "$bad_reports" ]]; then
-        step "D.5" "Adversarial tests section in completed task reports" "PASS"
+        step "D.6" "Adversarial tests section in completed task reports" "PASS"
     else
-        step "D.5" "Adversarial tests section in completed task reports" "FAIL" "Missing section:$(echo -e $bad_reports)"
+        step "D.6" "Adversarial tests section in completed task reports" "FAIL" "Missing section:$(echo -e $bad_reports)"
     fi
 fi
 

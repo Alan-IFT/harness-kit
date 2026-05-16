@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.2] - 2026-05-16
+
+### Added — verify_all check: `AI-GUIDE.md` ↔ `.harness/rules/` consistency
+
+v0.10 introduced `AI-GUIDE.md` as the tool-agnostic index referencing `.harness/rules/*.md` fragments. v0.11.0 added a new fragment (`05-insight-index.md`) and I almost forgot to update AI-GUIDE.md's index — caught only because I was tracing through what to edit. This is exactly the "AI attention decay" failure the reference articles warn about: relying on memory to keep two documents in sync is unsustainable.
+
+`verify_all` now has a bidirectional consistency check (`E.4b` in the dogfood; `E.5` / `D.5` in per-project fullstack/backend templates):
+
+- **Forward**: every `.harness/rules/*.md` file on disk MUST be referenced in `AI-GUIDE.md` (otherwise AI tools following AI-GUIDE.md miss the rule entirely).
+- **Reverse**: every `.harness/rules/<name>.md` reference in `AI-GUIDE.md` MUST point to an existing file (otherwise AI follows a broken pointer).
+
+The check is "verification, not generation" — consistent with the v0.10 philosophy of "AI-GUIDE.md and CLAUDE.md are NOT regenerated; they're authored. We just catch drift."
+
+A failed check tells the user / AI exactly which file is missing from which side, so the fix is mechanical (add or remove one line).
+
+### Changed
+
+- `scripts/verify_all.{ps1,sh}`: new `E.4b` check (dogfood). Total dogfood checks: 19 → 20.
+- `templates/fullstack/scripts/verify_all.{ps1,sh}.tmpl`: new `E.5` check; the previous `E.5` (adversarial tests in test reports) renumbered to `E.6`.
+- `templates/backend/scripts/verify_all.{ps1,sh}.tmpl`: new `D.5` check; the previous `D.5` (adversarial tests) renumbered to `D.6`.
+
+### Tests
+
+- verify_all: 20/20 PASS (was 19/19; one new check added).
+- test-init: 116/116 PASS.
+- test-real-project: 82/82 PASS.
+
+### Known issue (not fixed in this patch)
+
+The "Other / Generic" project type's `AI-GUIDE.md.tmpl` still references `50-{{PROJECT_TYPE}}.md` (which substitutes to e.g. `50-generic.md`), but the SKILL.md doesn't currently write that file to disk during init for Other-Generic. So an Other-Generic user's first `verify_all` run would fail E.5/D.5 with "AI-GUIDE.md references non-existent: .harness/rules/50-generic.md". Will be addressed in v0.12 alongside the broader Other-Generic improvements (AI-native init).
+
 ## [0.11.1] - 2026-05-16
 
 ### Fixed — Symmetric mode skills; `/harness` skill was referenced but did not exist

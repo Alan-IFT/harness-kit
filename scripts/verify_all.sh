@@ -123,6 +123,34 @@ else
     step "E.4" "Bootstrap files present and stubs reference AI-GUIDE.md" "FAIL" "missing:$gen_missing stub_no_ref:$stub_bad"
 fi
 
+# E.4b — AI-GUIDE.md must index every .harness/rules/*.md (and vice versa)
+e4b_problems=""
+if [[ ! -f AI-GUIDE.md ]]; then
+    e4b_problems="AI-GUIDE.md missing"
+elif [[ ! -d .harness/rules ]]; then
+    : # skip silently; E.3 already flagged
+else
+    # forward: every rule file must be referenced in AI-GUIDE.md
+    while IFS= read -r r; do
+        name=$(basename "$r")
+        if ! grep -qF ".harness/rules/$name" AI-GUIDE.md; then
+            e4b_problems="$e4b_problems\nNot indexed in AI-GUIDE.md: $name"
+        fi
+    done < <(find .harness/rules -maxdepth 1 -name '*.md' -type f)
+
+    # reverse: every reference in AI-GUIDE.md must point to an existing file
+    while IFS= read -r ref; do
+        if [[ ! -f ".harness/rules/$ref" ]]; then
+            e4b_problems="$e4b_problems\nAI-GUIDE.md references non-existent rule: .harness/rules/$ref"
+        fi
+    done < <(grep -oE '\.harness/rules/[0-9A-Za-z_\-]+\.md' AI-GUIDE.md | sed 's|\.harness/rules/||' | sort -u)
+fi
+if [[ -z "$e4b_problems" ]]; then
+    step "E.4b" "AI-GUIDE.md indexes every .harness/rules/*.md (and vice versa)" "PASS"
+else
+    step "E.4b" "AI-GUIDE.md indexes every .harness/rules/*.md (and vice versa)" "FAIL" "$(echo -e $e4b_problems)"
+fi
+
 # E.5 — docs
 missing_p=""
 for f in docs/workflow.md docs/dev-map.md docs/tasks.md docs/getting-started.md docs/concepts.md; do
