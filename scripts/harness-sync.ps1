@@ -45,8 +45,13 @@ if (Test-Path $rulesDir) {
     $ruleFiles = Get-ChildItem -Path $rulesDir -Filter "*.md" -File | Sort-Object Name
     if ($ruleFiles.Count -gt 0) {
         $header = @"
-<!-- THIS FILE IS GENERATED FROM .harness/rules/ — DO NOT EDIT DIRECTLY -->
-<!-- Edit .harness/rules/*.md and run scripts/harness-sync.ps1 -->
+> ⚠️ **GENERATED FILE — DO NOT EDIT DIRECTLY**
+>
+> Source of truth: ``.harness/rules/*.md`` (composed in filename order)
+> After editing the source, run ``scripts/harness-sync.ps1`` (or ``.sh``) to regenerate.
+> ``verify_all`` will FAIL if this file drifts from the source.
+
+<!-- generated marker: keep in sync with harness-sync output -->
 
 "@
         $bodies = $ruleFiles | ForEach-Object { (Get-Content $_.FullName -Raw).TrimEnd() }
@@ -85,8 +90,13 @@ if ($composedClaudeMd) {
 ---
 applyTo: "**"
 ---
-<!-- THIS FILE IS GENERATED FROM .harness/rules/ — DO NOT EDIT DIRECTLY -->
-<!-- Edit .harness/rules/*.md and run scripts/harness-sync.ps1 -->
+> ⚠️ **GENERATED FILE — DO NOT EDIT DIRECTLY**
+>
+> Source of truth: ``.harness/rules/*.md`` (composed in filename order)
+> After editing the source, run ``scripts/harness-sync.ps1`` (or ``.sh``) to regenerate.
+> ``verify_all`` will FAIL if this file drifts from the source.
+
+<!-- generated marker: keep in sync with harness-sync output -->
 
 "@
     $bodies = (Get-ChildItem -Path $rulesDir -Filter "*.md" -File | Sort-Object Name) | ForEach-Object { (Get-Content $_.FullName -Raw).TrimEnd() }

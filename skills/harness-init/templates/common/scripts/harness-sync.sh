@@ -40,13 +40,16 @@ if [[ -d "$rules_dir" ]]; then
 
         composed_tmp=$(mktemp)
         {
-            echo "<!-- THIS FILE IS GENERATED FROM .harness/rules/ — DO NOT EDIT DIRECTLY -->"
-            echo "<!-- Edit .harness/rules/*.md and run scripts/harness-sync.sh -->"
+            echo "> ⚠️ **GENERATED FILE — DO NOT EDIT DIRECTLY**"
+            echo ">"
+            echo "> Source of truth: \`.harness/rules/*.md\` (composed in filename order)"
+            echo "> After editing the source, run \`scripts/harness-sync.sh\` (or \`.ps1\`) to regenerate."
+            echo "> \`verify_all\` will FAIL if this file drifts from the source."
+            echo ""
+            echo "<!-- generated marker: keep in sync with harness-sync output -->"
             echo ""
             for f in "${sorted[@]}"; do
-                # Trim trailing newlines, then add separating blank line
                 content=$(cat "$f")
-                # Remove trailing whitespace/newlines
                 content="${content%"${content##*[![:space:]]}"}"
                 echo "$content"
                 echo ""
@@ -78,8 +81,13 @@ if [[ -d "$rules_dir" ]]; then
             echo "---"
             echo "applyTo: \"**\""
             echo "---"
-            echo "<!-- THIS FILE IS GENERATED FROM .harness/rules/ — DO NOT EDIT DIRECTLY -->"
-            echo "<!-- Edit .harness/rules/*.md and run scripts/harness-sync.sh -->"
+            echo "> ⚠️ **GENERATED FILE — DO NOT EDIT DIRECTLY**"
+            echo ">"
+            echo "> Source of truth: \`.harness/rules/*.md\` (composed in filename order)"
+            echo "> After editing the source, run \`scripts/harness-sync.sh\` (or \`.ps1\`) to regenerate."
+            echo "> \`verify_all\` will FAIL if this file drifts from the source."
+            echo ""
+            echo "<!-- generated marker: keep in sync with harness-sync output -->"
             echo ""
             for f in "${sorted[@]}"; do
                 content=$(cat "$f")

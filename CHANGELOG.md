@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-05-16
+
+### Fixed — Visible "GENERATED FILE" warning on synced artifacts
+
+Triggered by user feedback: "do I have to maintain CLAUDE.md and `.github/copilot-instructions.md` in parallel?"
+
+The answer was **no, already since v0.2 there's only one source of truth (`.harness/rules/`) and `harness-sync` generates both files**. But the previous warning was an **HTML comment** (`<!-- generated -->`) which is invisible in rendered Markdown (GitHub previews, IDE viewers). Easy to miss → easy to accidentally edit the generated file → drift gets caught by verify_all but only later.
+
+Fix: warning is now a Markdown **blockquote with ⚠️ emoji**, visible everywhere:
+
+```markdown
+> ⚠️ **GENERATED FILE — DO NOT EDIT DIRECTLY**
+>
+> Source of truth: `.harness/rules/*.md` (composed in filename order)
+> After editing the source, run `scripts/harness-sync.ps1` (or `.sh`) to regenerate.
+> `verify_all` will FAIL if this file drifts from the source.
+```
+
+Appears at the top of both `CLAUDE.md` and `.github/copilot-instructions.md`. The HTML comment is kept below it as a sentinel for tooling.
+
+### Changed
+
+- `scripts/harness-sync.{ps1,sh}` (in templates) emit the new visible warning.
+- `test-init` assertion updated to match the new marker text ("GENERATED FILE" instead of the old "THIS FILE IS GENERATED").
+- Dogfood: this repo's CLAUDE.md and .github/copilot-instructions.md regenerated with the visible warning.
+
+### Tests
+
+- test-init: 108/108 PASS.
+- test-real-project: 78/78 PASS.
+- verify_all: 19/19 PASS.
+
+### Architectural clarification
+
+To recap the source-of-truth model in this project (for future readers who hit the same question):
+
+```
+.harness/rules/*.md        ← YOU EDIT THIS (single source of truth)
+    │
+    │  harness-sync.ps1/.sh generates ↓
+    │
+    ├──> CLAUDE.md                            (Claude Code reads this fixed name)
+    └──> .github/copilot-instructions.md      (Copilot reads this fixed name)
+```
+
+Both target filenames are fixed by the respective tools (Claude Code mandates `CLAUDE.md`, Copilot mandates `.github/copilot-instructions.md`). We cannot make them read the same file — but we can keep them perfectly in sync from a single source. That's the whole point of the binding layer.
+
 ## [0.8.0] - 2026-05-16
 
 ### Added — Tool handoff protocol (Claude Code ↔ Copilot)

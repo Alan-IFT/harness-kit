@@ -1,5 +1,10 @@
-<!-- THIS FILE IS GENERATED FROM .harness/rules/ — DO NOT EDIT DIRECTLY -->
-<!-- Edit .harness/rules/*.md and run scripts/harness-sync.ps1 -->
+> ⚠️ **GENERATED FILE — DO NOT EDIT DIRECTLY**
+>
+> Source of truth: `.harness/rules/*.md` (composed in filename order)
+> After editing the source, run `scripts/harness-sync.ps1` (or `.sh`) to regenerate.
+> `verify_all` will FAIL if this file drifts from the source.
+
+<!-- generated marker: keep in sync with harness-sync output -->
 # Harness Kit — Project Rules (self-dogfood)
 
 > This repo **uses its own Harness setup**. The same 7-agent pipeline that we ship to users

@@ -161,7 +161,7 @@ function Test-Type {
 
         # === Content correctness ===
         Assert "CLAUDE.md has generated marker" {
-            (Get-Content (Join-Path $tmp "CLAUDE.md") -Raw) -match "THIS FILE IS GENERATED"
+            (Get-Content (Join-Path $tmp "CLAUDE.md") -Raw) -match "GENERATED FILE"
         }
         Assert "CLAUDE.md contains overlay marker for $ProjectType" {
             (Get-Content (Join-Path $tmp "CLAUDE.md") -Raw) -match "$ProjectType-specific rules"

@@ -127,7 +127,7 @@ test_type() {
     assert "copilot-instructions.md has applyTo frontmatter" "head -5 '$tmp/.github/copilot-instructions.md' | grep -q 'applyTo:'"
 
     # Content correctness
-    assert "CLAUDE.md has generated marker" "grep -q 'THIS FILE IS GENERATED' '$tmp/CLAUDE.md'"
+    assert "CLAUDE.md has generated marker" "grep -q 'GENERATED FILE' '$tmp/CLAUDE.md'"
     assert "CLAUDE.md contains overlay marker for $project_type" "grep -q '$project_type-specific rules' '$tmp/CLAUDE.md'"
     assert "PROJECT_NAME substituted into rules" "grep -q 'test-project' '$tmp/.harness/rules/00-core.md'"
     assert "TODAY substituted into rules" "grep -q '$today' '$tmp/.harness/rules/00-core.md'"
