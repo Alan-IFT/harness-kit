@@ -26,6 +26,20 @@
 
 Output language 规则、项目规则、约定对两个工具都生效。但**7-Agent 流水线和 sub-agents 是 Claude Code 独有**（Copilot 不支持 sub-agent 派发），Copilot 用户拿到的是规则层面的指导。
 
+### 工具切换（Claude Code ↔ Copilot）— v0.8.0+
+
+典型场景：Claude Code 5 小时额度用完，临时切到 Copilot 继续，额度恢复后切回 Claude Code。
+
+**这是支持的**。核心机制是任务状态全部持久化在文件里（`docs/tasks.md` + `docs/features/<task>/01..07.md` + `PM_LOG.md`），切工具时不丢上下文。`.harness/rules/60-tool-handoff.md` 写明切换协议，两个工具的 binding（CLAUDE.md / copilot-instructions.md）都包含。
+
+**用户操作**：
+
+1. Claude Code 里说一句 "正在交接到 Copilot"。当前 agent 写 PARTIAL.md（如果中途）+ 更新 PM_LOG + tasks.md。
+2. 切到 VS Code + Copilot。说 "Continue task T-XXX"。Copilot 读 copilot-instructions.md 找到切换协议、读现有 docs/、扮演下一个 role 推进。
+3. Claude Code 额度恢复后回来。PM Orchestrator 自动从同一组文件 resume。
+
+详见 `.harness/rules/60-tool-handoff.md`（init/adopt 之后生成的项目里）。
+
 ### 两层模型（v0.2+）
 
 项目里有两层资产：

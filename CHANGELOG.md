@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-05-16
+
+### Added — Tool handoff protocol (Claude Code ↔ Copilot)
+
+Direct response to a real workflow: developer hits Claude Code's 5-hour limit mid-task; wants to continue in GitHub Copilot; later switches back to Claude Code when the quota refreshes — without losing context.
+
+New rule fragment `.harness/rules/60-tool-handoff.md` (synced into both `CLAUDE.md` and `.github/copilot-instructions.md`) defines the cross-tool protocol:
+
+**Core principle**: all task state lives in **files**, not in chat memory. The recoverable state is `docs/tasks.md` + `docs/features/<task>/01..07_*.md` + `PM_LOG.md` + `.harness/agents/*.md` + `.harness/rules/*.md`.
+
+### How a handoff works in practice
+
+1. **In Claude Code** — Task is in flight, e.g. `dev-backend` working on stage 4. User about to hit rate limit. Whoever's working writes a `PARTIAL.md` if mid-stage, appends a `PM_LOG.md` line "handoff at stage X · next: Y by agent Z", ensures `docs/tasks.md` stage is current.
+2. **Switch to Copilot in VS Code** — User says "continue task T-001". Copilot reads `.github/copilot-instructions.md` → finds the tool-handoff protocol → reads `docs/tasks.md` → finds the in-flight task → reads `PM_LOG.md` last entry → reads existing 01..06 docs → reads `.harness/agents/<next-role>.md` → **assumes that role personally** → produces next stage's doc → updates `tasks.md` and `PM_LOG.md`. **One role at a time** — Copilot does not auto-route to a different role; user does that.
+3. **Switch back to Claude Code** — PM Orchestrator reads same state files → resumes routing.
+
+### Hard rules across all tools (also in the new fragment)
+
+- All AI tools read `docs/tasks.md` and `PM_LOG.md` first when "resume" is requested.
+- Sub-agent stages cannot be skipped on resume. If Gate Review document is missing, do that before Development.
+- No agent edits upstream documents (Reviewer never edits the requirement, etc.) — this constraint survives tool switches.
+- The "Output language" policy (v0.7.0) carries through — a Chinese project gets Chinese output from both Claude Code and Copilot in resume mode too.
+
+### Copilot-specific note
+
+Copilot has no sub-agent dispatch. When it finishes its current stage in resume mode, it **stops and asks the user** rather than silently moving to another role. Cross-stage routing goes through the user (who'll typically switch back to Claude Code or manually tell Copilot to assume the next role). This is intentional — preserves the "one agent, one job" discipline even when sub-agent infrastructure isn't available.
+
+### Tests
+
+- verify_all: 19/19 still PASS (no script changes, just a new rule file going through sync).
+- test-init: 108/108 still PASS.
+- test-real-project: 78/78 still PASS.
+- Dogfood: this repo now has `.harness/rules/60-tool-handoff.md`, and the generated `CLAUDE.md` + `.github/copilot-instructions.md` include the protocol.
+
+### Out of scope (future)
+
+- Automatic `/harness-handoff` skill to generate a "handoff brief" — for v0.9 if user demand surfaces.
+- Automatic `/harness-resume` skill to streamline the manual "continue task T-XXX" prompt — same.
+
 ## [0.7.1] - 2026-05-16
 
 ### Added — GitHub Copilot co-existence (minimal binding)
