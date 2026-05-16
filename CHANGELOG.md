@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.2] - 2026-05-16
+
+### Fixed — Requirement Analyst / Solution Architect / Gate Reviewer agent contracts now match v0.11+ feature surface
+
+v0.12.1 closed the gap for PM Orchestrator + Developer + Code Reviewer, but explicitly punted on the other three agents ("polish pass later if needed"). v0.12.2 finishes the job — now **all 7 agent contracts** know about v0.11+ features (modes, AI-GUIDE.md indirection, insight-index).
+
+#### Changed agents
+
+**`requirement-analyst.md`**:
+- New workflow steps 2 & 3: read `AI-GUIDE.md` (project entry) → follow its index to load relevant `.harness/rules/*.md` fragments; read `.harness/insight-index.md` — an insight about stack quirks may constrain in-scope behaviors.
+- New `## Mode-specific output` section: full / plan / explore / goal each have different output expectations. **Explore mode gets the LIGHT variant** — Question + Success criteria + Candidates, no acceptance criteria. This was promised by `/harness-explore` SKILL.md but never enforced in the RA contract.
+
+**`solution-architect.md`**:
+- New workflow steps 2 & 3: read `AI-GUIDE.md` and relevant rule fragments; read `.harness/insight-index.md` for stack-quirk constraints that affect design (e.g. an insight about an SDK returning `null` instead of throwing affects error-handling design).
+- New `## Mode-specific note` section: structure of `02_SOLUTION_DESIGN.md` is the same across modes, but in **plan mode** the design must be complete enough to hand off — possibly to a future session days/weeks later. Cite file paths absolutely; be explicit about assumptions.
+
+**`gate-reviewer.md`**:
+- New workflow steps 3 & 4: read `AI-GUIDE.md` + rules (design must comply with active rules); read `.harness/insight-index.md` — does any entry contradict an assumption in the design? If yes, that's a finding.
+- **`What you produce` → Verdict** completely restructured by mode:
+  - **Full mode** verdict vocabulary (unchanged): `APPROVED` / `APPROVED WITH CONDITIONS` / `BLOCKED ON REQUIREMENT` / `BLOCKED ON DESIGN`
+  - **Plan mode** verdict vocabulary (NEW): `APPROVED FOR DEVELOPMENT` (resume hook for `/harness` continuation) / `CHANGES REQUIRED` / `REJECTED`
+  - The exact verdict string is the PM's signal for next action — using the wrong vocabulary in plan mode breaks the resume path.
+
+### Synced
+
+`.harness/agents/{requirement-analyst,solution-architect,gate-reviewer}.md` in this repo (dogfood) updated via `sync-self`. `.claude/agents/*.md` re-generated via `harness-sync`.
+
+### Tests
+
+- verify_all: 20/20 PASS.
+- test-init: 159/159 PASS.
+- test-real-project: 82/82 PASS.
+
+Same as v0.12.1: no new assertions because this is an internal-prompt contract fix. The test suites can't introspect agent prompt behavior.
+
+### v0.11+ agent contract debt — fully closed
+
+All 7 agents are now v0.11+ aware:
+- `pm-orchestrator` (v0.12.1): modes, insight-index, archive-task
+- `requirement-analyst` (v0.12.2): modes, AI-GUIDE.md, insight-index, light-variant for explore
+- `solution-architect` (v0.12.2): AI-GUIDE.md, insight-index, plan-mode hand-off discipline
+- `gate-reviewer` (v0.12.2): AI-GUIDE.md, insight-index, mode-specific verdict vocabulary
+- `developer` (v0.12.1): AI-GUIDE.md, insight-index, `## Insight to surface` reporting
+- `code-reviewer` (v0.12.1): AI-GUIDE.md / rules references
+- `qa-tester` (v0.11.0): adversarial verification contract
+
 ## [0.12.1] - 2026-05-16
 
 ### Fixed — Agent role contracts now match the v0.11+ feature surface

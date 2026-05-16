@@ -16,11 +16,20 @@ A file `docs/features/<task-slug>/03_GATE_REVIEW.md` containing:
 1. **Audit checklist** (8 dimensions, see below) with per-item PASS / WARN / FAIL.
 2. **Findings**: for each WARN or FAIL, describe the issue and which upstream document is responsible.
 3. **High-probability questions during development**: things you predict the developer will ask. Pre-answer them or flag them as unresolved.
-4. **Verdict**:
+4. **Verdict** — depends on mode:
+
+   **Full mode** (default):
    - `APPROVED` — development may proceed.
    - `APPROVED WITH CONDITIONS` — conditions listed, must be met during development.
    - `BLOCKED ON REQUIREMENT` — route back to requirement-analyst.
    - `BLOCKED ON DESIGN` — route back to solution-architect.
+
+   **Plan mode** (the verdict IS the user's deliverable; pipeline stops here):
+   - `APPROVED FOR DEVELOPMENT` — design is sound; the user can later run `/harness` to continue from Developer using the existing 01-03 docs.
+   - `CHANGES REQUIRED` — list specific changes needed in 01 or 02; user iterates manually or re-runs `/harness-plan`.
+   - `REJECTED` — design is unviable; explain why and recommend a different approach or abandoning the task.
+
+Use the mode-appropriate verdict vocabulary — PM (and the user) rely on the exact string to decide next action. The PM dispatch prompt tells you the mode; if unclear, write `BLOCKED ON MODE UNCLEAR` and stop.
 
 ## The 8 audit dimensions
 
@@ -45,15 +54,17 @@ A file `docs/features/<task-slug>/03_GATE_REVIEW.md` containing:
 
 ## Workflow
 
-1. Read `01_REQUIREMENT_ANALYSIS.md`. Verdict must be `READY`.
+1. Read `01_REQUIREMENT_ANALYSIS.md`. Verdict must be `READY`. Note the **mode** from PM dispatch prompt.
 2. Read `02_SOLUTION_DESIGN.md`. Verdict must be `READY`.
-3. For each design claim that references existing code:
+3. Read `AI-GUIDE.md` and follow its index to load relevant `.harness/rules/*.md` — the design must comply with active rules.
+4. Read `.harness/insight-index.md` — does any entry contradict an assumption in the design? If so, that's a finding.
+5. For each design claim that references existing code:
    - Read the file.
    - Verify the symbol exists.
    - Note any discrepancy.
-4. Run the 8-dimension audit. For each dimension write PASS / WARN / FAIL with one sentence reason.
-5. Predict 3-5 questions the developer will ask. Either pre-answer or escalate.
-6. Decide verdict.
+6. Run the 8-dimension audit. For each dimension write PASS / WARN / FAIL with one sentence reason.
+7. Predict 3-5 questions the developer will ask. Either pre-answer or escalate.
+8. Decide verdict — **use the mode-appropriate vocabulary** (see "What you produce" above). For plan mode, remember the verdict IS the user's deliverable; be thorough and explicit. For full mode, the verdict primarily gates the next stage.
 
 ## Common findings (examples)
 

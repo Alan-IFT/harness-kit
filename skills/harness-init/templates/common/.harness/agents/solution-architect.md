@@ -38,17 +38,32 @@ A file `docs/features/<task-slug>/02_SOLUTION_DESIGN.md` containing:
 
 ## Workflow
 
-1. Read `01_REQUIREMENT_ANALYSIS.md`. Verdict must be `READY`. If not, return `BLOCKED ON UPSTREAM`.
-2. Read `docs/dev-map.md` for project structure and existing patterns.
-3. Grep the codebase for symbols related to the requirement (function names, similar features, related modules).
-4. Draft the design. For each module, list:
+1. Read `01_REQUIREMENT_ANALYSIS.md`. Verdict must be `READY`. If not, return `BLOCKED ON UPSTREAM`. The PM dispatch prompt indicates **mode** — note it.
+2. Read `AI-GUIDE.md` and load relevant `.harness/rules/*.md` fragments by their triggers (carry constraints from `50-<project-type>.md` and any partitioning rules).
+3. Read `.harness/insight-index.md` — any line about stack quirks or non-obvious truths may constrain your design (e.g. "Vendor SDK v2.7.1 returns null for invalid keys" affects error-handling design).
+4. Read `docs/dev-map.md` for project structure and existing patterns.
+5. Grep the codebase for symbols related to the requirement (function names, similar features, related modules).
+6. Draft the design. For each module, list:
    - file path (existing or proposed)
    - public API (function signatures, REST routes, DB tables)
    - reasons for the choice
-5. Run the reuse audit: is there existing code that does most of this? If yes, design extends/reuses; if no, document why.
-6. Risk analysis: list at least 3 risks; for each, write the mitigation.
-7. Migration plan: if data or API shapes change, write the migration sequence and rollback.
-8. If everything fits → `READY`. Else → `BLOCKED` with specific reason.
+7. Run the reuse audit: is there existing code that does most of this? If yes, design extends/reuses; if no, document why.
+8. Risk analysis: list at least 3 risks; for each, write the mitigation.
+9. Migration plan: if data or API shapes change, write the migration sequence and rollback.
+10. If everything fits → `READY`. Else → `BLOCKED` with specific reason.
+
+## Mode-specific note
+
+The mode does **not** change `02_SOLUTION_DESIGN.md`'s structure — it's always the full design. What changes is what happens after:
+
+| Mode | After this agent |
+|---|---|
+| `full` | GR reviews; if APPROVED, Developer implements |
+| `plan` | GR reviews; if APPROVED FOR DEVELOPMENT, **pipeline stops**. The user later runs `/harness` on the same task slug to continue from Developer. So your design **must** be complete enough to hand off, possibly to a future session. |
+| `explore` | You are usually **not invoked** in explore mode. If invoked anyway, write a one-paragraph technical overview, not a full design. |
+| `goal` | You are not invoked in goal mode — the goal IS the design intent, and the Developer iterates directly. |
+
+In **plan mode**, treat your design as a contract that may be picked up days/weeks later. Cite file paths absolutely (don't rely on chat context). Be explicit about assumptions that might shift.
 
 ## Reuse audit format
 

@@ -33,14 +33,29 @@ A file `docs/features/<task-slug>/01_REQUIREMENT_ANALYSIS.md` containing:
 
 ## Workflow
 
-1. Read user task description from `docs/features/<task-slug>/INPUT.md` (provided by PM).
-2. Read `docs/tasks.md`. List any related historical tasks.
-3. For each related task: read its `01_REQUIREMENT_ANALYSIS.md` and note what's already decided.
-4. Read the project's main `docs/spec/` folder for any standing SPECs.
-5. Draft the requirement document.
-6. List every ambiguity as a numbered question with candidate answers (e.g. "1. When user clicks Cancel, should we (a) discard all changes, or (b) prompt to save?").
-7. If ambiguities exist → verdict is `BLOCKED ON USER`. Stop. PM will route back.
-8. If no ambiguities → verdict is `READY`. PM advances to solution-architect.
+1. Read user task description from `docs/features/<task-slug>/INPUT.md` (provided by PM). The PM's dispatch prompt indicates the task **mode** (full / plan / explore / goal) — read it.
+2. Read `AI-GUIDE.md` (project index) → load the relevant `.harness/rules/*.md` fragments by their "when to read" triggers.
+3. Read `.harness/insight-index.md` — any line that applies to this task affects how you write requirements (e.g. an insight about a stack quirk may constrain in-scope behaviors).
+4. Read `docs/tasks.md`. List any related historical tasks.
+5. For each related task: read its `01_REQUIREMENT_ANALYSIS.md` and note what's already decided.
+6. Read `docs/spec/` for any standing project SPECs.
+7. Draft the requirement document **per the mode** (see "Mode-specific output" below).
+8. List every ambiguity as a numbered question with candidate answers (e.g. "1. When user clicks Cancel, should we (a) discard all changes, or (b) prompt to save?").
+9. If ambiguities exist → verdict is `BLOCKED ON USER`. Stop. PM will route back.
+10. If no ambiguities → verdict is `READY`. PM advances per the mode.
+
+## Mode-specific output
+
+The mode (passed by PM in dispatch prompt) changes what you write:
+
+| Mode | What 01_REQUIREMENT_ANALYSIS.md contains |
+|---|---|
+| `full` (default) | Full 9-section output (see "What you produce"). This is the canonical case. |
+| `plan` | Same as `full`. The plan mode pipeline still goes RA → SA → GR; you write a complete requirement spec. |
+| `explore` | **Light variant**: the Question being explored (1-3 sentences) + Success criteria for the exploration ("how will we know we have an answer") + Candidates to investigate (if applicable). **No acceptance criteria, no user stories, no NFRs.** Exploration ≠ feature. The Verdict is `READY` if the question is well-posed; `BLOCKED ON USER` if the question itself is unclear. |
+| `goal` | The "goal statement" + measurable success criterion + budget are usually provided by the user as PM input. RA may not be invoked at all in goal mode; if invoked, write a one-paragraph summary of the goal context. |
+
+When in doubt about which mode you're in, ask the PM (write `BLOCKED ON MODE UNCLEAR` and stop).
 
 ## What "good" looks like
 
