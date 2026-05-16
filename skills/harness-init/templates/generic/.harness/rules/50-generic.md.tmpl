@@ -1,0 +1,63 @@
+# 50 — Project-specific rules (generic)
+
+> Project-type overlay for **{{PROJECT_NAME}}**, a {{STACK}} project.
+> Intentionally near-empty at init — fill in as project conventions become clear.
+
+## When to read
+
+Carry this in mind when touching code in this project. Skip for typo fixes / comment cleanup.
+
+## Build / test / verify
+
+The project's actual build / test / lint commands live in `scripts/verify_all.{ps1,sh}`. The init template ships a generic skeleton — **customize it for your stack on the first real task**.
+
+For {{STACK}}, typical commands might include:
+- Build: `<your build command>` (e.g. `cargo build` for Rust, `pnpm build` for Node, `pip install -e .` for Python)
+- Test: `<your test command>` (e.g. `cargo test`, `pnpm test`, `pytest`)
+- Lint / typecheck: `<your linter>` (e.g. `cargo clippy`, `eslint .`, `ruff check .`)
+
+Fill these in once and `verify_all` will enforce them going forward.
+
+## Project structure
+
+Document conventions as you discover them. Examples:
+
+- Where source files live: `src/` / `lib/` / `app/` / ...
+- Entry point: `src/main.rs` / `index.ts` / `cli.py` / ...
+- Test layout: `tests/` adjacent to source, or `__tests__/` co-located, or ...
+- Lint / format config: `.eslintrc`, `pyproject.toml`, `rustfmt.toml`, ...
+
+Once a convention is stable, consider promoting it to a dedicated rule fragment (e.g. `55-conventions.md`) and referencing it from `AI-GUIDE.md`.
+
+## Stack-specific conventions
+
+If this project has unusual patterns specific to {{STACK}}, document them:
+
+- Code style overrides not covered by lint config
+- Dependency-injection or module-layout conventions
+- Async / concurrency patterns
+- API contract conventions
+- Build-time vs run-time config split
+
+## Partitioning (optional, not enabled by default)
+
+This project initialized as **Generic**, which defaults to a single `developer` agent (`.harness/agents/developer.md`).
+
+If the project becomes large enough that partitioned developers would help, ask AI to:
+
+1. Identify natural partition boundaries (e.g. `dev-mobile-ios` + `dev-mobile-android` for a mobile app; `dev-data-pipeline` + `dev-data-api` for an ML project; `dev-rust` + `dev-react` for a Tauri app)
+2. Create `.harness/agents/dev-<name>.md` for each partition with explicit owned-paths globs
+3. Update this file (or a new `55-partitioning.md`) to document the partitioning scheme
+4. Run `scripts/harness-sync` to copy the new agent files to `.claude/agents/`
+5. Update `AI-GUIDE.md`'s "Agents" section to list the new partitions
+
+The Solution Architect, when partition agents exist, must produce a partition-assignment table in `02_SOLUTION_DESIGN.md` for any task that touches multiple partitions.
+
+## Stack-specific verify_all checks (optional)
+
+If your stack has properties worth verifying beyond build / test / lint, add steps to `scripts/verify_all.{ps1,sh}`. Examples:
+
+- Rust: `cargo audit` for security
+- Python: `pip-audit` or `safety check`
+- Node: `pnpm audit --audit-level=high`
+- Any: spell-check on user-facing strings, license header on source files, ...

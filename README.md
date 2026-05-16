@@ -2,7 +2,7 @@
 
 **English** · [简体中文](README.zh-CN.md)
 
-![version](https://img.shields.io/badge/version-0.11.2-blue) ![verify_all](https://img.shields.io/badge/verify__all-19%2F19-brightgreen) ![test-init](https://img.shields.io/badge/test--init-108%2F108-brightgreen) ![integration](https://img.shields.io/badge/integration-78%2F78-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.12.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-19%2F19-brightgreen) ![test-init](https://img.shields.io/badge/test--init-108%2F108-brightgreen) ![integration](https://img.shields.io/badge/integration-78%2F78-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
 > **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (4 skills + project templates) that brings disciplined AI-driven development to fullstack and backend projects.
 >
@@ -87,10 +87,10 @@ In Claude Code:
 ```
 
 Five questions (`AskUserQuestion` popup):
-1. Project type — Fullstack / Backend / Other-Generic (CLI, library, mobile, ML, embedded, etc.)
+1. Project type — Fullstack / Backend / Generic (CLI, library, mobile, ML, embedded, etc.) — three first-class overlays
 2. Stack — free text (e.g. "Next.js + NestJS + Postgres", "Rust CLI tool", "PyTorch training pipeline")
 3. Enable `verify_all` Stop hook — Yes / No
-4. Developer partitioning — Partitioned (default) / Single (skipped for Other-Generic — AI assigns on first task)
+4. Developer partitioning — Partitioned (default) / Single (skipped for Generic — defaults to single, AI suggests partitions later if project grows)
 5. Project output language — English (default) / 中文
 
 In ~30 seconds your project has:
@@ -246,8 +246,9 @@ Markdown docs:
 | 0.8.x | done | Cross-tool handoff protocol; visible generated-file warnings |
 | 0.9.x | done | Auto-sync via Stop hook + OS-aware `{{SYNC_COMMAND}}` + tool-agnostic git pre-commit hook; "Other / Generic" project type |
 | 0.10.0 | done | **Progressive-disclosure layout**: `AI-GUIDE.md` entry + stub CLAUDE.md / copilot-instructions.md; rules no longer composed (~50% context-budget reduction) |
-| 0.11.0 | done | **Three execution modes** (`/harness-plan`, `/harness-explore`, `/harness-goal`) + **adversarial verification** (QA must write independent reproducers + `## Adversarial tests` section, verify_all enforces it) + **cross-task insight index** (`.harness/insight-index.md` + `scripts/archive-task`) — borrowing from lsdefine/GenericAgent's memory + verify discipline |
-| 0.12+ | planned | **AI-native init**: AI reads project description (and existing code if any) and generates custom overlay — no preset list; Copilot custom-agent binding; supervisor agent with intervention files |
+| 0.11.x | done | **Three execution modes** + **adversarial verification** + **cross-task insight index** (from lsdefine/GenericAgent borrows) + symmetric `/harness` skill + AI-GUIDE.md ↔ rules drift check |
+| 0.12.0 | done | **Generic project type** is now a first-class overlay (parallel to fullstack/backend) — closes the Other-Generic gap. New `templates/generic/` with `50-generic.md` rule stub + minimal `verify_all` skeleton. Test-init now exercises 3 project types (+33 assertions). |
+| 0.13+ | planned | True **AI-native init** (AI analyzes user description + existing code, generates custom 50-*.md and partition agents); supervisor agent with intervention-file protocol |
 
 ## Design principles
 

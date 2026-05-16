@@ -42,10 +42,10 @@ they back up or run `/harness-adopt`.
 
 Ask **five questions** in a single `AskUserQuestion` call:
 
-1. **Project type** — options:
-   - `Fullstack (frontend + backend + DB)` — copies fullstack overlay (partition agents, fullstack rules, verify_all preset for Node/web stacks).
-   - `Backend / API service` — copies backend overlay (api/services/db partitions, backend rules, multi-stack verify_all).
-   - `Other / Generic` — **for everything else** (CLI tool, library, mobile, ML pipeline, embedded, etc.). Only common assets are copied; no project-type overlay. You and the AI will refine `.harness/rules/00-core.md` and `verify_all` to fit your project. **v0.10 will make this path AI-native: AI analyzes your project description and generates a custom overlay automatically.**
+1. **Project type** — options. The choice determines `PROJECT_TYPE` placeholder and which overlay is copied.
+   - `Fullstack (frontend + backend + DB)` — `PROJECT_TYPE=fullstack`; copies fullstack overlay (partition agents, fullstack rules, verify_all preset for Node/web stacks).
+   - `Backend / API service` — `PROJECT_TYPE=backend`; copies backend overlay (api/services/db partitions, backend rules, multi-stack verify_all).
+   - `Generic (CLI / library / mobile / ML / embedded / etc.)` — `PROJECT_TYPE=generic`; copies generic overlay (`50-generic.md` stub for project-specific rules + a generic `verify_all` you customize for your actual build/test commands). No partition agents by default. The AI fills in `50-generic.md` based on your Q2 stack description and any existing code in the target directory.
 2. **Primary language / framework stack** — free text via "Other" option (e.g. "Next.js + NestJS + Postgres", "FastAPI + Postgres", "Rust CLI tool", "PyTorch training pipeline").
 3. **Install auto-sync hooks?** — options:
    - `Yes (recommended)` — installs **both** the Claude Code Stop hook (in `.claude/settings.json`) **and** the git pre-commit hook (via `scripts/install-hooks.{ps1,sh}`). Stop hook keeps `CLAUDE.md` + `.github/copilot-instructions.md` fresh while you work in Claude Code. Pre-commit hook is the tool-agnostic backstop — blocks any commit (Claude Code, Copilot, Cursor, hand-edits) that includes drifted generated artifacts.
@@ -60,8 +60,8 @@ Ask **five questions** in a single `AskUserQuestion` call:
    - `Partitioned (recommended) — dev-api / dev-services / dev-db agents` — three-layer split (HTTP boundary / business logic / persistence), supports clean coordination per Architect's design
    - `Single developer — one agent for all code` — fine for small/flat backend projects without a layered architecture
 
-   For **Other / Generic**:
-   - Skip this question. Defaults to single developer. The PM or the user can ask AI later to "add partition agents for X" — AI will create custom `.harness/agents/dev-*.md` based on the actual project layout. **v0.10 will offer this analysis as an init-time step automatically.**
+   For **Generic**:
+   - Skip this question. Defaults to single developer. After init, the AI can be asked to "add partition agents for X" — it will create custom `.harness/agents/dev-*.md` based on the actual project layout. See `.harness/rules/50-generic.md` for the documented partitioning procedure.
 
 5. **Project output language** — this is a **project-wide policy**, not just doc language. Options:
    - `English (default)` — **All AI output in this project will be in English**. That includes: chat replies, agent-to-agent hand-offs, every per-task document (`01_REQUIREMENT_ANALYSIS.md` through `07_DELIVERY.md`, `PM_LOG.md`), updates to `tasks.md` / `dev-map.md`, error messages, status reports. Even if the user writes in another language, AI responds in English.
@@ -77,6 +77,7 @@ Templates live alongside this skill:
   rule fragments in `.harness/rules/`, harness-sync scripts, docs, evals).
 - `<skill-root>/templates/fullstack/` — fullstack-specific overlays.
 - `<skill-root>/templates/backend/` — backend-specific overlays.
+- `<skill-root>/templates/generic/` — generic project overlay (single `50-generic.md` stub).
 - `<skill-root>/templates/i18n/<lang>/` — translation overlays (currently `zh` is provided). Mirror the directory structure of `common/` and `<project-type>/`; files inside override their English counterparts.
 
 If the skill is installed under `~/.claude/skills/harness-init/`, the templates are at `~/.claude/skills/harness-init/templates/`. Use `Glob` to discover the actual path.
@@ -89,7 +90,7 @@ Copy in this order (later layer overwrites earlier):
 2. Everything under `templates/<project-type>/` → target root.
    - Fullstack overlay adds `.harness/rules/50-fullstack.md`, `.harness/skills/{build,test,verify}/SKILL.md.tmpl`, `scripts/verify_all.{ps1,sh}.tmpl`, **and** `.harness/agents/dev-{frontend,backend,db}.md.tmpl` (partition agents).
    - Backend overlay adds `.harness/rules/50-backend.md` etc.
-   - **Other / Generic**: skip this step. No overlay applied. The project gets only `common/` content. After init, the PM or the user can ask AI to "look at the project and propose what rules / partition agents / verify_all checks should apply" — AI reads existing code (or the user's description), then generates `.harness/rules/50-project.md`, optional `.harness/agents/dev-*.md`, and customizes `verify_all` accordingly.
+   - **Generic** overlay adds `.harness/rules/50-generic.md` (a near-empty stub the user/AI fills in based on the actual stack). No partition agents. No project-type-specific `verify_all` template — the project gets the generic `verify_all` from `common/` (TODO: ship a `verify_all.tmpl` in `generic/` once the common one has stack-agnostic skeleton).
 3. **If Q5 ≠ English**, apply the language overlay:
    - Copy everything under `templates/i18n/<lang>/common/` → target root (overwrites the English files).
    - Copy everything under `templates/i18n/<lang>/<project-type>/` → target root.
@@ -129,7 +130,7 @@ Replace these placeholders in any `.tmpl` file:
 | Placeholder | Source |
 |---|---|
 | `{{PROJECT_NAME}}` | basename of the target directory |
-| `{{PROJECT_TYPE}}` | `fullstack` or `backend` |
+| `{{PROJECT_TYPE}}` | `fullstack`, `backend`, or `generic` |
 | `{{STACK}}` | user's free-text answer to Q2 |
 | `{{TODAY}}` | today's date in `YYYY-MM-DD` |
 | `{{ENABLE_HOOK}}` | `true` or `false` from Q3 |

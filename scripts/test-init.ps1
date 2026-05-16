@@ -15,8 +15,8 @@
 
 [CmdletBinding()]
 param(
-    [ValidateSet("both", "fullstack", "backend")]
-    [string]$Type = "both",
+    [ValidateSet("all", "both", "fullstack", "backend", "generic")]
+    [string]$Type = "all",
     [switch]$KeepTemp
 )
 
@@ -124,11 +124,11 @@ function Test-Type {
             Assert ".harness/agents/$a.md (SOT)" { Test-Path (Join-Path $tmp ".harness/agents/$a.md") }
         }
 
-        # Partition agents: both fullstack and backend have them in v0.5
-        $partitionAgents = if ($ProjectType -eq "fullstack") {
-            @("dev-frontend", "dev-backend", "dev-db")
-        } else {
-            @("dev-api", "dev-services", "dev-db")
+        # Partition agents: fullstack and backend have them in v0.5+; generic has none by default
+        $partitionAgents = switch ($ProjectType) {
+            "fullstack" { @("dev-frontend", "dev-backend", "dev-db") }
+            "backend"   { @("dev-api", "dev-services", "dev-db") }
+            "generic"   { @() }
         }
         foreach ($p in $partitionAgents) {
             Assert ".harness/agents/$p.md (partition SOT)" { Test-Path (Join-Path $tmp ".harness/agents/$p.md") }
@@ -141,8 +141,11 @@ function Test-Type {
         Assert ".harness/rules/00-core.md (composed base)" { Test-Path (Join-Path $tmp ".harness/rules/00-core.md") }
         Assert ".harness/rules/50-$ProjectType.md (overlay)" { Test-Path (Join-Path $tmp ".harness/rules/50-$ProjectType.md") }
 
-        foreach ($s in @("build","test","verify")) {
-            Assert ".harness/skills/$s/SKILL.md (SOT)" { Test-Path (Join-Path $tmp ".harness/skills/$s/SKILL.md") }
+        # .harness/skills/ is fullstack/backend-only; generic ships without them (user fills in)
+        if ($ProjectType -ne "generic") {
+            foreach ($s in @("build","test","verify")) {
+                Assert ".harness/skills/$s/SKILL.md (SOT)" { Test-Path (Join-Path $tmp ".harness/skills/$s/SKILL.md") }
+            }
         }
 
         # === Generated artifacts (.claude/ + CLAUDE.md) ===
@@ -152,8 +155,10 @@ function Test-Type {
         foreach ($p in $partitionAgents) {
             Assert ".claude/agents/$p.md (generated partition)" { Test-Path (Join-Path $tmp ".claude/agents/$p.md") }
         }
-        foreach ($s in @("build","test","verify")) {
-            Assert ".claude/skills/$s/SKILL.md (generated)" { Test-Path (Join-Path $tmp ".claude/skills/$s/SKILL.md") }
+        if ($ProjectType -ne "generic") {
+            foreach ($s in @("build","test","verify")) {
+                Assert ".claude/skills/$s/SKILL.md (generated)" { Test-Path (Join-Path $tmp ".claude/skills/$s/SKILL.md") }
+            }
         }
         Assert ".claude/settings.json (direct binding artifact)" { Test-Path (Join-Path $tmp ".claude/settings.json") }
         Assert "AI-GUIDE.md (v0.10 tool-agnostic entry)" { Test-Path (Join-Path $tmp "AI-GUIDE.md") }
@@ -244,11 +249,14 @@ function Test-Type {
 Write-Host "=== test-init: simulating /harness-init flow (v0.2) ===" -ForegroundColor Cyan
 Write-Host "Repo: $repoRoot"
 
-if ($Type -in @("both", "fullstack")) {
+if ($Type -in @("all", "both", "fullstack")) {
     Test-Type -ProjectType "fullstack" -Stack "Next.js + NestJS + Postgres"
 }
-if ($Type -in @("both", "backend")) {
+if ($Type -in @("all", "both", "backend")) {
     Test-Type -ProjectType "backend" -Stack "FastAPI + Postgres"
+}
+if ($Type -in @("all", "generic")) {
+    Test-Type -ProjectType "generic" -Stack "Rust CLI tool"
 }
 
 Write-Host ""

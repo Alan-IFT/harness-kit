@@ -1,0 +1,63 @@
+# 50 — 项目特定规则（generic）
+
+> **{{PROJECT_NAME}}** 项目的类型 overlay，技术栈 {{STACK}}。
+> init 时刻意写得近乎空白 —— 随着项目约定明确再填充。
+
+## 什么时候读
+
+碰这个项目代码时记在脑子里。typo / 注释清理跳过。
+
+## Build / test / verify
+
+项目实际的 build / test / lint 命令在 `scripts/verify_all.{ps1,sh}`。init 模板里是个通用骨架 —— **第一个实际任务时根据你的 stack 改一次**。
+
+对 {{STACK}}，典型命令可能是：
+- Build: `<你的 build 命令>`（Rust 可能是 `cargo build`、Node 可能是 `pnpm build`、Python 可能是 `pip install -e .`）
+- Test: `<你的测试命令>`（`cargo test` / `pnpm test` / `pytest` 等）
+- Lint / typecheck: `<你的 linter>`（`cargo clippy` / `eslint .` / `ruff check .` 等）
+
+填一次，之后 `verify_all` 会自动 enforce。
+
+## 项目结构
+
+随着发现的约定填进来。例子：
+
+- 源文件在哪：`src/` / `lib/` / `app/` / ...
+- Entry point：`src/main.rs` / `index.ts` / `cli.py` / ...
+- 测试布局：`tests/` 跟源代码并排，或者 `__tests__/` 共存放，等
+- Lint / format 配置：`.eslintrc`、`pyproject.toml`、`rustfmt.toml`、...
+
+某个约定稳定后，考虑提升成独立规则片段（比如 `55-conventions.md`），并从 `AI-GUIDE.md` 引用。
+
+## 栈特定约定
+
+如果项目对 {{STACK}} 有非常规模式，写在这里：
+
+- lint 配置覆盖不到的代码风格
+- 依赖注入或模块布局约定
+- 异步 / 并发模式
+- API 契约约定
+- 编译期 vs 运行期配置拆分
+
+## 分区（可选，默认不启用）
+
+本项目以 **Generic** 类型初始化，默认单个 `developer` agent（`.harness/agents/developer.md`）。
+
+如果项目大到分区开发更好，让 AI：
+
+1. 识别自然分区边界（比如移动 app 的 `dev-mobile-ios` + `dev-mobile-android`；ML 项目的 `dev-data-pipeline` + `dev-data-api`；Tauri 应用的 `dev-rust` + `dev-react`）
+2. 给每个分区创建 `.harness/agents/dev-<name>.md`，写明 owned-paths globs
+3. 在本文件（或新加的 `55-partitioning.md`）里写分区方案
+4. 跑 `scripts/harness-sync` 把新 agent 文件复制到 `.claude/agents/`
+5. 更新 `AI-GUIDE.md` 的 "Agents" 段列出新分区
+
+分区 agent 存在时，Solution Architect 必须为跨分区任务在 `02_SOLUTION_DESIGN.md` 里产出分区分配表。
+
+## 栈特定 verify_all check（可选）
+
+栈有 build / test / lint 之外值得验证的特性的话，往 `scripts/verify_all.{ps1,sh}` 加 step。例子：
+
+- Rust：`cargo audit` 检安全漏洞
+- Python：`pip-audit` 或 `safety check`
+- Node：`pnpm audit --audit-level=high`
+- 通用：用户可见字符串的 spell-check、源文件的 license header、...

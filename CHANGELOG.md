@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-05-16
+
+### Added — Generic project type is now a first-class overlay
+
+The v0.11.2 CHANGELOG explicitly listed "Known issue: the Other / Generic project type's `AI-GUIDE.md.tmpl` references `50-generic.md` but the SKILL.md doesn't write that file at init — first verify_all FAILs." v0.12.0 closes that gap by **promoting "Generic" from a stop-gap option to a first-class overlay parallel to fullstack and backend**.
+
+#### Concretely
+
+- **New: `templates/generic/`** overlay directory, parallel to `templates/fullstack/` and `templates/backend/`. Contains:
+  - `.harness/rules/50-generic.md.tmpl` — project-specific rules stub with explicit "fill these in" guidance for build/test/lint commands, project structure conventions, stack-specific patterns, and optional partition setup
+  - `scripts/verify_all.ps1.tmpl` and `scripts/verify_all.sh.tmpl` — minimal stack-agnostic verify_all skeleton with A.* hygiene checks + B.* placeholder steps (with examples for Rust / Python / Go / .NET / Java / mobile at the bottom of the file) + E.* Harness structure checks (including the v0.10 stub-references-AI-GUIDE and v0.11.2 AI-GUIDE-indexes-rules consistency checks)
+- **New: `templates/i18n/zh/generic/`** with Chinese counterparts of the above.
+- **`harness-init` SKILL.md updates**:
+  - Q1 option renamed from "Other / Generic" to **"Generic"** with clean PROJECT_TYPE value `generic`
+  - Step 4 (Copy template files) now covers Generic alongside fullstack/backend — overlay always copied, no special-casing
+  - Placeholder table updated: `PROJECT_TYPE` valid values now `fullstack` / `backend` / `generic`
+  - Q4 partitioning skip rule now points to the documented partition setup procedure in `50-generic.md`
+
+#### Test coverage
+
+- `scripts/test-init.{ps1,sh}` now accepts `--type generic` (and the new default is `all`, which exercises **all three** project types in one run).
+- Generic test scenario: simulates init for a "Rust CLI tool" project, asserts:
+  - 7 common agents present (no partition agents — correctly)
+  - `.harness/rules/50-generic.md` exists and PROJECT_NAME substituted
+  - Skills directory absent (correctly — generic ships no `.harness/skills/`)
+  - `scripts/verify_all.{ps1,sh}` present with PROJECT_NAME / STACK substituted
+  - AI-GUIDE.md references `50-generic.md` correctly
+- test-init: **116 → 159 PASS** (+43 new assertions for generic). Total assertion count across all 3 test suites is now 261 (was 218).
+
+### Changed
+
+- README.md and README.zh-CN.md: removed "Not yet supported" hedging; explicit that Generic is a first-class overlay. Quickstart Q1 description updated. Roadmap row added for 0.12.0.
+
+### Tests
+
+- verify_all: 20/20 PASS.
+- test-init: **159/159 PASS** (was 116/116).
+- test-real-project: 82/82 PASS.
+
+### Closed
+
+- v0.11.2 known issue ("Other-Generic projects' first verify_all run fails E.5/D.5"). Resolved by shipping the missing `50-generic.md` and a real `verify_all` template.
+
 ## [0.11.2] - 2026-05-16
 
 ### Added — verify_all check: `AI-GUIDE.md` ↔ `.harness/rules/` consistency

@@ -2,7 +2,7 @@
 
 [English](README.md) · **简体中文**
 
-![version](https://img.shields.io/badge/version-0.11.2-blue) ![verify_all](https://img.shields.io/badge/verify__all-19%2F19-brightgreen) ![test-init](https://img.shields.io/badge/test--init-108%2F108-brightgreen) ![integration](https://img.shields.io/badge/integration-78%2F78-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.12.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-19%2F19-brightgreen) ![test-init](https://img.shields.io/badge/test--init-108%2F108-brightgreen) ![integration](https://img.shields.io/badge/integration-78%2F78-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
 > **Claude Code 的 Harness Engineering 工具包** — 一个 Claude Code Plugin（4 个 skills + 项目模板），把"有纪律的 AI 驱动开发"带到全栈和后端项目里。
 >
@@ -87,10 +87,10 @@ claude
 ```
 
 5 个问题（`AskUserQuestion` 弹窗）：
-1. 项目类型 — Fullstack / Backend / Other-Generic（CLI、库、移动、ML、嵌入式 等）
+1. 项目类型 — Fullstack / Backend / Generic（CLI / 库 / 移动 / ML / 嵌入式 等）—— 三种一等公民 overlay
 2. 技术栈 — 自由文本（如 "Next.js + NestJS + Postgres"、"Rust CLI tool"、"PyTorch 训练流水线"）
 3. 启用 `verify_all` Stop hook — Yes / No
-4. Developer 分区 — Partitioned（默认）/ Single（Other-Generic 跳过此问题，首次任务时 AI 分析后再决定）
+4. Developer 分区 — Partitioned（默认）/ Single（Generic 跳过此问题，默认单 developer，项目长大后 AI 再建议分区）
 5. 项目输出语言 — English（默认）/ 中文
 
 ~30 秒后你的项目里就有：
@@ -246,8 +246,9 @@ Markdown 文档：
 | 0.8.x | 已交付 | 跨工具切换协议；生成文件可见 warning |
 | 0.9.x | 已交付 | 自动 sync via Stop hook + OS-aware `{{SYNC_COMMAND}}` + 工具无关 git pre-commit hook；"Other / Generic" 项目类型 |
 | 0.10.0 | 已交付 | **Progressive-disclosure 布局**：`AI-GUIDE.md` 入口 + stub CLAUDE.md / copilot-instructions.md；规则不再组合（~50% context 预算降低）|
-| 0.11.0 | 已交付 | **三个执行模式**（`/harness-plan`、`/harness-explore`、`/harness-goal`）+ **对抗性验证**（QA 必须写独立 reproducer + `## Adversarial tests` 段，verify_all 强制检查）+ **跨任务 insight index**（`.harness/insight-index.md` + `scripts/archive-task`）—— 借鉴 lsdefine/GenericAgent 的记忆 + 验证纪律 |
-| 0.12+ | 规划中 | **AI 原生 init**：AI 读项目描述（和已有代码）后生成自定义 overlay；Copilot 自定义 agent binding；supervisor agent 配介入文件 |
+| 0.11.x | 已交付 | **三个执行模式** + **对抗性验证** + **跨任务 insight index**（来自 GenericAgent 借鉴）+ 对称 `/harness` skill + AI-GUIDE.md ↔ rules 漂移检查 |
+| 0.12.0 | 已交付 | **Generic 项目类型升为一等公民 overlay**（跟 fullstack/backend 平级）—— 关闭 Other-Generic gap。新增 `templates/generic/`，包含 `50-generic.md` 规则 stub + 最小 `verify_all` 骨架。test-init 现在覆盖 3 个项目类型（+33 断言）。|
+| 0.13+ | 规划中 | 真正的 **AI 原生 init**（AI 读项目描述 + 已有代码后生成自定义 50-*.md 和分区 agent）；supervisor agent 配介入文件协议 |
 
 ## 设计原则
 

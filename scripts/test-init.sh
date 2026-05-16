@@ -4,7 +4,7 @@
 
 set -uo pipefail
 
-TYPE="both"
+TYPE="all"
 KEEP=false
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -101,21 +101,23 @@ test_type() {
         assert ".harness/agents/$a.md (SOT)" "[[ -f '$tmp/.harness/agents/$a.md' ]]"
     done
 
-    # Partition agents: both fullstack and backend have them in v0.5
-    if [[ "$project_type" == "fullstack" ]]; then
-        partition_agents="dev-frontend dev-backend dev-db"
-    else
-        partition_agents="dev-api dev-services dev-db"
-    fi
+    # Partition agents: fullstack and backend have them in v0.5+; generic has none
+    case "$project_type" in
+        fullstack) partition_agents="dev-frontend dev-backend dev-db" ;;
+        backend)   partition_agents="dev-api dev-services dev-db" ;;
+        generic)   partition_agents="" ;;
+    esac
     for p in $partition_agents; do
         assert ".harness/agents/$p.md (partition SOT)" "[[ -f '$tmp/.harness/agents/$p.md' ]]"
         assert ".harness/agents/$p.md placeholder substituted" "! grep -qE '\{\{[A-Z_]+\}\}' '$tmp/.harness/agents/$p.md' && grep -q 'test-project' '$tmp/.harness/agents/$p.md'"
     done
     assert ".harness/rules/00-core.md (composed base)" "[[ -f '$tmp/.harness/rules/00-core.md' ]]"
     assert ".harness/rules/50-$project_type.md (overlay)" "[[ -f '$tmp/.harness/rules/50-$project_type.md' ]]"
-    for s in build test verify; do
-        assert ".harness/skills/$s/SKILL.md (SOT)" "[[ -f '$tmp/.harness/skills/$s/SKILL.md' ]]"
-    done
+    if [[ "$project_type" != "generic" ]]; then
+        for s in build test verify; do
+            assert ".harness/skills/$s/SKILL.md (SOT)" "[[ -f '$tmp/.harness/skills/$s/SKILL.md' ]]"
+        done
+    fi
 
     # Generated artifacts
     for a in pm-orchestrator requirement-analyst solution-architect gate-reviewer developer code-reviewer qa-tester; do
@@ -124,9 +126,11 @@ test_type() {
     for p in $partition_agents; do
         assert ".claude/agents/$p.md (generated partition)" "[[ -f '$tmp/.claude/agents/$p.md' ]]"
     done
-    for s in build test verify; do
-        assert ".claude/skills/$s/SKILL.md (generated)" "[[ -f '$tmp/.claude/skills/$s/SKILL.md' ]]"
-    done
+    if [[ "$project_type" != "generic" ]]; then
+        for s in build test verify; do
+            assert ".claude/skills/$s/SKILL.md (generated)" "[[ -f '$tmp/.claude/skills/$s/SKILL.md' ]]"
+        done
+    fi
     assert ".claude/settings.json (direct binding artifact)" "[[ -f '$tmp/.claude/settings.json' ]]"
     assert "AI-GUIDE.md (v0.10 tool-agnostic entry)" "[[ -f '$tmp/AI-GUIDE.md' ]]"
     assert "CLAUDE.md (v0.10 bootstrap stub)" "[[ -f '$tmp/CLAUDE.md' ]]"
@@ -182,11 +186,14 @@ test_type() {
 echo "=== test-init: simulating /harness-init flow (v0.2) ==="
 echo "Repo: $repo_root"
 
-if [[ "$TYPE" == "both" || "$TYPE" == "fullstack" ]]; then
+if [[ "$TYPE" == "all" || "$TYPE" == "both" || "$TYPE" == "fullstack" ]]; then
     test_type "fullstack" "Next.js + NestJS + Postgres"
 fi
-if [[ "$TYPE" == "both" || "$TYPE" == "backend" ]]; then
+if [[ "$TYPE" == "all" || "$TYPE" == "both" || "$TYPE" == "backend" ]]; then
     test_type "backend" "FastAPI + Postgres"
+fi
+if [[ "$TYPE" == "all" || "$TYPE" == "generic" ]]; then
+    test_type "generic" "Rust CLI tool"
 fi
 
 echo ""

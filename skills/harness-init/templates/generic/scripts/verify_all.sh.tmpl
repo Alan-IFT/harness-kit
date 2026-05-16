@@ -1,0 +1,135 @@
+#!/usr/bin/env bash
+# verify_all.sh — Generic project total verification
+# Generated for {{PROJECT_NAME}} ({{STACK}}) on {{TODAY}}
+# Mirror of verify_all.ps1. See that file for full doc.
+
+set -uo pipefail
+
+errors=0
+warns=0
+skips=0
+declare -a report
+
+step() {
+    local id="$1" name="$2" status="$3" detail="${4:-}"
+    case "$status" in
+        PASS) echo "[$id] $name ... PASS" ;;
+        WARN) echo "[$id] $name ... WARN"; ((warns++)) ;;
+        SKIP) echo "[$id] $name ... SKIP"; ((skips++)) ;;
+        FAIL) echo "[$id] $name ... FAIL"; [[ -n "$detail" ]] && echo "      $detail"; ((errors++)) ;;
+    esac
+    report+=("$id|$name|$status")
+}
+
+echo "=== verify_all (generic) ==="
+echo "Project: {{PROJECT_NAME}}"
+echo "Stack:   {{STACK}}"
+echo ""
+
+# --- A. Hygiene (universal) ---
+if [[ ! -d .git ]]; then
+    step "A.1" "No hardcoded secrets" "SKIP"
+else
+    if git grep -E "(api[_-]?key|secret|password|token)[[:space:]]*[:=][[:space:]]*[\"'][^\"']{8,}[\"']" \
+        -- ':!*.md' ':!scripts/verify_all*' ':!.harness/*' &>/dev/null; then
+        step "A.1" "No hardcoded secrets" "FAIL" "Possible secret detected"
+    else
+        step "A.1" "No hardcoded secrets" "PASS"
+    fi
+fi
+
+if [[ ! -d .git ]]; then
+    step "A.2" "No .env files committed" "SKIP"
+else
+    env_committed=$(git ls-files '*.env' '.env*' 2>/dev/null | grep -vE 'example|sample' || true)
+    [[ -z "$env_committed" ]] && step "A.2" "No .env files committed" "PASS" || step "A.2" "No .env files committed" "FAIL" "$env_committed"
+fi
+
+# --- B. Build / test / lint (CUSTOMIZE FOR {{STACK}}) ---
+# TODO: Replace each SKIP with your actual command for {{STACK}}.
+# Examples at the bottom of this file.
+step "B.1" "Build" "SKIP"
+step "B.2" "Tests pass" "SKIP"
+step "B.3" "Lint" "SKIP"
+
+# --- E. Project structure (Harness required) ---
+e1_missing=""
+for f in AI-GUIDE.md CLAUDE.md .github/copilot-instructions.md; do
+    [[ -f "$f" ]] || e1_missing="$e1_missing $f"
+done
+[[ -z "$e1_missing" ]] && step "E.1" "Bootstrap files present" "PASS" || step "E.1" "Bootstrap files present" "FAIL" "missing:$e1_missing"
+
+[[ -f docs/workflow.md ]] && step "E.2" "workflow.md present" "PASS" || step "E.2" "workflow.md present" "FAIL"
+
+missing_agent=""
+for a in pm-orchestrator requirement-analyst solution-architect gate-reviewer developer code-reviewer qa-tester; do
+    [[ -f ".harness/agents/$a.md" ]] || missing_agent="$missing_agent $a"
+done
+[[ -z "$missing_agent" ]] && step "E.3" "All 7 agents in .harness/agents/" "PASS" || step "E.3" "All 7 agents in .harness/agents/" "FAIL" "Missing:$missing_agent"
+
+if [[ -f scripts/harness-sync.sh ]] && bash scripts/harness-sync.sh --check &>/dev/null; then
+    step "E.4" "Binding in sync (.harness/ -> .claude/)" "PASS"
+else
+    step "E.4" "Binding in sync (.harness/ -> .claude/)" "FAIL" "Run scripts/harness-sync.sh"
+fi
+
+# E.5 — AI-GUIDE.md indexes every .harness/rules/*.md (and vice versa)
+if [[ ! -f AI-GUIDE.md || ! -d .harness/rules ]]; then
+    step "E.5" "AI-GUIDE.md indexes every .harness/rules/*.md" "SKIP"
+else
+    e5_problems=""
+    while IFS= read -r r; do
+        name=$(basename "$r")
+        if ! grep -qF ".harness/rules/$name" AI-GUIDE.md; then
+            e5_problems="$e5_problems\nNot indexed: $name"
+        fi
+    done < <(find .harness/rules -maxdepth 1 -name '*.md' -type f)
+    while IFS= read -r ref; do
+        if [[ ! -f ".harness/rules/$ref" ]]; then
+            e5_problems="$e5_problems\nReferences non-existent: .harness/rules/$ref"
+        fi
+    done < <(grep -oE '\.harness/rules/[0-9A-Za-z_\-]+\.md' AI-GUIDE.md | sed 's|\.harness/rules/||' | sort -u)
+    if [[ -z "$e5_problems" ]]; then
+        step "E.5" "AI-GUIDE.md indexes every .harness/rules/*.md" "PASS"
+    else
+        step "E.5" "AI-GUIDE.md indexes every .harness/rules/*.md" "FAIL" "$(echo -e $e5_problems)"
+    fi
+fi
+
+# E.6 — Adversarial tests section required in every 06_TEST_REPORT.md
+if [[ ! -d docs/features ]]; then
+    step "E.6" "Adversarial tests section in completed task reports" "SKIP"
+else
+    bad_reports=""
+    while IFS= read -r r; do
+        if ! grep -qE '^##\s+Adversarial\s+tests' "$r"; then
+            bad_reports="$bad_reports\n$r"
+        fi
+    done < <(find docs/features -name '06_TEST_REPORT.md' -type f 2>/dev/null)
+    if [[ -z "$bad_reports" ]]; then
+        step "E.6" "Adversarial tests section in completed task reports" "PASS"
+    else
+        step "E.6" "Adversarial tests section in completed task reports" "FAIL" "Missing section:$(echo -e $bad_reports)"
+    fi
+fi
+
+# Summary
+echo ""
+echo "=== Summary ==="
+pass_count=$(printf '%s\n' "${report[@]}" | grep -c PASS || true)
+echo "  PASS: $pass_count"
+echo "  WARN: $warns"
+echo "  FAIL: $errors"
+echo "  SKIP: $skips"
+
+(( errors > 0 )) && exit 2
+(( warns > 0 )) && exit 1
+exit 0
+
+# --- CUSTOMIZE: B.* examples for common stacks ---
+# Rust:        cargo build  /  cargo test  /  cargo clippy
+# Python:      python -m pytest  /  ruff check .  /  mypy .
+# Go:          go build ./...  /  go test ./...  /  golangci-lint run
+# .NET / C#:   dotnet build  /  dotnet test
+# Java:        ./gradlew build  /  ./gradlew test
+# Mobile:      xcodebuild test  /  ./gradlew connectedAndroidTest
