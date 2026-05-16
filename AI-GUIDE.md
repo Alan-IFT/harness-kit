@@ -25,6 +25,7 @@ Stack: Markdown (skills, agent definitions, docs) + PowerShell + Bash (verify_al
 - **`.harness/rules/30-engineering.md`** (**before commits**): commit message conventions, file hygiene, no secrets, PS/Bash symmetry
 - **`.harness/rules/40-locations.md`** (**when looking for "where does X live"**): file-location lookup table (read this if you'd otherwise guess a path)
 - **`.harness/rules/60-tool-handoff.md`** (**when switching Claude Code ↔ Copilot or other tools**): state lives in files, doc-sync responsibility for non-Claude tools
+- **`.harness/rules/65-intervention.md`** (**when running, observing, or redirecting any `/harness*` task**): `.harness/intervention.md` is a single-shot signal file (STOP / REDIRECT / SKIP / NOTE) that PM consumes at every stage boundary
 
 **Memory layer**:
 - **`.harness/insight-index.md`** — ≤30 evidence-backed lines of project-specific facts. Read at task start; append at task end (only with evidence). Never edit other people's lines.
@@ -68,6 +69,7 @@ Full contracts in `.harness/agents/<name>.md`. Read on demand when assuming or d
 | Explore / feasibility | "Can we do X?" / "Is library Y feasible?" — research | "能不能..." / "可行吗" / "调研一下" | `/harness-explore` |
 | Goal loop (Dev + QA) | "Keep improving until X" / "iterate to N% coverage" | "持续优化到..." / "循环改进直到..." | `/harness-goal` |
 | Trivial | Typo, comment, single-line dependency bump | typo / 注释 / 改个变量名 | Direct edit + `scripts/verify_all` |
+| Mid-task redirect | "stop the pipeline" / "tell dev to skip X" / "leave a note for QA" | "停一下" / "让 dev 别动 X" / "顺便告诉 QA…" | `/harness-intervene` |
 
 Declare-done gate (**all non-trivial modes**): `scripts/verify_all` PASS + (if 7-stage or goal) QA's `06_TEST_REPORT.md` has an `## Adversarial tests` section.
 

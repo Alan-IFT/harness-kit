@@ -42,3 +42,6 @@ verification_history.log
 /dist/
 /build/
 /out/
+
+# Harness — ephemeral intervention signal (consumed and deleted by PM)
+.harness/intervention.md

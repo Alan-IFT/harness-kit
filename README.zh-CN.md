@@ -25,6 +25,7 @@
 **运维类**
 - `/harness-kit:harness-verify` — 跑总验证（编译 + 测试 + 规则扫描 + 基线对比）
 - `/harness-kit:harness-status` — 健康度快照（哪些资产存在、基线、最近 verify 状态、活动任务）
+- `/harness-kit:harness-intervene` — 给正在跑的流水线发"软 Ctrl-C"：写一个 `STOP` / `REDIRECT` / `SKIP` / `NOTE` 信号文件，PM 在下一次阶段切换时消费
 
 init 之后，每个非琐碎任务流经 **7-Agent 流水线**：PM Orchestrator → Requirement Analyst → Solution Architect → Gate Reviewer → Developer（或分区 `dev-*`）→ Code Reviewer → QA Tester → 交付。
 
@@ -176,7 +177,8 @@ harness-kit/
 │   │       └── i18n/zh/          中文翻译 overlay
 │   ├── harness-adopt/
 │   ├── harness-verify/
-│   └── harness-status/
+│   ├── harness-status/
+│   └── harness-intervene/
 │
 ├── .claude-plugin/               Claude Code plugin manifests
 │   ├── plugin.json

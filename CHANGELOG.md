@@ -7,6 +7,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-05-16
+
+### Added — Mid-task intervention protocol (`/harness-intervene`)
+
+First **new capability** on top of the v0.11/0.12 contract baseline. Real usage of the 7-stage pipeline surfaced no blocking bugs, so we're opening the surface again — starting with a universal "soft Ctrl-C" for long autonomous runs.
+
+#### What's new
+
+- **`.harness/intervention.md`** — a single-shot signal file the human (or another AI tool session) can drop to redirect, pause, or annotate an in-flight 7-stage task. PM reads it at every stage boundary, logs the consumption into `PM_LOG.md`, then deletes it. Presence = "unread intervention", absence = "no pending message".
+- **`/harness-kit:harness-intervene`** — new skill that writes the intervention file with the right first-line keyword (`STOP` / `REDIRECT <stage>` / `SKIP <stage>` / `NOTE`). Refuses to overwrite an existing unread intervention without confirmation.
+- **`.harness/rules/65-intervention.md`** — protocol contract: who writes, who reads, how PM consumes, what's forbidden (rules / insights / bug reports belong elsewhere).
+- **PM Orchestrator** updated (both dogfood `.harness/agents/pm-orchestrator.md` and `templates/common/.harness/agents/pm-orchestrator.md`):
+  - New `## Mid-task intervention (v0.13+)` section explaining the read points, consumption protocol, and prohibition on agents writing the file themselves.
+  - New workflow step 3 (check intervention immediately after PM_LOG.md creation) and updated step 8 (re-check after every stage completion before deciding next route).
+- **`.gitignore`** entry for `.harness/intervention.md` (dogfood). The init template instructs new projects to add the same line.
+- **`verify_all` E.7** — WARN (not FAIL) if `.harness/intervention.md` is tracked by git (it's supposed to be ephemeral and gitignored).
+
+#### Why intervention before AI-native init
+
+Both were on the v0.13 candidate list. Picked intervention because:
+- Universal benefit (every long task across every project type / mode), vs. one-time init.
+- Addresses a real "AI long-run runaway" UX pain proactively.
+- Simple protocol (one file, four keywords) vs. AI-output-as-config (init).
+- AI-native init can wait for evidence that the current static-stub Generic path is the bottleneck.
+
+#### Read points (PM Orchestrator)
+
+1. Immediately after `PM_LOG.md` is created, before stage 1 dispatch.
+2. After every stage completion, before routing decision.
+3. At the start of every iteration in `goal` mode.
+
+#### Keyword vocabulary
+
+| Keyword | Effect |
+|---|---|
+| `STOP` | Halt the pipeline, surface to user. No auto-resume. |
+| `REDIRECT <stage>` | Override stage's brief. If past it, route back as rollback. |
+| `SKIP <stage>` | Skip stage 5 (code-review) or 6 (QA) with logged rationale. **Skipping stage 3 (gate-review) is forbidden.** |
+| `NOTE` | Acknowledge, attach to next dispatch's prompt, continue. |
+
+Stage numbers reference `pm-orchestrator.md` (`01` … `07`).
+
+### Changed
+
+- **`AI-GUIDE.md`** — indexes new rule fragment `.harness/rules/65-intervention.md`; new mode row in the workflow-entry table ("Mid-task redirect → `/harness-intervene`").
+- **`install.{ps1,sh}`** — `harness-intervene` added to skill list (8 → 9 skills).
+- **`scripts/verify_all.{ps1,sh}`** — skill count checks bumped to 9 across C.1, G.1, G.2. New E.7 check (intervention.md tracking warning).
+- **`README.md` / `README.zh-CN.md`** — `harness-intervene` listed under operations skills.
+
+### Synced
+
+- `templates/common/.harness/agents/pm-orchestrator.md` mirrored with dogfood version (sync-self gate maintained).
+- `templates/common/.harness/rules/65-intervention.md.tmpl` provides the protocol fragment for newly-init projects.
+
+### Tests
+
+- verify_all: PASS (with new E.7).
+- test-init: PASS.
+- test-real-project: PASS.
+
+### Upgrade notes
+
+- No breaking changes. Existing pipelines work without any modification.
+- If you don't write `.harness/intervention.md`, nothing changes — PM's check is a quick `Test-Path` that costs almost nothing.
+- Add `.harness/intervention.md` to `.gitignore` for any project that runs the v0.13+ pipeline.
+- `/harness-intervene` is opt-in; you can write the file by hand if preferred.
+
 ## [0.12.2] - 2026-05-16
 
 ### Fixed — Requirement Analyst / Solution Architect / Gate Reviewer agent contracts now match v0.11+ feature surface

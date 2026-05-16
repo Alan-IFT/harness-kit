@@ -64,8 +64,8 @@ Step "B.2" "Install scripts present (both PowerShell + Bash)" {
 }
 
 # C. Skills structure
-Step "C.1" "All 8 skills present with SKILL.md" {
-    foreach ($s in @("harness", "harness-init", "harness-adopt", "harness-verify", "harness-status", "harness-plan", "harness-explore", "harness-goal")) {
+Step "C.1" "All 9 skills present with SKILL.md" {
+    foreach ($s in @("harness", "harness-init", "harness-adopt", "harness-verify", "harness-status", "harness-plan", "harness-explore", "harness-goal", "harness-intervene")) {
         $p = "skills/$s/SKILL.md"
         if (-not (Test-Path $p)) { throw "Missing $p" }
     }
@@ -196,10 +196,20 @@ Step "F.2" "Install scripts symmetric" {
 }
 
 # G. Documentation hygiene
-Step "G.1" "README references all 8 skills" {
+Step "G.1" "README references all 9 skills" {
     $readme = Get-Content "README.md" -Raw
-    foreach ($s in @("harness", "harness-init", "harness-adopt", "harness-verify", "harness-status", "harness-plan", "harness-explore", "harness-goal")) {
+    foreach ($s in @("harness", "harness-init", "harness-adopt", "harness-verify", "harness-status", "harness-plan", "harness-explore", "harness-goal", "harness-intervene")) {
         if ($readme -notmatch [regex]::Escape($s)) { throw "README missing skill mention: $s" }
+    }
+}
+
+Step "E.7" "No stale .harness/intervention.md tracked (v0.13+)" {
+    if (-not (Test-Path ".harness/intervention.md")) { return }
+    $tracked = git ls-files -- '.harness/intervention.md' 2>$null
+    if ($tracked) {
+        Write-Host "" -NoNewline
+        Write-Host " (intervention.md is tracked — should be gitignored)" -ForegroundColor Yellow -NoNewline
+        return $false
     }
 }
 
@@ -212,9 +222,9 @@ Step "H.1" "Test fixtures present (todo-fullstack + todo-backend)" {
     }
 }
 
-Step "G.2" "CHANGELOG mentions all 8 skills" {
+Step "G.2" "CHANGELOG mentions all 9 skills" {
     $cl = Get-Content "CHANGELOG.md" -Raw
-    foreach ($s in @("harness", "harness-init", "harness-adopt", "harness-verify", "harness-status", "harness-plan", "harness-explore", "harness-goal")) {
+    foreach ($s in @("harness", "harness-init", "harness-adopt", "harness-verify", "harness-status", "harness-plan", "harness-explore", "harness-goal", "harness-intervene")) {
         if ($cl -notmatch [regex]::Escape($s)) { throw "CHANGELOG missing skill mention: $s" }
     }
 }

@@ -48,10 +48,10 @@ done
 
 # C.1 — skills
 missing_skills=""
-for s in harness harness-init harness-adopt harness-verify harness-status harness-plan harness-explore harness-goal; do
+for s in harness harness-init harness-adopt harness-verify harness-status harness-plan harness-explore harness-goal harness-intervene; do
     [[ -f "skills/$s/SKILL.md" ]] || missing_skills="$missing_skills $s"
 done
-[[ -z "$missing_skills" ]] && step "C.1" "All 8 skills present" "PASS" || step "C.1" "All 8 skills present" "FAIL" "missing:$missing_skills"
+[[ -z "$missing_skills" ]] && step "C.1" "All 9 skills present" "PASS" || step "C.1" "All 9 skills present" "FAIL" "missing:$missing_skills"
 
 # C.2 — frontmatter sanity
 bad=""
@@ -161,6 +161,18 @@ done
 # E.6 — evals
 [[ -f "evals/golden-tasks.md" ]] && step "E.6" "evals/golden-tasks.md present" "PASS" || step "E.6" "evals/golden-tasks.md present" "FAIL"
 
+# E.7 — stale .harness/intervention.md (v0.13+)
+if [[ -f .harness/intervention.md ]]; then
+    tracked_int=$(git ls-files -- '.harness/intervention.md' 2>/dev/null || true)
+    if [[ -n "$tracked_int" ]]; then
+        step "E.7" "No stale .harness/intervention.md tracked" "WARN" "intervention.md is tracked — should be gitignored"
+    else
+        step "E.7" "No stale .harness/intervention.md tracked" "PASS"
+    fi
+else
+    step "E.7" "No stale .harness/intervention.md tracked" "PASS"
+fi
+
 # F.1 — script symmetry
 missing_sym=""
 for pair in verify_all sync-self harness-sync test-init test-real-project; do
@@ -172,10 +184,10 @@ done
 # G.1 — README mentions skills
 readme=$(cat README.md)
 miss_r=""
-for s in harness harness-init harness-adopt harness-verify harness-status harness-plan harness-explore harness-goal; do
+for s in harness harness-init harness-adopt harness-verify harness-status harness-plan harness-explore harness-goal harness-intervene; do
     grep -q "$s" <<< "$readme" || miss_r="$miss_r $s"
 done
-[[ -z "$miss_r" ]] && step "G.1" "README references all 8 skills" "PASS" || step "G.1" "README references all 8 skills" "FAIL" "missing:$miss_r"
+[[ -z "$miss_r" ]] && step "G.1" "README references all 9 skills" "PASS" || step "G.1" "README references all 9 skills" "FAIL" "missing:$miss_r"
 
 # H.1 — fixtures
 missing_fix=""
@@ -188,10 +200,10 @@ done
 # G.2 — CHANGELOG mentions skills
 cl=$(cat CHANGELOG.md)
 miss_c=""
-for s in harness harness-init harness-adopt harness-verify harness-status harness-plan harness-explore harness-goal; do
+for s in harness harness-init harness-adopt harness-verify harness-status harness-plan harness-explore harness-goal harness-intervene; do
     grep -q "$s" <<< "$cl" || miss_c="$miss_c $s"
 done
-[[ -z "$miss_c" ]] && step "G.2" "CHANGELOG references all 8 skills" "PASS" || step "G.2" "CHANGELOG references all 8 skills" "FAIL" "missing:$miss_c"
+[[ -z "$miss_c" ]] && step "G.2" "CHANGELOG references all 9 skills" "PASS" || step "G.2" "CHANGELOG references all 9 skills" "FAIL" "missing:$miss_c"
 
 # Summary
 echo ""

@@ -25,6 +25,7 @@ This is a Claude Code Plugin packaging that gives any project eight AI skills:
 **Operations skills**
 - `/harness-kit:harness-verify` — run total verification (compile + test + rule scan + baseline diff)
 - `/harness-kit:harness-status` — health snapshot (which assets present, baseline, last verify, active tasks)
+- `/harness-kit:harness-intervene` — soft Ctrl-C for an in-flight pipeline: drop a `STOP` / `REDIRECT` / `SKIP` / `NOTE` signal that the PM consumes at the next stage boundary
 
 After init, every non-trivial task flows through a **7-agent pipeline**: PM Orchestrator → Requirement Analyst → Solution Architect → Gate Reviewer → Developer (or partition `dev-*`) → Code Reviewer → QA Tester → Delivery.
 

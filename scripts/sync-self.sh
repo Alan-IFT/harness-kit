@@ -16,7 +16,7 @@ CHECK=false
 
 [[ -d "$template_common" ]] || { echo "templates/common/ not found at $template_common" >&2; exit 1; }
 
-declare -a drift
+drift=()
 
 sync_file() {
     local src="$1" dst="$2" label="$3"

@@ -55,6 +55,30 @@ Insight format example: `- 2026-05-16 · Vendor SDK v2.7.1 returns null for inva
 
 The contract for what counts as insight is in `.harness/rules/05-insight-index.md`. You do NOT write to insight-index directly — that happens at delivery via `scripts/archive-task` (see below).
 
+## Mid-task intervention (v0.13+)
+
+`.harness/intervention.md` is the human's (or another tool's) soft Ctrl-C for an in-flight pipeline. Its **presence means an unread intervention is waiting**; its absence means no pending message.
+
+**You MUST check for it at three points:**
+
+1. Right after creating `docs/features/<task>/PM_LOG.md`, before stage 1 dispatch.
+2. After EVERY stage completion, before deciding the next route.
+3. At the start of each iteration in `goal` mode.
+
+**Consumption protocol** (each time you find one):
+
+1. `Read` the file.
+2. Append its content to `PM_LOG.md` under a heading `## Intervention consumed at <ISO timestamp>`.
+3. Take the action implied by the first-line keyword:
+   - `STOP — <reason>` → halt the pipeline. Write current stage + intervention text to PM_LOG and surface to the user. Do NOT auto-resume.
+   - `REDIRECT <stage> — <new instruction>` → override the brief for that stage. If you are already past it, route back to it as a rollback with the override as the cause.
+   - `SKIP <stage> — <reason>` → skip the named stage. Allowed for stages 5 (code-review) and 6 (QA) only. Never skip stage 3 (gate-reviewer) — refuse and STOP if asked.
+   - `NOTE — <text>` → attach the note to the next dispatch's prompt; continue routing as planned.
+   - No keyword recognized → treat as `NOTE` if benign, `STOP` if ambiguous and consequential. When in doubt, STOP and ask the user.
+4. **Delete `.harness/intervention.md`** after acting on it. Leaving it would cause re-application at the next stage boundary.
+
+**You must NOT** write `.harness/intervention.md` yourself. Agents communicate via stage docs + BLOCKED markers; intervention.md is reserved for the human or out-of-band tool channel. The full protocol is in `.harness/rules/65-intervention.md`.
+
 ## Rollback routing rules
 
 | Failure | Route back to | Why |
@@ -100,18 +124,20 @@ explicitly marks two partitions as independent.
 ## How to start a task
 
 1. Receive user task description **and the invocation mode** (full / plan / explore / goal). Default to `full` if not specified.
-2. Create `docs/features/<task-slug>/` folder.
-3. **Read `.harness/insight-index.md`** — surface any applicable entries to downstream dispatch prompts.
-4. Read `docs/tasks.md` (task board) to check for related historical tasks. If found, list them. **Add new task entry with `mode: <mode>` field.**
-5. Read `docs/dev-map.md` if dev/test stages might touch known modules.
-6. **Dispatch stages according to the mode** (see Modes table above), starting from the first stage required.
-7. After each stage:
+2. Create `docs/features/<task-slug>/` folder and an empty `PM_LOG.md` inside it.
+3. **Check `.harness/intervention.md`** (see "Mid-task intervention"). Consume + delete if present.
+4. **Read `.harness/insight-index.md`** — surface any applicable entries to downstream dispatch prompts.
+5. Read `docs/tasks.md` (task board) to check for related historical tasks. If found, list them. **Add new task entry with `mode: <mode>` field.**
+6. Read `docs/dev-map.md` if dev/test stages might touch known modules.
+7. **Dispatch stages according to the mode** (see Modes table above), starting from the first stage required.
+8. After each stage:
    - Read the agent's output document.
    - Check for `BLOCKED:` markers or rollback requests.
+   - **Check `.harness/intervention.md` again** — consume + delete if present, apply its directive before deciding next route.
    - Decide: advance / rollback / stop.
    - Write your decision into `docs/features/<task-slug>/PM_LOG.md`.
-8. After the final stage of the mode, update `docs/tasks.md` with the delivery result.
-9. **Run `scripts/archive-task --task <slug>`** to harvest `## Insight` section from 07_DELIVERY.md into `.harness/insight-index.md` and move stage docs to `docs/features/_archived/<slug>/`. **Always run this for full and goal modes**; optional for plan/explore (whose outputs may be referenced again soon by a resumption).
+9. After the final stage of the mode, update `docs/tasks.md` with the delivery result.
+10. **Run `scripts/archive-task --task <slug>`** to harvest `## Insight` section from 07_DELIVERY.md into `.harness/insight-index.md` and move stage docs to `docs/features/_archived/<slug>/`. **Always run this for full and goal modes**; optional for plan/explore (whose outputs may be referenced again soon by a resumption).
 
 ## Stage gates (do not skip these checks)
 
