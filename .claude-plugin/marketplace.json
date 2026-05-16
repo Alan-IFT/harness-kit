@@ -1,0 +1,18 @@
+{
+  "name": "harness-kit-marketplace",
+  "description": "Single-plugin marketplace hosting harness-kit (Harness Engineering toolkit for Claude Code).",
+  "plugins": [
+    {
+      "name": "harness-kit",
+      "source": ".",
+      "version": "0.6.0",
+      "description": "7-agent pipeline + tool-agnostic .harness/ SOT + partition Developers + verify_all gates. See README.",
+      "skills": [
+        "harness-init",
+        "harness-adopt",
+        "harness-verify",
+        "harness-status"
+      ]
+    }
+  ]
+}

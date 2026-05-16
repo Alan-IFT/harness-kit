@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-05-15
+
+### Changed
+
+- **Project renamed: "Harness Engineering for Claude Code" → "Harness Kit"** (or just `harness-kit` in code/URL contexts). The methodology is still called Harness Engineering; the *project that distributes a toolkit implementing it* is now called Harness Kit. Branding references updated across README, CHANGELOG, CONTRIBUTING, MIGRATION, architecture.html, walkthrough.html, getting-started, concepts, dev-map, install scripts. References to the methodology and to the four source articles ("OpenAI Harness Engineering", "Harness Engineering 如何工程化落地", etc.) are unchanged — those are about the methodology, not this project.
+
+### Added
+
+- **Claude Code Plugin packaging**. `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` make this repo installable through Claude Code's native plugin marketplace, which is the recommended path going forward:
+  ```
+  /plugin marketplace add Alan-IFT/harness-kit
+  /plugin install harness-kit@harness-kit-marketplace
+  ```
+  After install, skills are namespaced: `/harness-kit:harness-init`, `/harness-kit:harness-adopt`, etc.
+- **One-line install for the legacy path** (direct copy to `~/.claude/skills/`). install.{ps1,sh} now auto-detect whether they're running from a cloned repo or from `curl | sh`; in the latter case they git-clone the repo into a temp dir and copy from there. No more `git clone first, then run install`.
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/Alan-IFT/harness-kit/main/install.sh | sh
+  ```
+  ```powershell
+  iwr -useb https://raw.githubusercontent.com/Alan-IFT/harness-kit/main/install.ps1 | iex
+  ```
+- README install section now leads with the Plugin path, lists curl/iwr one-liner as method 2, and clone-and-run as method 3 (dev mode).
+
+### Migration from 0.5.x
+
+No behavior changes for already-installed users. The repo's old name (`harness-engineering`) is referenced in some places — these will resolve to either the new repo URL or a redirect once the repo is renamed on GitHub. If you cloned `~/harness-engineering` previously, it keeps working; no rename forced.
+
 ## [0.5.0] - 2026-05-15
 
 ### Added

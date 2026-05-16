@@ -51,13 +51,13 @@ scripts/
 Update your Harness Engineering installation first:
 
 ```powershell
-cd ~/harness-engineering
+cd ~/harness-kit
 git pull
 & ./install.ps1     # refresh the skills
 ```
 
 ```bash
-cd ~/harness-engineering
+cd ~/harness-kit
 git pull
 ./install.sh
 ```
@@ -66,13 +66,13 @@ Then in your project, copy the binding sync script from the templates:
 
 ```powershell
 # Windows
-Copy-Item ~/harness-engineering/skills/harness-init/templates/common/scripts/harness-sync.ps1 scripts/
-Copy-Item ~/harness-engineering/skills/harness-init/templates/common/scripts/harness-sync.sh scripts/
+Copy-Item ~/harness-kit/skills/harness-init/templates/common/scripts/harness-sync.ps1 scripts/
+Copy-Item ~/harness-kit/skills/harness-init/templates/common/scripts/harness-sync.sh scripts/
 ```
 
 ```bash
-cp ~/harness-engineering/skills/harness-init/templates/common/scripts/harness-sync.ps1 scripts/
-cp ~/harness-engineering/skills/harness-init/templates/common/scripts/harness-sync.sh scripts/
+cp ~/harness-kit/skills/harness-init/templates/common/scripts/harness-sync.ps1 scripts/
+cp ~/harness-kit/skills/harness-init/templates/common/scripts/harness-sync.sh scripts/
 ```
 
 ## Step 2: Move agents to `.harness/agents/`
@@ -174,7 +174,7 @@ new template:
 ```
 
 Or just inspect the new template at
-`~/harness-engineering/skills/harness-init/templates/<type>/scripts/verify_all.{ps1,sh}.tmpl`
+`~/harness-kit/skills/harness-init/templates/<type>/scripts/verify_all.{ps1,sh}.tmpl`
 and merge the new check section into your existing script.
 
 ## Step 7: Commit

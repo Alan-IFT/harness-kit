@@ -1,14 +1,17 @@
 <!-- THIS FILE IS GENERATED FROM .harness/rules/ — DO NOT EDIT DIRECTLY -->
 <!-- Edit .harness/rules/*.md and run scripts/harness-sync.ps1 -->
-# Harness Engineering — Project Rules (self-dogfood)
+# Harness Kit — Project Rules (self-dogfood)
 
 > This repo **uses its own Harness setup**. The same 7-agent pipeline that we ship to users
 > governs work on this repo. If we can't develop this repo with it, we shouldn't ship it.
+>
+> "Harness Engineering" remains the name of the methodology this project implements; the project
+> itself is called **Harness Kit** (the distribution of skills + templates).
 
 ## Project type
 
-**Tooling / Skills library** — not fullstack, not backend. It distributes Claude Code skills
-and project templates. Build / test characteristics:
+**Tooling / Skills library + Claude Code Plugin** — not fullstack, not backend. It distributes
+Claude Code skills and project templates. Build / test characteristics:
 
 - Primary "code" is Markdown (Skill definitions, agent definitions, docs).
 - Secondary code is PowerShell + Bash scripts (verify_all, install scripts).

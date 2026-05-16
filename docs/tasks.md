@@ -1,4 +1,4 @@
-# Task Board — Harness Engineering
+# Task Board — Harness Kit
 
 > Maintained by PM Orchestrator. Each task lifecycle stage is logged here.
 

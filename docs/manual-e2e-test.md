@@ -15,7 +15,7 @@ upgrading / before announcing a release.
 
 ## Prerequisites
 
-- This repo cloned to `~/harness-engineering` (or any path; remember it).
+- This repo cloned to `~/harness-kit` (or any path; remember it).
 - Claude Code installed and authenticated.
 - An empty scratch directory at hand.
 
@@ -24,11 +24,11 @@ upgrading / before announcing a release.
 ### A.1 Dry-run install
 
 ```powershell
-& ~/harness-engineering/install.ps1 -DryRun
+& ~/harness-kit/install.ps1 -DryRun
 ```
 
 ```bash
-~/harness-engineering/install.sh --dry-run
+~/harness-kit/install.sh --dry-run
 ```
 
 **Expected**: prints "Would copy" for all 4 skills (harness-init, harness-adopt,
@@ -38,11 +38,11 @@ harness-verify, harness-status). Exits 0. **No file is created** under
 ### A.2 Real install
 
 ```powershell
-& ~/harness-engineering/install.ps1
+& ~/harness-kit/install.ps1
 ```
 
 ```bash
-~/harness-engineering/install.sh
+~/harness-kit/install.sh
 ```
 
 **Expected**: prints "Installed" for all 4 skills. After completion, list them:

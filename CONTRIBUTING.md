@@ -12,7 +12,7 @@ how to make changes that don't break the system, and how to verify your change.
 ```bash
 # Clone
 git clone <repo-url>
-cd HarnessEngineering
+cd harness-kit
 
 # Run verify_all to confirm a clean baseline
 pwsh -File scripts/verify_all.ps1     # Windows

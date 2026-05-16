@@ -1,11 +1,11 @@
-# Dev Map — Harness Engineering repo
+# Dev Map — Harness Kit repo
 
-> Where things live and the conventions to follow when changing them. (v0.2 layout)
+> Where things live and the conventions to follow when changing them. (v0.6 layout)
 
 ## Top-level layout
 
 ```
-HarnessEngineering/
+harness-kit/
 ├── skills/                              ← Distributed skills (the product)
 │   ├── harness-init/
 │   │   ├── SKILL.md                    ← Skill entry point

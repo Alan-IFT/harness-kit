@@ -1,4 +1,4 @@
-# Golden Tasks — Regression set for Harness Engineering itself
+# Golden Tasks — Regression set for Harness Kit itself
 
 > Manual regression checks. Re-run these after any change to:
 > - `skills/*/SKILL.md`

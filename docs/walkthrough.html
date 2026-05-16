@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>Harness Engineering · 使用流程 Walkthrough</title>
+<title>Harness Kit · 使用流程 Walkthrough</title>
 <style>
   :root {
     --bg: #0f1419;
@@ -325,13 +325,16 @@
   <div class="step-tag">STEP 1 · 一次性</div>
   <h3 style="margin-top: 8px;">装 Skills</h3>
 
-  <pre><span style="color:var(--text-dim)"># Windows</span>
-git clone &lt;repo-url&gt; ~/harness-engineering
-&amp; ~/harness-engineering/install.ps1
+  <p><b>推荐：Claude Code Plugin 一行命令</b>（在 Claude Code 会话内）：</p>
+  <pre>/plugin marketplace add Alan-IFT/harness-kit
+/plugin install harness-kit@harness-kit-marketplace</pre>
 
-<span style="color:var(--text-dim)"># macOS / Linux</span>
-git clone &lt;repo-url&gt; ~/harness-engineering
-~/harness-engineering/install.sh</pre>
+  <p>或者 <b>curl/iwr 一行命令</b>（无需 plugin 系统）：</p>
+  <pre><span style="color:var(--text-dim"># macOS / Linux</span>
+curl -fsSL https://raw.githubusercontent.com/Alan-IFT/harness-kit/main/install.sh | sh
+
+<span style="color:var(--text-dim)"># Windows PowerShell</span>
+iwr -useb https://raw.githubusercontent.com/Alan-IFT/harness-kit/main/install.ps1 | iex</pre>
 
   <p>装完后 <code>~/.claude/skills/</code> 里有 4 个 skill 目录：</p>
 
@@ -829,7 +832,7 @@ Recent (last 5):
 </div>
 
 <div style="text-align: center; margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--text-dim); font-size: 12px;">
-  Harness Engineering · v0.5.0 walkthrough<br>
+  Harness Kit · v0.6.0 walkthrough<br>
   See also: <a href="../architecture.html" style="color: var(--accent);">architecture.html</a> · <a href="workflow.md" style="color: var(--accent);">workflow.md</a> · <a href="concepts.md" style="color: var(--accent);">concepts.md</a>
 </div>
 

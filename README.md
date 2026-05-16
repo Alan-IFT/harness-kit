@@ -1,12 +1,12 @@
-# Harness Engineering for Claude Code
+# Harness Kit
 
-![version](https://img.shields.io/badge/version-0.5.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-19%2F19-brightgreen) ![test-init](https://img.shields.io/badge/test--init-104%2F104-brightgreen) ![integration](https://img.shields.io/badge/integration-76%2F76-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.6.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-19%2F19-brightgreen) ![test-init](https://img.shields.io/badge/test--init-104%2F104-brightgreen) ![integration](https://img.shields.io/badge/integration-76%2F76-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
-> 一套把 AI 自动开发架构落到 Claude Code 的 Skills 包。
+> **Harness Engineering 工具包 for Claude Code** — 一组 Skills + 项目模板，把"AI 自动开发"方法论落到你的项目里。
 >
 > 目标：**人工只做"提需求"和"AI 做不到时介入"**，其他由 7-Agent 流水线 + 验证闭环自动完成。
 >
-> **当前版本**：v0.5.0（Developer 分区完整覆盖 fullstack + backend；init 和 adopt 都支持）。从 v0.1.x 升级见 [MIGRATION.md](MIGRATION.md)。
+> **当前版本**：v0.6.0（重命名 harness-kit + Claude Code Plugin 打包；安装一行命令）。从 v0.1.x 升级见 [MIGRATION.md](MIGRATION.md)。
 
 ## 这是什么
 
@@ -50,29 +50,40 @@ CLAUDE.md        ← 自动合成（不要直接编辑）
 
 ## 安装
 
-### 全局安装（推荐）
+### 方式 1（推荐）：Claude Code Plugin marketplace
 
-```powershell
-# Windows PowerShell
-git clone https://github.com/<your>/harness-engineering ~/harness-engineering
-& ~/harness-engineering/install.ps1
+在任何 Claude Code 会话内：
+
 ```
+/plugin marketplace add Alan-IFT/harness-kit
+/plugin install harness-kit@harness-kit-marketplace
+```
+
+Claude Code 官方路径，版本可控、可审计、可升级。装完后 skill 命令路径为 `/harness-kit:harness-init` 等。
+
+### 方式 2：一行命令安装 skills（无需 plugin 系统）
 
 ```bash
 # macOS / Linux
-git clone https://github.com/<your>/harness-engineering ~/harness-engineering
-~/harness-engineering/install.sh
+curl -fsSL https://raw.githubusercontent.com/Alan-IFT/harness-kit/main/install.sh | sh
 ```
-
-装完后所有 skill 出现在 `~/.claude/skills/`，所有项目可用。
-
-### 项目级安装
 
 ```powershell
-& ~/harness-engineering/install.ps1 -Project .
+# Windows PowerShell
+iwr -useb https://raw.githubusercontent.com/Alan-IFT/harness-kit/main/install.ps1 | iex
 ```
 
-只安装到当前项目的 `.claude/skills/`。
+脚本自动从 GitHub 拉取并复制 skills 到 `~/.claude/skills/`，所有项目可用。命令路径为 `/harness-init` 等（无 namespace）。
+
+### 方式 3：本地 clone + 手动安装（开发模式）
+
+```bash
+git clone https://github.com/Alan-IFT/harness-kit ~/harness-kit
+~/harness-kit/install.sh                    # 或 Windows: install.ps1
+~/harness-kit/install.sh --project .        # 只装到当前项目
+~/harness-kit/install.sh --dry-run          # 预览不写
+~/harness-kit/install.sh --uninstall        # 卸载
+```
 
 ## 快速上手
 

@@ -1,6 +1,6 @@
 # Getting Started
 
-This guide walks you from "I just discovered Harness Engineering" to "I'm shipping features through it".
+This guide walks you from "I just installed Harness Kit" to "I'm shipping features through it".
 
 ## Prerequisites
 
@@ -13,14 +13,14 @@ This guide walks you from "I just discovered Harness Engineering" to "I'm shippi
 
 ```powershell
 # Windows
-git clone https://github.com/<your>/harness-engineering ~/harness-engineering
-& ~/harness-engineering/install.ps1
+git clone https://github.com/<your>/harness-kit ~/harness-kit
+& ~/harness-kit/install.ps1
 ```
 
 ```bash
 # macOS / Linux
-git clone https://github.com/<your>/harness-engineering ~/harness-engineering
-~/harness-engineering/install.sh
+git clone https://github.com/<your>/harness-kit ~/harness-kit
+~/harness-kit/install.sh
 ```
 
 This drops four skills into `~/.claude/skills/`:
