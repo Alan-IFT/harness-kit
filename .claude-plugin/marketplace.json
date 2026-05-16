@@ -1,18 +1,39 @@
 {
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "harness-kit-marketplace",
   "description": "Single-plugin marketplace hosting harness-kit (Harness Engineering toolkit for Claude Code).",
+  "owner": {
+    "name": "Alan-IFT",
+    "url": "https://github.com/Alan-IFT"
+  },
   "plugins": [
     {
       "name": "harness-kit",
-      "source": ".",
-      "version": "0.6.0",
+      "source": {
+        "source": "github",
+        "repo": "Alan-IFT/harness-kit"
+      },
       "description": "7-agent pipeline + tool-agnostic .harness/ SOT + partition Developers + verify_all gates. See README.",
-      "skills": [
-        "harness-init",
-        "harness-adopt",
-        "harness-verify",
-        "harness-status"
-      ]
+      "version": "0.6.0",
+      "author": {
+        "name": "Harness Kit Contributors",
+        "url": "https://github.com/Alan-IFT/harness-kit"
+      },
+      "homepage": "https://github.com/Alan-IFT/harness-kit",
+      "repository": "https://github.com/Alan-IFT/harness-kit",
+      "license": "MIT",
+      "keywords": [
+        "harness-engineering",
+        "claude-code",
+        "ai-agents",
+        "multi-agent",
+        "workflow",
+        "7-agent",
+        "fullstack",
+        "backend",
+        "skills"
+      ],
+      "category": "development"
     }
   ]
 }

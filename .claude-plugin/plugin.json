@@ -1,14 +1,15 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "harness-kit",
   "version": "0.6.0",
   "description": "Harness Engineering toolkit for Claude Code: 7-agent pipeline (PM/Analyst/Architect/Gate/Developer/Reviewer/QA), tool-agnostic .harness/ source-of-truth, fullstack & backend Developer partitioning, verify_all gates. Ships init / adopt / verify / status skills.",
-  "author": "Harness Kit Contributors",
+  "author": {
+    "name": "Harness Kit Contributors",
+    "url": "https://github.com/Alan-IFT/harness-kit"
+  },
   "license": "MIT",
   "homepage": "https://github.com/Alan-IFT/harness-kit",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Alan-IFT/harness-kit.git"
-  },
+  "repository": "https://github.com/Alan-IFT/harness-kit",
   "keywords": [
     "harness-engineering",
     "claude-code",
@@ -20,10 +21,5 @@
     "backend",
     "skills"
   ],
-  "skills": [
-    "skills/harness-init",
-    "skills/harness-adopt",
-    "skills/harness-verify",
-    "skills/harness-status"
-  ]
+  "skills": "skills/"
 }
