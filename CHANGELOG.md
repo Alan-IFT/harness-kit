@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — Documentation drift after v0.13/v0.14 releases
+
+Both v0.13.0 (mid-task intervention) and v0.14.0 (document size policy) shipped without updating user-facing surface numbers. This pass re-syncs every place readers see counts or version stamps, so README / docs / AI-GUIDE reflect what the code actually does today.
+
+- **`README.md` / `README.zh-CN.md`** — badges (`version-0.12.2` → `0.14.0`, `verify_all-19/19` → `26/26`, `test-init-108/108` → `159/159`, `integration-78/78` → `82/82`); "4/eight skills" → "9/nine skills"; regression-testing counts (19/108/78 → 26/159/82); roadmap rows for 0.13.0 (intervention) and 0.14.0 (doc size) added; `0.13+ planned` → `0.15+ planned`.
+- **`AI-GUIDE.md`** — "distributes 4 skills" → "9 skills"; verify gate "19/19 PASS" → "all checks PASS (26/26 at v0.14)"; "(19 checks)" → "(26 checks at v0.14, including I.1-I.5 doc-size WARN guards)".
+- **`docs/getting-started.md`** — installer drop list now enumerates all 9 skills grouped by Pipeline / Setup / Operations; init question count "three" → "five" with the actual 5 questions.
+- **`docs/manual-e2e-test.md`** — dry-run / install / `/help` discovery expectations all expanded from 4 to 9 skills with full names; init flow updated to 5 questions (project type / stack / verify hook / partitioning / language); `ls -la` "expected at minimum" gained `AI-GUIDE.md`; the stale "CLAUDE.md starts with `<!-- THIS FILE IS GENERATED -->`" claim (removed by the v0.10 stub layout) corrected to reference the AI-GUIDE-pointing stub.
+- **`docs/walkthrough.html`** — sample `/harness-verify` output count `19 checks: 19 PASS` → `26 checks: 26 PASS`.
+- **`evals/golden-tasks.md`** — Golden #4 expectation "lists 4 skills" → "lists 9 skills".
+- **`.harness/rules/40-locations.md`** — verify check enumeration: "(15+ items) / All 4 skills" → "(26 items at v0.14) / All 9 skills"; replaced stale "`CLAUDE.md` matches `.harness/rules/*.md` composed (Layer 2 binding)" line (composition removed in v0.10) with the current AI-GUIDE.md ↔ rules drift check + intervention.md + doc-size soft-cap entries; "Binding sync" target description scoped down to `.harness/agents/` + `.harness/skills/` (rules don't sync since v0.10).
+
+No source-code, agent contract, or template behavior changed — pure doc / rule-fragment alignment. verify_all 26/26 PASS, 0 WARN, 0 FAIL after the sweep.
+
 ## [0.14.0] - 2026-05-16
 
 ### Added — Document size policy (long-term context-bloat guardrail)

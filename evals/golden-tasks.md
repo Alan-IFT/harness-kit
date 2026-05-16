@@ -85,7 +85,7 @@ placeholder substitution worked, no `.tmpl`/`.append` leaked.
 .\install.ps1 -DryRun
 ```
 
-**Expected**: lists 4 skills, prints `[dry-run] Would copy ...` lines, exits cleanly. No file is created at `~/.claude/skills/`.
+**Expected**: lists 9 skills, prints `[dry-run] Would copy ...` lines, exits cleanly. No file is created at `~/.claude/skills/`.
 
 ### Golden #5 — install.ps1 and install.sh produce identical layouts (manual)
 

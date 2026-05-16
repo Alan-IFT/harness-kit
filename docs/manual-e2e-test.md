@@ -4,7 +4,7 @@ Automated regression (`scripts/test-init`, `scripts/verify_all`) covers everythi
 that runs from a shell. But two things must be exercised in a real Claude Code
 session to confirm the experience:
 
-1. **Skill discovery** — does Claude Code actually load the four skills?
+1. **Skill discovery** — does Claude Code actually load the nine skills?
 2. **Skill interaction** — does `/harness-init` correctly call `AskUserQuestion`,
    substitute placeholders, run `harness-sync`, and leave a usable project?
 
@@ -31,8 +31,9 @@ upgrading / before announcing a release.
 ~/harness-kit/install.sh --dry-run
 ```
 
-**Expected**: prints "Would copy" for all 4 skills (harness-init, harness-adopt,
-harness-verify, harness-status). Exits 0. **No file is created** under
+**Expected**: prints "Would copy" for all 9 skills (harness, harness-init,
+harness-adopt, harness-verify, harness-status, harness-plan, harness-explore,
+harness-goal, harness-intervene). Exits 0. **No file is created** under
 `~/.claude/skills/`.
 
 ### A.2 Real install
@@ -45,17 +46,20 @@ harness-verify, harness-status). Exits 0. **No file is created** under
 ~/harness-kit/install.sh
 ```
 
-**Expected**: prints "Installed" for all 4 skills. After completion, list them:
+**Expected**: prints "Installed" for all 9 skills. After completion, list them:
 
 ```powershell
 Get-ChildItem ~/.claude/skills/ -Directory | Select-Object Name
-# Should show: harness-adopt, harness-init, harness-status, harness-verify
+# Should show: harness, harness-adopt, harness-explore, harness-goal,
+# harness-init, harness-intervene, harness-plan, harness-status, harness-verify
 ```
 
 ### A.3 Claude Code sees them
 
 Open Claude Code in any folder. Type `/help` or look at the slash command picker.
-**Expected**: the four `/harness-*` commands appear.
+**Expected**: the nine `/harness-*` commands appear (`/harness`, `/harness-init`,
+`/harness-adopt`, `/harness-verify`, `/harness-status`, `/harness-plan`,
+`/harness-explore`, `/harness-goal`, `/harness-intervene`).
 
 If they don't appear: restart Claude Code; if still missing, check that
 `~/.claude/skills/harness-init/SKILL.md` exists and has valid frontmatter
@@ -89,10 +93,12 @@ In Claude Code:
 **Expected flow**:
 
 1. Claude confirms the target directory.
-2. Claude asks **three** questions via the AskUserQuestion UI:
-   - Project type (Fullstack / Backend)
+2. Claude asks **five** questions via the AskUserQuestion UI:
+   - Project type (Fullstack / Backend / Generic)
    - Stack (free text)
-   - Enable verify_all hook (Yes / No)
+   - Enable verify_all Stop hook (Yes / No)
+   - Developer partitioning (Partitioned / Single — skipped for Generic)
+   - Output language (English / 中文)
 3. Claude copies templates, substitutes placeholders, runs `harness-sync`.
 4. Claude prints a summary listing source-of-truth vs generated artifacts.
 
@@ -102,7 +108,7 @@ Outside Claude Code, in the scratch folder:
 
 ```bash
 ls -la
-# Expected at minimum: .harness/  .claude/  CLAUDE.md  scripts/  docs/  evals/
+# Expected at minimum: .harness/  .claude/  CLAUDE.md  AI-GUIDE.md  scripts/  docs/  evals/
 ```
 
 Check `.harness/` is the SOT:
@@ -113,11 +119,13 @@ ls .harness/rules/       # 00-core.md and 50-<type>.md
 ls .harness/skills/      # build/, test/, verify/
 ```
 
-Check `.claude/` is generated:
+Check `.claude/` is generated and `CLAUDE.md` is a stub pointing at `AI-GUIDE.md`:
 
 ```bash
-ls .claude/agents/       # same 7 agent files (byte-identical to .harness/agents/)
-cat CLAUDE.md | head -5  # starts with "<!-- THIS FILE IS GENERATED ... -->"
+ls .claude/agents/         # same 7 agent files (byte-identical to .harness/agents/)
+cat CLAUDE.md | head -10   # ~15-line stub; first heading is "# <project> — bootstrap rules"
+                           # and the body references AI-GUIDE.md + .harness/rules/*.md
+cat AI-GUIDE.md | head -5  # the tool-agnostic entry, indexes every rule fragment
 ```
 
 ### B.4 Verify binding consistency

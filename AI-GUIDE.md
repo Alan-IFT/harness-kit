@@ -4,7 +4,7 @@
 
 ## Project
 
-This is **harness-kit** itself — a Claude Code Plugin that distributes 4 skills + templates for AI-driven development under the Harness Engineering methodology. The repo **dogfoods** its own design: the same 7-agent pipeline that we ship to users governs work here.
+This is **harness-kit** itself — a Claude Code Plugin that distributes 9 skills + templates for AI-driven development under the Harness Engineering methodology. The repo **dogfoods** its own design: the same 7-agent pipeline that we ship to users governs work here.
 
 Stack: Markdown (skills, agent definitions, docs) + PowerShell + Bash (verify_all, install, sync scripts).
 
@@ -31,7 +31,7 @@ Stack: Markdown (skills, agent definitions, docs) + PowerShell + Bash (verify_al
 **Memory layer**:
 - **`.harness/insight-index.md`** — ≤30 evidence-backed lines of project-specific facts. Read at task start; append at task end (only with evidence). Never edit other people's lines.
 
-Before declaring any task complete, run `scripts/verify_all` and confirm 19/19 PASS — this is the gate, not a rule fragment.
+Before declaring any task complete, run `scripts/verify_all` and confirm all PASS checks are green (26/26 at v0.14; check count grows with releases) — this is the gate, not a rule fragment.
 
 If you add a new fragment to `.harness/rules/`, append a line above with its filename, a 1-line description, and the trigger condition.
 
@@ -53,7 +53,7 @@ Full contracts in `.harness/agents/<name>.md`. Read on demand when assuming or d
 
 ## Scripts (the moving parts)
 
-- `scripts/verify_all.{ps1,sh}` — total verification (19 checks). **Must PASS before declaring done.**
+- `scripts/verify_all.{ps1,sh}` — total verification (26 checks at v0.14, including I.1-I.5 doc-size WARN guards). **Must PASS before declaring done.**
 - `scripts/harness-sync.{ps1,sh}` — copy `.harness/agents/` + `.harness/skills/` to `.claude/`. v0.10 narrow scope.
 - `scripts/sync-self.{ps1,sh}` — keep this repo's dogfood `.harness/agents/` + 4 script pairs (harness-sync, install-hooks, archive-task) byte-identical with `templates/common/`. **Does NOT sync `.harness/rules/` — those are bespoke per repo.**
 - `scripts/install-hooks.{ps1,sh}` — one-shot installer for `.git/hooks/pre-commit` (runs `harness-sync --check`).

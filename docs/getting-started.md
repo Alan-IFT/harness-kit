@@ -23,12 +23,25 @@ git clone https://github.com/<your>/harness-kit ~/harness-kit
 ~/harness-kit/install.sh
 ```
 
-This drops four skills into `~/.claude/skills/`:
+This drops nine skills into `~/.claude/skills/`:
 
-- `harness-init`
-- `harness-adopt`
-- `harness-verify`
-- `harness-status`
+Pipeline (pick by task shape):
+
+- `harness` — full 7-stage pipeline (RA → SA → GR → Dev → CR → QA → Delivery)
+- `harness-plan` — design-only mode (stops at Gate Review verdict)
+- `harness-explore` — research / feasibility mode
+- `harness-goal` — open-ended Dev + QA loop bounded by a measurable criterion
+
+Setup:
+
+- `harness-init` — bootstrap a new project
+- `harness-adopt` — non-invasively add Harness to an existing project
+
+Operations:
+
+- `harness-verify` — run total verification
+- `harness-status` — health snapshot
+- `harness-intervene` — soft Ctrl-C for an in-flight pipeline
 
 Verify with `/help` inside Claude Code — you should see them listed.
 
@@ -42,7 +55,7 @@ claude
 > /harness-init
 ```
 
-Answer the three questions (type, stack, verify hook). The skill generates a
+Answer the five questions (project type, stack, verify hook, Developer partitioning, output language). The skill generates a
 **two-layer structure**:
 
 ```

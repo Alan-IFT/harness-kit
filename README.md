@@ -2,15 +2,15 @@
 
 **English** · [简体中文](README.zh-CN.md)
 
-![version](https://img.shields.io/badge/version-0.12.2-blue) ![verify_all](https://img.shields.io/badge/verify__all-19%2F19-brightgreen) ![test-init](https://img.shields.io/badge/test--init-108%2F108-brightgreen) ![integration](https://img.shields.io/badge/integration-78%2F78-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.14.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-26%2F26-brightgreen) ![test-init](https://img.shields.io/badge/test--init-159%2F159-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
-> **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (4 skills + project templates) that brings disciplined AI-driven development to fullstack and backend projects.
+> **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (9 skills + project templates) that brings disciplined AI-driven development to fullstack and backend projects.
 >
 > **Goal**: humans only do "describe the requirement" and "step in when AI can't"; everything else — 7-agent pipeline, verify gates, structured documents — runs automatically.
 
 ## What's inside
 
-This is a Claude Code Plugin packaging that gives any project eight AI skills:
+This is a Claude Code Plugin packaging that gives any project nine AI skills:
 
 **Pipeline skills** (four task shapes; the AI picks the right one from your natural-language description)
 - `/harness-kit:harness` — full 7-stage pipeline (RA → SA → GR → Dev → CR → QA → Delivery). Use for real feature / bug / refactor work.
@@ -154,9 +154,9 @@ Hit Claude Code's rate limit mid-task? Switch to GitHub Copilot in VS Code and k
 
 ### Three layers of regression testing
 
-- `verify_all` (19 checks) — repo health
-- `test-init` (108 assertions) — init template logic on empty dirs
-- `test-real-project` (78 assertions) — overlay onto real fixtures (todo-fullstack, todo-backend)
+- `verify_all` (26 checks) — repo health
+- `test-init` (159 assertions) — init template logic on empty dirs
+- `test-real-project` (82 assertions) — overlay onto real fixtures (todo-fullstack, todo-backend)
 
 Every commit must pass all three. `test-init` and `test-real-project` exercise the generated project's structure end-to-end with no network needed.
 
@@ -249,7 +249,9 @@ Markdown docs:
 | 0.10.0 | done | **Progressive-disclosure layout**: `AI-GUIDE.md` entry + stub CLAUDE.md / copilot-instructions.md; rules no longer composed (~50% context-budget reduction) |
 | 0.11.x | done | **Three execution modes** + **adversarial verification** + **cross-task insight index** (from lsdefine/GenericAgent borrows) + symmetric `/harness` skill + AI-GUIDE.md ↔ rules drift check |
 | 0.12.0 | done | **Generic project type** is now a first-class overlay (parallel to fullstack/backend) — closes the Other-Generic gap. New `templates/generic/` with `50-generic.md` rule stub + minimal `verify_all` skeleton. Test-init now exercises 3 project types (+33 assertions). |
-| 0.13+ | planned | True **AI-native init** (AI analyzes user description + existing code, generates custom 50-*.md and partition agents); supervisor agent with intervention-file protocol |
+| 0.13.0 | done | **Mid-task intervention protocol** (`/harness-kit:harness-intervene`): single-shot `.harness/intervention.md` signal file (STOP / REDIRECT / SKIP / NOTE) that PM consumes at every stage boundary. First user-facing addition since v0.12. |
+| 0.14.0 | done | **Document size policy**: numeric caps for 8 document classes (rules / agents / per-task docs / insight-index / tasks.md) + WARN-level size checks in `verify_all` (I.1-I.5 here, F.1-F.6 in user-project templates). "Reference, don't paste" + always-archive-task discipline. |
+| 0.15+ | planned | True **AI-native init** (AI analyzes user description + existing code, generates custom 50-*.md and partition agents); supervisor agent observing pipeline progress |
 
 ## Design principles
 
