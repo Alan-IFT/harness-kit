@@ -66,13 +66,41 @@ switching IDE, end of session:
 ### Tool-specific notes
 
 - **Claude Code**: PM Orchestrator is the routing agent. It reads PM_LOG,
-  dispatches sub-agents. The full 7-stage pipeline is native.
+  dispatches sub-agents. The full 7-stage pipeline is native. The Stop hook
+  in `.claude/settings.json` auto-runs `scripts/harness-sync` at session
+  end, so `.harness/` edits flow to `CLAUDE.md` + `.github/copilot-instructions.md`
+  without user intervention.
 - **GitHub Copilot**: No sub-agent dispatch. You (Copilot) play whichever
   role the protocol points you to. **One role at a time.** When you finish
   your stage, stop and ask the user to "switch to next agent" — do not
   silently move on as a different role. Cross-stage handoffs go through the
   user (who'll usually switch back to Claude Code for PM routing, or
   manually tell you to assume the next role).
+
+### Doc-sync responsibility when not on Claude Code
+
+The Stop hook above is **Claude-Code-specific** — it does NOT fire for
+Copilot, Cursor, or hand-edits. If you (Copilot or any non-Claude-Code AI)
+edit any file under `.harness/`, you have two equally valid ways to keep
+`CLAUDE.md` and `.github/copilot-instructions.md` from going stale:
+
+1. **Run sync before declaring your turn done.** Execute
+   `pwsh -File scripts/harness-sync.ps1` (Windows) or
+   `bash scripts/harness-sync.sh` (macOS / Linux) immediately after the edit.
+   Then stage the regenerated `CLAUDE.md` / `.github/copilot-instructions.md`
+   along with your `.harness/` change.
+2. **Let the git pre-commit hook catch it.** If `scripts/install-hooks.{ps1,sh}`
+   was run during init, `.git/hooks/pre-commit` runs `harness-sync --check`
+   and blocks any commit with drift. You'll see a clear error telling you
+   to run sync.
+
+The pre-commit hook is the tool-agnostic backstop — it catches any tool,
+any human. The "run sync before done" rule is the gentler, faster path
+and keeps the working tree always consistent during the session.
+
+Hand-edits to generated files (`CLAUDE.md`, `.github/copilot-instructions.md`,
+`.claude/agents/*.md`, `.claude/skills/*/SKILL.md`) are **always wrong** —
+they get clobbered by the next sync. Edit `.harness/` and sync.
 
 ### Hard rules across all tools
 

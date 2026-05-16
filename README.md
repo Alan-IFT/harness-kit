@@ -2,7 +2,7 @@
 
 **English** · [简体中文](README.zh-CN.md)
 
-![version](https://img.shields.io/badge/version-0.9.1-blue) ![verify_all](https://img.shields.io/badge/verify__all-19%2F19-brightgreen) ![test-init](https://img.shields.io/badge/test--init-108%2F108-brightgreen) ![integration](https://img.shields.io/badge/integration-78%2F78-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.9.2-blue) ![verify_all](https://img.shields.io/badge/verify__all-19%2F19-brightgreen) ![test-init](https://img.shields.io/badge/test--init-108%2F108-brightgreen) ![integration](https://img.shields.io/badge/integration-78%2F78-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
 > **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (4 skills + project templates) that brings disciplined AI-driven development to fullstack and backend projects.
 >
@@ -117,6 +117,8 @@ PM Orchestrator picks it up, routes through 7 stages, produces 6 stage documents
 You edit one place. Two binding artifacts stay in sync automatically. `verify_all` detects drift and fails the build.
 
 **v0.9+: you don't even run sync manually.** A Stop hook (in `.claude/settings.json`) auto-runs `harness-sync` at the end of every Claude Code session. Even better: ask AI to edit `.harness/` for you — "Add a rule: never use `MessageBox.Show`", "Add a Developer partition for `apps/mobile/`" — AI picks the right file, edits, the Stop hook syncs. You only edit prose if you want to.
+
+**v0.9.2: tool-agnostic backstop.** The Stop hook is Claude-Code-only — it doesn't fire for Copilot, Cursor, or hand-edits. So `scripts/install-hooks.{ps1,sh}` (auto-run during init) installs a git pre-commit hook that runs `harness-sync --check` and blocks any commit with drift. No matter which AI or human edited `.harness/`, stale `CLAUDE.md` / `.github/copilot-instructions.md` never leave the working tree.
 
 ### Project-wide language policy
 

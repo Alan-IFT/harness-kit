@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.2] - 2026-05-16
+
+### Added — Tool-agnostic git pre-commit hook (closes the Copilot doc-drift gap)
+
+User flagged the obvious gap in v0.9.0/0.9.1's "auto-sync via Stop hook" design: **the Stop hook only fires for Claude Code.** A user developing through GitHub Copilot (or Cursor, or hand-editing `.harness/`) would not trigger the hook, so `CLAUDE.md` and `.github/copilot-instructions.md` could go stale until someone next opened Claude Code.
+
+`verify_all` would eventually catch the drift, but only when manually run — not on every workflow boundary. The fix needs a tool-agnostic enforcement point.
+
+#### Solution: `scripts/install-hooks.{ps1,sh}` + git pre-commit hook
+
+New scripts install `.git/hooks/pre-commit` that runs `harness-sync --check`. Any commit with `.harness/` ↔ generated drift gets blocked with a clear error pointing the user (or their AI) to the fix command. This catches:
+
+- GitHub Copilot edits to `.harness/`
+- Cursor edits to `.harness/`
+- Manual edits in any IDE
+- A misbehaving Claude Code session whose Stop hook didn't fire
+- A `git commit --amend` that pulled in stale generated files
+
+Plus the "Doc-sync responsibility when not on Claude Code" section was added to `.harness/rules/60-tool-handoff.md` (en + zh + dogfood). It explicitly tells non-Claude-Code AIs: "you have no Stop hook; either run sync before declaring done, or let the pre-commit hook block you."
+
+#### Q3 reframed
+
+`harness-init` Q3 was previously "Enable verify_all hook on Stop event?" — misleading, since the Stop hook actually runs `harness-sync`, not `verify_all`. v0.9.2 rewrites it as "Install auto-sync hooks?" with two options: `Yes (recommended)` installs both the Stop hook and the pre-commit hook; `No, manual only` keeps the Stop hook present (it's harmless if Claude Code isn't used) but skips the pre-commit hook.
+
+A new init step 8 ("Install the git pre-commit hook") runs `install-hooks` automatically if Q3 = Yes.
+
+### Changed
+
+- `skills/harness-init/templates/common/scripts/install-hooks.{ps1,sh}` — new files; static, no template substitution needed.
+- `scripts/sync-self.{ps1,sh}` — mapping list extended to keep install-hooks scripts in sync between `templates/common/scripts/` and the dogfood's `scripts/`.
+- `skills/harness-init/templates/common/.harness/rules/60-tool-handoff.md` — new "Doc-sync responsibility when not on Claude Code" section explains the Copilot Stop-hook gap and the two ways to handle it.
+- `skills/harness-init/templates/i18n/zh/common/.harness/rules/60-tool-handoff.md` — Chinese translation of the same section.
+- `.harness/rules/60-tool-handoff.md` — dogfood update.
+- `skills/harness-init/SKILL.md` — Q3 reframed; new Step 8 (install pre-commit hook); steps 8–10 renumbered to 9–11.
+- Dogfood: this repo now has `.git/hooks/pre-commit` installed (ran `scripts/install-hooks.ps1` once).
+
+### Tests
+
+- test-init: 108/108 PASS.
+- test-real-project: 78/78 PASS.
+- verify_all: 19/19 PASS.
+
 ## [0.9.1] - 2026-05-16
 
 ### Fixed — OS-aware Stop hook command (no more manual edit on macOS/Linux)

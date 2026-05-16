@@ -2,7 +2,7 @@
 
 [English](README.md) · **简体中文**
 
-![version](https://img.shields.io/badge/version-0.9.1-blue) ![verify_all](https://img.shields.io/badge/verify__all-19%2F19-brightgreen) ![test-init](https://img.shields.io/badge/test--init-108%2F108-brightgreen) ![integration](https://img.shields.io/badge/integration-78%2F78-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.9.2-blue) ![verify_all](https://img.shields.io/badge/verify__all-19%2F19-brightgreen) ![test-init](https://img.shields.io/badge/test--init-108%2F108-brightgreen) ![integration](https://img.shields.io/badge/integration-78%2F78-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
 > **Claude Code 的 Harness Engineering 工具包** — 一个 Claude Code Plugin（4 个 skills + 项目模板），把"有纪律的 AI 驱动开发"带到全栈和后端项目里。
 >
@@ -117,6 +117,8 @@ PM Orchestrator 接手，跑完 7 个 stage，在 `docs/features/<slug>/` 下产
 你编辑一个地方，两个 binding 自动同步。`verify_all` 检测漂移，drift 时 FAIL。
 
 **v0.9+：连 sync 都不用自己跑。** Stop hook（在 `.claude/settings.json`）会在每次 Claude Code session 结束时自动跑 `harness-sync`。更进一步：让 AI 帮你编辑 `.harness/` — "加一条规则：禁止用 `MessageBox.Show`"、"为 `apps/mobile/` 加一个 Developer 分区" — AI 选对文件、编辑，Stop hook 同步。你只在想编辑时才编辑。
+
+**v0.9.2：工具无关的兜底。** Stop hook 是 Claude Code 专属 — Copilot、Cursor、手工编辑都不会触发。所以 `scripts/install-hooks.{ps1,sh}`（init 时自动跑）会装一个 git pre-commit hook：每次 commit 跑 `harness-sync --check`，有漂移就拦下来。不管哪个 AI 或人编辑了 `.harness/`，过时的 `CLAUDE.md` / `.github/copilot-instructions.md` 都不会离开工作树。
 
 ### 项目级语言策略
 

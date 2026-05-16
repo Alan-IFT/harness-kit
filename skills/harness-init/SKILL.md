@@ -47,9 +47,9 @@ Ask **five questions** in a single `AskUserQuestion` call:
    - `Backend / API service` — copies backend overlay (api/services/db partitions, backend rules, multi-stack verify_all).
    - `Other / Generic` — **for everything else** (CLI tool, library, mobile, ML pipeline, embedded, etc.). Only common assets are copied; no project-type overlay. You and the AI will refine `.harness/rules/00-core.md` and `verify_all` to fit your project. **v0.10 will make this path AI-native: AI analyzes your project description and generates a custom overlay automatically.**
 2. **Primary language / framework stack** — free text via "Other" option (e.g. "Next.js + NestJS + Postgres", "FastAPI + Postgres", "Rust CLI tool", "PyTorch training pipeline").
-3. **Enable verify_all hook on Stop event?** — options:
-   - `Yes (recommended)` — runs verify after every major change
-   - `No, manual only`
+3. **Install auto-sync hooks?** — options:
+   - `Yes (recommended)` — installs **both** the Claude Code Stop hook (in `.claude/settings.json`) **and** the git pre-commit hook (via `scripts/install-hooks.{ps1,sh}`). Stop hook keeps `CLAUDE.md` + `.github/copilot-instructions.md` fresh while you work in Claude Code. Pre-commit hook is the tool-agnostic backstop — blocks any commit (Claude Code, Copilot, Cursor, hand-edits) that includes drifted generated artifacts.
+   - `No, manual only` — you run `scripts/harness-sync` yourself after `.harness/` edits. `verify_all` will still catch drift after the fact, but you lose the auto-fresh guarantee.
 4. **Developer partitioning** — options depend on Q1:
 
    For **Fullstack**:
@@ -147,11 +147,33 @@ it transitively); they never hand-edit `.claude/` or `CLAUDE.md`.
 
 If the target is not a git repo (`.git/` does not exist), `git init -b main`.
 
-### 8. Write the initial SPEC stub
+### 8. Install the git pre-commit hook (if Q3 = Yes)
+
+If the user answered Q3 = `Yes (recommended)`, run the hook installer
+right after `git init`:
+
+```powershell
+pwsh -File scripts/install-hooks.ps1   # Windows
+bash scripts/install-hooks.sh          # macOS / Linux
+```
+
+This writes `.git/hooks/pre-commit` which runs `harness-sync --check`
+before every commit. Drift between `.harness/` and the generated files
+(`CLAUDE.md`, `.github/copilot-instructions.md`) becomes a hard block,
+regardless of which AI tool (Claude Code, Copilot, Cursor) or human did
+the edit. Catches the case where Claude Code's Stop hook didn't fire
+because the user was working in a different tool.
+
+If Q3 = `No, manual only`, skip this step. The Stop hook in
+`.claude/settings.json` is also unconditionally written by the template
+(it does no harm if Claude Code is never used); only the pre-commit hook
+is conditional on Q3.
+
+### 9. Write the initial SPEC stub
 
 Create `docs/spec/README.md` if missing (the template usually provides one).
 
-### 9. Initialize baseline
+### 10. Initialize baseline
 
 Create `scripts/baseline.json` with empty defaults:
 
@@ -166,7 +188,7 @@ Create `scripts/baseline.json` with empty defaults:
 }
 ```
 
-### 10. Summary report to user
+### 11. Summary report to user
 
 Print a structured summary:
 

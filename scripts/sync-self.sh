@@ -61,6 +61,10 @@ sync_dir_of_md "$template_common/.harness/agents" "$repo_root/.harness/agents" "
 sync_file "$template_common/scripts/harness-sync.ps1" "$repo_root/scripts/harness-sync.ps1" "scripts/harness-sync.ps1"
 sync_file "$template_common/scripts/harness-sync.sh"  "$repo_root/scripts/harness-sync.sh"  "scripts/harness-sync.sh"
 
+# Mapping 3: install-hooks scripts
+sync_file "$template_common/scripts/install-hooks.ps1" "$repo_root/scripts/install-hooks.ps1" "scripts/install-hooks.ps1"
+sync_file "$template_common/scripts/install-hooks.sh"  "$repo_root/scripts/install-hooks.sh"  "scripts/install-hooks.sh"
+
 if [[ "$CHECK" == true ]]; then
     if (( ${#drift[@]} > 0 )); then
         echo "Drift detected:" >&2

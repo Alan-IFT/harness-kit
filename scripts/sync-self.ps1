@@ -8,6 +8,8 @@
 #   .harness/agents/*.md             → .harness/agents/*.md
 #   scripts/harness-sync.ps1         → scripts/harness-sync.ps1
 #   scripts/harness-sync.sh          → scripts/harness-sync.sh
+#   scripts/install-hooks.ps1        → scripts/install-hooks.ps1
+#   scripts/install-hooks.sh         → scripts/install-hooks.sh
 #
 # Run before commit if you've edited any of the above. verify_all step E.1 FAILs
 # on drift.
@@ -33,6 +35,8 @@ $mappings = @(
     @{ from = ".harness/agents"; to = ".harness/agents"; type = "dir-of-md" }
     @{ from = "scripts/harness-sync.ps1"; to = "scripts/harness-sync.ps1"; type = "file" }
     @{ from = "scripts/harness-sync.sh"; to = "scripts/harness-sync.sh"; type = "file" }
+    @{ from = "scripts/install-hooks.ps1"; to = "scripts/install-hooks.ps1"; type = "file" }
+    @{ from = "scripts/install-hooks.sh"; to = "scripts/install-hooks.sh"; type = "file" }
 )
 
 $drift = @()
