@@ -99,6 +99,12 @@ Use `AskUserQuestion`:
      (or `src/controllers/` + `src/services/` + `src/repositories/`) → recommend
      Partitioned. Flat single-folder project → Single.
 
+5. **Document language** — options:
+   - `English (default)` — generated docs/rules/workflow in English.
+   - `中文 (Chinese)` — 生成的文档、规则、workflow 用中文。
+   - Pre-fill: detect existing README/CONTRIBUTING language; if dominantly Chinese,
+     recommend Chinese. Agent prompts stay in English regardless.
+
 ### 4. Extract rule candidates
 
 Read existing convention files and extract rule candidates:
@@ -181,6 +187,17 @@ For each file in the plan:
   - Backend:   `dev-api`, `dev-services`, `dev-db`
   Keep the generic `developer.md` as fallback.
 - If Q4 = Single developer: do NOT copy partition agents. Only `developer.md` is shipped.
+
+**Language handling** (Q5 from step 3):
+
+- If Q5 = English (default): no further action. Copied files are already English.
+- If Q5 = Chinese (zh): after the English copy in step 4 and 6, apply the language
+  overlay — copy `templates/i18n/zh/common/` and `templates/i18n/zh/<type>/` over
+  the target root, overwriting matching files. The overlay translates:
+  - `00-core.md.tmpl`, `50-fullstack.md` or `50-backend.md`
+  - `docs/workflow.md`, `docs/dev-map.md.tmpl`, `docs/tasks.md.tmpl`,
+    `docs/spec/README.md`, `evals/golden-tasks.md.tmpl`
+  Agent prompts stay in English regardless of Q5.
 
 Substitution rules (same as `/harness-init`):
 

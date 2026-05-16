@@ -7,6 +7,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-05-16
+
+### Added — Project-wide language policy (English / 中文)
+
+`/harness-init` and `/harness-adopt` now ask a fifth question: **Project output language**.
+
+The answer is **not just doc language** — it's a project-wide enforcement of which language all AI output uses. Specifically, the choice affects:
+
+- Replies to the user in chat
+- Agent-to-agent hand-offs
+- Every per-task document (`01_REQUIREMENT_ANALYSIS.md` through `07_DELIVERY.md`, `PM_LOG.md`)
+- Updates to `tasks.md` / `dev-map.md`
+- Error messages and status reports
+- Even when the user writes in another language, AI responds in the configured project language
+
+Enforcement: a new **"Output language"** section at the top of generated `CLAUDE.md`. Agents read CLAUDE.md and follow the rule.
+
+### Files added
+
+- `templates/common/.harness/rules/00-core.md.tmpl` — top-level "Output language: English" callout (default).
+- `templates/i18n/zh/` — Chinese translation overlay covering the 7 most user-facing files:
+  - `common/.harness/rules/00-core.md.tmpl` (output language: 中文; rest translated)
+  - `common/docs/workflow.md` (7-stage pipeline)
+  - `common/docs/dev-map.md.tmpl`
+  - `common/docs/tasks.md.tmpl`
+  - `common/docs/spec/README.md`
+  - `common/evals/golden-tasks.md.tmpl`
+  - `fullstack/.harness/rules/50-fullstack.md`
+  - `backend/.harness/rules/50-backend.md`
+
+### Not translated (intentional, Phase 1 scope)
+
+Agent prompts (`.harness/agents/*.md`) stay in English. LLM reads English equally well; file size stays manageable. The "Output language" CLAUDE.md rule binds *output* without forcing the agent definitions to be translated. Future phases may translate agents if user demand surfaces.
+
+Skills (`.harness/skills/{build,test,verify}/SKILL.md`) and scripts also stay English-only.
+
+### Changed
+
+- `harness-init` SKILL.md: Q5 added with explicit project-wide language semantics.
+- `harness-adopt` SKILL.md: Q5 added; pre-fill recommends Chinese when existing README/CONTRIBUTING is dominantly Chinese.
+- `templates/common/.harness/rules/00-core.md.tmpl`: added top "Output language" section before "How this project is developed".
+- New `{{LANG}}` placeholder available (`en` default, `zh` when Chinese selected).
+
+### Tests
+
+- test-init: still 104/104 PASS (English default unchanged).
+- test-real-project: still 76/76 PASS.
+- verify_all (this repo): still 19/19 PASS.
+- Not yet added: an i18n=zh assertion to test-init. Will add when first issue surfaces.
+
+### Upgrading existing v0.6.x projects
+
+The new "Output language" rule only applies to newly initialized projects. Existing projects (like `TodoList`) keep their v0.6.x CLAUDE.md without the rule — AI will continue to use whatever language it picks up from context.
+
+To upgrade an existing project:
+1. Edit `.harness/rules/00-core.md`, add an "## Output language" section (copy from the v0.7 template) declaring the desired language.
+2. Run `scripts/harness-sync` to regenerate `CLAUDE.md`.
+3. New sessions will follow the new rule.
+
 ## [0.6.4] - 2026-05-16
 
 ### Fixed

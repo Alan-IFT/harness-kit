@@ -5,6 +5,21 @@
 > This file is **generated** from `.harness/rules/*.md` via `scripts/harness-sync.{ps1,sh}`.
 > Edit `.harness/rules/*.md` and re-run sync. Do not edit `CLAUDE.md` directly.
 
+## Output language (project-wide)
+
+**Everything this project's AI produces must be in English.** This applies to:
+
+- Replies to the user in chat.
+- Agent-to-agent hand-offs (the PM dispatching, the Architect describing, etc).
+- Every per-task document under `docs/features/<task>/`: `01_REQUIREMENT_ANALYSIS.md`, `02_SOLUTION_DESIGN.md`, `03_GATE_REVIEW.md`, `04_DEVELOPMENT.md`, `05_CODE_REVIEW.md`, `06_TEST_REPORT.md`, `07_DELIVERY.md`, and `PM_LOG.md`.
+- Updates to `docs/tasks.md` and `docs/dev-map.md`.
+- Error messages, status reports, and explanations to the user.
+- Code comments where applicable.
+
+**Do not mix languages.** If a user message arrives in another language, still respond in English (translate the user's intent internally; emit English). This keeps every artifact in this repo readable by any contributor.
+
+To change the project language, edit this "Output language" section in `.harness/rules/00-core.md`, then run `scripts/harness-sync`.
+
 ## How this project is developed
 
 This repo uses the **Harness 7-agent pipeline**. Read `docs/workflow.md` before starting work.

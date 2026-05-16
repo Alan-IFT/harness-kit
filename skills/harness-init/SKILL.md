@@ -40,7 +40,7 @@ they back up or run `/harness-adopt`.
 
 ### 2. Gather project info via `AskUserQuestion`
 
-Ask three or four questions in a single `AskUserQuestion` call:
+Ask **five questions** in a single `AskUserQuestion` call:
 
 1. **Project type** — options:
    - `Fullstack (frontend + backend + DB)`
@@ -59,6 +59,12 @@ Ask three or four questions in a single `AskUserQuestion` call:
    - `Partitioned (recommended) — dev-api / dev-services / dev-db agents` — three-layer split (HTTP boundary / business logic / persistence), supports clean coordination per Architect's design
    - `Single developer — one agent for all code` — fine for small/flat backend projects without a layered architecture
 
+5. **Project output language** — this is a **project-wide policy**, not just doc language. Options:
+   - `English (default)` — **All AI output in this project will be in English**. That includes: chat replies, agent-to-agent hand-offs, every per-task document (`01_REQUIREMENT_ANALYSIS.md` through `07_DELIVERY.md`, `PM_LOG.md`), updates to `tasks.md` / `dev-map.md`, error messages, status reports. Even if the user writes in another language, AI responds in English.
+   - `中文 (Chinese)` — **项目内 AI 全程使用中文输出**。包括：对话回复、agent 间交接、所有任务阶段文档、tasks.md / dev-map.md 更新、错误消息、状态报告。即使用户用其他语言提问，AI 也用中文回答。
+   - The policy is enforced by an "Output language" section at the top of CLAUDE.md. Agents read CLAUDE.md and follow the rule.
+   - Agent definitions and verify_all scripts stay in English regardless (LLM reads English fine, file count manageable). Only output is constrained.
+
 ### 3. Locate the template directory
 
 Templates live alongside this skill:
@@ -67,17 +73,23 @@ Templates live alongside this skill:
   rule fragments in `.harness/rules/`, harness-sync scripts, docs, evals).
 - `<skill-root>/templates/fullstack/` — fullstack-specific overlays.
 - `<skill-root>/templates/backend/` — backend-specific overlays.
+- `<skill-root>/templates/i18n/<lang>/` — translation overlays (currently `zh` is provided). Mirror the directory structure of `common/` and `<project-type>/`; files inside override their English counterparts.
 
 If the skill is installed under `~/.claude/skills/harness-init/`, the templates are at `~/.claude/skills/harness-init/templates/`. Use `Glob` to discover the actual path.
 
 ### 4. Copy template files
 
-Copy in this order (later layer adds to earlier; overlays do not overwrite common):
+Copy in this order (later layer overwrites earlier):
 
 1. Everything under `templates/common/` → target root.
 2. Everything under `templates/<project-type>/` → target root.
    - Fullstack overlay adds `.harness/rules/50-fullstack.md`, `.harness/skills/{build,test,verify}/SKILL.md.tmpl`, `scripts/verify_all.{ps1,sh}.tmpl`, **and** `.harness/agents/dev-{frontend,backend,db}.md.tmpl` (partition agents).
    - Backend overlay adds `.harness/rules/50-backend.md` etc.
+3. **If Q5 ≠ English**, apply the language overlay:
+   - Copy everything under `templates/i18n/<lang>/common/` → target root (overwrites the English files).
+   - Copy everything under `templates/i18n/<lang>/<project-type>/` → target root.
+   - The `zh` overlay translates: `00-core.md.tmpl`, `50-fullstack.md` or `50-backend.md`, `docs/workflow.md`, `docs/dev-map.md.tmpl`, `docs/tasks.md.tmpl`, `docs/spec/README.md`, `evals/golden-tasks.md.tmpl`.
+   - Files **not** in the overlay (agent prompts, skills/build|test|verify SKILL.md, scripts) stay in English. This is intentional: LLM reads English fine, file count stays manageable.
 
 Files ending in `.tmpl` need placeholder substitution (step 5). Drop the `.tmpl` suffix on write.
 
@@ -109,6 +121,7 @@ Replace these placeholders in any `.tmpl` file:
 | `{{TODAY}}` | today's date in `YYYY-MM-DD` |
 | `{{ENABLE_HOOK}}` | `true` or `false` from Q3 |
 | `{{PARTITIONED}}` | `true` or `false` from Q4 (default `false` if Q4 was skipped) |
+| `{{LANG}}` | `en` (default) or `zh` from Q5 |
 
 ### 6. Run the initial binding sync
 
