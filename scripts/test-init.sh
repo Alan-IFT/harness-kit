@@ -144,6 +144,17 @@ test_type() {
         "grep -q 'AI-GUIDE.md' '$tmp/.github/copilot-instructions.md' && [[ \$(wc -c < '$tmp/.github/copilot-instructions.md') -lt 2000 ]]"
     assert "AI-GUIDE.md indexes project-type rule overlay" \
         "grep -q '50-$project_type.md' '$tmp/AI-GUIDE.md'"
+    # AI-GUIDE.md indexes EVERY rule file (matches user-project verify_all E.5)
+    missing_rules=""
+    if [[ -d "$tmp/.harness/rules" ]]; then
+        while IFS= read -r r; do
+            rname=$(basename "$r")
+            grep -q ".harness/rules/$rname" "$tmp/AI-GUIDE.md" || missing_rules="$missing_rules $rname"
+        done < <(find "$tmp/.harness/rules" -maxdepth 1 -name '*.md' -type f)
+    fi
+    assert "AI-GUIDE.md indexes every .harness/rules/*.md file (matches user-project verify_all E.5)" \
+        "[[ -z '$missing_rules' ]]"
+    [[ -n "$missing_rules" ]] && echo "    Rules NOT indexed:$missing_rules" >&2
     assert "PROJECT_NAME substituted into rules" "grep -q 'test-project' '$tmp/.harness/rules/00-core.md'"
     assert "TODAY substituted into rules" "grep -q '$today' '$tmp/.harness/rules/00-core.md'"
     assert "STACK substituted into rules" "grep -qF '$stack' '$tmp/.harness/rules/00-core.md'"

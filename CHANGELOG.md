@@ -35,6 +35,19 @@ Why FAIL not WARN: a version mismatch is never "expected drift" — it always me
 
 What G.3 does NOT cover (still manual at release time): skill count claims (`"9 skills"` text), `verify_all (26 checks)` claim, test-init / test-real-project assertion counts. Adding programmatic checks for those would either require running the tests inside `verify_all` (too heavy) or pinning every count in a JSON sidecar (premature). Catching the version drift is the highest-leverage single lever; the rest is release-checklist discipline.
 
+### Fixed — Template AI-GUIDE missing `65-intervention.md` + `70-doc-size.md` index entries
+
+Latent shipping defect: a fresh `/harness-init` produced a project where `.harness/rules/` contained `65-intervention.md` (and, for the Chinese path, also `70-doc-size.md`), but `AI-GUIDE.md` did not index them. The user-project's own `verify_all E.5` ("AI-GUIDE.md indexes every .harness/rules/*.md") would FAIL on the very first run after init — a broken first-run experience.
+
+Root cause: `test-init.{ps1,sh}` only asserted that the `50-<type>.md` overlay was indexed (one specific file), not the "every rule file is indexed" inverse. So when v0.13 added `65-intervention.md` and v0.14 added `70-doc-size.md` (zh template never picked up either; English template picked up only 70), the regression suite stayed green while the user-facing template silently rotted.
+
+- **`skills/harness-init/templates/common/AI-GUIDE.md.tmpl`** — added the `65-intervention.md` index line (between 60-tool-handoff and 70-doc-size) and the two missing modes-table rows ("Trivial" + "Mid-task redirect" pointing at `/harness-intervene`).
+- **`skills/harness-init/templates/i18n/zh/common/AI-GUIDE.md.tmpl`** — added Chinese index lines for **both** `65-intervention.md` and `70-doc-size.md` (it was missing both) and the same two modes-table rows in Chinese.
+- **`scripts/test-init.{ps1,sh}`** — new assertion "AI-GUIDE.md indexes every .harness/rules/*.md file (matches user-project verify_all E.5)". Walks the rules dir after init and FAILs naming any rule file not referenced in AI-GUIDE.md. This is the inverse of the existing "indexes project-type overlay" check and would have caught the v0.13/v0.14 omissions immediately. Drift-tested both ways: removing the 65-intervention line from the template produces 3 FAILs (one per project type) naming `65-intervention.md`; restoring brings it back to 162 PASS.
+- **`README.md` / `README.zh-CN.md`** — test-init badge `159/159` → `162/162` (the +3 reflects the new assertion running once per project type).
+
+Why test the inverse rather than running `verify_all` post-init: the user-project `verify_all` has many checks (build tooling, baselines, etc.) that depend on stack-specific state. Running it inside `test-init` would either be flaky or require heavy fixture setup. A targeted inverse-of-E.5 check buys 90% of the safety for ~10 lines of code per shell.
+
 ## [0.14.0] - 2026-05-16
 
 ### Added — Document size policy (long-term context-bloat guardrail)

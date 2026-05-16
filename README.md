@@ -2,7 +2,7 @@
 
 **English** · [简体中文](README.zh-CN.md)
 
-![version](https://img.shields.io/badge/version-0.14.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-26%2F26-brightgreen) ![test-init](https://img.shields.io/badge/test--init-159%2F159-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.14.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-26%2F26-brightgreen) ![test-init](https://img.shields.io/badge/test--init-162%2F162-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
 > **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (9 skills + project templates) that brings disciplined AI-driven development to fullstack and backend projects.
 >
@@ -155,7 +155,7 @@ Hit Claude Code's rate limit mid-task? Switch to GitHub Copilot in VS Code and k
 ### Three layers of regression testing
 
 - `verify_all` (26 checks) — repo health
-- `test-init` (159 assertions) — init template logic on empty dirs
+- `test-init` (162 assertions) — init template logic on empty dirs
 - `test-real-project` (82 assertions) — overlay onto real fixtures (todo-fullstack, todo-backend)
 
 Every commit must pass all three. `test-init` and `test-real-project` exercise the generated project's structure end-to-end with no network needed.

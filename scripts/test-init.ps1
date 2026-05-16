@@ -183,6 +183,17 @@ function Test-Type {
         Assert "AI-GUIDE.md indexes project-type rule overlay" {
             (Get-Content (Join-Path $tmp "AI-GUIDE.md") -Raw) -match "50-$ProjectType\.md"
         }
+        Assert "AI-GUIDE.md indexes every .harness/rules/*.md file (matches user-project verify_all E.5)" {
+            $guide = Get-Content (Join-Path $tmp "AI-GUIDE.md") -Raw
+            $missing = @()
+            Get-ChildItem -Path (Join-Path $tmp ".harness/rules") -Filter "*.md" -File | ForEach-Object {
+                if ($guide -notmatch [regex]::Escape(".harness/rules/$($_.Name)")) { $missing += $_.Name }
+            }
+            if ($missing.Count -gt 0) {
+                Write-Host ("  Rules NOT indexed: " + ($missing -join ", ")) -ForegroundColor Yellow
+                $false
+            } else { $true }
+        }
         Assert "PROJECT_NAME substituted into rules" {
             (Get-Content (Join-Path $tmp ".harness/rules/00-core.md") -Raw) -match "test-project"
         }
