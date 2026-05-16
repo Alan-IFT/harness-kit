@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.4] - 2026-05-16
+
+### Fixed
+
+- **Generated-project `verify_all` no longer reports silent PASSes**. v0.6.3 and earlier had B.1/B.2/B.3 (and similar steps in backend templates) return PASS when their prerequisite (e.g. `package.json`) didn't exist — confusingly identical to a real PASS. The script now distinguishes PASS / WARN / FAIL / **SKIP**, where SKIP means the check's prerequisite is absent and the check didn't run. SKIPs do not affect exit code. First user feedback after end-to-end test on `C:\Programs\TodoList` flagged this.
+- **D.1 "OpenAPI / tRPC schema present" no longer WARNs on empty projects**. Now SKIPs when no source code (`src/` / `apps/` / `packages/`) exists. Only WARNs on real projects that have code but lack a schema.
+- **E.4 step name no longer renders as garbled glyphs on Windows console**. Replaced the Unicode `→` arrow with ASCII `->` in step labels (the binding-direction arrow). Same fix applied to backend's `D.4`.
+- B.2 Lint now SKIPs when no eslint config exists (previously could FAIL).
+- B.3 Unit tests now SKIPs when `package.json` has no `test` script (previously could FAIL).
+- B.4 Test count vs baseline now SKIPs while baseline is at zero (just-initialized state).
+- A.1/A.2/A.3 now SKIP when the project isn't a git repo (previously would error).
+- Backend C.1 migrations check SKIPs when there's no migrations directory.
+
+### Added
+
+- Summary line now shows SKIP count alongside PASS/WARN/FAIL.
+- verification_history.log entries include skip count for trend analysis.
+
+### Tests
+
+- test-init: still 104/104 PASS (template-copy logic unchanged).
+- test-real-project: still 76/76 PASS.
+- verify_all (this repo): still 19/19 PASS.
+
+### Upgrading
+
+Existing initialized projects (like `TodoList`) keep their v0.6.3 verify_all. To pick up the v0.6.4 polish: copy the new `scripts/verify_all.{ps1,sh}` from the harness-kit repo (or re-init in a sibling folder and selectively port). No data loss either way.
+
 ## [0.6.0] - 2026-05-15
 
 ### Changed
