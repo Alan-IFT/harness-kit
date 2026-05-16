@@ -21,6 +21,20 @@ Both v0.13.0 (mid-task intervention) and v0.14.0 (document size policy) shipped 
 
 No source-code, agent contract, or template behavior changed — pure doc / rule-fragment alignment. verify_all 26/26 PASS, 0 WARN, 0 FAIL after the sweep.
 
+### Added — `verify_all G.3`: version-stamp consistency check (FAIL on drift)
+
+The doc-resync above was reactive — drift had already happened. G.3 is the preventive layer: every `verify_all` run cross-checks `version` across the four authoritative stamps and FAILs (not WARN) if any of them disagree.
+
+- **`scripts/verify_all.{ps1,sh}`** — new `G.3` step. Extracts version from `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, the `version-X.Y.Z-` shields.io badge in `README.md`, and the same badge in `README.zh-CN.md`. All four must match the same `X.Y.Z`. The FAIL message lists every stamp's value plus the actionable hint "bump all four together when cutting a release", so the failure mode is self-fixing.
+- Drift-tested in both languages: temporarily mutating any one stamp produces a deterministic FAIL with the offending file named.
+- **PS verify_all `F.2` removed** — was a literal duplicate of `B.2` (both checked `install.ps1` + `install.sh` exist). Bash never had F.2, so PS reported 27 / Bash reported 26 even though they tested the same facts. Deduplicating PS lands both at 26 checks total — same number you see in the README badge.
+- **`.harness/rules/40-locations.md`** — bullet added enumerating G.3's contract.
+- **`.harness/insight-index.md`** — new entry recording the v0.13/v0.14 drift class and that G.3 closes the version vector but skill-count / check-count claims still need manual sync (no programmatic source-of-truth for those counts).
+
+Why FAIL not WARN: a version mismatch is never "expected drift" — it always means either (a) pre-release state that shouldn't be in main or (b) someone forgot to update a README badge. Both want a hard stop, not a soft hint.
+
+What G.3 does NOT cover (still manual at release time): skill count claims (`"9 skills"` text), `verify_all (26 checks)` claim, test-init / test-real-project assertion counts. Adding programmatic checks for those would either require running the tests inside `verify_all` (too heavy) or pinning every count in a JSON sidecar (premature). Catching the version drift is the highest-leverage single lever; the rest is release-checklist discipline.
+
 ## [0.14.0] - 2026-05-16
 
 ### Added — Document size policy (long-term context-bloat guardrail)

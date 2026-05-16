@@ -33,6 +33,7 @@
 - Project rules / docs / evals present
 - Script pairs (.ps1 + .sh) for verify_all / harness-sync / sync-self / test-init / test-real-project
 - README and CHANGELOG reference all skills
+- Version stamps consistent across `plugin.json` / `marketplace.json` / both README badges (G.3, v0.14.x+; FAIL on drift)
 - `.harness/intervention.md` not tracked (ephemeral file; v0.13+)
 - Document size soft caps (I.1-I.5, v0.14+; WARN-level)
 

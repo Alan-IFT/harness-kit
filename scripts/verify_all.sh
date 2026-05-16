@@ -205,6 +205,30 @@ for s in harness harness-init harness-adopt harness-verify harness-status harnes
 done
 [[ -z "$miss_c" ]] && step "G.2" "CHANGELOG references all 9 skills" "PASS" || step "G.2" "CHANGELOG references all 9 skills" "FAIL" "missing:$miss_c"
 
+# G.3 — Version stamps consistent across plugin.json / marketplace.json / README badges
+# Extracts the FIRST "version": "X.Y.Z" from each JSON (both manifests have a single version field today)
+# and the first version-X.Y.Z badge token from each README. All four must match.
+extract_json_version() {
+    grep -oE '"version"[[:space:]]*:[[:space:]]*"[0-9]+\.[0-9]+\.[0-9]+"' "$1" 2>/dev/null \
+        | head -1 \
+        | grep -oE '[0-9]+\.[0-9]+\.[0-9]+'
+}
+extract_readme_badge_version() {
+    grep -oE 'version-[0-9]+\.[0-9]+\.[0-9]+-' "$1" 2>/dev/null \
+        | head -1 \
+        | grep -oE '[0-9]+\.[0-9]+\.[0-9]+'
+}
+plugin_v=$(extract_json_version .claude-plugin/plugin.json)
+market_v=$(extract_json_version .claude-plugin/marketplace.json)
+readme_v=$(extract_readme_badge_version README.md)
+zh_v=$(extract_readme_badge_version README.zh-CN.md)
+if [[ -n "$plugin_v" && "$plugin_v" == "$market_v" && "$plugin_v" == "$readme_v" && "$plugin_v" == "$zh_v" ]]; then
+    step "G.3" "Version stamps consistent across plugin/marketplace/README" "PASS"
+else
+    step "G.3" "Version stamps consistent across plugin/marketplace/README" "FAIL" \
+        "plugin.json=$plugin_v marketplace.json=$market_v README.md=$readme_v README.zh-CN.md=$zh_v (bump all four together when cutting a release)"
+fi
+
 # --- I. Document size caps (v0.14+, WARN-only; see .harness/rules/70-doc-size.md) ---
 
 # I.1 — AI-GUIDE.md ≤200 lines

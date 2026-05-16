@@ -190,10 +190,7 @@ Step "F.1" "verify_all, sync-self, harness-sync, test-init, test-real-project ex
     }
 }
 
-Step "F.2" "Install scripts symmetric" {
-    if (-not (Test-Path "install.ps1")) { throw "install.ps1 missing" }
-    if (-not (Test-Path "install.sh")) { throw "install.sh missing" }
-}
+# (F.2 removed v0.14.x — was a literal duplicate of B.2; Bash never had it.)
 
 # G. Documentation hygiene
 Step "G.1" "README references all 9 skills" {
@@ -226,6 +223,30 @@ Step "G.2" "CHANGELOG mentions all 9 skills" {
     $cl = Get-Content "CHANGELOG.md" -Raw
     foreach ($s in @("harness", "harness-init", "harness-adopt", "harness-verify", "harness-status", "harness-plan", "harness-explore", "harness-goal", "harness-intervene")) {
         if ($cl -notmatch [regex]::Escape($s)) { throw "CHANGELOG missing skill mention: $s" }
+    }
+}
+
+Step "G.3" "Version stamps consistent across plugin.json / marketplace.json / README badges" {
+    $manifest = Get-Content ".claude-plugin/plugin.json" -Raw | ConvertFrom-Json
+    $market = Get-Content ".claude-plugin/marketplace.json" -Raw | ConvertFrom-Json
+    $pluginV = $manifest.version
+    $marketV = $market.plugins[0].version
+
+    $readmeBadge = $null
+    if ((Get-Content "README.md" -Raw) -match 'version-(\d+\.\d+\.\d+)-') { $readmeBadge = $Matches[1] }
+    $zhBadge = $null
+    if ((Get-Content "README.zh-CN.md" -Raw) -match 'version-(\d+\.\d+\.\d+)-') { $zhBadge = $Matches[1] }
+
+    $stamps = [ordered]@{
+        "plugin.json"            = $pluginV
+        "marketplace.json"       = $marketV
+        "README.md badge"        = $readmeBadge
+        "README.zh-CN.md badge"  = $zhBadge
+    }
+    $unique = $stamps.Values | Where-Object { $_ } | Sort-Object -Unique
+    if ($null -eq $unique -or $unique.Count -ne 1) {
+        $detail = ($stamps.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }) -join '; '
+        throw "version mismatch: $detail (bump all four together when cutting a release)"
     }
 }
 
