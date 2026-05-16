@@ -61,13 +61,13 @@ Full contracts in `.harness/agents/<name>.md`. Read on demand when assuming or d
 
 ## Workflow entry — pick the right mode
 
-| Mode | Use when | Skill |
-|---|---|---|
-| Full 7-stage pipeline | Real feature / bug / refactor with a clear acceptance criterion | `/harness` or PM Orchestrator dispatch |
-| Plan only (stages 1-3) | "Vet the design before committing engineering time" | `/harness-plan` |
-| Explore / feasibility | "Can we even do X?" — research, no code | `/harness-explore` |
-| Goal loop (Dev + QA) | "Keep improving until criterion met" with measurable target | `/harness-goal` |
-| Trivial | Typo, comment, single-line dependency bump | Direct edit + `scripts/verify_all` |
+| Mode | Use when (English triggers) | Use when (中文触发) | Skill |
+|---|---|---|---|
+| Full 7-stage pipeline | "Add X" / "Fix bug Y" / "Refactor Z to ..." — real shipping work | "加一个 ..." / "修个 bug" / "重构成 ..." | `/harness` |
+| Plan only (stages 1-3) | "Vet this design" / "evaluate the approach before coding" | "评审一下..." / "先别动手" / "设计上行不行" | `/harness-plan` |
+| Explore / feasibility | "Can we do X?" / "Is library Y feasible?" — research | "能不能..." / "可行吗" / "调研一下" | `/harness-explore` |
+| Goal loop (Dev + QA) | "Keep improving until X" / "iterate to N% coverage" | "持续优化到..." / "循环改进直到..." | `/harness-goal` |
+| Trivial | Typo, comment, single-line dependency bump | typo / 注释 / 改个变量名 | Direct edit + `scripts/verify_all` |
 
 Declare-done gate (**all non-trivial modes**): `scripts/verify_all` PASS + (if 7-stage or goal) QA's `06_TEST_REPORT.md` has an `## Adversarial tests` section.
 

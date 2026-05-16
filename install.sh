@@ -75,7 +75,7 @@ else
     scope="global: $HOME"
 fi
 
-skills=(harness-init harness-adopt harness-verify harness-status harness-plan harness-explore harness-goal)
+skills=(harness harness-init harness-adopt harness-verify harness-status harness-plan harness-explore harness-goal)
 
 echo ""
 echo "Harness Kit install"
@@ -129,11 +129,15 @@ echo ""
 echo "Use in Claude Code:"
 echo "  /harness-init     in an empty project"
 echo "  /harness-adopt    in an existing project"
+echo "  /harness          full 7-stage pipeline (real feature / bug / refactor)"
+echo "  /harness-plan     design-only mode (RA + SA + GR, no Dev)"
+echo "  /harness-explore  research/feasibility (light RA + findings.md)"
+echo "  /harness-goal     open-ended Dev + QA loop within a budget"
+echo ""
+echo "  /harness-init     bootstrap an empty project with Harness skeleton"
+echo "  /harness-adopt    add Harness to an existing project"
 echo "  /harness-verify   run the project's verify_all"
 echo "  /harness-status   inspect Harness assets"
-echo "  /harness-plan     design-only mode (RA + SA + GR, no Dev)"
-echo "  /harness-explore  research/feasibility (RA only + findings.md)"
-echo "  /harness-goal     open-ended Dev + QA loop within a budget"
 echo ""
 echo "Tip: for versioned/auditable install, prefer the plugin path inside Claude Code:"
 echo "  /plugin marketplace add Alan-IFT/harness-kit"

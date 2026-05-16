@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-05-16
+
+### Fixed — Symmetric mode skills; `/harness` skill was referenced but did not exist
+
+v0.11.0 shipped `/harness-plan`, `/harness-explore`, `/harness-goal` and updated docs / AI-GUIDE to talk about four parallel "task shape" modes. But the SKILL.md cross-references in those three skills referenced `/harness` as the full-pipeline counterpart — and **`/harness` did not exist as a skill**; the full 7-stage was only invocable via natural language to the PM Orchestrator. Documentation / reality gap.
+
+Fix: added `skills/harness/SKILL.md`, making the 4 mode skills symmetric. The new skill explicitly documents the canonical 7-stage flow with the v0.11 contracts (insight-index read at start, adversarial QA, archive-task at end). It also adds explicit "resume from partial run" logic for the `/harness-plan` → `/harness` continuation path.
+
+### Added — Chinese trigger words in the mode-selection table
+
+`AI-GUIDE.md` (both dogfood and template; en + zh i18n) decision-tree table now lists both English and Chinese trigger phrases per mode. The main Claude Code agent (and any other AI tool reading AI-GUIDE.md) can match Chinese user input ("能不能...", "先别动手", "持续优化到...") directly to the right mode, not just English. Earlier versions implicitly assumed English keyword matching.
+
+### Changed
+
+- `skills/` count: 7 → 8 (added `/harness`).
+- `install.{ps1,sh}`: skill list updated, print order restructured to put pipeline skills first, then setup, then operations.
+- `scripts/verify_all.{ps1,sh}` C.1 / G.1 / G.2: "All 7 skills" → "All 8 skills".
+- README.md and README.zh-CN.md: skill section now has 3 groups (Pipeline / Setup / Operations) with `/harness` at the top.
+
+### Tests
+
+- verify_all: 19/19 PASS.
+- test-init: 116/116 PASS.
+- test-real-project: 82/82 PASS.
+
 ## [0.11.0] - 2026-05-16
 
 ### Added — Three execution modes + adversarial verification + cross-task insight index

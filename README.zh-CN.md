@@ -2,7 +2,7 @@
 
 [English](README.md) · **简体中文**
 
-![version](https://img.shields.io/badge/version-0.11.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-19%2F19-brightgreen) ![test-init](https://img.shields.io/badge/test--init-108%2F108-brightgreen) ![integration](https://img.shields.io/badge/integration-78%2F78-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.11.1-blue) ![verify_all](https://img.shields.io/badge/verify__all-19%2F19-brightgreen) ![test-init](https://img.shields.io/badge/test--init-108%2F108-brightgreen) ![integration](https://img.shields.io/badge/integration-78%2F78-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
 > **Claude Code 的 Harness Engineering 工具包** — 一个 Claude Code Plugin（4 个 skills + 项目模板），把"有纪律的 AI 驱动开发"带到全栈和后端项目里。
 >
@@ -10,7 +10,13 @@
 
 ## 包含什么
 
-这是一个 Claude Code Plugin 包，给任何项目装上 7 个 AI skill：
+这是一个 Claude Code Plugin 包，给任何项目装上 8 个 AI skill：
+
+**流水线类**（4 种任务形态，AI 根据你的自然语言自动挑对应那条）
+- `/harness-kit:harness` — 完整 7-stage 流水线（RA → SA → GR → Dev → CR → QA → 交付）。用于真正的功能 / bug / 重构。
+- `/harness-kit:harness-plan` — 只做设计：跑 RA + SA + GR，给出判决后停止，**不写代码**。用于"投入工程时间前先验证设计"。
+- `/harness-kit:harness-explore` — 调研/可行性：轻量 RA + 一份带引用的 `findings.md`。**不做设计、不写代码**。用于"这事儿到底能不能做？"
+- `/harness-kit:harness-goal` — 开放式 Dev + QA 循环，由可量化的成功标准 + 预算限定。用于"持续改进直到覆盖率 > 80%"这类任务。
 
 **安装类**
 - `/harness-kit:harness-init` — 新项目从零生成 Harness 骨架（问 5 个问题，~30 秒生成 `.harness/` + `.claude/` + `AI-GUIDE.md` + stub CLAUDE.md / copilot-instructions.md）
@@ -19,11 +25,6 @@
 **运维类**
 - `/harness-kit:harness-verify` — 跑总验证（编译 + 测试 + 规则扫描 + 基线对比）
 - `/harness-kit:harness-status` — 健康度快照（哪些资产存在、基线、最近 verify 状态、活动任务）
-
-**模式类**（7-stage 流水线的变体，按任务形态挑 —— v0.11 新增）
-- `/harness-kit:harness-plan` — 只做设计：跑 RA + SA + GR，给出判决后停止，**不写代码**。用于"投入工程时间前先验证设计"。
-- `/harness-kit:harness-explore` — 调研/可行性：轻量 RA + 一份带引用的 `findings.md`。**不做设计、不写代码**。用于"这事儿到底能不能做？"
-- `/harness-kit:harness-goal` — 开放式 Dev + QA 循环，由可量化的成功标准 + 预算限定。用于"持续改进直到覆盖率 > 80%"这类任务。
 
 init 之后，每个非琐碎任务流经 **7-Agent 流水线**：PM Orchestrator → Requirement Analyst → Solution Architect → Gate Reviewer → Developer（或分区 `dev-*`）→ Code Reviewer → QA Tester → 交付。
 

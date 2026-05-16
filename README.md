@@ -2,7 +2,7 @@
 
 **English** · [简体中文](README.zh-CN.md)
 
-![version](https://img.shields.io/badge/version-0.11.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-19%2F19-brightgreen) ![test-init](https://img.shields.io/badge/test--init-108%2F108-brightgreen) ![integration](https://img.shields.io/badge/integration-78%2F78-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.11.1-blue) ![verify_all](https://img.shields.io/badge/verify__all-19%2F19-brightgreen) ![test-init](https://img.shields.io/badge/test--init-108%2F108-brightgreen) ![integration](https://img.shields.io/badge/integration-78%2F78-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
 > **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (4 skills + project templates) that brings disciplined AI-driven development to fullstack and backend projects.
 >
@@ -10,7 +10,13 @@
 
 ## What's inside
 
-This is a Claude Code Plugin packaging that gives any project seven AI skills:
+This is a Claude Code Plugin packaging that gives any project eight AI skills:
+
+**Pipeline skills** (four task shapes; the AI picks the right one from your natural-language description)
+- `/harness-kit:harness` — full 7-stage pipeline (RA → SA → GR → Dev → CR → QA → Delivery). Use for real feature / bug / refactor work.
+- `/harness-kit:harness-plan` — design-only mode: runs RA + SA + GR, stops with a verdict before any code is written. Use to vet a design.
+- `/harness-kit:harness-explore` — research / feasibility mode: light RA + a `findings.md` with citations. No design, no code. Use for "can we even do X?"
+- `/harness-kit:harness-goal` — open-ended Dev + QA loop bounded by a measurable success criterion and a budget. Use for "keep improving until coverage > 80%" type tasks.
 
 **Setup skills**
 - `/harness-kit:harness-init` — bootstrap Harness skeleton in a new project (asks 5 questions, generates `.harness/` + `.claude/` + `AI-GUIDE.md` + stub CLAUDE.md / copilot-instructions.md in ~30s)
@@ -19,11 +25,6 @@ This is a Claude Code Plugin packaging that gives any project seven AI skills:
 **Operations skills**
 - `/harness-kit:harness-verify` — run total verification (compile + test + rule scan + baseline diff)
 - `/harness-kit:harness-status` — health snapshot (which assets present, baseline, last verify, active tasks)
-
-**Mode skills** (variants of the 7-stage pipeline, pick based on task shape — v0.11)
-- `/harness-kit:harness-plan` — design-only mode: runs RA + SA + GR, stops with a verdict before any code is written. Use to vet a design.
-- `/harness-kit:harness-explore` — research / feasibility mode: light RA + a `findings.md` with citations. No design, no code. Use for "can we even do X?"
-- `/harness-kit:harness-goal` — open-ended Dev + QA loop bounded by a measurable success criterion and a budget. Use for "keep improving until coverage > 80%" type tasks.
 
 After init, every non-trivial task flows through a **7-agent pipeline**: PM Orchestrator → Requirement Analyst → Solution Architect → Gate Reviewer → Developer (or partition `dev-*`) → Code Reviewer → QA Tester → Delivery.
 

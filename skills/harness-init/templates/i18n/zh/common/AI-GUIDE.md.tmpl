@@ -59,12 +59,12 @@ Claude Code 用户用 Task tool 派发；Copilot 用户读 agent 文件自己扮
 
 ## 工作流入口 —— 挑对的模式
 
-| 模式 | 什么时候用 | Skill |
-|---|---|---|
-| 完整 7-stage 流水线 | 真正的功能 / bug / 重构，有清晰 acceptance criteria | `/harness` 或 PM 派发 |
-| 只做设计（stages 1-3） | "投入工程时间前先验证设计" | `/harness-plan` |
-| 探索 / 可行性 | "这事儿能不能做？" —— 调研，不写代码 | `/harness-explore` |
-| 目标循环（Dev + QA） | "持续改进直到达到标准"，有可量化目标 | `/harness-goal` |
+| 模式 | 中文触发词 | English trigger | Skill |
+|---|---|---|---|
+| 完整 7-stage 流水线 | "加一个 ..." / "修个 bug" / "重构 ..." | "Add X" / "Fix Y" / "Refactor Z" | `/harness` |
+| 只做设计（stages 1-3） | "评审一下..." / "先别动手" / "设计上行不行" | "Vet this design" / "evaluate" | `/harness-plan` |
+| 探索 / 可行性 | "能不能..." / "可行吗" / "调研一下" | "Can we do X?" / "Is Y feasible?" | `/harness-explore` |
+| 目标循环（Dev + QA） | "持续优化到..." / "循环改进直到..." | "Keep improving until X" | `/harness-goal` |
 
 Declare-done 闸门：`scripts/verify_all` PASS + （7-stage 或 goal 模式下）QA 的 `06_TEST_REPORT.md` 有 `## Adversarial tests` 段。
 
