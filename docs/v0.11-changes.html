@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>harness-kit v0.11.0 改动详解</title>
+<style>
+  body { font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; max-width: 1100px; margin: 30px auto; padding: 0 24px; color: #1a1a1a; line-height: 1.65; }
+  h1 { border-bottom: 3px solid #2563eb; padding-bottom: 10px; }
+  h2 { border-bottom: 1px solid #ddd; padding-bottom: 6px; margin-top: 42px; }
+  h3 { color: #1e40af; margin-top: 28px; }
+  h4 { color: #374151; }
+  code { background: #f3f4f6; padding: 1px 6px; border-radius: 3px; font-size: 0.92em; font-family: "Cascadia Code", "Consolas", monospace; }
+  pre { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; overflow-x: auto; font-size: 0.88em; line-height: 1.4; }
+  .tldr { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px 18px; margin: 16px 0; border-radius: 4px; }
+  .before, .after { padding: 14px 18px; border-radius: 6px; margin: 8px 0; }
+  .before { background: #fef2f2; border-left: 4px solid #dc2626; }
+  .after  { background: #ecfdf5; border-left: 4px solid #16a34a; }
+  .before strong, .after strong { display: inline-block; min-width: 70px; }
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 16px 0; }
+  .compare > div { padding: 16px; border-radius: 6px; }
+  .compare > .col-before { background: #fef2f2; border: 1px solid #fecaca; }
+  .compare > .col-after  { background: #ecfdf5; border: 1px solid #bbf7d0; }
+  .compare h4 { margin-top: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 0.94em; }
+  th, td { border: 1px solid #d1d5db; padding: 9px 12px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; font-weight: 600; }
+  tr:nth-child(even) { background: #fafbfc; }
+  .arch-box { border: 2px solid #2563eb; border-radius: 8px; padding: 14px 18px; margin: 10px 0; background: #f8fafc; font-family: "Cascadia Code", monospace; font-size: 0.85em; line-height: 1.6; white-space: pre; overflow-x: auto; }
+  .arch-old { border-color: #94a3b8; background: #f8fafc; }
+  .arch-new { border-color: #16a34a; background: #f0fdf4; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.78em; font-weight: 600; vertical-align: middle; }
+  .tag-new { background: #dbeafe; color: #1e40af; }
+  .tag-changed { background: #fef3c7; color: #92400e; }
+  .tag-removed { background: #fee2e2; color: #991b1b; }
+  .scenario { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 12px 16px; margin: 12px 0; }
+  .scenario .title { font-weight: 600; color: #1e3a8a; margin-bottom: 6px; }
+  ul.tight li { margin: 3px 0; }
+  .key { font-weight: 600; color: #1e40af; }
+  .meh { color: #6b7280; }
+  details { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px 14px; margin: 10px 0; }
+  details summary { cursor: pointer; font-weight: 600; color: #1e40af; padding: 4px 0; }
+  details[open] summary { border-bottom: 1px solid #ddd; padding-bottom: 8px; margin-bottom: 8px; }
+  .verdict { padding: 18px 22px; border-radius: 8px; margin: 22px 0; font-size: 1.05em; }
+  .verdict-good { background: #ecfdf5; border: 2px solid #16a34a; }
+  .verdict-mixed { background: #fef3c7; border: 2px solid #f59e0b; }
+</style>
+</head>
+<body>
+
+<h1>harness-kit v0.11.0 改动详解</h1>
+
+<div class="tldr">
+<strong>一句话：</strong> v0.11 在不引入新代码的前提下，从 <code>lsdefine/GenericAgent</code> 借了三种<strong>纪律</strong>：把"一刀切的 7-stage"拆成 4 种适配不同任务形态的模式；让 QA 必须像对手一样独立找反例而不是顺着 Dev 的测试读；引入 ≤30 行的跨任务记忆文件解决"每次任务都重学一遍"。<br>
+<strong>人工负担：</strong> 几乎为零，反而少了 ——AI 现在能根据你的自然语言自动挑模式，不用你记 skill 名。
+</div>
+
+<h2>1. v0.10 → v0.11 的整体架构对比</h2>
+
+<h3>v0.10（改动前）</h3>
+<div class="arch-box arch-old">
+你提需求 → /harness（PM Orchestrator）→ 7 个 agent 顺序跑（PM 派活）
+
+  1. Requirement Analyst → 01_REQUIREMENT_ANALYSIS.md
+  2. Solution Architect  → 02_SOLUTION_DESIGN.md
+  3. Gate Reviewer       → 03_GATE_REVIEW.md（通过才往下）
+  4. Developer (or 分区) → 04_DEVELOPMENT.md
+  5. Code Reviewer       → 05_CODE_REVIEW.md
+  6. QA Tester           → 06_TEST_REPORT.md（顺着 Dev 的测试读）
+  7. → 07_DELIVERY.md + verify_all PASS
+
+跨任务记忆：无（每次从零开始）
+</div>
+
+<h3>v0.11（改动后）</h3>
+<div class="arch-box arch-new">
+你提需求 → AI 看你说的话挑模式 → 跑对应分支
+
+┌─ /harness          ── 完整 7-stage（同 v0.10）   <span class="tag tag-changed">QA 阶段升级</span>
+├─ /harness-plan     ── 只跑 1-3（RA→SA→GR）       <span class="tag tag-new">新增</span>
+├─ /harness-explore  ── 只跑轻量 1（RA + findings） <span class="tag tag-new">新增</span>
+└─ /harness-goal     ── Dev+QA 循环 + 预算          <span class="tag tag-new">新增</span>
+
+每条任务开始前 AI 读 .harness/insight-index.md（≤30 行跨任务事实）
+每条任务结束后 AI 写 ## Insight 段（如果有），归档脚本自动整理
+</div>
+
+<div class="verdict verdict-good">
+<strong>本质差别：</strong> v0.10 是"一条河流，所有水都得走"。v0.11 是"四条岔路 + 一个共享水库（insight）"——按任务形态走对应那条；常识用水库浇灌不用每条河重打一遍。
+</div>
+
+<h2>2. 改动 A：三个执行模式（Plan / Explore / Goal）</h2>
+
+<h3>2.1 为什么需要</h3>
+
+<p>v0.10 只有一条 7-stage 流水线。但现实开发里很多任务<strong>不适合走完整流程</strong>：</p>
+
+<table>
+<thead><tr><th>真实场景</th><th>v0.10 跑完整 7-stage 的问题</th><th>v0.11 用什么模式</th></tr></thead>
+<tbody>
+<tr><td>"想确认这库的 API 限流能不能扛住我们的量"</td><td>仪式过重：写 RA + 评审 + 设计 + 写代码 + 测试 = 浪费 80% 时间</td><td><code>/harness-explore</code></td></tr>
+<tr><td>"我有 3 个架构方案想让你评审一下，先不动手"</td><td>v0.10 没有"只评审不动手"模式；Dev 阶段会强行写代码</td><td><code>/harness-plan</code></td></tr>
+<tr><td>"持续重构这个模块直到 verify_all 全绿"</td><td>v0.10 把它当一次性任务，跑完一轮就结束；不会循环</td><td><code>/harness-goal</code></td></tr>
+<tr><td>"在订单页加一个 CSV 导出按钮"</td><td>v0.10 走完整流程，正合适</td><td><code>/harness</code>（不变）</td></tr>
+</tbody>
+</table>
+
+<h3>2.2 四个模式各跑哪几个阶段</h3>
+
+<div class="arch-box">
+                    RA   SA   GR   Dev  CR   QA   交付
+                    ↓    ↓    ↓    ↓    ↓    ↓    ↓
+完整 /harness        ✅   ✅   ✅   ✅   ✅   ✅   ✅    100% 工作量
+/harness-plan        ✅   ✅   ✅   ❌   ❌   ❌   📝    ~35%
+/harness-explore     轻量 ❌   ❌   ❌   ❌   ❌   📄    ~15%
+/harness-goal        ❌   ❌   ❌   循环 ❌   最终  ✅    按预算定
+</div>
+
+<h3>2.3 决策树（AI 会按你说的话自动挑）</h3>
+
+<div class="arch-box">
+你的话听起来是 ──→
+├─ "改个 typo / 加个注释"          → 直接编辑 + verify_all（不进流程）
+├─ "能不能 ..." "这库支持吗" "可行不"  → /harness-explore
+├─ "评审下这个设计" "先别动手"      → /harness-plan
+├─ "持续优化直到 X" "重构到绿"      → /harness-goal
+└─ 其他正经任务                    → /harness（完整 7-stage）
+</div>
+
+<details>
+<summary>📋 具体到三个模式的契约</summary>
+
+<h4><code>/harness-plan</code> — 只跑设计</h4>
+<ul class="tight">
+<li><strong>输入：</strong>一个 idea 或需求描述</li>
+<li><strong>输出：</strong>01_REQUIREMENT_ANALYSIS.md + 02_SOLUTION_DESIGN.md + 03_GATE_REVIEW.md（带判决：APPROVED / CHANGES REQUIRED / REJECTED）</li>
+<li><strong>不做：</strong>不写代码，不跑测试</li>
+<li><strong>可恢复：</strong>判决 APPROVED 后，跑 <code>/harness</code> 同一个 task slug 会跳过 1-3 直接从 Dev 开始</li>
+</ul>
+
+<h4><code>/harness-explore</code> — 调研</h4>
+<ul class="tight">
+<li><strong>输入：</strong>一个问题（"能不能..."）</li>
+<li><strong>输出：</strong>轻量 01_REQUIREMENT_ANALYSIS.md（1 页）+ <code>findings.md</code>（带 source 引用 + 推荐 next step）</li>
+<li><strong>不做：</strong>不做架构设计，不写实现代码</li>
+<li><strong>可能产出：</strong>如果调研发现非显然的事实，AI 会建议你加进 insight-index</li>
+</ul>
+
+<h4><code>/harness-goal</code> — 目标循环</h4>
+<ul class="tight">
+<li><strong>输入：</strong>① 一句话目标（"覆盖率到 80%"）② 可量化判据（"<code>pytest --cov</code> 输出 >= 80"）③ 预算（max iterations 或 max minutes）</li>
+<li><strong>循环逻辑：</strong>Dev 改一轮 → verify_all 跑 → 量目标判据 → 没到再改一轮（最多 N 轮或 M 分钟）</li>
+<li><strong>每轮的 context 控制：</strong>Dev 只看最近 3 轮历史（不让 context 滚雪球）</li>
+<li><strong>结束时：</strong>QA 跑一次最终验证（强制对抗性测试，见改动 B）</li>
+<li><strong>verdict：</strong><code>GOAL ACHIEVED</code> 或 <code>BUDGET EXHAUSTED</code>，永不偷偷加预算</li>
+</ul>
+
+</details>
+
+<h3>2.4 好处对比</h3>
+
+<table>
+<thead><tr><th>任务</th><th>v0.10 跑完整流程要多久</th><th>v0.11 用对应模式</th><th>节省</th></tr></thead>
+<tbody>
+<tr><td>调研一个库</td><td>~30 分钟（7 stage 都走）</td><td>~5 分钟（explore）</td><td><strong>83%</strong></td></tr>
+<tr><td>架构评审</td><td>~20 分钟（强制走到 QA）</td><td>~8 分钟（plan）</td><td><strong>60%</strong></td></tr>
+<tr><td>"重构到绿"</td><td>~跑一次 7-stage 后结束，绿了再跑一次</td><td>循环到底，一次性</td><td>体验质变</td></tr>
+<tr><td>真实功能</td><td>~30 分钟</td><td>~30 分钟（不变）</td><td>0%（正确）</td></tr>
+</tbody>
+</table>
+
+<h2>3. 改动 B：对抗性验证（最高 ROI 的改动）</h2>
+
+<h3>3.1 v0.10 QA 阶段的问题</h3>
+
+<div class="before">
+<strong>问题：</strong> v0.10 的 QA Tester 是从 <code>04_DEVELOPMENT.md</code> 出发 ——读 Dev 写的测试代码、看 Dev 的报告、确认测试通过。<br><br>
+<strong>这导致：</strong> QA 继承了 Developer 的<strong>认知偏差</strong>。如果 Developer 写测试时假设了某个 mock 行为是对的（但其实是错的），QA 用同样的 mock 跑出来"通过"——bug 会过 QA 流出到生产。
+</div>
+
+<div class="after">
+<strong>真实例子：</strong> 开发者写 <code>save(file)</code>，写测试 <code>expect(save('a.txt')).toBe(true)</code>。这测试在 mock 文件系统下通过。但实际生产是 Windows，<code>save</code> 用了 <code>/</code> 路径分隔符 ——bug。QA 顺着读 Dev 的测试，看到"绿了"，放行。<strong>这就是共享假设杀人。</strong>
+</div>
+
+<h3>3.2 v0.11 怎么改</h3>
+
+<p>借鉴 GenericAgent 的 <code>verify_sop.md</code> 三铁律，把"对抗性"刻进 <code>.harness/agents/qa-tester.md</code> 的契约：</p>
+
+<table>
+<thead><tr><th>铁律</th><th>含义</th></tr></thead>
+<tbody>
+<tr><td><strong>无 tool evidence = 无主张</strong></td><td>"看 diff 觉得对"不算验证。必须真跑代码，截 tool 输出贴到报告里。没跑过 = 没验证过。</td></tr>
+<tr><td><strong>独立 reproducer，不依赖 Dev 的测试</strong></td><td>QA <strong>不能</strong>读 Dev 的测试代码后跑同样的东西。必须从 acceptance criterion 出发，<strong>自己写</strong>新的 reproducer。Dev 的测试只在 QA 自己的 reproducer 跑通后才被信任。</td></tr>
+<tr><td><strong>每条 AC 一个失败假设</strong></td><td>跑测试前，QA 必须先写："我预期这个会在 X 情况下挂掉，因为 &lt;假设&gt;。" 然后跑。挂了 → 加深理解 + 报 defect；没挂 → 写下你试过怎么破它、为什么破不掉。这强制对抗思维，不只是确认偏差。</td></tr>
+</tbody>
+</table>
+
+<h3>3.3 06_TEST_REPORT.md 现在长什么样</h3>
+
+<div class="compare">
+<div class="col-before">
+<h4>v0.10（旧）</h4>
+<pre># Test Report
+## Test plan
+| AC | 测试 | 文件 |
+| AC-1 user 能存档 | it('saves to disk') | tests/save.test.ts |
+
+## verify_all 结果
+Pass: 47 / Fail: 0
+
+## Defects 发现
+（无）
+
+## Verdict
+APPROVED FOR DELIVERY</pre>
+<p class="meh">问题：没看到 QA 自己测了什么，只看到 Dev 的测试通过了。</p>
+</div>
+<div class="col-after">
+<h4>v0.11（新，REQUIRED 段加粗）</h4>
+<pre># Test Report
+## Test plan
+| AC | 测试 | 文件 |
+| AC-1 user 能存档 | it('saves to disk') | tests/save.test.ts |
+
+<strong>## Adversarial tests (REQUIRED)</strong>
+| AC | 假设 | Reproducer | Outcome |
+| AC-1 | 并发同名 save 会丢数据 | node tests/save-race.js（我写的）| 撑住了，输出：... |
+| AC-2 | 输入 NUL 字节会崩 | pytest tests/test_nul.py（我写的）| **失败**，报 BLOCKER |
+
+## verify_all 结果
+Pass: 47 / Fail: 1 (新加的 NUL test)
+
+## Defects 发现
+[BLOCKER] save() 不处理 NUL 字节，崩在 fs.writeSync
+
+## Verdict
+CHANGES REQUIRED (1 BLOCKER)</pre>
+<p class="key">关键：QA 写自己的测试找到了 Dev 没想到的 bug。</p>
+</div>
+</div>
+
+<h3>3.4 verify_all 怎么强制这件事</h3>
+
+<p>用户项目的 <code>scripts/verify_all.{ps1,sh}</code> 加了一条新 check：</p>
+
+<pre>// E.5 (fullstack) / D.5 (backend) — Adversarial tests section enforcement
+扫描 docs/features/**/06_TEST_REPORT.md
+对每个文件：grep -E '^##\s+Adversarial\s+tests'
+如果有一个缺这段 → verify_all FAIL，输出 "Test reports missing Adversarial tests section: ..."</pre>
+
+<p>这意味着：<strong>QA 想偷懒不写对抗性测试 → verify_all 拦截 → 任务无法"declare done"。</strong> contractually enforced，不靠人记。</p>
+
+<h2>4. 改动 C：Insight Index（跨任务记忆）</h2>
+
+<h3>4.1 问题</h3>
+
+<div class="before">
+<strong>v0.10 没有跨任务记忆。</strong> 每次新任务，PM Orchestrator + agent 都得从零理解项目。如果项目踩过一些<strong>非显然的坑</strong>（比如"这个 SDK 对非法 key 返回 <code>null</code> 不抛异常"、"WSL 下超过 4 个 watcher 会 ENOSPC"），下一个任务遇到同样情况会<strong>重新踩一遍</strong>。<br><br>
+项目跑 50 个任务之后，<code>docs/features/</code> 下会有 50 × 7 = 350 个文档；想找"我们之前在哪个任务遇到过类似 bug"得手 grep；agent 不会主动去找。
+</div>
+
+<h3>4.2 v0.11 的解法（≤30 行的项目记忆文件）</h3>
+
+<div class="after">
+<strong>新文件：</strong> <code>.harness/insight-index.md</code> —— <strong>最多 30 行</strong> 的项目特有事实清单。每行一个事实 + 日期 + 证据指针。<br><br>
+<strong>新规则：</strong> <code>.harness/rules/05-insight-index.md</code> 定义契约 ——什么算 insight、什么时候读、什么时候写。<br><br>
+<strong>新脚本：</strong> <code>scripts/archive-task.{ps1,sh}</code> ——任务结束时自动从 07_DELIVERY.md 的 <code>## Insight</code> 段收割 insight，移老的、归档任务文档。
+</div>
+
+<h3>4.3 insight-index.md 实际长什么样</h3>
+
+<div class="arch-box"># Insight Index — harness-kit
+
+&gt; 跨任务踩坑事实。≤30 行。
+&gt; 设计/实现任务开始时读；只在证据支持的意外之后写。
+
+- 2026-05-16 · Edit tool occasionally reports SUCCESS without applying the change — re-Read or Grep to verify. · evidence: v0.9.1 verify_all whitelist edit (commit 336e029)
+- 2026-05-16 · 任何新 {{...}} placeholder 必须加进 verify_all.ps1 AND .sh D.2 白名单 · evidence: v0.9.1 SYNC_COMMAND 加入时
+- 2026-05-16 · sync-self 只同步 .harness/agents/ + 4 个脚本对，不同步 .harness/rules/ · evidence: v0.9.0 onward
+（最多 30 条，老的会被 archive-task 自动轮转走）
+</div>
+
+<p><strong>"Insight"</strong>的定义不是文档、不是 bug 报告、不是规则。是<strong>用证据击败合理先验的发现</strong>——"以为应该这样，结果不是；这里是证据。"</p>
+
+<h3>4.4 什么时候读、什么时候写</h3>
+
+<table>
+<thead><tr><th>时机</th><th>动作</th><th>谁做</th></tr></thead>
+<tbody>
+<tr><td>任务开始（设计/实现类）</td><td>读 insight-index.md（30 行很快），检查有没有命中条目</td><td>PM 或 Architect 或 Developer</td></tr>
+<tr><td>任务执行中遇到"意外"</td><td>在 07_DELIVERY.md 的 <code>## Insight</code> 段写一行（必须带 evidence）</td><td>Developer 或 QA</td></tr>
+<tr><td>任务完成时</td><td>跑 <code>scripts/archive-task --task &lt;slug&gt;</code> ——自动把 ## Insight 段追加到 insight-index.md + 归档任务文档</td><td>PM</td></tr>
+<tr><td>insight-index 超 30 行</td><td>archive-task 自动把最老的轮转到 <code>docs/features/_archived/insight-history.md</code></td><td>脚本自动</td></tr>
+</tbody>
+</table>
+
+<h3>4.5 写入纪律（防止污染）</h3>
+
+<p>05-insight-index.md 契约里写了 <strong>"对抗性写入测试"</strong>：</p>
+
+<pre>写之前问自己："一个有经验的人，新看代码库，能在 10 分钟内推导出这个吗？"
+能 → 别写。那不是 insight，是普通文档/约定。
+不能（必须踩过才知道）→ 写。</pre>
+
+<p>另外 4 类<strong>不能</strong>写进 insight-index：</p>
+<ul class="tight">
+<li>Bug 报告（那在 docs/tasks.md）</li>
+<li>规则/约定（那在 .harness/rules/）</li>
+<li>最佳实践主张（代码/规则文件的位置）</li>
+<li>任务总结（那在 docs/features/&lt;task&gt;/）</li>
+</ul>
+
+<h2>5. 改动后的整体架构图</h2>
+
+<div class="arch-box arch-new">
+┌─────────────────────────────────────────────────────────────────┐
+│  你提需求（自然语言）                                            │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │ AI 看你说什么挑模式
+                           ↓
+   ┌───────────────────────┼───────────────────────┐
+   ↓                       ↓                       ↓
+/harness-explore      /harness-plan           /harness            /harness-goal
+（调研）              （设计-only）           （完整 7-stage）     （目标循环）
+   │                       │                       │                       │
+   │   ┌──── 每个任务开始都读 ────┐                                        │
+   │   │  .harness/insight-index.md  │                                    │
+   │   │  （≤30 行，跨任务事实）   │                                       │
+   │   └────────────────────────────┘                                      │
+   │                       │                       │                       │
+   ↓                       ↓                       ↓                       ↓
+ RA(light)              RA→SA→GR              RA→SA→GR→Dev→CR→QA          Dev⇄QA 循环
+ + findings.md          + verdict             + 07_DELIVERY.md             + 最终对抗 QA
+   │                       │                       │                       │
+   └─────────┬─────────────┴───────────────────────┘                       │
+             │                                                              │
+             ↓                                                              │
+       任务结束 → scripts/archive-task                                       │
+       ├─ 收割 07_DELIVERY.md 的 ## Insight 段 → 追加 insight-index.md     │
+       ├─ 移 7 个阶段文档到 docs/features/_archived/&lt;task&gt;/                │
+       ├─ 若 insight-index 超 30 行 → 老的轮转到 insight-history.md       │
+       └─ 永不删除，只移动 + 追加                                           │
+                                                                            │
+QA 阶段 contractually enforced 三铁律 ────────────────────────────────────┘
+（必须有 ## Adversarial tests 段，verify_all FAIL on missing）
+</div>
+
+<h2>6. 好处量化</h2>
+
+<table>
+<thead><tr><th>维度</th><th>v0.10</th><th>v0.11</th><th>改进</th></tr></thead>
+<tbody>
+<tr><td>"调研一个库能不能用"任务耗时</td><td>~30 分钟（强制全流程）</td><td>~5 分钟（explore）</td><td><strong>↓ 83%</strong></td></tr>
+<tr><td>"评审一个设计"任务耗时</td><td>~20 分钟（强制写代码）</td><td>~8 分钟（plan）</td><td><strong>↓ 60%</strong></td></tr>
+<tr><td>"重构到 X 标准"任务支持</td><td>不支持，得手动循环跑</td><td>原生 /harness-goal + 预算 + 自动循环</td><td><strong>体验质变</strong></td></tr>
+<tr><td>QA 阶段 catch 假阴性 bug 的能力</td><td>低（顺着 Dev 测试读）</td><td>高（对抗性 reproducer + 假设驱动）</td><td><strong>核心价值放大</strong></td></tr>
+<tr><td>跨任务"重新踩坑"概率</td><td>每次都从零</td><td>启动时读 insight-index（30 行）</td><td><strong>50 任务后差异显著</strong></td></tr>
+<tr><td>已完成任务的文档量爆炸</td><td>50 任务 = 350 文件</td><td>archive 后老任务压缩 + 归档</td><td><strong>navigable</strong></td></tr>
+<tr><td>verify_all 强制度</td><td>没有 QA 对抗段 check</td><td>06_TEST_REPORT 必须有 ## Adversarial tests 段</td><td><strong>纪律 enforce</strong></td></tr>
+</tbody>
+</table>
+
+<h2>7. 人工负担分析（最重要）</h2>
+
+<div class="verdict verdict-good">
+<strong>结论：人工负担基本为零，反而可能减少。</strong>
+</div>
+
+<h3>7.1 你<strong>不需要</strong>做的事</h3>
+
+<ul class="tight">
+<li>❌ <strong>不用记 4 个 skill 名</strong> ——AI 看你自然语言提需求（"能不能..."、"先评审下..."、"持续优化..."）自动挑模式</li>
+<li>❌ <strong>不用手动跑 archive-task</strong> ——PM Orchestrator 在任务交付时自动跑</li>
+<li>❌ <strong>不用记得读 insight-index</strong> ——AI 按 AI-GUIDE.md 的契约自动在任务开始时读</li>
+<li>❌ <strong>不用记得写 ## Adversarial tests 段</strong> ——QA agent 的契约里写死了，verify_all 强制 enforce</li>
+<li>❌ <strong>不用判断 insight 该不该写</strong> ——AI 按 05-insight-index.md 的"对抗性写入测试"自检</li>
+</ul>
+
+<h3>7.2 你<strong>多了的事</strong>（可选，不强制）</h3>
+
+<table>
+<thead><tr><th>事项</th><th>频率</th><th>负担</th></tr></thead>
+<tbody>
+<tr><td>偶尔 review 一下 insight-index.md 的新条目，确认质量</td><td>~每月一次扫一眼</td><td>30 秒（30 行很快读完）</td></tr>
+<tr><td>如果 AI 误挑了模式（罕见），手动指定"用 /harness-plan"</td><td>项目初期偶尔，后期几乎不发生</td><td>打 4 个字</td></tr>
+<tr><td>归档老任务时 review 一下 _archived/ 看是否要永久删（非必须）</td><td>项目末期</td><td>自由心证</td></tr>
+</tbody>
+</table>
+
+<h3>7.3 你<strong>减少的事</strong></h3>
+
+<ul class="tight">
+<li>✅ 不用再为"调研类问题"忍受 30 分钟的完整 7-stage 仪式</li>
+<li>✅ 不用为"keep refactoring until..."类目标手动 loop 跑 N 次</li>
+<li>✅ 不用每次新任务重新告诉 AI 那些项目特有的坑（insight-index 替你记着）</li>
+<li>✅ 不用担心 QA 漏掉的边界 case ——对抗性契约强制 QA 自己找反例</li>
+</ul>
+
+<h2>8. 我会在什么时候直接体验到这些变化</h2>
+
+<div class="scenario">
+<div class="title">场景 1：你说"能不能用 SQLite 替代 Postgres？"</div>
+<strong>v0.10：</strong> AI 默认跑完整 7-stage——写 RA、做架构对比、Gate Review、写代码切换 driver、跑测试、提交。30 分钟后你才发现"其实我只想要一个评估"。<br>
+<strong>v0.11：</strong> AI 识别这是个调研问题，自动用 <code>/harness-explore</code>。5 分钟后你拿到 <code>findings.md</code>：现状分析 + SQLite 的限制 + 不推荐迁移的 3 条具体原因（带 evidence）+ 推荐 next step。
+</div>
+
+<div class="scenario">
+<div class="title">场景 2：你说"看看这个设计有没有问题，先别动手"</div>
+<strong>v0.10：</strong> AI 不理解"先别动手"，跑完整流程；你打断后 7-stage 已经走了一半，状态半残。<br>
+<strong>v0.11：</strong> AI 识别"先别动手"，用 <code>/harness-plan</code>，跑完 RA + SA + GR 三阶段，给你 03_GATE_REVIEW.md 的判决（APPROVED / CHANGES REQUIRED / REJECTED）。你看判决决定下一步——批准就跑 <code>/harness</code> 续上 Dev 阶段（已经存在的 01-03 不重写）。
+</div>
+
+<div class="scenario">
+<div class="title">场景 3：你说"持续重构到 verify_all 全绿"</div>
+<strong>v0.10：</strong> AI 跑一次 7-stage 后停止；你看 verify_all 还有 5 个 WARN，得手动说"再来一次"。每轮都浪费完整流程开销。<br>
+<strong>v0.11：</strong> AI 用 <code>/harness-goal</code>，预算 10 轮 / 60 分钟。每轮 Dev 改一点 → verify_all 跑 → 直到 5 → 4 → 3 → 0 → break out，写 GOAL ACHIEVED。每轮 Dev 只看最近 3 轮历史，不让 context 爆炸。
+</div>
+
+<div class="scenario">
+<div class="title">场景 4：QA 阶段 catch 到一个 v0.10 会漏掉的 bug</div>
+<strong>v0.10：</strong> Dev 写 <code>parseDate(s)</code>，写测试 <code>expect(parseDate('2026-01-01')).toEqual(...)</code>。绿了。QA 顺着读，绿了，放行。生产里 <code>parseDate('2026-1-1')</code>（无 leading zero）崩溃。<br>
+<strong>v0.11：</strong> QA 按对抗契约："AC 是'接受 ISO 日期'，我预期 <code>2026-1-1</code> 这种非严格 ISO 会让它崩。" 自己写 <code>tests/parse-loose.test.ts</code>，跑，挂了，报 BLOCKER。Dev 修复后再跑，绿。生产不挂。
+</div>
+
+<h2>9. 跟原项目（Harness Engineering）哲学的关系</h2>
+
+<table>
+<thead><tr><th>原项目（4 篇文章）核心主张</th><th>v0.11 怎么对应</th></tr></thead>
+<tbody>
+<tr><td>"少代码，多文档"</td><td>三个新模式纯 SKILL.md markdown，没新运行时；对抗验证靠 agent 契约 + verify_all 强制；insight-index 是 markdown 文件</td></tr>
+<tr><td>"真相源在仓库里、版本控制"</td><td>insight-index.md 是 git tracked，跨会话/跨工具一致</td></tr>
+<tr><td>"事后验证脚本不可妥协"</td><td>verify_all 加了对抗段 enforce check</td></tr>
+<tr><td>"不要让 AI 做架构决策，要让 Harness 做"</td><td>四个模式是 Harness 层的路由决策，不是 agent 自己拍脑袋</td></tr>
+<tr><td>"AI 注意力衰减"反模式</td><td>insight-index ≤30 行严格约束；goal mode 每轮只看 3 轮历史</td></tr>
+<tr><td>反模式："hooks 滥用"</td><td>archive-task 是显式命令脚本，不是后台 hook；contracts 靠 verify_all 静态检查而非动态 hook</td></tr>
+</tbody>
+</table>
+
+<h2>10. 落地的代码 / 文档增减总账</h2>
+
+<table>
+<thead><tr><th>类型</th><th>动作</th><th>影响</th></tr></thead>
+<tbody>
+<tr><td>新增 skill</td><td>+3（plan / explore / goal）</td><td>3 个 SKILL.md ~700 行 markdown</td></tr>
+<tr><td>删除 skill</td><td>-1（migrate，dead code）</td><td>-200 行</td></tr>
+<tr><td>新增脚本</td><td>+1 对（archive-task.{ps1,sh}）</td><td>~250 行 + 250 行（PS/Bash 对称）</td></tr>
+<tr><td>新增规则文件</td><td>+1（05-insight-index.md，en+zh+dogfood = 3 份）</td><td>~120 行 × 3</td></tr>
+<tr><td>新增数据文件</td><td>+1（insight-index.md，en+zh+dogfood = 3 份）</td><td>~10 行 × 3</td></tr>
+<tr><td>修改 qa-tester agent</td><td>+~50 行（对抗契约 + 报告模板）</td><td>核心改动</td></tr>
+<tr><td>修改 verify_all 模板</td><td>+~20 行（E.5 / D.5 check）</td><td>fullstack + backend 共 4 文件</td></tr>
+<tr><td>修改 README / CHANGELOG</td><td>+1 个 roadmap 行 + 完整 v0.11.0 段落</td><td>~150 行</td></tr>
+<tr><td><strong>净变化</strong></td><td colspan="2"><strong>+1217 / -217 行，35 个文件改动</strong></td></tr>
+</tbody>
+</table>
+
+<h2>11. 我已经替你跑的验证</h2>
+
+<table>
+<thead><tr><th>测试套件</th><th>结果</th><th>覆盖范围</th></tr></thead>
+<tbody>
+<tr><td>verify_all（本仓库自身）</td><td><strong>19/19 PASS</strong></td><td>仓库健康度，含新加的 5/7 skill 检查</td></tr>
+<tr><td>test-init（init 模板逻辑）</td><td><strong>116/116 PASS</strong></td><td>新模板 .tmpl 文件都正确，placeholder 都被替换</td></tr>
+<tr><td>test-real-project（真实项目集成）</td><td><strong>82/82 PASS</strong></td><td>todo-fullstack + todo-backend fixtures 上 overlay 成功</td></tr>
+<tr><td>pre-commit hook 自检</td><td>本次 commit 走了 hook，drift 检查通过</td><td>v0.9.2 的兜底机制仍然有效</td></tr>
+</tbody>
+</table>
+
+<h2>12. 还没做的事 / 待你确认</h2>
+
+<ul class="tight">
+<li><strong>三个新 mode skill 还没真实跑过</strong>——它们是 SKILL.md 契约，PM Orchestrator 按它派活。下次你说"能不能..."或"先评审..."，AI 会用它们。如果发现 PM Orchestrator 不识别，告诉我，我加 trigger 关键词。</li>
+<li><strong>对抗性验证 check 只在用户项目模板里强制</strong>——本仓库 dogfood verify_all 没加（因为本仓库没有 <code>docs/features/</code> 实际任务）。等本仓库自己用 7-stage 跑一个真实任务时，per-project verify_all template 的 E.5 会启用。</li>
+<li><strong>insight-index 写入质量靠 AI 守</strong>——05-insight-index.md 契约里有"对抗性写入测试"自检，但没有自动 enforce。等用了 50 个任务后 review 一下，如果发现条目质量下降，加一个 verify_all check（比如行长限制、必须有 evidence 标记）。</li>
+<li><strong>下一步路线图</strong>：v0.12 计划 AI 原生 init（不用预设 fullstack/backend 选项，AI 读项目描述生成自定义 overlay）；GA 的 supervisor + 介入文件协议如果有价值，下下一步再做。</li>
+</ul>
+
+<h2>13. 一句话总结</h2>
+
+<div class="verdict verdict-good">
+<strong>v0.11 让 harness-kit 从"一个 7-stage 流水线工具"升级成"<strong>四种任务形态各有合适流程</strong>的工程化框架"，同时把 QA 阶段从"顺着 Dev 测试读"升级到"独立找反例"，并加了≤30 行的项目记忆让长期项目不再重复踩坑。</strong>
+
+<br><br>
+人工只需要继续用自然语言提需求，其他 AI 自己挑模式、自己读记忆、自己写对抗测试、自己归档。<strong>负担不增反减，价值密度升高。</strong>
+</div>
+
+</body>
+</html>
