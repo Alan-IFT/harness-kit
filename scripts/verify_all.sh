@@ -205,6 +205,72 @@ for s in harness harness-init harness-adopt harness-verify harness-status harnes
 done
 [[ -z "$miss_c" ]] && step "G.2" "CHANGELOG references all 9 skills" "PASS" || step "G.2" "CHANGELOG references all 9 skills" "FAIL" "missing:$miss_c"
 
+# --- I. Document size caps (v0.14+, WARN-only; see .harness/rules/70-doc-size.md) ---
+
+# I.1 — AI-GUIDE.md ≤200 lines
+if [[ -f AI-GUIDE.md ]]; then
+    n=$(wc -l < AI-GUIDE.md)
+    if (( n > 200 )); then
+        step "I.1" "AI-GUIDE.md ≤200 lines" "WARN" "$n lines (cap 200) — see .harness/rules/70-doc-size.md"
+    else
+        step "I.1" "AI-GUIDE.md ≤200 lines" "PASS"
+    fi
+else
+    step "I.1" "AI-GUIDE.md ≤200 lines" "PASS"
+fi
+
+# I.2 — Each .harness/rules/*.md ≤200 lines
+i2_over=""
+if [[ -d .harness/rules ]]; then
+    while IFS= read -r f; do
+        n=$(wc -l < "$f")
+        (( n > 200 )) && i2_over="$i2_over $f:${n}L"
+    done < <(find .harness/rules -maxdepth 1 -name '*.md' -type f)
+fi
+if [[ -n "$i2_over" ]]; then
+    step "I.2" "Rule fragments ≤200 lines each" "WARN" "over cap:$i2_over"
+else
+    step "I.2" "Rule fragments ≤200 lines each" "PASS"
+fi
+
+# I.3 — Each .harness/agents/*.md ≤300 lines
+i3_over=""
+if [[ -d .harness/agents ]]; then
+    while IFS= read -r f; do
+        n=$(wc -l < "$f")
+        (( n > 300 )) && i3_over="$i3_over $f:${n}L"
+    done < <(find .harness/agents -maxdepth 1 -name '*.md' -type f)
+fi
+if [[ -n "$i3_over" ]]; then
+    step "I.3" "Agent definitions ≤300 lines each" "WARN" "over cap:$i3_over"
+else
+    step "I.3" "Agent definitions ≤300 lines each" "PASS"
+fi
+
+# I.4 — insight-index ≤30 lines (defense-in-depth; archive-task normally rotates)
+if [[ -f .harness/insight-index.md ]]; then
+    n=$(wc -l < .harness/insight-index.md)
+    if (( n > 30 )); then
+        step "I.4" "insight-index.md ≤30 lines" "WARN" "$n lines — archive-task auto-rotates; manual overflow"
+    else
+        step "I.4" "insight-index.md ≤30 lines" "PASS"
+    fi
+else
+    step "I.4" "insight-index.md ≤30 lines" "PASS"
+fi
+
+# I.5 — docs/tasks.md ≤300 lines
+if [[ -f docs/tasks.md ]]; then
+    n=$(wc -l < docs/tasks.md)
+    if (( n > 300 )); then
+        step "I.5" "docs/tasks.md ≤300 lines" "WARN" "$n lines — rotate oldest Completed rows to docs/tasks-archive.md"
+    else
+        step "I.5" "docs/tasks.md ≤300 lines" "PASS"
+    fi
+else
+    step "I.5" "docs/tasks.md ≤300 lines" "PASS"
+fi
+
 # Summary
 echo ""
 echo "=== Summary ==="

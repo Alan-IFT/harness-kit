@@ -229,6 +229,65 @@ Step "G.2" "CHANGELOG mentions all 9 skills" {
     }
 }
 
+# I. Document size caps (v0.14+, WARN-only; see .harness/rules/70-doc-size.md)
+Step "I.1" "AI-GUIDE.md <=200 lines" {
+    if (-not (Test-Path "AI-GUIDE.md")) { return }
+    $n = (Get-Content "AI-GUIDE.md" | Measure-Object -Line).Lines
+    if ($n -gt 200) {
+        Write-Host "" -NoNewline
+        Write-Host " ($n lines, cap 200 — see .harness/rules/70-doc-size.md)" -ForegroundColor Yellow -NoNewline
+        return $false
+    }
+}
+
+Step "I.2" "Rule fragments <=200 lines each" {
+    if (-not (Test-Path ".harness/rules")) { return }
+    $over = @()
+    Get-ChildItem -Path ".harness/rules" -Filter "*.md" -File | ForEach-Object {
+        $n = (Get-Content $_.FullName | Measure-Object -Line).Lines
+        if ($n -gt 200) { $over += "$($_.Name):${n}L" }
+    }
+    if ($over.Count -gt 0) {
+        Write-Host "" -NoNewline
+        Write-Host " (over cap: $($over -join ', '))" -ForegroundColor Yellow -NoNewline
+        return $false
+    }
+}
+
+Step "I.3" "Agent definitions <=300 lines each" {
+    if (-not (Test-Path ".harness/agents")) { return }
+    $over = @()
+    Get-ChildItem -Path ".harness/agents" -Filter "*.md" -File | ForEach-Object {
+        $n = (Get-Content $_.FullName | Measure-Object -Line).Lines
+        if ($n -gt 300) { $over += "$($_.Name):${n}L" }
+    }
+    if ($over.Count -gt 0) {
+        Write-Host "" -NoNewline
+        Write-Host " (over cap: $($over -join ', '))" -ForegroundColor Yellow -NoNewline
+        return $false
+    }
+}
+
+Step "I.4" "insight-index.md <=30 lines" {
+    if (-not (Test-Path ".harness/insight-index.md")) { return }
+    $n = (Get-Content ".harness/insight-index.md" | Measure-Object -Line).Lines
+    if ($n -gt 30) {
+        Write-Host "" -NoNewline
+        Write-Host " ($n lines — archive-task auto-rotates; manual overflow)" -ForegroundColor Yellow -NoNewline
+        return $false
+    }
+}
+
+Step "I.5" "docs/tasks.md <=300 lines" {
+    if (-not (Test-Path "docs/tasks.md")) { return }
+    $n = (Get-Content "docs/tasks.md" | Measure-Object -Line).Lines
+    if ($n -gt 300) {
+        Write-Host "" -NoNewline
+        Write-Host " ($n lines — rotate oldest Completed rows to docs/tasks-archive.md)" -ForegroundColor Yellow -NoNewline
+        return $false
+    }
+}
+
 # Summary
 Write-Host ""
 Write-Host "=== Summary ===" -ForegroundColor Cyan

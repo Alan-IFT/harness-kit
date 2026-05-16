@@ -113,6 +113,60 @@ else
     fi
 fi
 
+# --- F. Document size caps (v0.14+, WARN-only; see .harness/rules/70-doc-size.md) ---
+
+# F.1 — AI-GUIDE.md <=200 lines
+if [[ -f AI-GUIDE.md ]]; then
+    n=$(wc -l < AI-GUIDE.md)
+    if (( n > 200 )); then step "F.1" "AI-GUIDE.md <=200 lines" "WARN" "$n lines (cap 200)"; else step "F.1" "AI-GUIDE.md <=200 lines" "PASS"; fi
+else
+    step "F.1" "AI-GUIDE.md <=200 lines" "SKIP"
+fi
+
+# F.2 — Rule fragments <=200 lines each
+f2_over=""
+if [[ -d .harness/rules ]]; then
+    while IFS= read -r f; do
+        n=$(wc -l < "$f"); (( n > 200 )) && f2_over="$f2_over $f:${n}L"
+    done < <(find .harness/rules -maxdepth 1 -name '*.md' -type f)
+fi
+[[ -n "$f2_over" ]] && step "F.2" "Rule fragments <=200 lines each" "WARN" "over cap:$f2_over" || step "F.2" "Rule fragments <=200 lines each" "PASS"
+
+# F.3 — Agent definitions <=300 lines each
+f3_over=""
+if [[ -d .harness/agents ]]; then
+    while IFS= read -r f; do
+        n=$(wc -l < "$f"); (( n > 300 )) && f3_over="$f3_over $f:${n}L"
+    done < <(find .harness/agents -maxdepth 1 -name '*.md' -type f)
+fi
+[[ -n "$f3_over" ]] && step "F.3" "Agent definitions <=300 lines each" "WARN" "over cap:$f3_over" || step "F.3" "Agent definitions <=300 lines each" "PASS"
+
+# F.4 — insight-index <=30 lines
+if [[ -f .harness/insight-index.md ]]; then
+    n=$(wc -l < .harness/insight-index.md)
+    if (( n > 30 )); then step "F.4" "insight-index.md <=30 lines" "WARN" "$n lines — run scripts/archive-task to rotate"; else step "F.4" "insight-index.md <=30 lines" "PASS"; fi
+else
+    step "F.4" "insight-index.md <=30 lines" "SKIP"
+fi
+
+# F.5 — docs/tasks.md <=300 lines
+if [[ -f docs/tasks.md ]]; then
+    n=$(wc -l < docs/tasks.md)
+    if (( n > 300 )); then step "F.5" "docs/tasks.md <=300 lines" "WARN" "$n lines — rotate Completed rows to docs/tasks-archive.md"; else step "F.5" "docs/tasks.md <=300 lines" "PASS"; fi
+else
+    step "F.5" "docs/tasks.md <=300 lines" "SKIP"
+fi
+
+# F.6 — Active task docs <=500 lines each (excludes _archived/)
+f6_over=""
+if [[ -d docs/features ]]; then
+    while IFS= read -r f; do
+        case "$f" in *"/_archived/"*) continue ;; esac
+        n=$(wc -l < "$f"); (( n > 500 )) && f6_over="$f6_over $f:${n}L"
+    done < <(find docs/features -type f \( -name 'PM_LOG.md' -o -name '0[1-7]_*.md' \) 2>/dev/null)
+fi
+[[ -n "$f6_over" ]] && step "F.6" "Active task docs <=500 lines each" "WARN" "over cap:$f6_over (see rule 70: compact PM_LOG or reference don't paste)" || step "F.6" "Active task docs <=500 lines each" "PASS"
+
 # Summary
 echo ""
 echo "=== Summary ==="

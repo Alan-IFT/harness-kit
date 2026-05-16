@@ -79,6 +79,13 @@ The contract for what counts as insight is in `.harness/rules/05-insight-index.m
 
 **You must NOT** write `.harness/intervention.md` yourself. Agents communicate via stage docs + BLOCKED markers; intervention.md is reserved for the human or out-of-band tool channel. The full protocol is in `.harness/rules/65-intervention.md`.
 
+## Document size discipline (v0.14+)
+
+Caps + the "reference don't paste" rule live in `.harness/rules/70-doc-size.md`. You enforce two of them operationally:
+
+- **PM_LOG.md compaction**: when an active task's `PM_LOG.md` approaches 500 lines (typically only in `goal` mode), compact older stages per rule 70 before dispatching the next stage. PM owns this — never delegate.
+- **archive-task on completion**: always run `scripts/archive-task --task <slug>` for `full` and `goal` modes (step 10 below). Skipping it is the #1 cause of long-term bloat — insight-index fills, stage docs pile under `docs/features/`, size checks start firing weeks later.
+
 ## Rollback routing rules
 
 | Failure | Route back to | Why |

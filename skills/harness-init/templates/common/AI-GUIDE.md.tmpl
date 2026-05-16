@@ -22,6 +22,7 @@ This project uses the **Harness 7-agent pipeline**: PM Orchestrator → Requirem
 - **`.harness/rules/05-insight-index.md`** (**at the start of design/implementation tasks**): how cross-task hard-won truths are captured; check `.harness/insight-index.md` before deciding anything non-trivial
 - **`.harness/rules/50-{{PROJECT_TYPE}}.md`** (**when touching code**): project-type overlay, partitioning, stack conventions
 - **`.harness/rules/60-tool-handoff.md`** (**when switching Claude Code ↔ Copilot**): state lives in files, not chat memory
+- **`.harness/rules/70-doc-size.md`** (**when adding or reviewing long-lived docs, or when `verify_all` flags an `F.*` WARN**): soft caps on AI-GUIDE / rules / agents / insight-index / tasks.md / per-task docs; "reference don't paste" + PM_LOG compaction + always-archive discipline
 
 If you add a new fragment, append a line above with its filename, a 1-line description, and the trigger condition.
 

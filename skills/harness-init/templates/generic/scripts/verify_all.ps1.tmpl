@@ -147,6 +147,75 @@ Step "E.6" "Adversarial tests section present in completed task reports" {
     if ($bad.Count -gt 0) { throw "Test reports missing '## Adversarial tests' section:`n$($bad -join "`n")" }
 }
 
+# --- F. Document size caps (v0.14+, WARN-only; see .harness/rules/70-doc-size.md) ---
+Step "F.1" "AI-GUIDE.md <=200 lines" {
+    if (-not (Test-Path "AI-GUIDE.md")) { return "SKIP" }
+    $n = (Get-Content "AI-GUIDE.md" | Measure-Object -Line).Lines
+    if ($n -gt 200) {
+        Write-Host "" -NoNewline; Write-Host " ($n lines, cap 200)" -ForegroundColor Yellow -NoNewline
+        return $false
+    }
+}
+
+Step "F.2" "Rule fragments <=200 lines each" {
+    if (-not (Test-Path ".harness/rules")) { return "SKIP" }
+    $over = @()
+    Get-ChildItem -Path ".harness/rules" -Filter "*.md" -File | ForEach-Object {
+        $n = (Get-Content $_.FullName | Measure-Object -Line).Lines
+        if ($n -gt 200) { $over += "$($_.Name):${n}L" }
+    }
+    if ($over.Count -gt 0) {
+        Write-Host "" -NoNewline; Write-Host " (over cap: $($over -join ', '))" -ForegroundColor Yellow -NoNewline
+        return $false
+    }
+}
+
+Step "F.3" "Agent definitions <=300 lines each" {
+    if (-not (Test-Path ".harness/agents")) { return "SKIP" }
+    $over = @()
+    Get-ChildItem -Path ".harness/agents" -Filter "*.md" -File | ForEach-Object {
+        $n = (Get-Content $_.FullName | Measure-Object -Line).Lines
+        if ($n -gt 300) { $over += "$($_.Name):${n}L" }
+    }
+    if ($over.Count -gt 0) {
+        Write-Host "" -NoNewline; Write-Host " (over cap: $($over -join ', '))" -ForegroundColor Yellow -NoNewline
+        return $false
+    }
+}
+
+Step "F.4" "insight-index.md <=30 lines" {
+    if (-not (Test-Path ".harness/insight-index.md")) { return "SKIP" }
+    $n = (Get-Content ".harness/insight-index.md" | Measure-Object -Line).Lines
+    if ($n -gt 30) {
+        Write-Host "" -NoNewline; Write-Host " ($n lines — run scripts/archive-task to rotate)" -ForegroundColor Yellow -NoNewline
+        return $false
+    }
+}
+
+Step "F.5" "docs/tasks.md <=300 lines" {
+    if (-not (Test-Path "docs/tasks.md")) { return "SKIP" }
+    $n = (Get-Content "docs/tasks.md" | Measure-Object -Line).Lines
+    if ($n -gt 300) {
+        Write-Host "" -NoNewline; Write-Host " ($n lines — rotate Completed rows to docs/tasks-archive.md)" -ForegroundColor Yellow -NoNewline
+        return $false
+    }
+}
+
+Step "F.6" "Active task docs <=500 lines each" {
+    if (-not (Test-Path "docs/features")) { return "SKIP" }
+    $over = @()
+    Get-ChildItem -Path "docs/features" -Recurse -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.FullName -notmatch '[\\/]_archived[\\/]' -and ($_.Name -eq 'PM_LOG.md' -or $_.Name -match '^0[1-7]_.+\.md$') } |
+        ForEach-Object {
+            $n = (Get-Content $_.FullName | Measure-Object -Line).Lines
+            if ($n -gt 500) { $over += "$($_.FullName.Substring($root.Length + 1)):${n}L" }
+        }
+    if ($over.Count -gt 0) {
+        Write-Host "" -NoNewline; Write-Host " (over cap: $($over -join ', ') — see rule 70)" -ForegroundColor Yellow -NoNewline
+        return $false
+    }
+}
+
 # --- Summary ---
 Write-Host ""
 Write-Host "=== Summary ===" -ForegroundColor Cyan

@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-05-16
+
+### Added — Document size policy (long-term context-bloat guardrail)
+
+Long-running Harness projects accumulate per-task documents (stage docs, PM_LOG, insights, tasks ledger). Without explicit caps, those files grow until AI tools start burning context budget reading bloated context that doesn't earn its tokens. v0.14 ships the policy + the soft-enforcement layer.
+
+#### What's new
+
+- **`.harness/rules/70-doc-size.md`** — new rule fragment defining:
+  - **Numeric caps** for 8 document classes: `AI-GUIDE.md` (200), `CLAUDE.md` (50), `.harness/rules/*.md` (200 each), `.harness/agents/*.md` (300 each), `.harness/insight-index.md` (30), `docs/tasks.md` (300), per-task `PM_LOG.md` (500), per-task stage docs (`0[1-7]_*.md`, 500 each).
+  - **Process discipline**: "reference, don't paste" (cite `path:line` instead of pasting code blocks), `PM_LOG.md` compaction at the cap, `docs/tasks.md` Completed-row rotation, and the **#1 guardrail**: always run `scripts/archive-task --task <slug>` after every completed `full` / `goal` task.
+  - **Adversarial check** to ask before writing: "would a future AI reader need this in the next 10 min?"
+- **`scripts/verify_all` `I.1-I.5`** (this repo) and **`F.1-F.6`** (user-project templates: fullstack, backend, generic) — WARN-level size checks that flag overflow files with line counts, pointing at the cap and remediation step from rule 70. WARN not FAIL: soft guidance, no hard block, escalation possible in a later release.
+- **PM Orchestrator** (`.harness/agents/pm-orchestrator.md` + template) gained a `## Document size discipline (v0.14+)` section enforcing two operational rules: PM_LOG compaction at the cap, and unconditional archive-task on completion.
+
+#### Why these caps
+
+- AI tools reread always-on files (AI-GUIDE, rules, agents, tasks.md, insight-index) every task — bloat there multiplies across all tasks.
+- Per-task files (`PM_LOG`, stage docs) are bounded if archived; the policy makes archival explicit responsibility.
+- The "reference, don't paste" rule attacks the most common bloat vector in stage docs: agents pasting 16-line snippets when one `path:line` would do.
+
+#### Why WARN, not FAIL
+
+Hard FAIL would block all CI for a project that's accumulated 200+ tasks. Soft WARN gives signal without breaking. After dogfooding the cap for a few releases, individual checks can graduate to FAIL.
+
+### Changed
+
+- **`AI-GUIDE.md`** (dogfood + template) indexes `.harness/rules/70-doc-size.md` with its trigger condition.
+- **`scripts/verify_all.{ps1,sh}`** (this repo) — added I.1-I.5 size WARN block before Summary.
+- **`skills/harness-init/templates/{fullstack,backend,generic}/scripts/verify_all.{ps1,sh}.tmpl`** — all 6 user-project templates received the F.1-F.6 WARN block.
+
+### Synced
+
+- `scripts/sync-self.{ps1,sh}` carried the pm-orchestrator update from `templates/common/` to dogfood (byte-identical agents per E.1 gate).
+
+### Upgrade notes
+
+- Existing projects on v0.13 get the new rule + checks on next `git pull` of the plugin marketplace. No migration needed.
+- First `verify_all` run after upgrade may show new WARN lines for files you already exceeded — none break the build. Apply rule 70 to bring them under cap when convenient.
+- `.harness/rules/70-doc-size.md` is **not** auto-installed into existing projects (rules aren't synced post-init). Re-run `/harness-init` only for new projects; for existing projects, manually copy the rule file from the marketplace if you want size-policy reference in your project. The `F.*` checks in your project's `verify_all` work standalone — the rule file just explains them.
+
 ## [0.13.0] - 2026-05-16
 
 ### Added — Mid-task intervention protocol (`/harness-intervene`)
