@@ -89,12 +89,18 @@ function Test-Type {
     New-Item -ItemType Directory -Path $tmp -Force | Out-Null
 
     try {
+        $syncCmd = if ($IsWindows -or $env:OS -eq "Windows_NT") {
+            "pwsh -File scripts/harness-sync.ps1"
+        } else {
+            "bash scripts/harness-sync.sh"
+        }
         $vars = @{
             "PROJECT_NAME" = "test-project"
             "PROJECT_TYPE" = $ProjectType
             "STACK"        = $Stack
             "TODAY"        = $today
             "ENABLE_HOOK"  = "false"
+            "SYNC_COMMAND" = $syncCmd
         }
 
         # 1) copy templates (common, then overlay)

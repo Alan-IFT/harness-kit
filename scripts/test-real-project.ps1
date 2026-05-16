@@ -106,6 +106,7 @@ function Test-Fixture {
             "STACK"        = $Stack
             "TODAY"        = $today
             "ENABLE_HOOK"  = "false"
+            "SYNC_COMMAND" = if ($IsWindows -or $env:OS -eq "Windows_NT") { "pwsh -File scripts/harness-sync.ps1" } else { "bash scripts/harness-sync.sh" }
         }
         Copy-TemplateLayer -Source (Join-Path $templateRoot "common") -Target $tmp -Vars $vars
         Copy-TemplateLayer -Source (Join-Path $templateRoot $ProjectType) -Target $tmp -Vars $vars

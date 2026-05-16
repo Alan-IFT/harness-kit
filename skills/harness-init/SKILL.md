@@ -127,6 +127,7 @@ Replace these placeholders in any `.tmpl` file:
 | `{{ENABLE_HOOK}}` | `true` or `false` from Q3 |
 | `{{PARTITIONED}}` | `true` or `false` from Q4 (default `false` if Q4 was skipped) |
 | `{{LANG}}` | `en` (default) or `zh` from Q5 |
+| `{{SYNC_COMMAND}}` | OS-detected harness-sync invocation for the Stop hook. **Windows** → `pwsh -File scripts/harness-sync.ps1`. **macOS / Linux** → `bash scripts/harness-sync.sh`. Detect via `$IsWindows` (PowerShell) or `[[ "$OSTYPE" == "msys"* \|\| "$OSTYPE" == "cygwin"* \|\| "$OSTYPE" == "win32" ]]` (bash). Used only in `.claude/settings.json`. |
 
 ### 6. Run the initial binding sync
 

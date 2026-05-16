@@ -34,6 +34,11 @@ assert() {
     fi
 }
 
+case "${OSTYPE:-}" in
+    msys*|cygwin*|win32) SYNC_COMMAND="pwsh -File scripts/harness-sync.ps1" ;;
+    *) SYNC_COMMAND="bash scripts/harness-sync.sh" ;;
+esac
+
 substitute() {
     local file="$1" project_name="$2" project_type="$3" stack="$4"
     local tmp; tmp=$(mktemp)
@@ -43,6 +48,7 @@ substitute() {
         -e "s|{{STACK}}|$stack|g" \
         -e "s|{{TODAY}}|$today|g" \
         -e "s|{{ENABLE_HOOK}}|false|g" \
+        -e "s|{{SYNC_COMMAND}}|$SYNC_COMMAND|g" \
         "$file" > "$tmp"
     mv "$tmp" "$file"
 }

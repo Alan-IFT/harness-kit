@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-05-16
+
+### Fixed — OS-aware Stop hook command (no more manual edit on macOS/Linux)
+
+v0.9.0 shipped `templates/common/.claude/settings.json.tmpl` with a hardcoded `pwsh -File scripts/harness-sync.ps1` Stop-hook command and a comment telling non-Windows users to change it to `bash scripts/harness-sync.sh`. That's manual friction the init flow should eliminate.
+
+v0.9.1 introduces a new `{{SYNC_COMMAND}}` placeholder. At init time, the AI detects the OS and substitutes:
+
+- **Windows** → `pwsh -File scripts/harness-sync.ps1`
+- **macOS / Linux** → `bash scripts/harness-sync.sh`
+
+So the Stop hook just works after init, on any platform, no hand-edit required.
+
+### Changed
+
+- `skills/harness-init/templates/common/.claude/settings.json.tmpl` — `pwsh -File ...` replaced with `{{SYNC_COMMAND}}`; the doc comment now explains the substitution happened at init.
+- `skills/harness-init/SKILL.md` — `{{SYNC_COMMAND}}` added to the placeholder table with OS-detection logic (Windows vs Unix-like).
+- `scripts/verify_all.{ps1,sh}` — `{{SYNC_COMMAND}}` added to the placeholder whitelist so D.2 doesn't flag the new tag as unknown.
+- `scripts/test-init.{ps1,sh}` and `scripts/test-real-project.{ps1,sh}` — substitute `{{SYNC_COMMAND}}` per OS so the regression suites verify the new placeholder gets resolved correctly.
+
+### Tests
+
+- test-init: 108/108 PASS.
+- test-real-project: 78/78 PASS.
+- verify_all: 19/19 PASS.
+
 ## [0.9.0] - 2026-05-16
 
 ### Added — Auto-sync via Stop hook, "Other / Generic" project type
