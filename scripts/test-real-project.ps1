@@ -147,6 +147,7 @@ function Test-Fixture {
         Assert ".harness/rules/50-$ProjectType.md" { Test-Path (Join-Path $tmp ".harness/rules/50-$ProjectType.md") }
         Assert "CLAUDE.md (generated)" { Test-Path (Join-Path $tmp "CLAUDE.md") }
         Assert ".claude/settings.json (direct copy)" { Test-Path (Join-Path $tmp ".claude/settings.json") }
+        Assert ".github/copilot-instructions.md (Copilot binding)" { Test-Path (Join-Path $tmp ".github/copilot-instructions.md") }
 
         # 6) Binding consistency
         Assert "harness-sync --check is clean" {

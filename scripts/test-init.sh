@@ -123,6 +123,8 @@ test_type() {
     done
     assert ".claude/settings.json (direct binding artifact)" "[[ -f '$tmp/.claude/settings.json' ]]"
     assert "CLAUDE.md (generated)" "[[ -f '$tmp/CLAUDE.md' ]]"
+    assert ".github/copilot-instructions.md (Copilot binding, generated)" "[[ -f '$tmp/.github/copilot-instructions.md' ]]"
+    assert "copilot-instructions.md has applyTo frontmatter" "head -5 '$tmp/.github/copilot-instructions.md' | grep -q 'applyTo:'"
 
     # Content correctness
     assert "CLAUDE.md has generated marker" "grep -q 'THIS FILE IS GENERATED' '$tmp/CLAUDE.md'"

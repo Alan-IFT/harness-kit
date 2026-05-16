@@ -24,9 +24,11 @@ $ErrorActionPreference = "Stop"
 $scriptDir = $PSScriptRoot
 $projectRoot = Split-Path $scriptDir -Parent
 
-$harnessDir = Join-Path $projectRoot ".harness"
-$claudeDir  = Join-Path $projectRoot ".claude"
-$claudeMd   = Join-Path $projectRoot "CLAUDE.md"
+$harnessDir   = Join-Path $projectRoot ".harness"
+$claudeDir    = Join-Path $projectRoot ".claude"
+$claudeMd     = Join-Path $projectRoot "CLAUDE.md"
+$githubDir    = Join-Path $projectRoot ".github"
+$copilotInstr = Join-Path $githubDir "copilot-instructions.md"
 
 if (-not (Test-Path $harnessDir)) {
     Write-Error "No .harness/ found at $harnessDir. This project has not been Harness-bound. Run /harness-init or /harness-adopt first."
@@ -67,6 +69,45 @@ if ($composedClaudeMd) {
         if (-not $Check) {
             [System.IO.File]::WriteAllText($claudeMd, $composedClaudeMd)
             Write-Host "Created CLAUDE.md (from .harness/rules/)" -ForegroundColor Green
+        }
+    }
+}
+
+# ---------- Compose .github/copilot-instructions.md from .harness/rules/ ----------
+# Copilot uses different frontmatter (applyTo: "**") and a slightly different
+# generated-marker comment, but the body is the same composed rules. This lets
+# GitHub Copilot users in the same repo pick up project rules without any extra
+# setup. Agents and skills are NOT mirrored here — Copilot has its own format
+# (.agent.md, prompt files) that needs a separate binding (deferred to v0.8+).
+$composedCopilotInstr = $null
+if ($composedClaudeMd) {
+    $copilotHeader = @"
+---
+applyTo: "**"
+---
+<!-- THIS FILE IS GENERATED FROM .harness/rules/ — DO NOT EDIT DIRECTLY -->
+<!-- Edit .harness/rules/*.md and run scripts/harness-sync.ps1 -->
+
+"@
+    $bodies = (Get-ChildItem -Path $rulesDir -Filter "*.md" -File | Sort-Object Name) | ForEach-Object { (Get-Content $_.FullName -Raw).TrimEnd() }
+    $composedCopilotInstr = $copilotHeader + ($bodies -join "`n`n") + "`n"
+
+    if (Test-Path $copilotInstr) {
+        $current = Get-Content $copilotInstr -Raw
+        if ($current -ne $composedCopilotInstr) {
+            $drift += ".github/copilot-instructions.md (out of sync with .harness/rules/)"
+            if (-not $Check) {
+                if (-not (Test-Path $githubDir)) { New-Item -ItemType Directory -Path $githubDir -Force | Out-Null }
+                [System.IO.File]::WriteAllText($copilotInstr, $composedCopilotInstr)
+                Write-Host "Synced .github/copilot-instructions.md (from .harness/rules/)" -ForegroundColor Green
+            }
+        }
+    } else {
+        $drift += ".github/copilot-instructions.md (missing)"
+        if (-not $Check) {
+            if (-not (Test-Path $githubDir)) { New-Item -ItemType Directory -Path $githubDir -Force | Out-Null }
+            [System.IO.File]::WriteAllText($copilotInstr, $composedCopilotInstr)
+            Write-Host "Created .github/copilot-instructions.md (from .harness/rules/)" -ForegroundColor Green
         }
     }
 }

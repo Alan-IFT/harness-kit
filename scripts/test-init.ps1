@@ -151,6 +151,13 @@ function Test-Type {
         }
         Assert ".claude/settings.json (direct binding artifact)" { Test-Path (Join-Path $tmp ".claude/settings.json") }
         Assert "CLAUDE.md (generated)" { Test-Path (Join-Path $tmp "CLAUDE.md") }
+        Assert ".github/copilot-instructions.md (Copilot binding, generated)" {
+            Test-Path (Join-Path $tmp ".github/copilot-instructions.md")
+        }
+        Assert "copilot-instructions.md has applyTo frontmatter" {
+            $head = Get-Content (Join-Path $tmp ".github/copilot-instructions.md") -TotalCount 5
+            ($head -join "`n") -match 'applyTo:\s*"\*\*"'
+        }
 
         # === Content correctness ===
         Assert "CLAUDE.md has generated marker" {

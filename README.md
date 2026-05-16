@@ -14,9 +14,17 @@
 封装成 Claude Code 可直接调用的 Skills，让你能在任何全栈或后端项目里：
 
 - `/harness-init` — 给新项目从零生成 Harness 骨架 ✅
-- `/harness-adopt` — 给现有项目无侵入接入 Harness ✅ **v0.3 自动 apply**
+- `/harness-adopt` — 给现有项目无侵入接入 Harness ✅
 - `/harness-verify` — 跑总验证脚本（编译 + 测试 + 规则扫描 + 基线对比） ✅
 - `/harness-status` — 查看项目当前 Harness 健康度 ✅
+
+### 与 GitHub Copilot 共存（v0.7.1+）
+
+同一个项目里可以同时用 Claude Code 和 GitHub Copilot。`harness-sync` 从单一 `.harness/rules/` 同时生成两份 binding：
+- `CLAUDE.md`（Claude Code 读）
+- `.github/copilot-instructions.md`（Copilot 读）
+
+Output language 规则、项目规则、约定对两个工具都生效。但**7-Agent 流水线和 sub-agents 是 Claude Code 独有**（Copilot 不支持 sub-agent 派发），Copilot 用户拿到的是规则层面的指导。
 
 ### 两层模型（v0.2+）
 

@@ -147,6 +147,7 @@ test_fixture() {
     assert ".harness/rules/50-$project_type.md" "[[ -f '$tmp/.harness/rules/50-$project_type.md' ]]"
     assert "CLAUDE.md (generated)" "[[ -f '$tmp/CLAUDE.md' ]]"
     assert ".claude/settings.json (direct copy)" "[[ -f '$tmp/.claude/settings.json' ]]"
+    assert ".github/copilot-instructions.md (Copilot binding)" "[[ -f '$tmp/.github/copilot-instructions.md' ]]"
 
     # Binding consistency
     if bash "$tmp/scripts/harness-sync.sh" --check &>/dev/null; then

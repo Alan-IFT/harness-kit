@@ -18,6 +18,8 @@ project_root="$(cd "$script_dir/.." && pwd)"
 harness_dir="$project_root/.harness"
 claude_dir="$project_root/.claude"
 claude_md="$project_root/CLAUDE.md"
+github_dir="$project_root/.github"
+copilot_instr="$github_dir/copilot-instructions.md"
 
 if [[ ! -d "$harness_dir" ]]; then
     echo "Error: No .harness/ at $harness_dir. Run /harness-init or /harness-adopt first." >&2
@@ -55,23 +57,56 @@ if [[ -d "$rules_dir" ]]; then
             if ! cmp -s "$composed_tmp" "$claude_md"; then
                 drift+=("CLAUDE.md (out of sync with .harness/rules/)")
                 if [[ "$CHECK" == false ]]; then
-                    mv "$composed_tmp" "$claude_md"
+                    cp "$composed_tmp" "$claude_md"
                     echo "Synced CLAUDE.md (from .harness/rules/)"
-                else
-                    rm -f "$composed_tmp"
                 fi
-            else
-                rm -f "$composed_tmp"
             fi
         else
             drift+=("CLAUDE.md (missing)")
             if [[ "$CHECK" == false ]]; then
-                mv "$composed_tmp" "$claude_md"
+                cp "$composed_tmp" "$claude_md"
                 echo "Created CLAUDE.md (from .harness/rules/)"
-            else
-                rm -f "$composed_tmp"
             fi
         fi
+
+        # ---------- Compose .github/copilot-instructions.md from .harness/rules/ ----------
+        # Same composed rules with Copilot frontmatter, lets GitHub Copilot users
+        # in the same repo pick up project rules. Agents and skills are NOT mirrored
+        # here — Copilot has its own format (deferred to v0.8+).
+        copilot_tmp=$(mktemp)
+        {
+            echo "---"
+            echo "applyTo: \"**\""
+            echo "---"
+            echo "<!-- THIS FILE IS GENERATED FROM .harness/rules/ — DO NOT EDIT DIRECTLY -->"
+            echo "<!-- Edit .harness/rules/*.md and run scripts/harness-sync.sh -->"
+            echo ""
+            for f in "${sorted[@]}"; do
+                content=$(cat "$f")
+                content="${content%"${content##*[![:space:]]}"}"
+                echo "$content"
+                echo ""
+            done
+        } > "$copilot_tmp"
+
+        if [[ -f "$copilot_instr" ]]; then
+            if ! cmp -s "$copilot_tmp" "$copilot_instr"; then
+                drift+=(".github/copilot-instructions.md (out of sync with .harness/rules/)")
+                if [[ "$CHECK" == false ]]; then
+                    mkdir -p "$github_dir"
+                    cp "$copilot_tmp" "$copilot_instr"
+                    echo "Synced .github/copilot-instructions.md (from .harness/rules/)"
+                fi
+            fi
+        else
+            drift+=(".github/copilot-instructions.md (missing)")
+            if [[ "$CHECK" == false ]]; then
+                mkdir -p "$github_dir"
+                cp "$copilot_tmp" "$copilot_instr"
+                echo "Created .github/copilot-instructions.md (from .harness/rules/)"
+            fi
+        fi
+        rm -f "$composed_tmp" "$copilot_tmp"
     fi
 fi
 

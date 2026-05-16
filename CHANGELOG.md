@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-05-16
+
+### Added — GitHub Copilot co-existence (minimal binding)
+
+A user using **GitHub Copilot in the same repo as Claude Code** now gets project rules automatically. `harness-sync` (the binding layer) now emits two artifacts from a single `.harness/rules/` source:
+
+  - `CLAUDE.md`  (Claude Code reads at session start)
+  - `.github/copilot-instructions.md`  (Copilot reads as project-wide custom instructions)
+
+Both files share the same composed rules body; only the frontmatter differs (Copilot requires `applyTo: "**"` per its schema). The "Output language" policy from v0.7.0 therefore applies to both tools — pick zh in init, both Claude Code and Copilot output Chinese.
+
+### What this enables
+
+Same repo, two contributors:
+  - Alice uses Claude Code → reads CLAUDE.md + has access to 7-agent pipeline
+  - Bob uses VS Code + GitHub Copilot → reads .github/copilot-instructions.md (same rules)
+
+Both pick up the project's hard rules, conventions, and output-language policy.
+
+### What this does NOT enable (Phase 2 candidates)
+
+- **7-agent pipeline in Copilot**: Copilot has `.agent.md` + `handoffs` (different schema). The Claude Code sub-agents are not mirrored as Copilot custom agents in v0.7.1. Copilot users get rules-level guidance but no automatic 7-stage flow.
+- **Skills mirror**: `.claude/skills/` content is not yet mirrored to Copilot prompt files (`.prompt.md`).
+- **Agent role files**: `.harness/agents/*.md` stay Claude Code-specific in v0.7.1.
+
+These are well-defined future work, deferred until real user demand surfaces.
+
+### Tests
+
+- test-init: 104 → 108 assertions (+4: copilot-instructions.md presence + frontmatter for both fullstack/backend).
+- test-real-project: 76 → 78 (+2 similar).
+- verify_all: 19/19 still PASS.
+- harness-sync now also emits .github/copilot-instructions.md in this repo (dogfood).
+
+### Upgrading
+
+Existing v0.7.0 (or earlier) projects: just re-run `scripts/harness-sync.{ps1,sh}` after updating the script (or after re-installing harness-kit plugin). It auto-creates `.github/copilot-instructions.md` from existing `.harness/rules/`.
+
 ## [0.7.0] - 2026-05-16
 
 ### Added — Project-wide language policy (English / 中文)
