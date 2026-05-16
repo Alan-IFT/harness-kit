@@ -151,9 +151,10 @@ test_fixture() {
     done
     assert ".harness/rules/00-core.md" "[[ -f '$tmp/.harness/rules/00-core.md' ]]"
     assert ".harness/rules/50-$project_type.md" "[[ -f '$tmp/.harness/rules/50-$project_type.md' ]]"
-    assert "CLAUDE.md (generated)" "[[ -f '$tmp/CLAUDE.md' ]]"
+    assert "AI-GUIDE.md (v0.10 tool-agnostic entry)" "[[ -f '$tmp/AI-GUIDE.md' ]]"
+    assert "CLAUDE.md (v0.10 bootstrap stub)" "[[ -f '$tmp/CLAUDE.md' ]]"
     assert ".claude/settings.json (direct copy)" "[[ -f '$tmp/.claude/settings.json' ]]"
-    assert ".github/copilot-instructions.md (Copilot binding)" "[[ -f '$tmp/.github/copilot-instructions.md' ]]"
+    assert ".github/copilot-instructions.md (v0.10 bootstrap stub)" "[[ -f '$tmp/.github/copilot-instructions.md' ]]"
 
     # Binding consistency
     if bash "$tmp/scripts/harness-sync.sh" --check &>/dev/null; then
@@ -164,8 +165,9 @@ test_fixture() {
         ((fail++))
     fi
 
-    # Overlay marker
-    assert "CLAUDE.md mentions $project_type overlay" "grep -q '$project_type-specific rules' '$tmp/CLAUDE.md'"
+    # AI-GUIDE.md indexes the overlay; CLAUDE.md stub points to AI-GUIDE.md
+    assert "AI-GUIDE.md indexes 50-$project_type.md" "grep -q '50-$project_type.md' '$tmp/AI-GUIDE.md'"
+    assert "CLAUDE.md stub references AI-GUIDE.md" "grep -q 'AI-GUIDE.md' '$tmp/CLAUDE.md'"
 
     # Fixture source intact
     if [[ "$project_type" == "fullstack" ]]; then

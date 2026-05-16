@@ -1,126 +1,35 @@
-# harness-sync.ps1
-# Binding sync: .harness/ (tool-agnostic source of truth) → .claude/ + CLAUDE.md
+# harness-sync.ps1 — v0.10
+# Binding sync: .harness/ (tool-agnostic SOT) → .claude/ (Claude Code path requirement).
 #
-# This script is the v0.2 binding layer for Claude Code. Run it after editing
-# anything under .harness/ — verify_all enforces consistency, so a forgotten
-# sync becomes a FAIL.
+# v0.10 scope (much narrower than v0.9.x):
+#   .harness/agents/*.md   → .claude/agents/*.md   (byte-identical copy)
+#   .harness/skills/*/     → .claude/skills/*/     (byte-identical copy)
+#
+# Rules are NO LONGER composed into CLAUDE.md or .github/copilot-instructions.md.
+# Those are static stubs written once at init, pointing at AI-GUIDE.md.
+# AI-GUIDE.md indexes .harness/rules/ by reference; no regeneration needed.
 #
 # Usage:
 #   harness-sync.ps1                # do the sync
 #   harness-sync.ps1 -Check         # report drift only; exit 0 if in sync, 1 otherwise
-#
-# Sync rules:
-#   .harness/agents/*.md  → .claude/agents/*.md   (byte-identical copy)
-#   .harness/rules/*.md   → CLAUDE.md             (composed in filename order,
-#                                                   with a generated header)
-#   .harness/skills/*/    → .claude/skills/*/     (byte-identical copy; if present)
 
 [CmdletBinding()]
 param([switch]$Check)
 
 $ErrorActionPreference = "Stop"
 
-# Locate project root (parent of scripts/, where .harness/ lives)
 $scriptDir = $PSScriptRoot
 $projectRoot = Split-Path $scriptDir -Parent
 
-$harnessDir   = Join-Path $projectRoot ".harness"
-$claudeDir    = Join-Path $projectRoot ".claude"
-$claudeMd     = Join-Path $projectRoot "CLAUDE.md"
-$githubDir    = Join-Path $projectRoot ".github"
-$copilotInstr = Join-Path $githubDir "copilot-instructions.md"
+$harnessDir = Join-Path $projectRoot ".harness"
+$claudeDir  = Join-Path $projectRoot ".claude"
 
 if (-not (Test-Path $harnessDir)) {
-    Write-Error "No .harness/ found at $harnessDir. This project has not been Harness-bound. Run /harness-init or /harness-adopt first."
+    Write-Error "No .harness/ found at $harnessDir. Run /harness-init or /harness-adopt first."
     exit 1
 }
 
 $drift = @()
-
-# ---------- Compose CLAUDE.md from .harness/rules/ ----------
-$rulesDir = Join-Path $harnessDir "rules"
-$composedClaudeMd = $null
-
-if (Test-Path $rulesDir) {
-    $ruleFiles = Get-ChildItem -Path $rulesDir -Filter "*.md" -File | Sort-Object Name
-    if ($ruleFiles.Count -gt 0) {
-        $header = @"
-> ⚠️ **GENERATED FILE — DO NOT EDIT DIRECTLY**
->
-> Source of truth: ``.harness/rules/*.md`` (composed in filename order)
-> After editing the source, run ``scripts/harness-sync.ps1`` (or ``.sh``) to regenerate.
-> ``verify_all`` will FAIL if this file drifts from the source.
-
-<!-- generated marker: keep in sync with harness-sync output -->
-
-"@
-        $bodies = $ruleFiles | ForEach-Object { (Get-Content $_.FullName -Raw).TrimEnd() }
-        $composedClaudeMd = $header + ($bodies -join "`n`n") + "`n"
-    }
-}
-
-if ($composedClaudeMd) {
-    if (Test-Path $claudeMd) {
-        $current = Get-Content $claudeMd -Raw
-        if ($current -ne $composedClaudeMd) {
-            $drift += "CLAUDE.md (out of sync with .harness/rules/)"
-            if (-not $Check) {
-                [System.IO.File]::WriteAllText($claudeMd, $composedClaudeMd)
-                Write-Host "Synced CLAUDE.md (from .harness/rules/)" -ForegroundColor Green
-            }
-        }
-    } else {
-        $drift += "CLAUDE.md (missing)"
-        if (-not $Check) {
-            [System.IO.File]::WriteAllText($claudeMd, $composedClaudeMd)
-            Write-Host "Created CLAUDE.md (from .harness/rules/)" -ForegroundColor Green
-        }
-    }
-}
-
-# ---------- Compose .github/copilot-instructions.md from .harness/rules/ ----------
-# Copilot uses different frontmatter (applyTo: "**") and a slightly different
-# generated-marker comment, but the body is the same composed rules. This lets
-# GitHub Copilot users in the same repo pick up project rules without any extra
-# setup. Agents and skills are NOT mirrored here — Copilot has its own format
-# (.agent.md, prompt files) that needs a separate binding (deferred to v0.8+).
-$composedCopilotInstr = $null
-if ($composedClaudeMd) {
-    $copilotHeader = @"
----
-applyTo: "**"
----
-> ⚠️ **GENERATED FILE — DO NOT EDIT DIRECTLY**
->
-> Source of truth: ``.harness/rules/*.md`` (composed in filename order)
-> After editing the source, run ``scripts/harness-sync.ps1`` (or ``.sh``) to regenerate.
-> ``verify_all`` will FAIL if this file drifts from the source.
-
-<!-- generated marker: keep in sync with harness-sync output -->
-
-"@
-    $bodies = (Get-ChildItem -Path $rulesDir -Filter "*.md" -File | Sort-Object Name) | ForEach-Object { (Get-Content $_.FullName -Raw).TrimEnd() }
-    $composedCopilotInstr = $copilotHeader + ($bodies -join "`n`n") + "`n"
-
-    if (Test-Path $copilotInstr) {
-        $current = Get-Content $copilotInstr -Raw
-        if ($current -ne $composedCopilotInstr) {
-            $drift += ".github/copilot-instructions.md (out of sync with .harness/rules/)"
-            if (-not $Check) {
-                if (-not (Test-Path $githubDir)) { New-Item -ItemType Directory -Path $githubDir -Force | Out-Null }
-                [System.IO.File]::WriteAllText($copilotInstr, $composedCopilotInstr)
-                Write-Host "Synced .github/copilot-instructions.md (from .harness/rules/)" -ForegroundColor Green
-            }
-        }
-    } else {
-        $drift += ".github/copilot-instructions.md (missing)"
-        if (-not $Check) {
-            if (-not (Test-Path $githubDir)) { New-Item -ItemType Directory -Path $githubDir -Force | Out-Null }
-            [System.IO.File]::WriteAllText($copilotInstr, $composedCopilotInstr)
-            Write-Host "Created .github/copilot-instructions.md (from .harness/rules/)" -ForegroundColor Green
-        }
-    }
-}
 
 # ---------- Copy .harness/agents/ → .claude/agents/ ----------
 $harnessAgents = Join-Path $harnessDir "agents"
@@ -153,11 +62,10 @@ if (Test-Path $harnessAgents) {
         }
     }
 
-    # Orphans: files in .claude/agents/ not in .harness/agents/
     if (Test-Path $claudeAgents) {
         Get-ChildItem -Path $claudeAgents -Filter "*.md" -File | ForEach-Object {
             if (-not (Test-Path (Join-Path $harnessAgents $_.Name))) {
-                $drift += ".claude/agents/$($_.Name) (orphan — not in .harness/agents/)"
+                $drift += ".claude/agents/$($_.Name) (orphan - not in .harness/agents/)"
                 if (-not $Check) {
                     Remove-Item $_.FullName -Force
                     Write-Host "Removed orphan .claude/agents/$($_.Name)" -ForegroundColor Yellow
@@ -172,7 +80,6 @@ $harnessSkills = Join-Path $harnessDir "skills"
 $claudeSkills  = Join-Path $claudeDir  "skills"
 
 if (Test-Path $harnessSkills) {
-    # Mirror via directory hashing (simpler: just re-copy all files and detect drift)
     Get-ChildItem -Path $harnessSkills -Recurse -File | ForEach-Object {
         $rel = $_.FullName.Substring($harnessSkills.Length).TrimStart('\','/')
         $dst = Join-Path $claudeSkills $rel

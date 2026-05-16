@@ -146,9 +146,10 @@ function Test-Fixture {
         }
         Assert ".harness/rules/00-core.md" { Test-Path (Join-Path $tmp ".harness/rules/00-core.md") }
         Assert ".harness/rules/50-$ProjectType.md" { Test-Path (Join-Path $tmp ".harness/rules/50-$ProjectType.md") }
-        Assert "CLAUDE.md (generated)" { Test-Path (Join-Path $tmp "CLAUDE.md") }
+        Assert "AI-GUIDE.md (v0.10 tool-agnostic entry)" { Test-Path (Join-Path $tmp "AI-GUIDE.md") }
+        Assert "CLAUDE.md (v0.10 bootstrap stub)" { Test-Path (Join-Path $tmp "CLAUDE.md") }
         Assert ".claude/settings.json (direct copy)" { Test-Path (Join-Path $tmp ".claude/settings.json") }
-        Assert ".github/copilot-instructions.md (Copilot binding)" { Test-Path (Join-Path $tmp ".github/copilot-instructions.md") }
+        Assert ".github/copilot-instructions.md (v0.10 bootstrap stub)" { Test-Path (Join-Path $tmp ".github/copilot-instructions.md") }
 
         # 6) Binding consistency
         Assert "harness-sync --check is clean" {
@@ -156,9 +157,12 @@ function Test-Fixture {
             $LASTEXITCODE -eq 0
         }
 
-        # 7) Generated CLAUDE.md references the right type
-        Assert "CLAUDE.md mentions $ProjectType overlay" {
-            (Get-Content (Join-Path $tmp "CLAUDE.md") -Raw) -match "$ProjectType-specific rules"
+        # 7) AI-GUIDE.md indexes the project-type rule overlay
+        Assert "AI-GUIDE.md indexes 50-$ProjectType.md" {
+            (Get-Content (Join-Path $tmp "AI-GUIDE.md") -Raw) -match "50-$ProjectType\.md"
+        }
+        Assert "CLAUDE.md stub references AI-GUIDE.md" {
+            (Get-Content (Join-Path $tmp "CLAUDE.md") -Raw) -match "AI-GUIDE\.md"
         }
 
         # 8) Fixture-specific source files intact

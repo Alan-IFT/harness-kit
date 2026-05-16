@@ -109,10 +109,18 @@ Files ending in `.tmpl` need placeholder substitution (step 5). Drop the `.tmpl`
   - Backend: `dev-api.md`, `dev-services.md`, `dev-db.md`
   - Only the generic `developer.md` remains.
 
-Note: templates/common contains both `.harness/` (the source of truth content) and
-`.claude/settings.json.tmpl` (Claude Code binding glue — permissions and hooks).
-The latter is copied directly to `.claude/settings.json` and is **not** routed
-through `.harness/` (it's Claude Code-specific, no benefit to abstracting).
+Note: templates/common contains:
+- `.harness/` (the source of truth content)
+- `.claude/settings.json.tmpl` (Claude Code binding glue — permissions + hooks)
+- `AI-GUIDE.md.tmpl` (tool-agnostic entry, indexes `.harness/rules/`)
+- `CLAUDE.md.tmpl` (~15-line bootstrap stub pointing at `AI-GUIDE.md`)
+- `.github/copilot-instructions.md.tmpl` (same stub for Copilot, with `applyTo: "**"` frontmatter)
+
+`CLAUDE.md.tmpl` and `.github/copilot-instructions.md.tmpl` are copied to their
+final paths during init and are **never regenerated** — they're static stubs.
+The full ruleset stays in `.harness/rules/*.md`; `AI-GUIDE.md` references those
+fragments with "when to read" descriptions so AI tools can lazy-load only what
+they need (progressive disclosure, like Claude Code's own skill system).
 
 ### 5. Substitute placeholders
 
@@ -131,17 +139,27 @@ Replace these placeholders in any `.tmpl` file:
 
 ### 6. Run the initial binding sync
 
-After all files are in place, run the binding sync to generate `.claude/agents/`,
-`.claude/skills/`, and `CLAUDE.md` from `.harness/`:
+After all files are in place, run the binding sync to copy `.harness/agents/`
+and `.harness/skills/` into the Claude-Code-required `.claude/` paths:
 
 ```powershell
 pwsh -File scripts/harness-sync.ps1     # Windows
 bash scripts/harness-sync.sh            # Unix
 ```
 
-This is what makes the skeleton actually usable by Claude Code. From now on, the
-user edits `.harness/` and runs `harness-sync` (or `/harness-verify`, which calls
-it transitively); they never hand-edit `.claude/` or `CLAUDE.md`.
+**v0.10 scope (much narrower than v0.9.x)**: `harness-sync` only copies
+`.harness/agents/` → `.claude/agents/` and `.harness/skills/` → `.claude/skills/`.
+It does **not** generate `CLAUDE.md` or `.github/copilot-instructions.md` —
+those are static stubs written once during init (step 4) and never regenerated.
+`AI-GUIDE.md` indexes `.harness/rules/` by reference; rules updates flow
+automatically by reference, not by re-composition.
+
+From now on:
+- To change a rule: edit `.harness/rules/<file>.md`. **No sync needed.** AI tools
+  follow the reference from `AI-GUIDE.md`.
+- To change an agent or skill: edit `.harness/agents/<file>.md` or
+  `.harness/skills/<name>/SKILL.md`, then re-run `harness-sync` to update
+  `.claude/`. The Stop hook + pre-commit hook auto-handle this if installed.
 
 ### 7. Initialize git if needed
 

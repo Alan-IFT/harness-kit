@@ -128,16 +128,23 @@ test_type() {
         assert ".claude/skills/$s/SKILL.md (generated)" "[[ -f '$tmp/.claude/skills/$s/SKILL.md' ]]"
     done
     assert ".claude/settings.json (direct binding artifact)" "[[ -f '$tmp/.claude/settings.json' ]]"
-    assert "CLAUDE.md (generated)" "[[ -f '$tmp/CLAUDE.md' ]]"
-    assert ".github/copilot-instructions.md (Copilot binding, generated)" "[[ -f '$tmp/.github/copilot-instructions.md' ]]"
+    assert "AI-GUIDE.md (v0.10 tool-agnostic entry)" "[[ -f '$tmp/AI-GUIDE.md' ]]"
+    assert "CLAUDE.md (v0.10 bootstrap stub)" "[[ -f '$tmp/CLAUDE.md' ]]"
+    assert ".github/copilot-instructions.md (v0.10 bootstrap stub)" "[[ -f '$tmp/.github/copilot-instructions.md' ]]"
     assert "copilot-instructions.md has applyTo frontmatter" "head -5 '$tmp/.github/copilot-instructions.md' | grep -q 'applyTo:'"
 
     # Content correctness
-    assert "CLAUDE.md has generated marker" "grep -q 'GENERATED FILE' '$tmp/CLAUDE.md'"
-    assert "CLAUDE.md contains overlay marker for $project_type" "grep -q '$project_type-specific rules' '$tmp/CLAUDE.md'"
+    assert "CLAUDE.md is a stub (references AI-GUIDE.md, no GENERATED marker, small)" \
+        "grep -q 'AI-GUIDE.md' '$tmp/CLAUDE.md' && ! grep -q 'GENERATED FILE' '$tmp/CLAUDE.md' && [[ \$(wc -c < '$tmp/CLAUDE.md') -lt 2000 ]]"
+    assert "copilot-instructions.md is a stub (references AI-GUIDE.md)" \
+        "grep -q 'AI-GUIDE.md' '$tmp/.github/copilot-instructions.md' && [[ \$(wc -c < '$tmp/.github/copilot-instructions.md') -lt 2000 ]]"
+    assert "AI-GUIDE.md indexes project-type rule overlay" \
+        "grep -q '50-$project_type.md' '$tmp/AI-GUIDE.md'"
     assert "PROJECT_NAME substituted into rules" "grep -q 'test-project' '$tmp/.harness/rules/00-core.md'"
     assert "TODAY substituted into rules" "grep -q '$today' '$tmp/.harness/rules/00-core.md'"
     assert "STACK substituted into rules" "grep -qF '$stack' '$tmp/.harness/rules/00-core.md'"
+    assert "PROJECT_NAME substituted into AI-GUIDE.md" "grep -q 'test-project' '$tmp/AI-GUIDE.md'"
+    assert "PROJECT_NAME substituted into CLAUDE.md stub" "grep -q 'test-project' '$tmp/CLAUDE.md'"
 
     # Docs / scripts / evals
     for f in docs/workflow.md docs/dev-map.md docs/tasks.md docs/spec/README.md evals/golden-tasks.md scripts/verify_all.ps1 scripts/verify_all.sh scripts/harness-sync.ps1; do

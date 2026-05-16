@@ -1,0 +1,68 @@
+# AI-GUIDE — {{PROJECT_NAME}} project index
+
+> Tool-agnostic entry. Any AI tool (Claude Code, GitHub Copilot, Cursor, …) reads this **before starting a task**.
+
+## Project
+
+Type: **{{PROJECT_TYPE}}** · Stack: **{{STACK}}** · Initialized: {{TODAY}}
+
+This project uses the **Harness 7-agent pipeline**: PM Orchestrator → Requirement Analyst → Solution Architect → Gate Reviewer → Developer → Code Reviewer → QA Tester.
+
+## Source of truth (in this repo, version-controlled)
+
+- `.harness/rules/*.md` — rule fragments
+- `.harness/agents/*.md` — 7 agent role contracts
+- `.harness/skills/*/SKILL.md` — standard procedures (build / test / verify)
+
+**Do not directly edit** `.claude/`, `CLAUDE.md`, `.github/copilot-instructions.md` — they are tool-specific stubs or generated bindings.
+
+## Rule fragments (read by "when to read")
+
+- **`.harness/rules/00-core.md`** (**always**): 7-stage pipeline, hard rules, default output formats
+- **`.harness/rules/50-{{PROJECT_TYPE}}.md`** (**when touching code**): project-type overlay, partitioning, stack conventions
+- **`.harness/rules/60-tool-handoff.md`** (**when switching Claude Code ↔ Copilot**): state lives in files, not chat memory
+
+If you add a new fragment, append a line above with its filename, a 1-line description, and the trigger condition.
+
+## Skills (standard procedures, invoked per task type)
+
+- **`.harness/skills/build/`**: compile / package commands
+- **`.harness/skills/test/`**: test runner
+- **`.harness/skills/verify/`**: total verification gate (`scripts/verify_all`)
+
+## Agents
+
+Full role contracts in `.harness/agents/<name>.md`. Read on demand when assuming or dispatching to a role.
+
+- `pm-orchestrator` — takes new tasks, routes
+- `requirement-analyst` — writes `01_REQUIREMENT_ANALYSIS.md`
+- `solution-architect` — writes `02_SOLUTION_DESIGN.md`
+- `gate-reviewer` — writes `03_GATE_REVIEW.md`
+- `developer` (or partitions: `dev-frontend` / `dev-backend` / `dev-db` / `dev-api` / `dev-services`) — writes `04_DEVELOPMENT.md`
+- `code-reviewer` — writes `05_CODE_REVIEW.md`
+- `qa-tester` — writes `06_TEST_REPORT.md`
+
+Claude Code users dispatch via the Task tool. Copilot users read the agent file and play the role personally (one role at a time).
+
+## Project documents
+
+- `docs/workflow.md` — full 7-stage pipeline definition
+- `docs/tasks.md` — current task board
+- `docs/dev-map.md` — project navigation
+- `docs/features/<task-slug>/` — per-task stage documents
+- `docs/spec/` — project specs
+- `evals/golden-tasks.md` — regression task set
+
+## Workflow entry
+
+New feature or bug? Tell the PM Orchestrator: "Take this task: …"
+
+The PM dispatches; the 7-stage pipeline runs; the task is **only done** when `scripts/verify_all` PASSes.
+
+## Editing rules
+
+- To change a rule: edit the relevant `.harness/rules/*.md` fragment. If you add a new fragment, append an index line above.
+- To change an agent: edit `.harness/agents/<name>.md`. Then run `scripts/harness-sync` so the change reaches `.claude/agents/` (Claude Code requires that path).
+- To change a skill: edit `.harness/skills/<name>/SKILL.md`. Same sync applies.
+
+No automatic regeneration of this file or of `CLAUDE.md` / `.github/copilot-instructions.md` — they reference `.harness/`; updates flow by reference, not by re-composition.

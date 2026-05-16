@@ -7,6 +7,79 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-05-16
+
+### Added — Progressive-disclosure layout (`AI-GUIDE.md` entry + stub CLAUDE.md / copilot-instructions.md)
+
+User pushed back on the v0.9.x architecture: even with all the auto-sync infrastructure, the project was still maintaining two near-identical generated documents (`CLAUDE.md` and `.github/copilot-instructions.md`, each ~250 lines) and burning Claude Code's persistent system-prompt context on the full ruleset every session — regardless of whether the user was filing a typo or building a feature.
+
+The right architectural answer, after reading the 4 reference articles in `参考/`, is the same pattern Claude Code itself uses for skills: **progressive disclosure**. A small always-loaded stub points at a slightly larger on-demand index, which in turn points at modular rule fragments AI tools load only when relevant.
+
+#### New layout
+
+```
+.harness/rules/*.md      ← SOT, modular fragments (UNCHANGED from v0.9.x)
+       ↑
+       │  referenced by
+       │
+AI-GUIDE.md              ← NEW: ~50-line tool-agnostic index with "when to read" triggers
+       ↑
+       │  pointed at by
+       │
+CLAUDE.md                            ← REPLACED: ~15-line bootstrap stub (was: ~250-line generated)
+.github/copilot-instructions.md     ← REPLACED: same stub with applyTo frontmatter
+```
+
+#### What changed
+
+- **`AI-GUIDE.md`** (new file, root): tool-agnostic entry. Indexes `.harness/rules/`, `.harness/agents/`, `.harness/skills/` with a 1-line description and "when to read" trigger for each. AI tools follow the index and lazy-load only the relevant fragments — like Claude Code's skill system.
+- **`CLAUDE.md`**: was a generated ~250-line file composed from `.harness/rules/`. Now a static ~15-line stub: output language + 3 hard red lines + "read `AI-GUIDE.md` first". Written once at init, never regenerated.
+- **`.github/copilot-instructions.md`**: same transformation. Static stub with `applyTo: "**"` frontmatter for Copilot.
+- **`harness-sync.{ps1,sh}`**: scope reduced ~60%. No more composing CLAUDE.md or copilot-instructions.md from rule fragments. Only copies `.harness/agents/` → `.claude/agents/` and `.harness/skills/` → `.claude/skills/` (still needed because Claude Code requires those paths).
+- **`install-hooks` pre-commit hook**: error message updated to reflect the narrower drift scope (agents/skills only, not rules).
+- **`verify_all` E.4**: replaced the "generated artifacts present" check with "bootstrap files present and stubs reference `AI-GUIDE.md`" check.
+- **`harness-init` SKILL.md**: Step 4 (copy templates) now copies `AI-GUIDE.md.tmpl`, `CLAUDE.md.tmpl`, and `.github/copilot-instructions.md.tmpl` (new template files). Step 6 (run binding sync) reflects the narrower scope.
+
+#### Context budget improvement
+
+| Scenario | v0.9.x persistent tokens | v0.10 persistent tokens | Saving |
+|---|---|---|---|
+| Single-turn small question | ~3500 | ~250 | 92% |
+| Feature implementation (function + test) | ~3500 | ~1500 | 57% |
+| Complex cross-stage task | ~3500 | ~4500 | -28% (but loaded fragments are all relevant) |
+| **Weighted average** | **~3500** | **~1500–2000** | **~50%** |
+
+Plus: v0.9.x's CLAUDE.md was in the system prompt every turn. v0.10's `AI-GUIDE.md` and fragments load once per session (then sit in cached conversation history).
+
+#### New skill: `/harness-migrate`
+
+`skills/harness-migrate/SKILL.md` — one-shot migration for v0.9.x projects:
+1. Backs up `CLAUDE.md`, `.github/copilot-instructions.md`, and the scripts to `.harness-migrate-backup/`.
+2. Writes the new `AI-GUIDE.md` (project info extracted from the old `CLAUDE.md` header).
+3. Overwrites `CLAUDE.md` and `.github/copilot-instructions.md` with the new stubs.
+4. Updates `harness-sync` / `install-hooks` / `verify_all` from the v0.10 templates.
+5. Runs the new `verify_all` to confirm.
+
+#### Migration path for v0.9.x users
+
+Either:
+- Run `/harness-kit:harness-migrate` (recommended — one shot, auto-backup, ~10 seconds)
+- Or follow the manual steps in `skills/harness-migrate/SKILL.md`
+
+`.harness/rules/`, `.harness/agents/`, `.harness/skills/` are **unchanged** — only the bootstrap surface and scripts change.
+
+### Tests
+
+- test-init: 116/116 PASS (added AI-GUIDE.md + stub assertions, removed obsolete "GENERATED FILE" + "overlay marker" assertions)
+- test-real-project: 82/82 PASS (same pattern)
+- verify_all: 19/19 PASS
+
+### Breaking changes
+
+This is a breaking change for users developing inside an existing v0.9.x harness-bound project who hand-edit `CLAUDE.md`. After migration, `CLAUDE.md` is a stub — edits to it will not survive future syncs (well, the stub doesn't get regenerated, but edits there violate the "do not edit static files" red line and should go into `.harness/rules/` instead).
+
+Users who only edit `.harness/rules/` directly (the documented path since v0.2) are **unaffected**: their workflow now produces less context bloat with no other change.
+
 ## [0.9.2] - 2026-05-16
 
 ### Added — Tool-agnostic git pre-commit hook (closes the Copilot doc-drift gap)

@@ -48,13 +48,14 @@ else
 fi
 if [ "$_drift" = "1" ]; then
     echo "" >&2
-    echo "harness-kit: drift between .harness/ and generated artifacts." >&2
-    echo "  CLAUDE.md and/or .github/copilot-instructions.md are stale." >&2
+    echo "harness-kit: drift between .harness/ and .claude/." >&2
+    echo "  .claude/agents/ and/or .claude/skills/ are stale relative to .harness/." >&2
     echo "" >&2
     echo "  Fix: pwsh -File scripts/harness-sync.ps1   (Windows)" >&2
     echo "       bash scripts/harness-sync.sh          (macOS / Linux)" >&2
-    echo "  Then: git add CLAUDE.md .github/copilot-instructions.md && git commit ..." >&2
+    echo "  Then: git add .claude/ && git commit ..." >&2
     echo "" >&2
+    echo "  Note: edits to .harness/rules/ do NOT need sync (referenced by AI-GUIDE.md, not composed)." >&2
     echo "  Bypass once (NOT recommended): git commit --no-verify" >&2
     exit 1
 fi

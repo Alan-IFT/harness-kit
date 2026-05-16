@@ -2,7 +2,7 @@
 
 **English** · [简体中文](README.zh-CN.md)
 
-![version](https://img.shields.io/badge/version-0.9.2-blue) ![verify_all](https://img.shields.io/badge/verify__all-19%2F19-brightgreen) ![test-init](https://img.shields.io/badge/test--init-108%2F108-brightgreen) ![integration](https://img.shields.io/badge/integration-78%2F78-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.10.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-19%2F19-brightgreen) ![test-init](https://img.shields.io/badge/test--init-108%2F108-brightgreen) ![integration](https://img.shields.io/badge/integration-78%2F78-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
 > **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (4 skills + project templates) that brings disciplined AI-driven development to fullstack and backend projects.
 >
@@ -10,12 +10,13 @@
 
 ## What's inside
 
-This is a Claude Code Plugin packaging that gives any project four AI skills:
+This is a Claude Code Plugin packaging that gives any project five AI skills:
 
-- `/harness-kit:harness-init` — bootstrap Harness skeleton in a new project (asks 5 questions, generates `.harness/` + `.claude/` + docs in ~30s)
+- `/harness-kit:harness-init` — bootstrap Harness skeleton in a new project (asks 5 questions, generates `.harness/` + `.claude/` + `AI-GUIDE.md` + stub CLAUDE.md / copilot-instructions.md in ~30s)
 - `/harness-kit:harness-adopt` — non-invasively add Harness to an existing project (detects stack, extracts conventions, prompts before applying)
 - `/harness-kit:harness-verify` — run total verification (compile + test + rule scan + baseline diff)
 - `/harness-kit:harness-status` — health snapshot (which assets present, baseline, last verify, active tasks)
+- `/harness-kit:harness-migrate` — upgrade a v0.9.x project to the v0.10 layout (AI-GUIDE.md entry + stub CLAUDE.md / copilot-instructions.md). One-shot; backs up the old files first
 
 After init, every non-trivial task flows through a **7-agent pipeline**: PM Orchestrator → Requirement Analyst → Solution Architect → Gate Reviewer → Developer (or partition `dev-*`) → Code Reviewer → QA Tester → Delivery.
 
@@ -103,22 +104,26 @@ PM Orchestrator picks it up, routes through 7 stages, produces 6 stage documents
 
 ## Key features
 
-### Tool-agnostic source of truth
+### Tool-agnostic source of truth (v0.10 — progressive disclosure)
 
 ```
-.harness/rules/*.md     ← edit this (single source of truth)
+.harness/rules/*.md     ← edit this (single source of truth, modular fragments)
+       ↑
+       │  referenced by
        │
-       │  harness-sync generates ↓
+AI-GUIDE.md             ← tool-agnostic entry (~50-line index with "when to read" descriptions)
+       ↑
+       │  pointed at by
        │
-       ├──> CLAUDE.md                            (Claude Code reads)
-       └──> .github/copilot-instructions.md      (Copilot reads)
+CLAUDE.md                            (~15-line bootstrap stub; Claude Code reads)
+.github/copilot-instructions.md      (~15-line bootstrap stub; Copilot reads)
 ```
 
-You edit one place. Two binding artifacts stay in sync automatically. `verify_all` detects drift and fails the build.
+You edit one place: `.harness/rules/`. The stubs and AI-GUIDE.md reference it; no regeneration needed. AI tools follow the references and **lazy-load only the fragments they need** — same pattern as Claude Code's own skill system.
 
-**v0.9+: you don't even run sync manually.** A Stop hook (in `.claude/settings.json`) auto-runs `harness-sync` at the end of every Claude Code session. Even better: ask AI to edit `.harness/` for you — "Add a rule: never use `MessageBox.Show`", "Add a Developer partition for `apps/mobile/`" — AI picks the right file, edits, the Stop hook syncs. You only edit prose if you want to.
+**Context budget**: persistent always-loaded ruleset drops from ~3500 tokens (v0.9.x full CLAUDE.md) to ~250 tokens (v0.10 stub). On small interactions (~92% saving), AI doesn't even read `AI-GUIDE.md`. On bigger tasks, it reads `AI-GUIDE.md` once + the 1-3 fragments whose "when to read" matches — typically ~50% saving vs v0.9.x.
 
-**v0.9.2: tool-agnostic backstop.** The Stop hook is Claude-Code-only — it doesn't fire for Copilot, Cursor, or hand-edits. So `scripts/install-hooks.{ps1,sh}` (auto-run during init) installs a git pre-commit hook that runs `harness-sync --check` and blocks any commit with drift. No matter which AI or human edited `.harness/`, stale `CLAUDE.md` / `.github/copilot-instructions.md` never leave the working tree.
+`harness-sync` still exists but only copies `.harness/agents/` and `.harness/skills/` to `.claude/` (Claude Code requires those paths). Rules don't sync. The git pre-commit hook (from `scripts/install-hooks`) keeps `.claude/` in lockstep with `.harness/` for users on Copilot, Cursor, or hand-edits — tool-agnostic.
 
 ### Project-wide language policy
 
@@ -231,9 +236,9 @@ Markdown docs:
 | 0.6.x | done | Project renamed to harness-kit; plugin marketplace packaging |
 | 0.7.x | done | i18n (en/zh) + project-wide output-language policy; Copilot rules binding |
 | 0.8.x | done | Cross-tool handoff protocol; visible generated-file warnings |
-| 0.9.0 | done | Auto-sync via Stop hook (no manual `harness-sync` needed); "Other / Generic" project type so any stack works today |
-| 0.10 | planned | **AI-native init**: AI reads project description (and existing code if any) and generates custom overlay — no preset selection, no preset partition shape |
-| 0.11+ | planned | Copilot custom-agent binding; `/harness-handoff` and `/harness-resume` automation; semantic rule extraction in adopt |
+| 0.9.x | done | Auto-sync via Stop hook + OS-aware `{{SYNC_COMMAND}}` + tool-agnostic git pre-commit hook; "Other / Generic" project type |
+| 0.10.0 | done | **Progressive-disclosure layout**: `AI-GUIDE.md` entry + stub CLAUDE.md / copilot-instructions.md; rules no longer composed (~50% context-budget reduction); new `/harness-migrate` skill |
+| 0.11+ | planned | **AI-native init**: AI reads project description (and existing code if any) and generates custom overlay — no preset list; Copilot custom-agent binding; `/harness-handoff` / `/harness-resume` automation |
 
 ## Design principles
 

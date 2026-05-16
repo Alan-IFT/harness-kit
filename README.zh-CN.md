@@ -2,7 +2,7 @@
 
 [English](README.md) · **简体中文**
 
-![version](https://img.shields.io/badge/version-0.9.2-blue) ![verify_all](https://img.shields.io/badge/verify__all-19%2F19-brightgreen) ![test-init](https://img.shields.io/badge/test--init-108%2F108-brightgreen) ![integration](https://img.shields.io/badge/integration-78%2F78-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.10.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-19%2F19-brightgreen) ![test-init](https://img.shields.io/badge/test--init-108%2F108-brightgreen) ![integration](https://img.shields.io/badge/integration-78%2F78-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
 > **Claude Code 的 Harness Engineering 工具包** — 一个 Claude Code Plugin（4 个 skills + 项目模板），把"有纪律的 AI 驱动开发"带到全栈和后端项目里。
 >
@@ -10,12 +10,13 @@
 
 ## 包含什么
 
-这是一个 Claude Code Plugin 包，给任何项目装上 4 个 AI skill：
+这是一个 Claude Code Plugin 包，给任何项目装上 5 个 AI skill：
 
-- `/harness-kit:harness-init` — 新项目从零生成 Harness 骨架（问 5 个问题，~30 秒生成 `.harness/` + `.claude/` + docs）
+- `/harness-kit:harness-init` — 新项目从零生成 Harness 骨架（问 5 个问题，~30 秒生成 `.harness/` + `.claude/` + `AI-GUIDE.md` + stub CLAUDE.md / copilot-instructions.md）
 - `/harness-kit:harness-adopt` — 给现有项目无侵入接入 Harness（侦察栈、提取约定、用户确认后再 apply）
 - `/harness-kit:harness-verify` — 跑总验证（编译 + 测试 + 规则扫描 + 基线对比）
 - `/harness-kit:harness-status` — 健康度快照（哪些资产存在、基线、最近 verify 状态、活动任务）
+- `/harness-kit:harness-migrate` — 把 v0.9.x 项目升级到 v0.10 布局（AI-GUIDE.md 入口 + stub CLAUDE.md / copilot-instructions.md）。一键式，先备份旧文件
 
 init 之后，每个非琐碎任务流经 **7-Agent 流水线**：PM Orchestrator → Requirement Analyst → Solution Architect → Gate Reviewer → Developer（或分区 `dev-*`）→ Code Reviewer → QA Tester → 交付。
 
@@ -103,22 +104,26 @@ PM Orchestrator 接手，跑完 7 个 stage，在 `docs/features/<slug>/` 下产
 
 ## 核心特性
 
-### 工具无关真相源
+### 工具无关真相源（v0.10 —— progressive disclosure）
 
 ```
-.harness/rules/*.md     ← 你只编辑这里（单一真相源）
+.harness/rules/*.md     ← 你只编辑这里（单一真相源，模块化片段）
+       ↑
+       │  被引用
        │
-       │  harness-sync 自动生成 ↓
+AI-GUIDE.md             ← 工具无关入口（~50 行索引，每条带"什么时候读"）
+       ↑
+       │  被指向
        │
-       ├──> CLAUDE.md                            (Claude Code 读)
-       └──> .github/copilot-instructions.md      (Copilot 读)
+CLAUDE.md                            (~15 行 bootstrap stub；Claude Code 读)
+.github/copilot-instructions.md      (~15 行 bootstrap stub；Copilot 读)
 ```
 
-你编辑一个地方，两个 binding 自动同步。`verify_all` 检测漂移，drift 时 FAIL。
+你编辑一个地方：`.harness/rules/`。stub 和 AI-GUIDE.md 都靠引用，**不再生成**。AI 工具跟着引用、**按需懒加载相关片段** —— 跟 Claude Code 自己的 skill 系统同模式。
 
-**v0.9+：连 sync 都不用自己跑。** Stop hook（在 `.claude/settings.json`）会在每次 Claude Code session 结束时自动跑 `harness-sync`。更进一步：让 AI 帮你编辑 `.harness/` — "加一条规则：禁止用 `MessageBox.Show`"、"为 `apps/mobile/` 加一个 Developer 分区" — AI 选对文件、编辑，Stop hook 同步。你只在想编辑时才编辑。
+**Context 预算**：常驻 system prompt 的规则集从 ~3500 token（v0.9.x 全量 CLAUDE.md）降到 ~250 token（v0.10 stub）。小问答里（~92% 节省）AI 甚至不读 AI-GUIDE.md。中等任务读 AI-GUIDE.md 一次 + 触发条件命中的 1-3 个片段，平均 ~50% 节省。
 
-**v0.9.2：工具无关的兜底。** Stop hook 是 Claude Code 专属 — Copilot、Cursor、手工编辑都不会触发。所以 `scripts/install-hooks.{ps1,sh}`（init 时自动跑）会装一个 git pre-commit hook：每次 commit 跑 `harness-sync --check`，有漂移就拦下来。不管哪个 AI 或人编辑了 `.harness/`，过时的 `CLAUDE.md` / `.github/copilot-instructions.md` 都不会离开工作树。
+`harness-sync` 还在，但只复制 `.harness/agents/` 和 `.harness/skills/` 到 `.claude/`（Claude Code 强要求这些路径）。规则不 sync。git pre-commit hook（来自 `scripts/install-hooks`）兜底保证 Copilot / Cursor / 手编辑用户的 `.claude/` 也跟得上 `.harness/`，工具无关。
 
 ### 项目级语言策略
 
@@ -231,9 +236,9 @@ Markdown 文档：
 | 0.6.x | 已交付 | 改名 harness-kit；Plugin marketplace 打包 |
 | 0.7.x | 已交付 | i18n（en/zh）+ 项目级输出语言策略；Copilot rules binding |
 | 0.8.x | 已交付 | 跨工具切换协议；生成文件可见 warning |
-| 0.9.0 | 已交付 | 自动 sync via Stop hook（无需手动跑 `harness-sync`）；"Other / Generic" 项目类型，任何栈现在都能用 |
-| 0.10 | 规划中 | **AI 原生 init**：AI 读项目描述（和已有代码，如果有的话）后生成自定义 overlay — 不用预设选项、不用预设分区形态 |
-| 0.11+ | 规划中 | Copilot 自定义 agent binding；`/harness-handoff` 和 `/harness-resume` 自动化；adopt 中的语义规则提取 |
+| 0.9.x | 已交付 | 自动 sync via Stop hook + OS-aware `{{SYNC_COMMAND}}` + 工具无关 git pre-commit hook；"Other / Generic" 项目类型 |
+| 0.10.0 | 已交付 | **Progressive-disclosure 布局**：`AI-GUIDE.md` 入口 + stub CLAUDE.md / copilot-instructions.md；规则不再组合（~50% context 预算降低）；新增 `/harness-migrate` skill |
+| 0.11+ | 规划中 | **AI 原生 init**：AI 读项目描述（和已有代码）后生成自定义 overlay；Copilot 自定义 agent binding；`/harness-handoff` / `/harness-resume` 自动化 |
 
 ## 设计原则
 

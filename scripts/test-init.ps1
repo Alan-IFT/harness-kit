@@ -156,8 +156,9 @@ function Test-Type {
             Assert ".claude/skills/$s/SKILL.md (generated)" { Test-Path (Join-Path $tmp ".claude/skills/$s/SKILL.md") }
         }
         Assert ".claude/settings.json (direct binding artifact)" { Test-Path (Join-Path $tmp ".claude/settings.json") }
-        Assert "CLAUDE.md (generated)" { Test-Path (Join-Path $tmp "CLAUDE.md") }
-        Assert ".github/copilot-instructions.md (Copilot binding, generated)" {
+        Assert "AI-GUIDE.md (v0.10 tool-agnostic entry)" { Test-Path (Join-Path $tmp "AI-GUIDE.md") }
+        Assert "CLAUDE.md (v0.10 bootstrap stub)" { Test-Path (Join-Path $tmp "CLAUDE.md") }
+        Assert ".github/copilot-instructions.md (v0.10 bootstrap stub)" {
             Test-Path (Join-Path $tmp ".github/copilot-instructions.md")
         }
         Assert "copilot-instructions.md has applyTo frontmatter" {
@@ -166,11 +167,16 @@ function Test-Type {
         }
 
         # === Content correctness ===
-        Assert "CLAUDE.md has generated marker" {
-            (Get-Content (Join-Path $tmp "CLAUDE.md") -Raw) -match "GENERATED FILE"
+        Assert "CLAUDE.md is a stub (references AI-GUIDE.md, no GENERATED marker)" {
+            $c = Get-Content (Join-Path $tmp "CLAUDE.md") -Raw
+            ($c -match "AI-GUIDE\.md") -and ($c -notmatch "GENERATED FILE") -and ($c.Length -lt 2000)
         }
-        Assert "CLAUDE.md contains overlay marker for $ProjectType" {
-            (Get-Content (Join-Path $tmp "CLAUDE.md") -Raw) -match "$ProjectType-specific rules"
+        Assert "copilot-instructions.md is a stub (references AI-GUIDE.md)" {
+            $c = Get-Content (Join-Path $tmp ".github/copilot-instructions.md") -Raw
+            ($c -match "AI-GUIDE\.md") -and ($c.Length -lt 2000)
+        }
+        Assert "AI-GUIDE.md indexes project-type rule overlay" {
+            (Get-Content (Join-Path $tmp "AI-GUIDE.md") -Raw) -match "50-$ProjectType\.md"
         }
         Assert "PROJECT_NAME substituted into rules" {
             (Get-Content (Join-Path $tmp ".harness/rules/00-core.md") -Raw) -match "test-project"
@@ -180,6 +186,12 @@ function Test-Type {
         }
         Assert "STACK substituted into rules" {
             (Get-Content (Join-Path $tmp ".harness/rules/00-core.md") -Raw) -match [regex]::Escape($Stack)
+        }
+        Assert "PROJECT_NAME substituted into AI-GUIDE.md" {
+            (Get-Content (Join-Path $tmp "AI-GUIDE.md") -Raw) -match "test-project"
+        }
+        Assert "PROJECT_NAME substituted into CLAUDE.md stub" {
+            (Get-Content (Join-Path $tmp "CLAUDE.md") -Raw) -match "test-project"
         }
 
         # === Docs / scripts / evals ===

@@ -75,7 +75,7 @@ else
     scope="global: $HOME"
 fi
 
-skills=(harness-init harness-adopt harness-verify harness-status)
+skills=(harness-init harness-adopt harness-verify harness-status harness-migrate)
 
 echo ""
 echo "Harness Kit install"
@@ -131,6 +131,7 @@ echo "  /harness-init     in an empty project"
 echo "  /harness-adopt    in an existing project"
 echo "  /harness-verify   run the project's verify_all"
 echo "  /harness-status   inspect Harness assets"
+echo "  /harness-migrate  upgrade a v0.9.x project to v0.10 layout"
 echo ""
 echo "Tip: for versioned/auditable install, prefer the plugin path inside Claude Code:"
 echo "  /plugin marketplace add Alan-IFT/harness-kit"

@@ -72,7 +72,7 @@ if ($Project) {
     $scope = "global: $homeDir"
 }
 
-$skills = @("harness-init", "harness-adopt", "harness-verify", "harness-status")
+$skills = @("harness-init", "harness-adopt", "harness-verify", "harness-status", "harness-migrate")
 
 Write-Host ""
 Write-Host "Harness Kit install" -ForegroundColor Cyan
@@ -136,6 +136,7 @@ Write-Host "  /harness-init     in an empty project"
 Write-Host "  /harness-adopt    in an existing project"
 Write-Host "  /harness-verify   run the project's verify_all"
 Write-Host "  /harness-status   inspect Harness assets"
+Write-Host "  /harness-migrate  upgrade a v0.9.x project to v0.10 layout"
 Write-Host ""
 Write-Host "Tip: for versioned/auditable install, prefer the plugin path inside Claude Code:" -ForegroundColor Cyan
 Write-Host "  /plugin marketplace add Alan-IFT/harness-kit"

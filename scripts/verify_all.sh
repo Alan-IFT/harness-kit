@@ -48,10 +48,10 @@ done
 
 # C.1 — skills
 missing_skills=""
-for s in harness-init harness-adopt harness-verify harness-status; do
+for s in harness-init harness-adopt harness-verify harness-status harness-migrate; do
     [[ -f "skills/$s/SKILL.md" ]] || missing_skills="$missing_skills $s"
 done
-[[ -z "$missing_skills" ]] && step "C.1" "All 4 skills present" "PASS" || step "C.1" "All 4 skills present" "FAIL" "missing:$missing_skills"
+[[ -z "$missing_skills" ]] && step "C.1" "All 5 skills present" "PASS" || step "C.1" "All 5 skills present" "FAIL" "missing:$missing_skills"
 
 # C.2 — frontmatter sanity
 bad=""
@@ -90,11 +90,11 @@ else
     step "E.1" "Layer 1: .harness/ matches templates/common/.harness/" "FAIL" "Run scripts/sync-self.sh"
 fi
 
-# E.2 — Layer 2: .harness/ → .claude/ + CLAUDE.md
+# E.2 — Layer 2: .harness/ → .claude/ (agents + skills only in v0.10)
 if bash "$repo_root/scripts/harness-sync.sh" --check &>/dev/null; then
-    step "E.2" "Layer 2: .claude/ and CLAUDE.md generated from .harness/" "PASS"
+    step "E.2" "Layer 2: .claude/agents and .claude/skills synced from .harness/" "PASS"
 else
-    step "E.2" "Layer 2: .claude/ and CLAUDE.md generated from .harness/" "FAIL" "Run scripts/harness-sync.sh"
+    step "E.2" "Layer 2: .claude/agents and .claude/skills synced from .harness/" "FAIL" "Run scripts/harness-sync.sh"
 fi
 
 # E.3 — rule sources present
@@ -105,11 +105,23 @@ done
 rule_count=$(find .harness/rules -name '*.md' -type f 2>/dev/null | wc -l)
 [[ -z "$missing_e3" ]] && (( rule_count >= 1 )) && step "E.3" "Rule sources present" "PASS" || step "E.3" "Rule sources present" "FAIL" "missing:$missing_e3 rules_count=$rule_count"
 
-# E.4 — generated artifacts
+# E.4 — bootstrap files (AI-GUIDE.md + CLAUDE.md + copilot-instructions.md stubs)
 gen_missing=""
-[[ -f CLAUDE.md ]] || gen_missing="$gen_missing CLAUDE.md"
+for f in AI-GUIDE.md CLAUDE.md .github/copilot-instructions.md; do
+    [[ -f "$f" ]] || gen_missing="$gen_missing $f"
+done
+stub_bad=""
+for stub in CLAUDE.md .github/copilot-instructions.md; do
+    if [[ -f "$stub" ]] && ! grep -q "AI-GUIDE.md" "$stub"; then
+        stub_bad="$stub_bad $stub"
+    fi
+done
 [[ -d .claude/agents ]] || gen_missing="$gen_missing .claude/agents"
-[[ -z "$gen_missing" ]] && step "E.4" "Generated artifacts present" "PASS" || step "E.4" "Generated artifacts present" "FAIL" "missing:$gen_missing (run harness-sync)"
+if [[ -z "$gen_missing" && -z "$stub_bad" ]]; then
+    step "E.4" "Bootstrap files present and stubs reference AI-GUIDE.md" "PASS"
+else
+    step "E.4" "Bootstrap files present and stubs reference AI-GUIDE.md" "FAIL" "missing:$gen_missing stub_no_ref:$stub_bad"
+fi
 
 # E.5 — docs
 missing_p=""
@@ -132,10 +144,10 @@ done
 # G.1 — README mentions skills
 readme=$(cat README.md)
 miss_r=""
-for s in harness-init harness-adopt harness-verify harness-status; do
+for s in harness-init harness-adopt harness-verify harness-status harness-migrate; do
     grep -q "$s" <<< "$readme" || miss_r="$miss_r $s"
 done
-[[ -z "$miss_r" ]] && step "G.1" "README references all skills" "PASS" || step "G.1" "README references all skills" "FAIL" "missing:$miss_r"
+[[ -z "$miss_r" ]] && step "G.1" "README references all 5 skills" "PASS" || step "G.1" "README references all 5 skills" "FAIL" "missing:$miss_r"
 
 # H.1 — fixtures
 missing_fix=""
@@ -148,10 +160,10 @@ done
 # G.2 — CHANGELOG mentions skills
 cl=$(cat CHANGELOG.md)
 miss_c=""
-for s in harness-init harness-adopt harness-verify harness-status; do
+for s in harness-init harness-adopt harness-verify harness-status harness-migrate; do
     grep -q "$s" <<< "$cl" || miss_c="$miss_c $s"
 done
-[[ -z "$miss_c" ]] && step "G.2" "CHANGELOG references all skills" "PASS" || step "G.2" "CHANGELOG references all skills" "FAIL" "missing:$miss_c"
+[[ -z "$miss_c" ]] && step "G.2" "CHANGELOG references all 5 skills" "PASS" || step "G.2" "CHANGELOG references all 5 skills" "FAIL" "missing:$miss_c"
 
 # Summary
 echo ""

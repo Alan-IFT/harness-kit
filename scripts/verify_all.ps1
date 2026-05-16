@@ -64,8 +64,8 @@ Step "B.2" "Install scripts present (both PowerShell + Bash)" {
 }
 
 # C. Skills structure
-Step "C.1" "All 4 skills present with SKILL.md" {
-    foreach ($s in @("harness-init", "harness-adopt", "harness-verify", "harness-status")) {
+Step "C.1" "All 5 skills present with SKILL.md" {
+    foreach ($s in @("harness-init", "harness-adopt", "harness-verify", "harness-status", "harness-migrate")) {
         $p = "skills/$s/SKILL.md"
         if (-not (Test-Path $p)) { throw "Missing $p" }
     }
@@ -113,8 +113,8 @@ Step "E.1" "Layer 1: .harness/ matches templates/common/.harness/" {
     if ($LASTEXITCODE -ne 0) { throw "Layer 1 drift — run scripts/sync-self.ps1 to fix" }
 }
 
-# Layer 2: .harness/ → .claude/ + CLAUDE.md (binding)
-Step "E.2" "Layer 2: .claude/ and CLAUDE.md generated from .harness/" {
+# Layer 2: .harness/ → .claude/ (binding, agents + skills only in v0.10)
+Step "E.2" "Layer 2: .claude/agents and .claude/skills synced from .harness/" {
     & (Join-Path $PSScriptRoot "harness-sync.ps1") -Check
     if ($LASTEXITCODE -ne 0) { throw "Layer 2 drift — run scripts/harness-sync.ps1 to fix" }
 }
@@ -127,9 +127,13 @@ Step "E.3" "Project rule sources present (.harness/rules + 7 agents)" {
     if ($rules.Count -lt 1) { throw "No .harness/rules/*.md files found" }
 }
 
-Step "E.4" "Generated artifacts present (CLAUDE.md, .claude/agents/)" {
-    foreach ($f in @("CLAUDE.md")) {
-        if (-not (Test-Path $f)) { throw "Missing $f (run harness-sync)" }
+Step "E.4" "Bootstrap files present and point to AI-GUIDE.md" {
+    foreach ($f in @("AI-GUIDE.md", "CLAUDE.md", ".github/copilot-instructions.md")) {
+        if (-not (Test-Path $f)) { throw "Missing $f" }
+    }
+    foreach ($stub in @("CLAUDE.md", ".github/copilot-instructions.md")) {
+        $c = Get-Content $stub -Raw
+        if ($c -notmatch 'AI-GUIDE\.md') { throw "$stub does not reference AI-GUIDE.md — stub broken" }
     }
     if (-not (Test-Path ".claude/agents")) { throw "Missing .claude/agents/ (run harness-sync)" }
 }
@@ -158,9 +162,9 @@ Step "F.2" "Install scripts symmetric" {
 }
 
 # G. Documentation hygiene
-Step "G.1" "README references all 4 skills" {
+Step "G.1" "README references all 5 skills" {
     $readme = Get-Content "README.md" -Raw
-    foreach ($s in @("harness-init", "harness-adopt", "harness-verify", "harness-status")) {
+    foreach ($s in @("harness-init", "harness-adopt", "harness-verify", "harness-status", "harness-migrate")) {
         if ($readme -notmatch [regex]::Escape($s)) { throw "README missing skill mention: $s" }
     }
 }
@@ -174,9 +178,9 @@ Step "H.1" "Test fixtures present (todo-fullstack + todo-backend)" {
     }
 }
 
-Step "G.2" "CHANGELOG mentions the four skills" {
+Step "G.2" "CHANGELOG mentions all 5 skills" {
     $cl = Get-Content "CHANGELOG.md" -Raw
-    foreach ($s in @("harness-init", "harness-adopt", "harness-verify", "harness-status")) {
+    foreach ($s in @("harness-init", "harness-adopt", "harness-verify", "harness-status", "harness-migrate")) {
         if ($cl -notmatch [regex]::Escape($s)) { throw "CHANGELOG missing skill mention: $s" }
     }
 }
