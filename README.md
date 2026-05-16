@@ -2,7 +2,7 @@
 
 **English** · [简体中文](README.zh-CN.md)
 
-![version](https://img.shields.io/badge/version-0.10.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-19%2F19-brightgreen) ![test-init](https://img.shields.io/badge/test--init-108%2F108-brightgreen) ![integration](https://img.shields.io/badge/integration-78%2F78-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.11.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-19%2F19-brightgreen) ![test-init](https://img.shields.io/badge/test--init-108%2F108-brightgreen) ![integration](https://img.shields.io/badge/integration-78%2F78-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
 > **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (4 skills + project templates) that brings disciplined AI-driven development to fullstack and backend projects.
 >
@@ -10,13 +10,20 @@
 
 ## What's inside
 
-This is a Claude Code Plugin packaging that gives any project five AI skills:
+This is a Claude Code Plugin packaging that gives any project seven AI skills:
 
+**Setup skills**
 - `/harness-kit:harness-init` — bootstrap Harness skeleton in a new project (asks 5 questions, generates `.harness/` + `.claude/` + `AI-GUIDE.md` + stub CLAUDE.md / copilot-instructions.md in ~30s)
 - `/harness-kit:harness-adopt` — non-invasively add Harness to an existing project (detects stack, extracts conventions, prompts before applying)
+
+**Operations skills**
 - `/harness-kit:harness-verify` — run total verification (compile + test + rule scan + baseline diff)
 - `/harness-kit:harness-status` — health snapshot (which assets present, baseline, last verify, active tasks)
-- `/harness-kit:harness-migrate` — upgrade a v0.9.x project to the v0.10 layout (AI-GUIDE.md entry + stub CLAUDE.md / copilot-instructions.md). One-shot; backs up the old files first
+
+**Mode skills** (variants of the 7-stage pipeline, pick based on task shape — v0.11)
+- `/harness-kit:harness-plan` — design-only mode: runs RA + SA + GR, stops with a verdict before any code is written. Use to vet a design.
+- `/harness-kit:harness-explore` — research / feasibility mode: light RA + a `findings.md` with citations. No design, no code. Use for "can we even do X?"
+- `/harness-kit:harness-goal` — open-ended Dev + QA loop bounded by a measurable success criterion and a budget. Use for "keep improving until coverage > 80%" type tasks.
 
 After init, every non-trivial task flows through a **7-agent pipeline**: PM Orchestrator → Requirement Analyst → Solution Architect → Gate Reviewer → Developer (or partition `dev-*`) → Code Reviewer → QA Tester → Delivery.
 
@@ -237,8 +244,9 @@ Markdown docs:
 | 0.7.x | done | i18n (en/zh) + project-wide output-language policy; Copilot rules binding |
 | 0.8.x | done | Cross-tool handoff protocol; visible generated-file warnings |
 | 0.9.x | done | Auto-sync via Stop hook + OS-aware `{{SYNC_COMMAND}}` + tool-agnostic git pre-commit hook; "Other / Generic" project type |
-| 0.10.0 | done | **Progressive-disclosure layout**: `AI-GUIDE.md` entry + stub CLAUDE.md / copilot-instructions.md; rules no longer composed (~50% context-budget reduction); new `/harness-migrate` skill |
-| 0.11+ | planned | **AI-native init**: AI reads project description (and existing code if any) and generates custom overlay — no preset list; Copilot custom-agent binding; `/harness-handoff` / `/harness-resume` automation |
+| 0.10.0 | done | **Progressive-disclosure layout**: `AI-GUIDE.md` entry + stub CLAUDE.md / copilot-instructions.md; rules no longer composed (~50% context-budget reduction) |
+| 0.11.0 | done | **Three execution modes** (`/harness-plan`, `/harness-explore`, `/harness-goal`) + **adversarial verification** (QA must write independent reproducers + `## Adversarial tests` section, verify_all enforces it) + **cross-task insight index** (`.harness/insight-index.md` + `scripts/archive-task`) — borrowing from lsdefine/GenericAgent's memory + verify discipline |
+| 0.12+ | planned | **AI-native init**: AI reads project description (and existing code if any) and generates custom overlay — no preset list; Copilot custom-agent binding; supervisor agent with intervention files |
 
 ## Design principles
 

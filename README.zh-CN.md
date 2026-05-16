@@ -2,7 +2,7 @@
 
 [English](README.md) · **简体中文**
 
-![version](https://img.shields.io/badge/version-0.10.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-19%2F19-brightgreen) ![test-init](https://img.shields.io/badge/test--init-108%2F108-brightgreen) ![integration](https://img.shields.io/badge/integration-78%2F78-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.11.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-19%2F19-brightgreen) ![test-init](https://img.shields.io/badge/test--init-108%2F108-brightgreen) ![integration](https://img.shields.io/badge/integration-78%2F78-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
 > **Claude Code 的 Harness Engineering 工具包** — 一个 Claude Code Plugin（4 个 skills + 项目模板），把"有纪律的 AI 驱动开发"带到全栈和后端项目里。
 >
@@ -10,13 +10,20 @@
 
 ## 包含什么
 
-这是一个 Claude Code Plugin 包，给任何项目装上 5 个 AI skill：
+这是一个 Claude Code Plugin 包，给任何项目装上 7 个 AI skill：
 
+**安装类**
 - `/harness-kit:harness-init` — 新项目从零生成 Harness 骨架（问 5 个问题，~30 秒生成 `.harness/` + `.claude/` + `AI-GUIDE.md` + stub CLAUDE.md / copilot-instructions.md）
 - `/harness-kit:harness-adopt` — 给现有项目无侵入接入 Harness（侦察栈、提取约定、用户确认后再 apply）
+
+**运维类**
 - `/harness-kit:harness-verify` — 跑总验证（编译 + 测试 + 规则扫描 + 基线对比）
 - `/harness-kit:harness-status` — 健康度快照（哪些资产存在、基线、最近 verify 状态、活动任务）
-- `/harness-kit:harness-migrate` — 把 v0.9.x 项目升级到 v0.10 布局（AI-GUIDE.md 入口 + stub CLAUDE.md / copilot-instructions.md）。一键式，先备份旧文件
+
+**模式类**（7-stage 流水线的变体，按任务形态挑 —— v0.11 新增）
+- `/harness-kit:harness-plan` — 只做设计：跑 RA + SA + GR，给出判决后停止，**不写代码**。用于"投入工程时间前先验证设计"。
+- `/harness-kit:harness-explore` — 调研/可行性：轻量 RA + 一份带引用的 `findings.md`。**不做设计、不写代码**。用于"这事儿到底能不能做？"
+- `/harness-kit:harness-goal` — 开放式 Dev + QA 循环，由可量化的成功标准 + 预算限定。用于"持续改进直到覆盖率 > 80%"这类任务。
 
 init 之后，每个非琐碎任务流经 **7-Agent 流水线**：PM Orchestrator → Requirement Analyst → Solution Architect → Gate Reviewer → Developer（或分区 `dev-*`）→ Code Reviewer → QA Tester → 交付。
 
@@ -237,8 +244,9 @@ Markdown 文档：
 | 0.7.x | 已交付 | i18n（en/zh）+ 项目级输出语言策略；Copilot rules binding |
 | 0.8.x | 已交付 | 跨工具切换协议；生成文件可见 warning |
 | 0.9.x | 已交付 | 自动 sync via Stop hook + OS-aware `{{SYNC_COMMAND}}` + 工具无关 git pre-commit hook；"Other / Generic" 项目类型 |
-| 0.10.0 | 已交付 | **Progressive-disclosure 布局**：`AI-GUIDE.md` 入口 + stub CLAUDE.md / copilot-instructions.md；规则不再组合（~50% context 预算降低）；新增 `/harness-migrate` skill |
-| 0.11+ | 规划中 | **AI 原生 init**：AI 读项目描述（和已有代码）后生成自定义 overlay；Copilot 自定义 agent binding；`/harness-handoff` / `/harness-resume` 自动化 |
+| 0.10.0 | 已交付 | **Progressive-disclosure 布局**：`AI-GUIDE.md` 入口 + stub CLAUDE.md / copilot-instructions.md；规则不再组合（~50% context 预算降低）|
+| 0.11.0 | 已交付 | **三个执行模式**（`/harness-plan`、`/harness-explore`、`/harness-goal`）+ **对抗性验证**（QA 必须写独立 reproducer + `## Adversarial tests` 段，verify_all 强制检查）+ **跨任务 insight index**（`.harness/insight-index.md` + `scripts/archive-task`）—— 借鉴 lsdefine/GenericAgent 的记忆 + 验证纪律 |
+| 0.12+ | 规划中 | **AI 原生 init**：AI 读项目描述（和已有代码）后生成自定义 overlay；Copilot 自定义 agent binding；supervisor agent 配介入文件 |
 
 ## 设计原则
 

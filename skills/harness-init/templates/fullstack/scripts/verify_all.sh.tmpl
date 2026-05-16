@@ -164,9 +164,26 @@ done
 [[ -z "$missing_agent" ]] && step "E.3" "All 7 agents in .harness/agents/" "PASS" || step "E.3" "All 7 agents in .harness/agents/" "FAIL" "Missing:$missing_agent"
 
 if [[ -f scripts/harness-sync.sh ]] && bash scripts/harness-sync.sh --check &>/dev/null; then
-    step "E.4" "Binding in sync (.harness/ -> .claude/ + CLAUDE.md)" "PASS"
+    step "E.4" "Binding in sync (.harness/ -> .claude/)" "PASS"
 else
-    step "E.4" "Binding in sync (.harness/ -> .claude/ + CLAUDE.md)" "FAIL" "Run scripts/harness-sync.sh"
+    step "E.4" "Binding in sync (.harness/ -> .claude/)" "FAIL" "Run scripts/harness-sync.sh"
+fi
+
+# E.5 — Adversarial tests section required in every 06_TEST_REPORT.md
+if [[ ! -d docs/features ]]; then
+    step "E.5" "Adversarial tests section in completed task reports" "SKIP"
+else
+    bad_reports=""
+    while IFS= read -r r; do
+        if ! grep -qE '^##\s+Adversarial\s+tests' "$r"; then
+            bad_reports="$bad_reports\n$r"
+        fi
+    done < <(find docs/features -name '06_TEST_REPORT.md' -type f 2>/dev/null)
+    if [[ -z "$bad_reports" ]]; then
+        step "E.5" "Adversarial tests section in completed task reports" "PASS"
+    else
+        step "E.5" "Adversarial tests section in completed task reports" "FAIL" "Missing section:$(echo -e $bad_reports)"
+    fi
 fi
 
 # Summary

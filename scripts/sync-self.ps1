@@ -37,6 +37,8 @@ $mappings = @(
     @{ from = "scripts/harness-sync.sh"; to = "scripts/harness-sync.sh"; type = "file" }
     @{ from = "scripts/install-hooks.ps1"; to = "scripts/install-hooks.ps1"; type = "file" }
     @{ from = "scripts/install-hooks.sh"; to = "scripts/install-hooks.sh"; type = "file" }
+    @{ from = "scripts/archive-task.ps1"; to = "scripts/archive-task.ps1"; type = "file" }
+    @{ from = "scripts/archive-task.sh"; to = "scripts/archive-task.sh"; type = "file" }
 )
 
 $drift = @()

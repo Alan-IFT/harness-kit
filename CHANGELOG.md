@@ -7,6 +7,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-05-16
+
+### Added — Three execution modes + adversarial verification + cross-task insight index
+
+User pointed me at **lsdefine/GenericAgent** to mine borrowable ideas. After surveying GenericAgent's design (a self-evolving Python agent framework with L0–L4 memory, supervisor-via-files protocol, Plan/Task/Goal modes, and an "adversarial independent verification" stage in its plan SOP), three patterns map cleanly onto harness-kit's "less code, more docs" + "Claude Code ecosystem first" philosophy. v0.11 lands those three.
+
+User also confirmed no backwards-compat needed (the project is still in testing), so **`/harness-migrate` (v0.10 only) has been removed** as dead code — bringing the skill count from 5 → 4, plus 3 new modes → 7 total.
+
+#### 1. Three execution modes — `/harness-plan`, `/harness-explore`, `/harness-goal`
+
+The full 7-stage pipeline is ceremonial for many real-world tasks (research, design-only review, "keep improving" loops). GenericAgent's Plan/Task/Goal triad gave a clean abstraction. Mapped to harness-kit:
+
+- **`/harness-kit:harness-plan`** — design-only mode. Runs RA + SA + GR (stages 1-3) and stops with a verdict. ~30-40% of full-pipeline cost. Use to vet a design before committing engineering time. Skill defines verdict types (`APPROVED FOR DEVELOPMENT` / `CHANGES REQUIRED` / `REJECTED`) and how the partial 01-03 docs can be resumed by `/harness` later.
+- **`/harness-kit:harness-explore`** — research / feasibility mode. Light RA + a `findings.md` with citations. No design, no code. Use for "can we even do X?" type questions. ~15-20% of full-pipeline cost. Skill explicitly forbids implementing the answer (switch to `/harness-plan` if you want to).
+- **`/harness-kit:harness-goal`** — open-ended Dev + QA loop bounded by a measurable success criterion and a budget (max iterations or max minutes). Use for "keep improving until coverage > 80%" / "reduce verify_all warnings to 0" type tasks. Each iteration's Developer dispatch receives only the 3 most recent iterations' history to bound context growth (GenericAgent-style budget discipline). Final QA must include the adversarial section (see #2).
+
+These are skill markdown files only — no new runtime code, no new harness-sync logic. They route through the existing PM Orchestrator + Task tool infrastructure.
+
+#### 2. Adversarial verification (the highest-ROI borrow from GenericAgent)
+
+GenericAgent's `verify_sop.md` has three iron rules: "must really run (with tool output)", "no tool evidence = skipped", and "cannot rely on the implementer's tests (they may share mock assumptions with the bug)". This contractual adversarial mindset is exactly what harness-kit's QA stage was missing — the v0.10 QA tester read from `04_DEVELOPMENT.md` and inherited the developer's cognitive biases.
+
+Changes:
+- `templates/common/.harness/agents/qa-tester.md` adds an **"Adversarial mindset (core principle)"** section with three iron rules: no-tool-evidence-no-claim / independent-reproducer-not-dev's-test / one-predicted-failure-per-AC. Test report format now includes a **REQUIRED `## Adversarial tests`** section with hypothesis + reproducer + tool output per acceptance criterion.
+- `templates/{fullstack,backend}/scripts/verify_all.{ps1,sh}.tmpl` adds a new step (`E.5` / `D.5`) that fails if any `06_TEST_REPORT.md` under `docs/features/` is missing the `## Adversarial tests` section. Verification now contractually enforces the discipline.
+- Dogfood: `.harness/agents/qa-tester.md` propagated via `sync-self`.
+
+#### 3. Cross-task insight index (`.harness/insight-index.md`) + `scripts/archive-task`
+
+Long-running projects accumulate hard-won truths ("this column is TIMESTAMPTZ", "this SDK silently returns null") that every new task otherwise re-discovers. GenericAgent's L1 `global_mem_insight.txt` is a ≤30-line indexed memory; we adopt the same idea as a markdown file.
+
+New files:
+- `templates/common/.harness/rules/05-insight-index.md.tmpl` — the contract for what counts as insight, when to read it, when to write it, and the "adversarial test" for writing (if a reasonable person could derive it in <10 min from the codebase, it's not insight). Trigger condition: "at the start of any task that involves design or implementation decisions."
+- `templates/common/.harness/insight-index.md.tmpl` — the data file itself, starts empty with a 1-line header.
+- `templates/i18n/zh/common/` — Chinese versions of both.
+- `templates/common/scripts/archive-task.{ps1,sh}` — at task completion, harvests `## Insight` section bullets from `07_DELIVERY.md` into `.harness/insight-index.md`, moves the 7 stage docs to `docs/features/_archived/<task>/`, and rotates the oldest insights to `docs/features/_archived/insight-history.md` if the index would exceed 30 lines. Never deletes; only moves and appends.
+- `sync-self.{ps1,sh}` mappings extended to keep the archive-task scripts byte-identical between `templates/common/scripts/` and the dogfood's `scripts/`.
+
+Dogfood: `.harness/rules/05-insight-index.md` and `.harness/insight-index.md` created for this repo. The insight-index seeded with three real truths from v0.9.x / v0.10.0 development (the Edit-tool-silent-success bug, the placeholder-whitelist gotcha, the sync-self-doesn't-cover-rules gotcha).
+
+`AI-GUIDE.md` (both dogfood and template) updated to reference the new rule fragment, the insight-index data file, the three new modes, and the `archive-task` script.
+
+### Removed
+
+- `/harness-migrate` skill (was v0.10-only). The project isn't in production use yet; the migrate skill was dead code. Brings skill count from 5 → 4 setup/ops skills + 3 new modes = 7 total.
+
+### Changed
+
+- `install.{ps1,sh}` — skill list updated (remove migrate, add 3 modes).
+- `scripts/verify_all.{ps1,sh}` C.1 / G.1 / G.2 — now check "All 7 skills".
+- README.md and README.zh-CN.md — restructured skill section into Setup / Operations / Modes; roadmap updated.
+
+### Tests
+
+- test-init: 116/116 PASS (unchanged from v0.10.0 — new templates pass the existing assertions).
+- test-real-project: 82/82 PASS (same).
+- verify_all: 19/19 PASS.
+
+### Explicitly NOT borrowed from GenericAgent
+
+- **9 atomic tools + `code_run` fallback** — overlaps with Claude Code's native tool surface; reinventing would violate "don't reinvent platform mechanisms."
+- **Self-evolution / auto-skill-crystallization** — would require auto-writes to `.harness/rules/`, violating "truth source is not auto-modified."
+- **Python runtime** — violates "lightweight, markdown + dual-shell scripts only, zero runtime dependency."
+
+The borrow surface was the **discipline** (adversarial verification, insight tiering, mode separation), not the implementation.
+
 ## [0.10.0] - 2026-05-16
 
 ### Added — Progressive-disclosure layout (`AI-GUIDE.md` entry + stub CLAUDE.md / copilot-instructions.md)

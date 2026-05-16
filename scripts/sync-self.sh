@@ -65,6 +65,10 @@ sync_file "$template_common/scripts/harness-sync.sh"  "$repo_root/scripts/harnes
 sync_file "$template_common/scripts/install-hooks.ps1" "$repo_root/scripts/install-hooks.ps1" "scripts/install-hooks.ps1"
 sync_file "$template_common/scripts/install-hooks.sh"  "$repo_root/scripts/install-hooks.sh"  "scripts/install-hooks.sh"
 
+# Mapping 4: archive-task scripts
+sync_file "$template_common/scripts/archive-task.ps1" "$repo_root/scripts/archive-task.ps1" "scripts/archive-task.ps1"
+sync_file "$template_common/scripts/archive-task.sh"  "$repo_root/scripts/archive-task.sh"  "scripts/archive-task.sh"
+
 if [[ "$CHECK" == true ]]; then
     if (( ${#drift[@]} > 0 )); then
         echo "Drift detected:" >&2

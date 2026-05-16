@@ -19,10 +19,14 @@ This project uses the **Harness 7-agent pipeline**: PM Orchestrator → Requirem
 ## Rule fragments (read by "when to read")
 
 - **`.harness/rules/00-core.md`** (**always**): 7-stage pipeline, hard rules, default output formats
+- **`.harness/rules/05-insight-index.md`** (**at the start of design/implementation tasks**): how cross-task hard-won truths are captured; check `.harness/insight-index.md` before deciding anything non-trivial
 - **`.harness/rules/50-{{PROJECT_TYPE}}.md`** (**when touching code**): project-type overlay, partitioning, stack conventions
 - **`.harness/rules/60-tool-handoff.md`** (**when switching Claude Code ↔ Copilot**): state lives in files, not chat memory
 
 If you add a new fragment, append a line above with its filename, a 1-line description, and the trigger condition.
+
+**Memory layer**:
+- **`.harness/insight-index.md`** — ≤30 evidence-backed lines of project-specific facts. Read at task start; append at task end (only with evidence).
 
 ## Skills (standard procedures, invoked per task type)
 
@@ -53,11 +57,18 @@ Claude Code users dispatch via the Task tool. Copilot users read the agent file 
 - `docs/spec/` — project specs
 - `evals/golden-tasks.md` — regression task set
 
-## Workflow entry
+## Workflow entry — pick the right mode
 
-New feature or bug? Tell the PM Orchestrator: "Take this task: …"
+| Mode | Use when | Skill |
+|---|---|---|
+| Full 7-stage pipeline | Real feature / bug / refactor with a clear acceptance criterion | `/harness` or PM dispatch |
+| Plan only (stages 1-3) | "Vet the design before committing engineering time" | `/harness-plan` |
+| Explore / feasibility | "Can we even do X?" — research, no code | `/harness-explore` |
+| Goal loop (Dev + QA) | "Keep improving until criterion met" with measurable target | `/harness-goal` |
 
-The PM dispatches; the 7-stage pipeline runs; the task is **only done** when `scripts/verify_all` PASSes.
+Declare-done gate: `scripts/verify_all` PASS + (if 7-stage or goal) QA's `06_TEST_REPORT.md` has an `## Adversarial tests` section.
+
+When a task is complete, run `scripts/archive-task --task <task-slug>` to harvest its insights (from the `## Insight` section of `07_DELIVERY.md`) into `.harness/insight-index.md` and move the stage docs to `docs/features/_archived/`.
 
 ## Editing rules
 

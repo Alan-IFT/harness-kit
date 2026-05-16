@@ -19,11 +19,15 @@ Stack: Markdown (skills, agent definitions, docs) + PowerShell + Bash (verify_al
 ## Rule fragments (read by "when to read")
 
 - **`.harness/rules/00-core.md`** (**always**): this repo's identity (tooling library + Claude Code Plugin), how development flows, trivial vs non-trivial
+- **`.harness/rules/05-insight-index.md`** (**at the start of design/implementation tasks**): how cross-task hard-won truths are captured in `.harness/insight-index.md`; read `insight-index.md` itself before deciding anything non-trivial
 - **`.harness/rules/10-self-consistency.md`** (**when touching `templates/`, `.harness/`, or scripts/sync-self**): the two consistency layers (templates ↔ this repo, `.harness` ↔ `.claude`/`CLAUDE.md`)
 - **`.harness/rules/20-documentation.md`** (**when touching README / CHANGELOG / docs**): doc-sync rules, what README must reference
 - **`.harness/rules/30-engineering.md`** (**before commits**): commit message conventions, file hygiene, no secrets, PS/Bash symmetry
 - **`.harness/rules/40-locations.md`** (**when looking for "where does X live"**): file-location lookup table (read this if you'd otherwise guess a path)
 - **`.harness/rules/60-tool-handoff.md`** (**when switching Claude Code ↔ Copilot or other tools**): state lives in files, doc-sync responsibility for non-Claude tools
+
+**Memory layer**:
+- **`.harness/insight-index.md`** — ≤30 evidence-backed lines of project-specific facts. Read at task start; append at task end (only with evidence). Never edit other people's lines.
 
 Before declaring any task complete, run `scripts/verify_all` and confirm 19/19 PASS — this is the gate, not a rule fragment.
 
@@ -49,20 +53,23 @@ Full contracts in `.harness/agents/<name>.md`. Read on demand when assuming or d
 
 - `scripts/verify_all.{ps1,sh}` — total verification (19 checks). **Must PASS before declaring done.**
 - `scripts/harness-sync.{ps1,sh}` — copy `.harness/agents/` + `.harness/skills/` to `.claude/`. v0.10 narrow scope.
-- `scripts/sync-self.{ps1,sh}` — keep this repo's dogfood `.harness/agents/` + scripts byte-identical with `templates/common/`.
+- `scripts/sync-self.{ps1,sh}` — keep this repo's dogfood `.harness/agents/` + 4 script pairs (harness-sync, install-hooks, archive-task) byte-identical with `templates/common/`. **Does NOT sync `.harness/rules/` — those are bespoke per repo.**
 - `scripts/install-hooks.{ps1,sh}` — one-shot installer for `.git/hooks/pre-commit` (runs `harness-sync --check`).
+- `scripts/archive-task.{ps1,sh}` — archive a completed task: harvest `## Insight` section from 07_DELIVERY.md to `.harness/insight-index.md`, move 7 stage docs to `docs/features/_archived/<task>/`, rotate old insights to `docs/features/_archived/insight-history.md` if >30 lines.
 - `scripts/test-init.{ps1,sh}` — regression for `/harness-init` on empty dirs.
 - `scripts/test-real-project.{ps1,sh}` — regression overlaying templates on real fixtures.
 
-## Workflow entry
+## Workflow entry — pick the right mode
 
-Want to change something non-trivial (new skill, new template, change to any agent definition, change to verify_all)?
-→ Ask the PM Orchestrator: "Take this task: …"
+| Mode | Use when | Skill |
+|---|---|---|
+| Full 7-stage pipeline | Real feature / bug / refactor with a clear acceptance criterion | `/harness` or PM Orchestrator dispatch |
+| Plan only (stages 1-3) | "Vet the design before committing engineering time" | `/harness-plan` |
+| Explore / feasibility | "Can we even do X?" — research, no code | `/harness-explore` |
+| Goal loop (Dev + QA) | "Keep improving until criterion met" with measurable target | `/harness-goal` |
+| Trivial | Typo, comment, single-line dependency bump | Direct edit + `scripts/verify_all` |
 
-Trivial (typo, comment, dependency bump)?
-→ Direct edit + `scripts/verify_all`.
-
-Declare-done gate: **`scripts/verify_all` must PASS**.
+Declare-done gate (**all non-trivial modes**): `scripts/verify_all` PASS + (if 7-stage or goal) QA's `06_TEST_REPORT.md` has an `## Adversarial tests` section.
 
 ## Editing rules
 

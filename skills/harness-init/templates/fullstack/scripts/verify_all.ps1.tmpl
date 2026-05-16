@@ -143,10 +143,24 @@ Step "E.3" "All 7 agent definitions present in .harness/agents/" {
     }
 }
 
-Step "E.4" "Binding in sync (.harness/ -> .claude/ + CLAUDE.md)" {
+Step "E.4" "Binding in sync (.harness/ -> .claude/)" {
     if (-not (Test-Path "scripts/harness-sync.ps1")) { throw "scripts/harness-sync.ps1 missing" }
     & "scripts/harness-sync.ps1" -Check
     if ($LASTEXITCODE -ne 0) { throw "Binding drift -- run scripts/harness-sync.ps1 to fix" }
+}
+
+Step "E.5" "Adversarial tests section present in completed task reports" {
+    # Each completed 06_TEST_REPORT.md MUST contain the '## Adversarial tests' section.
+    # This enforces the QA Tester's adversarial-verification contract.
+    if (-not (Test-Path "docs/features")) { return "SKIP" }
+    $reports = Get-ChildItem -Path "docs/features" -Recurse -Filter "06_TEST_REPORT.md" -ErrorAction SilentlyContinue
+    if ($reports.Count -eq 0) { return "SKIP" }
+    $bad = @()
+    foreach ($r in $reports) {
+        $c = Get-Content $r.FullName -Raw
+        if ($c -notmatch '##\s+Adversarial\s+tests') { $bad += $r.FullName.Substring($root.Length + 1) }
+    }
+    if ($bad.Count -gt 0) { throw "Test reports missing '## Adversarial tests' section:`n$($bad -join "`n")" }
 }
 
 # --- Summary ---

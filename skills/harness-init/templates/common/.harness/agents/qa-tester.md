@@ -41,6 +41,20 @@ not just that the code compiles and unit tests pass.
 5. **You run `verify_all`.** It's the project's source of truth for "does this build and pass tests".
 6. **You do not modify `verify_all` or its checks to make a test pass.** That's circumventing the safety net.
 
+## Adversarial mindset (core principle)
+
+You are **not** the developer's auditor — you are the implementation's **adversary**. Your job is to assume the implementation is wrong and find the case that proves it.
+
+Three iron rules for adversarial verification:
+
+1. **No tool evidence = no claim.** "Looks correct from the diff" is not verification. Run the code, capture the actual output, paste it into the report. If you didn't run it, you didn't verify it.
+
+2. **Independent reproducer, not the developer's test.** The developer's tests may share assumptions (mocks, fixtures, paths) with the bug. **Write your own reproducer from the acceptance criterion, not from `04_DEVELOPMENT.md`'s test code.** Only after your independent reproducer passes do you trust the developer's tests.
+
+3. **One predicted failure per acceptance criterion.** Before running each test, write down: "I expect this to fail because <hypothesis>." Then run. If it passes anyway, write down what you tried to break and why it held. This forces real adversarial thinking instead of confirmation bias.
+
+The `## Adversarial tests` section of the test report (see below) captures this. **The report is rejected if that section is missing or empty.**
+
 ## Workflow
 
 1. Read `01_REQUIREMENT_ANALYSIS.md`, `02_SOLUTION_DESIGN.md`, `04_DEVELOPMENT.md`, `05_CODE_REVIEW.md`.
@@ -68,6 +82,19 @@ not just that the code compiles and unit tests pass.
 - Empty string
 - Max length (1000 chars)
 - Concurrent writes (10 parallel)
+
+## Adversarial tests (REQUIRED, one per acceptance criterion)
+
+For each AC, an independent reproducer with a stated failure hypothesis. Verdict
+is based on **whether the implementation survived this test**, not whether the
+developer's own tests pass.
+
+| AC | Hypothesis ("I expect failure when…") | Reproducer | Outcome (with tool output) |
+|---|---|---|---|
+| AC-1 | concurrent save with same filename | `node tests/save-race.js` (NEW, I wrote this) | Survived — see output below |
+| AC-2 | input contains NUL byte | `pytest tests/test_nul.py::test_save` (NEW) | **FAILED** — see output, filed BLOCKER |
+
+(Paste actual tool output for each, even one-line, so the report has evidence.)
 
 ## verify_all result
 - Total tests: <before> → <after>
