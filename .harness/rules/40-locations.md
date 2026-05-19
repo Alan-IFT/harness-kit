@@ -9,17 +9,20 @@
 | Stub CLAUDE.md (do not edit; ~15 lines, references AI-GUIDE.md) | `CLAUDE.md` |
 | Generated .claude/ (do not edit; synced from `.harness/agents/` + `.harness/skills/`) | `.claude/` |
 | The 7-agent pipeline definition | `docs/workflow.md` |
+| Supervisor agent (auxiliary, v0.17+; not part of 7-stage routing) | `.harness/agents/supervisor.md` |
+| Supervisor skill (manual invocation, v0.17+) | `skills/harness-supervise/SKILL.md` |
 | Project repo navigation | `docs/dev-map.md` |
 | Total verification | `scripts/verify_all.{ps1,sh}` |
 | Binding sync (`.harness/agents/` + `.harness/skills/` → `.claude/`) | `scripts/harness-sync.{ps1,sh}` |
 | Repo-self sync (`templates/` → `.harness/`) | `scripts/sync-self.{ps1,sh}` |
 | Init regression | `scripts/test-init.{ps1,sh}` |
+| Supervisor regression (v0.17+) | `scripts/test-supervisor.{ps1,sh}` |
 | Architecture overview (HTML) | `architecture.html` |
 | Project history | `CHANGELOG.md` |
 
 ## Verify before declaring done
 
-`scripts/verify_all` checks (29 items at v0.16.0, all must PASS — count grows with releases):
+`scripts/verify_all` checks (30 items at v0.17.0, all must PASS — count grows with releases):
 
 - No secrets / committed env files
 - `参考/` not tracked
@@ -39,5 +42,6 @@
 - Document size soft caps (I.1-I.5, v0.14+; WARN-level)
 - Retired-claim phrase guard (I.6, v0.15.1+; FAIL if any banned phrase from past architectural retirements resurfaces in a live file)
 - AI-generated `50-*.md` sanity (D.3, v0.16.0+; FAIL if a `50-*.md` rule fragment is missing any of the six required headings, leaks a `{{...}}` placeholder, or has a non-template `##`/`###` section without a `<!-- source: ... -->` annotation)
+- Ignored INTERVENE supervision reports (I.7, v0.17.0+; WARN if a `docs/features/<slug>/SUPERVISION_REPORT.md` has `Verdict: INTERVENE` AND the slug is an active row in `docs/tasks.md` AND the file mtime is >48h old)
 
 Run after every change; do not skip.

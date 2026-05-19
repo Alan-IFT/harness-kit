@@ -1,10 +1,10 @@
 # Manual End-to-End Test Checklist
 
-Automated regression (`scripts/test-init.ps1` at 227 assertions; `scripts/test-init.sh` at 191 when python3 is unavailable (e.g. Windows Microsoft Store stub) / 227 when present; `scripts/verify_all` at 29 checks at v0.16.0) covers everything
+Automated regression (`scripts/test-init.ps1` at 227 assertions; `scripts/test-init.sh` at 191 when python3 is unavailable (e.g. Windows Microsoft Store stub) / 227 when present; `scripts/verify_all` at 30 checks at v0.17.0; `scripts/test-supervisor.ps1` at 54 assertions / `scripts/test-supervisor.sh` at 50 (no-python3) covering the supervisor agent contract + AC-4..AC-7 + BUG-1 fixed-case Q-1 negative fixtures) covers everything
 that runs from a shell. But two things must be exercised in a real Claude Code
 session to confirm the experience:
 
-1. **Skill discovery** — does Claude Code actually load the nine skills?
+1. **Skill discovery** — does Claude Code actually load the ten skills?
 2. **Skill interaction** — does `/harness-init` correctly call `AskUserQuestion`,
    substitute placeholders, run `harness-sync`, and leave a usable project?
 
@@ -31,9 +31,9 @@ upgrading / before announcing a release.
 ~/harness-kit/install.sh --dry-run
 ```
 
-**Expected**: prints "Would copy" for all 9 skills (harness, harness-init,
+**Expected**: prints "Would copy" for all 10 skills (harness, harness-init,
 harness-adopt, harness-verify, harness-status, harness-plan, harness-explore,
-harness-goal, harness-intervene). Exits 0. **No file is created** under
+harness-goal, harness-intervene, harness-supervise). Exits 0. **No file is created** under
 `~/.claude/skills/`.
 
 ### A.2 Real install
@@ -46,20 +46,20 @@ harness-goal, harness-intervene). Exits 0. **No file is created** under
 ~/harness-kit/install.sh
 ```
 
-**Expected**: prints "Installed" for all 9 skills. After completion, list them:
+**Expected**: prints "Installed" for all 10 skills. After completion, list them:
 
 ```powershell
 Get-ChildItem ~/.claude/skills/ -Directory | Select-Object Name
 # Should show: harness, harness-adopt, harness-explore, harness-goal,
-# harness-init, harness-intervene, harness-plan, harness-status, harness-verify
+# harness-init, harness-intervene, harness-plan, harness-status, harness-supervise, harness-verify
 ```
 
 ### A.3 Claude Code sees them
 
 Open Claude Code in any folder. Type `/help` or look at the slash command picker.
-**Expected**: the nine `/harness-*` commands appear (`/harness`, `/harness-init`,
+**Expected**: the ten `/harness-*` commands appear (`/harness`, `/harness-init`,
 `/harness-adopt`, `/harness-verify`, `/harness-status`, `/harness-plan`,
-`/harness-explore`, `/harness-goal`, `/harness-intervene`).
+`/harness-explore`, `/harness-goal`, `/harness-intervene`, `/harness-supervise`).
 
 If they don't appear: restart Claude Code; if still missing, check that
 `~/.claude/skills/harness-init/SKILL.md` exists and has valid frontmatter

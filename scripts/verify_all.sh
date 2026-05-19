@@ -7,7 +7,11 @@ cd "$repo_root"
 
 errors=0
 warns=0
-declare -a report
+# Use `report=()` instead of `declare -a report` — under `set -u`, the latter
+# can leak an empty index-0 element on some bash versions, making
+# `printf '%s\n' "${report[@]}"` emit an extra empty line and underreport
+# the PASS counter by 1 (per user-feedback insight on `set -u` array init).
+report=()
 
 step() {
     local id="$1" name="$2" status="$3" detail="${4:-}"
@@ -48,10 +52,10 @@ done
 
 # C.1 — skills
 missing_skills=""
-for s in harness harness-init harness-adopt harness-verify harness-status harness-plan harness-explore harness-goal harness-intervene; do
+for s in harness harness-init harness-adopt harness-verify harness-status harness-plan harness-explore harness-goal harness-intervene harness-supervise; do
     [[ -f "skills/$s/SKILL.md" ]] || missing_skills="$missing_skills $s"
 done
-[[ -z "$missing_skills" ]] && step "C.1" "All 9 skills present" "PASS" || step "C.1" "All 9 skills present" "FAIL" "missing:$missing_skills"
+[[ -z "$missing_skills" ]] && step "C.1" "All 10 skills present" "PASS" || step "C.1" "All 10 skills present" "FAIL" "missing:$missing_skills"
 
 # C.2 — frontmatter sanity
 bad=""
@@ -322,10 +326,10 @@ fi
 # G.1 — README mentions skills
 readme=$(cat README.md)
 miss_r=""
-for s in harness harness-init harness-adopt harness-verify harness-status harness-plan harness-explore harness-goal harness-intervene; do
+for s in harness harness-init harness-adopt harness-verify harness-status harness-plan harness-explore harness-goal harness-intervene harness-supervise; do
     grep -q "$s" <<< "$readme" || miss_r="$miss_r $s"
 done
-[[ -z "$miss_r" ]] && step "G.1" "README references all 9 skills" "PASS" || step "G.1" "README references all 9 skills" "FAIL" "missing:$miss_r"
+[[ -z "$miss_r" ]] && step "G.1" "README references all 10 skills" "PASS" || step "G.1" "README references all 10 skills" "FAIL" "missing:$miss_r"
 
 # H.1 — fixtures
 missing_fix=""
@@ -338,10 +342,10 @@ done
 # G.2 — CHANGELOG mentions skills
 cl=$(cat CHANGELOG.md)
 miss_c=""
-for s in harness harness-init harness-adopt harness-verify harness-status harness-plan harness-explore harness-goal harness-intervene; do
+for s in harness harness-init harness-adopt harness-verify harness-status harness-plan harness-explore harness-goal harness-intervene harness-supervise; do
     grep -q "$s" <<< "$cl" || miss_c="$miss_c $s"
 done
-[[ -z "$miss_c" ]] && step "G.2" "CHANGELOG references all 9 skills" "PASS" || step "G.2" "CHANGELOG references all 9 skills" "FAIL" "missing:$miss_c"
+[[ -z "$miss_c" ]] && step "G.2" "CHANGELOG references all 10 skills" "PASS" || step "G.2" "CHANGELOG references all 10 skills" "FAIL" "missing:$miss_c"
 
 # G.3 — Version stamps consistent across plugin.json / marketplace.json / README badges
 # Extracts the FIRST "version": "X.Y.Z" from each JSON (both manifests have a single version field today)
@@ -431,6 +435,64 @@ if [[ -f docs/tasks.md ]]; then
     fi
 else
     step "I.5" "docs/tasks.md ≤300 lines" "PASS"
+fi
+
+# I.7 — Ignored INTERVENE supervision reports (v0.17+, WARN-only)
+# Passive guard for the supervisor agent. Globs every
+# docs/features/<slug>/SUPERVISION_REPORT.md (not _archived/), reads the last
+# 5 non-blank lines for the verdict, and WARNs if Verdict: INTERVENE has been
+# ignored on an active task whose row in docs/tasks.md is not Completed/Archived
+# and whose file mtime is >48h ago.
+i7_stale=""
+if [[ -d docs/features ]]; then
+    # NOTE: loop variable is `report_file` (NOT `report`) — `report` is the global
+    # array used by step() to accumulate the audit log; reusing the name clobbers
+    # it via implicit scalar→array coercion and corrupts the PASS counter.
+    while IFS= read -r report_file; do
+        [[ -z "$report_file" ]] && continue
+        # exclude _archived/ and _supervision/
+        case "$report_file" in
+            *_archived*) continue ;;
+            *_supervision*) continue ;;
+        esac
+        slug=$(basename "$(dirname "$report_file")")
+        # Last 5 non-blank lines, look for verdict
+        verdict=""
+        while IFS= read -r line; do
+            if [[ "$line" =~ ^Verdict:\ (HEALTHY|WATCH|INTERVENE)$ ]]; then
+                verdict="${BASH_REMATCH[1]}"
+                break
+            fi
+        done < <(grep -v '^[[:space:]]*$' "$report_file" | tail -n 5)
+        [[ "$verdict" != "INTERVENE" ]] && continue
+        # Is the slug an active row in docs/tasks.md (not Completed/Archived)?
+        is_active=0
+        if [[ -f docs/tasks.md ]]; then
+            while IFS= read -r row; do
+                if [[ "$row" != *Completed* && "$row" != *Archived* ]]; then
+                    is_active=1
+                    break
+                fi
+            done < <(grep -F -- "$slug" docs/tasks.md || true)
+        fi
+        (( is_active == 1 )) || continue
+        # mtime > 48h ago?
+        if [[ "$(uname)" == "Darwin" ]]; then
+            mtime=$(stat -f %m "$report_file" 2>/dev/null || echo 0)
+        else
+            mtime=$(stat -c %Y "$report_file" 2>/dev/null || echo 0)
+        fi
+        now=$(date +%s)
+        age_hours=$(( (now - mtime) / 3600 ))
+        if (( age_hours > 48 )); then
+            i7_stale="$i7_stale $report_file(INTERVENE,${age_hours}h,slug=$slug)"
+        fi
+    done < <(find docs/features -maxdepth 3 -name SUPERVISION_REPORT.md -type f 2>/dev/null)
+fi
+if [[ -n "$i7_stale" ]]; then
+    step "I.7" "Ignored INTERVENE supervision reports (WARN if >48h old on active task)" "WARN" "stale:$i7_stale"
+else
+    step "I.7" "Ignored INTERVENE supervision reports (WARN if >48h old on active task)" "PASS"
 fi
 
 # I.6 — Banned literal substrings that used to be accurate but were retired by a

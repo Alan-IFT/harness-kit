@@ -2,15 +2,15 @@
 
 **English** · [简体中文](README.zh-CN.md)
 
-![version](https://img.shields.io/badge/version-0.16.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-29%2F29-brightgreen) ![test-init](https://img.shields.io/badge/test--init-227%2F227-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.17.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-30%2F30-brightgreen) ![test-init](https://img.shields.io/badge/test--init-227%2F227-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
-> **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (9 skills + project templates) that brings disciplined AI-driven development to fullstack and backend projects.
+> **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (10 skills + project templates) that brings disciplined AI-driven development to fullstack and backend projects.
 >
 > **Goal**: humans only do "describe the requirement" and "step in when AI can't"; everything else — 7-agent pipeline, verify gates, structured documents — runs automatically.
 
 ## What's inside
 
-This is a Claude Code Plugin packaging that gives any project nine AI skills:
+This is a Claude Code Plugin packaging that gives any project ten AI skills:
 
 **Pipeline skills** (four task shapes; the AI picks the right one from your natural-language description)
 - `/harness-kit:harness` — full 7-stage pipeline (RA → SA → GR → Dev → CR → QA → Delivery). Use for real feature / bug / refactor work.
@@ -26,6 +26,7 @@ This is a Claude Code Plugin packaging that gives any project nine AI skills:
 - `/harness-kit:harness-verify` — run total verification (compile + test + rule scan + baseline diff)
 - `/harness-kit:harness-status` — health snapshot (which assets present, baseline, last verify, active tasks)
 - `/harness-kit:harness-intervene` — soft Ctrl-C for an in-flight pipeline: drop a `STOP` / `REDIRECT` / `SKIP` / `NOTE` signal that the PM consumes at the next stage boundary
+- `/harness-kit:harness-supervise` — observer-only auxiliary skill (v0.17+): reads an in-flight or archived task folder and emits a `SUPERVISION_REPORT.md` flagging anti-patterns (rollback rate, stage-doc thinness, missing intervention checks, missing archive call) with `INFO`/`WARN`/`ALERT` severity and a final `HEALTHY`/`WATCH`/`INTERVENE` verdict
 
 After init, every non-trivial task flows through a **7-agent pipeline**: PM Orchestrator → Requirement Analyst → Solution Architect → Gate Reviewer → Developer (or partition `dev-*`) → Code Reviewer → QA Tester → Delivery.
 
@@ -154,7 +155,7 @@ Hit Claude Code's rate limit mid-task? Switch to GitHub Copilot in VS Code and k
 
 ### Three layers of regression testing
 
-- `verify_all` (29 checks) — repo health
+- `verify_all` (30 checks) — repo health
 - `test-init` (227 assertions on PowerShell; 191 on Bash without python3) — init template logic on empty dirs (3 project types × 75 PS / 63 Bash, plus 2 shell-agnostic BUG-2 placeholder-regex regression assertions)
 - `test-real-project` (82 assertions) — overlay onto real fixtures (todo-fullstack, todo-backend)
 
@@ -254,7 +255,8 @@ Markdown docs:
 | 0.15.0 | done | **AI safety guardrails**: cross-platform `guard-rm.{ps1,sh}` PreToolUse hook blocks destructive commands (`rm` / `Remove-Item` / `find -delete` / nested `pwsh -c`) targeting paths outside the project root; per-call override via `HARNESS_ALLOW_OUTSIDE_RM=1`. New `.harness/rules/75-safety-hook.md`. Plus D1+D2 docs: AI tool flow modes (Claude Code auto-dispatch / Copilot manual / Copilot opt-in "continuous mode" with HARD STOP after Gate Review) and an explicit Claude-Code-sub-agent-dispatch callout. verify_all 26 → 27 (new F.2). |
 | 0.15.1 | done | **Documentation-drift cleanup + I.6 retired-claim guard**: closes the v0.10 composition-retirement drift class across 14 files (docs / templates / dogfood rules / Chinese overlay), and adds a literal-substring banned-phrase guard in `verify_all` (FAIL if any retired claim resurfaces). verify_all 27 → 28 (new I.6). |
 | 0.16.0 | done | **AI-native init / adopt**: opt-in `/harness-init` Q6 and `/harness-adopt` Q6 ask whether to let AI draft a tailored `.harness/rules/50-<project-slug>.md` (and optional `dev-*` partition agents) grounded in the user's Q2 stack string plus top-level filenames + named manifest contents. Static-stub fallback if the four invariants fail (sections, no `{{...}}`, ≤200 lines, no reserved partition names). Inline source citations (`<!-- source: ... -->`). Mock fixture for test/dry-run via `HARNESS_AI_NATIVE_MOCK`. verify_all 28 → 29 (new D.3 per-section sanity check). |
-| 0.17+ | planned | Supervisor agent observing pipeline progress |
+| 0.17.0 | done | **Supervisor agent + `/harness-supervise` skill**: observer-only auxiliary agent reads an in-flight or archived 7-stage task folder, detects 4 anti-patterns (AP-1 same-stage rollback rate, AP-1b cross-stage rollback tally, AP-2 stage-doc thinness, AP-3 missing intervention checks, AP-4 missing archive call) with fixed thresholds, classifies findings INFO/WARN/ALERT, emits one `SUPERVISION_REPORT.md` per invocation with a final `Verdict: HEALTHY | WATCH | INTERVENE`. Manual-invocation only (not part of the canonical 7-stage routing); `allowed-tools` whitelist physically excludes `Edit`/`Bash`/`PowerShell`/`Task`/`AskUserQuestion`. New `verify_all I.7` passive guard WARNs when an `INTERVENE` report has been ignored >48h on an active task. verify_all 29 → 30. |
+| 0.18+ | planned | Supervisor auto-dispatch by PM at user-configurable stage boundaries (once false-positive budget is proven against ≥10 real tasks) |
 
 ## Design principles
 

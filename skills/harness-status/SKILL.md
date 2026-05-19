@@ -22,6 +22,7 @@ Check each of these and report concisely:
 | Dev map | `docs/dev-map.md` | ? |
 | Spec folder | `docs/spec/` | ? |
 | All 7 agents | `.claude/agents/{pm,req,sol,gate,dev,review,qa}*.md` | ? |
+| Supervisor (auxiliary) | `.claude/agents/supervisor.md` | ? |
 | Build skill | `.claude/skills/build/SKILL.md` | ? |
 | Test skill | `.claude/skills/test/SKILL.md` | ? |
 | Verify skill | `.claude/skills/verify/SKILL.md` | ? |

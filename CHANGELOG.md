@@ -7,6 +7,85 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-05-19
+
+The first **observer-only** release. A new auxiliary agent (`.harness/agents/supervisor.md`) and a manually-invoked skill (`/harness-kit:harness-supervise`) read an in-flight or archived 7-stage task folder, detect a fixed catalog of anti-patterns, and emit a single `SUPERVISION_REPORT.md` for human review. The supervisor is **not** part of the canonical 7-stage routing; it is purely informational and never modifies upstream documents, dispatches sub-agents, or routes the pipeline. The PM Orchestrator contract is unchanged — running `/harness` end-to-end produces stage docs byte-identical to v0.16.0 whether the supervisor is invoked or not (AC-10).
+
+### Added — Supervisor agent + `/harness-supervise` skill (manual-invocation only)
+
+- **`.harness/agents/supervisor.md`** — new auxiliary agent contract (≤300 lines, currently 255). Declares the severity scheme (`INFO`/`WARN`/`ALERT`), the five anti-pattern detectors with explicit thresholds (AP-1 same-stage rollback rate, AP-1b cross-stage rollback tally, AP-2 stage-doc thinness, AP-3 missing intervention checks, AP-4 missing archive call), the fixed report schema (last non-blank line MUST match `^Verdict: (HEALTHY|WATCH|INTERVENE)$`), and the read-only / write-one-file constraints. `tools: Read, Write, Glob, Grep` — `Edit`, `Bash`, `PowerShell`, `Task`, `AskUserQuestion` are physically excluded per NFR-4. Byte-identical mirror at `skills/harness-init/templates/common/.harness/agents/supervisor.md` (covered by `sync-self`'s `dir-of-md` mapping; no script edit needed).
+- **`skills/harness-supervise/SKILL.md`** — new skill. Three argument shapes: `<task-slug>` (single task), `--recent <N>` (last N archived tasks), `--all` (every archived task). `allowed-tools: Read, Write, Glob, Grep` (NFR-4 enforced). Includes the `HARNESS_SUPERVISOR_MOCK` env-var pattern for CI / dry-run, the report-write protocol (one Write call + re-Read verification per insight-index L10), and the boundary conditions (missing task folder, malformed PM_LOG, mock-fallback, doc-size cap).
+- **`skills/harness-supervise/fixtures/sample-task/`** — committed HEALTHY-baseline fixture (PM_LOG with zero rollbacks, 6 stage-to-stage intervention checks, all seven stage docs above AP-2 minimums). Used by `test-supervisor` AC-4.
+- **`skills/harness-supervise/fixtures/sample-task-three-rollbacks/PM_LOG.md`** — committed ALERT-path fixture (3 same-stage rollbacks at Stage 5). Used by `test-supervisor` AC-5.
+- **`skills/harness-supervise/fixtures/supervisor-mock.json`** — canned `SUPERVISION_REPORT.md` body. Loaded by the skill when `HARNESS_SUPERVISOR_MOCK` env var points at it; bypasses live detection for CI.
+- **`scripts/test-supervisor.{ps1,sh}`** — new symmetric test driver covering AC-1..AC-7 plus the I.7 contract in-process emulation. Bash side gates the JSON-validation assertion on `python3` availability (mirrors `test-init.sh:198-201` pattern). Counts: 54 PS / 50 Bash-no-python3 assertions (BUG-1 rollback round 2 added the lowercase + mixed-case negative-fixture assertions; bash gains 1 explicit mirror).
+- **`scripts/verify_all.{ps1,sh}` I.7 — Ignored INTERVENE supervision reports (WARN)** — passive guard. Globs every `docs/features/<slug>/SUPERVISION_REPORT.md` (not `_archived/`, not `_supervision/`), reads the last 5 non-blank lines, regex-matches `^Verdict: (HEALTHY|WATCH|INTERVENE)$`, and WARNs if `INTERVENE` appears AND the slug's row in `docs/tasks.md` is not Completed/Archived AND the file mtime is >48h ago. Severity is WARN, not FAIL — the supervisor IS the deep check; `I.7` just notices when one of its alerts was forgotten. Total `verify_all` checks: 29 → 30.
+
+### Anti-pattern thresholds (declared in `supervisor.md`)
+
+- **AP-1 same-stage rollback rate**: 0–1 → no finding · 2 → WARN · ≥3 → ALERT (matches PM hard-stop threshold).
+- **AP-1b cross-stage rollback tally**: 0–1 → no finding · 2 → INFO · 3 → WARN · ≥4 → ALERT. Orthogonal to AP-1; T-002 (1 rollback at Stage 5 + 1 at Stage 6 — different stages) emits AP-1b INFO and no AP-1 finding → `Verdict: HEALTHY` (binding interpretation of AC-6 per gate-finding F-1).
+- **AP-2 stage-doc thinness**: per-stage required headings + per-stage minimum line count (RA 30 · Arch 40 · Gate 20 · Dev 30 · CR 20 · QA 30 · Delivery 15). Missing heading OR under minimum → WARN; both → ALERT.
+- **AP-3 missing intervention checks**: 1–2 missing → WARN · ≥3 → ALERT · PM_LOG absent/malformed → INFO only (prevents T-000-style false positives). **Audit operates on stage-to-stage transitions only**; round-to-round events within a single stage are explicitly NOT audited (gate-finding F-4).
+- **AP-4 missing archive call**: single ALERT severity. Fires when `docs/tasks.md` marks task Completed AND stage docs still live under `docs/features/<slug>/` (not `_archived/<slug>/`).
+
+### Three architect decisions (recorded in `docs/features/supervisor-agent/02_SOLUTION_DESIGN.md` §3)
+
+- **A-1 Two-layer fixture**: real task-folder fixtures at `skills/harness-supervise/fixtures/sample-task/` and `.../sample-task-three-rollbacks/` exercise the AP-1..AP-4 detectors on synthetic Markdown; a separate `supervisor-mock.json` covers the AI-dispatch-free path for CI. Separating "fixture" from "mock" lets each be tested independently.
+- **A-2 Inline execution by the orchestrator AI**: the skill prompt embeds a "read this file, behave like supervisor.md" instruction rather than a `Task`-tool dispatch — matches NFR-4 (no `Task` in `allowed-tools`) and keeps the skill tool-agnostic across Claude Code / Copilot / Cursor.
+- **A-3 Fixed report schema with the verdict as the last non-blank line**: lets `I.7` use a 5-line tail + one-line regex instead of a full Markdown parse; six required sections in fixed order (Summary, Findings, Anti-pattern detail, Cross-references, Methodology notes, Verdict).
+
+### Four Gate-Review round-1 findings resolved (round 2 APPROVED)
+
+- **F-1 (blocker, AC-6 arithmetic)** — added AP-1b cross-stage tally so T-002 archived (1 rollback at Stage 5 + 1 at Stage 6) deterministically yields AP-1b INFO + `Verdict: HEALTHY` rather than the impossible-under-AP-1 "AP-1 WARN" the requirement originally asserted. Binding interpretation note in §16 of the design.
+- **F-2 (clarification)** — `skills/harness-status/SKILL.md:24` fix format pinned: add a new row `| Supervisor (auxiliary) | .claude/agents/supervisor.md | ? |` rather than widening the existing `{pm,req,sol,gate,dev,review,qa}*` glob. The canonical-7 glob's purpose is unchanged.
+- **F-3 (doc fan-out)** — `AI-GUIDE.md:14` phrasing bumped from `7 agent role contracts` to `7 canonical agents + 1 auxiliary (supervisor)` alongside the line-35 / line-67 check-count bumps and the standard CHANGELOG / README / dev-map / manual-e2e-test / walkthrough / architecture sweep (insight L21).
+- **F-4 (AP-3 ambiguity)** — `supervisor.md` AP-3 contract explicitly states audit operates on stage-to-stage transitions only; round-to-round events within a single stage never count as a missing intervention check.
+
+### Changed — Version stamps and surface-count claims
+
+- `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`: `0.16.0` → `0.17.0` (G.3 keeps these in sync).
+- `README.md` / `README.zh-CN.md` badges: `version-0.16.0` → `0.17.0`, `verify_all-29/29` → `30/30`. Skill count `9` → `10` in the intro line, the AI skill list, and the regression-testing layer count.
+- `AI-GUIDE.md`: `29/29 at v0.16.0` → `30/30 at v0.17.0`; line 14 phrasing bumped to `7 canonical agents + 1 auxiliary (supervisor)`; scripts entry now mentions `I.7 ignored-INTERVENE-report guard` and the new `test-supervisor.{ps1,sh}` driver.
+- `docs/dev-map.md`: verify_all comment `29 checks at v0.16.0` → `30 checks at v0.17.0`; scripts/ tree gains a `test-supervisor.{ps1,sh}` row and an `agents/supervisor.md` note.
+- `docs/manual-e2e-test.md`: assertion count statement bumped (verify_all 30; test-supervisor ~47); skill-count copy `9` → `10`; slash-command list extended with `/harness-supervise`.
+- `docs/walkthrough.html`: sample `/harness-verify` output `29 checks: 29 PASS` → `30 checks: 30 PASS`.
+- `architecture.html`: 文档时效说明 banner `v0.16.0 / 29 个 verify_all 检查` → `v0.17.0 / 30 个 verify_all 检查`.
+- `.harness/rules/40-locations.md`: verify_all check enumeration bumped to 30 items at v0.17.0; new bullet listing `I.7`; supervisor + harness-supervise rows added.
+- `skills/harness-status/SKILL.md`: new asset-list row `Supervisor (auxiliary) | .claude/agents/supervisor.md | ?` added below the canonical-7 row (per F-2); the `{pm,req,sol,gate,dev,review,qa}*.md` glob is NOT widened (asset table includes auxiliary; "7-stage pipeline" wording elsewhere stays).
+- `scripts/verify_all.{ps1,sh}` skill-set checks C.1 / G.1 / G.2 updated from 9 → 10 to include `harness-supervise`.
+
+### Notes on regression surface
+
+- `verify_all` 29 → 30 (one new WARN-severity check, I.7). On a clean repo, I.7 is vacuously true (no `SUPERVISION_REPORT.md` files exist yet); it fires only when users actually run `/harness-supervise` and then ignore the resulting INTERVENE verdict for >48h.
+- `test-init` unchanged at 227 PASS — additive change, no regression.
+- `test-supervisor` new: 54 PS / 50 Bash-no-python3 (one python3-gated JSON-validation assertion fires when python3 is present, raising bash count to 51).
+- `test-real-project` unchanged at 82/82.
+- No agent contract or pipeline-stage behavior changed. Supervisor is an auxiliary agent file (8th file in `.harness/agents/`) but **not** part of the canonical 7-stage routing — the "7 agents" wording in `harness-status` SKILL.md, the 7-agent pipeline phrasing in README, and the workflow.md stage table are intentionally untouched.
+
+### Backwards compatibility (AC-10 binding)
+
+A v0.16.0 user upgrading to v0.17.0 who never types `/harness-supervise` sees zero behavior change. The skill is on-demand only; the agent file is never loaded unless the skill is invoked. PM Orchestrator's contract is unchanged (it has no awareness of `supervisor.md`). The 9 prior distributed skills are unchanged. The 7-stage pipeline runs the same shape whether the supervisor exists or not.
+
+### Rollback round 2 — BUG-1 fix (I.7 PS case-sensitivity)
+
+Stage-5 QA's adversarial probe (`06_TEST_REPORT.md` ADV-1) found that `scripts/verify_all.ps1`'s I.7 verdict-line regex used PowerShell's default `-match` operator, which is **case-insensitive** — so a malformed `verdict: intervene` (lowercase) would falsely trigger I.7 WARN even though the Q-1 / Architect §15 issue 1 binding decision pinned the schema to UPPERCASE-only. The bash twin at `verify_all.sh:462` correctly used case-sensitive `=~` already, so this was a cross-shell asymmetry. Same insight class as T-002's BUG-2 (PS `-notin` case-insensitivity → use `-cnotin` / `-cmatch`).
+
+- **`scripts/verify_all.ps1:439`** — `-match` → `-cmatch` (one-character fix) with a four-line comment block citing the Q-1 decision, the bash-twin reference (`verify_all.sh:462`), and insight-index L20 (PS case-sensitivity discipline).
+- **`scripts/test-supervisor.ps1`** — `Get-VerdictFromReport` helper also bumped to `-cmatch` for consistency with the production code path; added two new negative-fixture assertions in the I.7 contract block: lowercase `verdict: intervene` and mixed-case `Verdict: Intervene` must both fail to parse as a verdict. PS test count: 52 → 54.
+- **`scripts/test-supervisor.sh`** — added one explicit lowercase-`verdict:` negative-fixture assertion for cross-shell symmetry (bash's `=~` is already case-sensitive, so the assertion is implicit; making it explicit pins the contract under future shell refactors). Bash-no-python3 count: 49 → 50.
+
+Verification: `verify_all.ps1` 30/0/0 PASS (unchanged); `test-supervisor.ps1` 54/0 PASS (+2); `test-supervisor.sh` 50/0 PASS (+1).
+
+### Known limitations — deferred to v0.17.1
+
+Two adversarial findings from `06_TEST_REPORT.md` are intentionally deferred to a patch release to keep the v0.17.0 rollback round narrow:
+
+- **BUG-2 (MINOR) — I.7 active-row slug match is substring-based on both shells.** `scripts/verify_all.ps1:441` (`[regex]::Escape($slug)`) and `scripts/verify_all.sh:476` (`grep -F -- "$slug"`) flag a report as "active" when ANY row in `docs/tasks.md` contains the slug as a substring — so a slug `foo` is matched by an Active row for `foo-extra`, raising a spurious WARN. Latent footgun for adopters whose task slugs share prefixes (e.g. `auth` / `auth-v2`). Fix queued for v0.17.1: column-anchored match (`\|\s*<slug>\s*\|` PS; `grep -E "\|[[:space:]]*<slug>[[:space:]]*\|"` bash). Reproducer: `06_TEST_REPORT.md` ADV-8.
+- **BUG-3 (MINOR) — `supervisor.md` boundary table doc-drift on cross-task N=0.** `.harness/agents/supervisor.md:230` says *"Clamp to `[1, archived-count]`; INFO-log the clamp"* — when `archived-count` is 0 this clamp is mathematically undefined. `skills/harness-supervise/SKILL.md:129` has the authoritative behavior (*"one-line `Verdict: HEALTHY` + INFO 'no archived tasks'"*); the agent contract just has a less-clear edge-case note. No runtime impact (SKILL.md path wins); doc-only drift. Fix queued for v0.17.1: rewrite the boundary row to split the N=0 case from the N>archived-count case. Reproducer: `06_TEST_REPORT.md` ADV-7.
+
+Both are MINOR and do not block v0.17.0 ship. v0.17.1 will sweep both in a single patch.
+
 ## [0.16.0] - 2026-05-19
 
 The first **AI-native** release. `/harness-init` and `/harness-adopt` gain a Q6 opt-in step that lets the orchestrator model draft a tailored `.harness/rules/50-<project-slug>.md` (and optional `dev-*` partition agents) grounded in the user's Q2 stack description, the target directory's top-level filenames, and the contents of named manifests (`package.json`, `Cargo.toml`, `pyproject.toml`, etc.) — replacing the previous static-stub-only path. Opt-out remains the default and produces byte-identical v0.15.1 output (AC-10). A new `verify_all` check (`D.3`) keeps the new file shape honest.

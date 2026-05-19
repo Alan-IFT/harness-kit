@@ -37,10 +37,12 @@ harness-kit/
 │   ├── harness-explore/SKILL.md        ← Research / feasibility mode
 │   ├── harness-goal/SKILL.md           ← Dev + QA loop bounded by criterion + budget
 │   ├── harness/SKILL.md                ← Full 7-stage pipeline
-│   └── harness-intervene/SKILL.md      ← Soft Ctrl-C for an in-flight pipeline
+│   ├── harness-intervene/SKILL.md      ← Soft Ctrl-C for an in-flight pipeline
+│   └── harness-supervise/SKILL.md      ← Observer-only auxiliary skill (v0.17+); emits SUPERVISION_REPORT.md
 │
 ├── .harness/                            ← THIS repo's tool-agnostic SOT (dogfood)
 │   ├── agents/                         ← byte-copy of templates/common/.harness/agents/
+│   │                                      (7 canonical + 1 auxiliary supervisor.md at v0.17+)
 │   └── rules/                          ← repo-specific rule fragments
 │       ├── 00-core.md
 │       ├── 05-insight-index.md
@@ -69,10 +71,11 @@ harness-kit/
 │   └── features/                       ← Per-task documents
 │
 ├── scripts/
-│   ├── verify_all.{ps1,sh}             ← Total verification (29 checks at v0.16.0)
+│   ├── verify_all.{ps1,sh}             ← Total verification (30 checks at v0.17.0)
 │   ├── harness-sync.{ps1,sh}           ← Layer 2: .harness/agents + .harness/skills → .claude/
 │   ├── sync-self.{ps1,sh}              ← Layer 1: templates/common/ → repo SOT
 │   ├── test-init.{ps1,sh}              ← Init+sync regression on EMPTY dir (227 assertions PS / 191 Bash-no-python3 at v0.16.0)
+│   ├── test-supervisor.{ps1,sh}        ← Supervisor agent + /harness-supervise skill regression (54 assertions PS / 50 Bash-no-python3 at v0.17.0; includes BUG-1 fixed-case Q-1 negative fixtures)
 │   ├── test-real-project.{ps1,sh}      ← Integration regression on REAL fixture (82 assertions)
 │   ├── install-hooks.{ps1,sh}          ← One-shot git pre-commit installer
 │   ├── archive-task.{ps1,sh}           ← Insight-harvest + stage-doc archive
@@ -111,7 +114,7 @@ Both layers are checked by `scripts/verify_all` and FAIL on drift.
 | Skill: harness-verify | `skills/harness-verify/SKILL.md` | Invokes scripts/verify_all |
 | Skill: harness-status | `skills/harness-status/SKILL.md` | Read-only inspection |
 | Project templates | `skills/harness-init/templates/` | `common/` + `fullstack/` + `backend/` |
-| Agent role contracts | `templates/common/.harness/agents/*.md` | 7 files, byte-copied to repo `.harness/agents/` via sync-self |
+| Agent role contracts | `templates/common/.harness/agents/*.md` | 7 canonical + 1 auxiliary (supervisor, v0.17+), byte-copied to repo `.harness/agents/` via sync-self |
 | Distributed binding sync | `templates/common/scripts/harness-sync.{ps1,sh}` | Byte-copied to repo `scripts/` via sync-self |
 | Repo rules (multi-file) | `.harness/rules/*.md` | Referenced (not composed) — AI-GUIDE.md indexes them, AI lazy-loads on demand |
 | Documentation | `docs/`, `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md` | Keep tone consistent |
@@ -123,7 +126,7 @@ Both layers are checked by `scripts/verify_all` and FAIL on drift.
 |---|---|---|
 | Layer 1 sync (templates → repo SOT) | `sync-self` | Run before commit if you edited `templates/common/.harness/agents/` or one of the 4 mirrored script pairs (`harness-sync`, `install-hooks`, `archive-task`, `guard-rm`) |
 | Layer 2 sync (repo SOT → binding) | `harness-sync` | Run before commit if you edited `.harness/agents/` or `.harness/skills/`. Rule edits do NOT require sync — they're referenced, not copied. |
-| Total verification | `verify_all` | Single source of truth for "is the repo healthy" — runs all 29 checks (at v0.16.0) including both `--check` modes |
+| Total verification | `verify_all` | Single source of truth for "is the repo healthy" — runs all 30 checks (at v0.17.0) including both `--check` modes |
 | Init regression | `test-init` | Simulates full init + sync in temp dir (227 assertions on PS / 191 Bash without python3 at v0.16.0; +50 vs v0.15 on PS from AI-native opt-in/opt-out bidirectional cases × 3 project types, plus AC-10 byte-compare in a discrete fresh-temp-dir pass, plus 2 shell-agnostic BUG-2 placeholder-regex regression assertions from rollback round 2) |
 
 ## Patterns to follow

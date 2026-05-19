@@ -64,8 +64,8 @@ Step "B.2" "Install scripts present (both PowerShell + Bash)" {
 }
 
 # C. Skills structure
-Step "C.1" "All 9 skills present with SKILL.md" {
-    foreach ($s in @("harness", "harness-init", "harness-adopt", "harness-verify", "harness-status", "harness-plan", "harness-explore", "harness-goal", "harness-intervene")) {
+Step "C.1" "All 10 skills present with SKILL.md" {
+    foreach ($s in @("harness", "harness-init", "harness-adopt", "harness-verify", "harness-status", "harness-plan", "harness-explore", "harness-goal", "harness-intervene", "harness-supervise")) {
         $p = "skills/$s/SKILL.md"
         if (-not (Test-Path $p)) { throw "Missing $p" }
     }
@@ -296,9 +296,9 @@ Step "F.2" "Guard-rm scripts and PreToolUse wiring present" {
 }
 
 # G. Documentation hygiene
-Step "G.1" "README references all 9 skills" {
+Step "G.1" "README references all 10 skills" {
     $readme = Get-Content "README.md" -Raw
-    foreach ($s in @("harness", "harness-init", "harness-adopt", "harness-verify", "harness-status", "harness-plan", "harness-explore", "harness-goal", "harness-intervene")) {
+    foreach ($s in @("harness", "harness-init", "harness-adopt", "harness-verify", "harness-status", "harness-plan", "harness-explore", "harness-goal", "harness-intervene", "harness-supervise")) {
         if ($readme -notmatch [regex]::Escape($s)) { throw "README missing skill mention: $s" }
     }
 }
@@ -322,9 +322,9 @@ Step "H.1" "Test fixtures present (todo-fullstack + todo-backend)" {
     }
 }
 
-Step "G.2" "CHANGELOG mentions all 9 skills" {
+Step "G.2" "CHANGELOG mentions all 10 skills" {
     $cl = Get-Content "CHANGELOG.md" -Raw
-    foreach ($s in @("harness", "harness-init", "harness-adopt", "harness-verify", "harness-status", "harness-plan", "harness-explore", "harness-goal", "harness-intervene")) {
+    foreach ($s in @("harness", "harness-init", "harness-adopt", "harness-verify", "harness-status", "harness-plan", "harness-explore", "harness-goal", "harness-intervene", "harness-supervise")) {
         if ($cl -notmatch [regex]::Escape($s)) { throw "CHANGELOG missing skill mention: $s" }
     }
 }
@@ -408,6 +408,55 @@ Step "I.5" "docs/tasks.md <=300 lines" {
     if ($n -gt 300) {
         Write-Host "" -NoNewline
         Write-Host " ($n lines — rotate oldest Completed rows to docs/tasks-archive.md)" -ForegroundColor Yellow -NoNewline
+        return $false
+    }
+}
+
+Step "I.7" "Ignored INTERVENE supervision reports (WARN if >48h old on active task)" {
+    # Passive guard for the supervisor agent (v0.17+). Globs every
+    # docs/features/<slug>/SUPERVISION_REPORT.md (not _archived/, which is one
+    # level deeper and out of scope), reads last 5 lines for the verdict, and
+    # WARNs if Verdict: INTERVENE has been ignored on an active task >48h.
+    if (-not (Test-Path "docs/features")) { return }
+    $reports = Get-ChildItem -Path "docs/features" -Filter "SUPERVISION_REPORT.md" -File -Recurse -ErrorAction SilentlyContinue |
+        Where-Object { $_.FullName -notmatch '_archived' -and $_.FullName -notmatch '_supervision' }
+    if (-not $reports -or $reports.Count -eq 0) { return }
+    # docs/tasks.md row format: a row containing <slug> whose status is not Completed/Archived = active.
+    $tasksMd = ""
+    if (Test-Path "docs/tasks.md") { $tasksMd = Get-Content "docs/tasks.md" -Raw }
+    $stale = @()
+    foreach ($r in $reports) {
+        # Extract slug from path: docs/features/<slug>/SUPERVISION_REPORT.md
+        $slug = Split-Path (Split-Path $r.FullName -Parent) -Leaf
+        # Last 5 non-blank lines
+        $tail = (Get-Content $r.FullName | Where-Object { $_.Trim() -ne "" }) | Select-Object -Last 5
+        $verdict = $null
+        foreach ($line in $tail) {
+            # PS `-match` is case-insensitive by default — use `-cmatch` for case-sensitive
+            # regex so a lowercase `verdict: intervene` does NOT trigger I.7 (Q-1 fixed-case
+            # schema). Mirrors bash twin's case-sensitive `=~` at verify_all.sh:462.
+            # See insight-index L20 (PowerShell case-sensitivity discipline).
+            if ($line -cmatch '^Verdict: (HEALTHY|WATCH|INTERVENE)$') { $verdict = $Matches[1]; break }
+        }
+        if ($verdict -ne "INTERVENE") { continue }
+        # Is the task active in tasks.md? Heuristic: row contains the slug and is not marked Completed/Archived.
+        $isActive = $false
+        if ($tasksMd) {
+            $rows = $tasksMd -split "`r?`n" | Where-Object { $_ -match [regex]::Escape($slug) }
+            foreach ($row in $rows) {
+                if ($row -notmatch 'Completed' -and $row -notmatch 'Archived') { $isActive = $true; break }
+            }
+        }
+        if (-not $isActive) { continue }
+        # mtime >48h?
+        $age = (Get-Date) - $r.LastWriteTime
+        if ($age.TotalHours -gt 48) {
+            $stale += "$($r.FullName) (INTERVENE, $([math]::Round($age.TotalHours,1))h old, slug=$slug active)"
+        }
+    }
+    if ($stale.Count -gt 0) {
+        Write-Host "" -NoNewline
+        Write-Host " (stale: $($stale -join '; '))" -ForegroundColor Yellow -NoNewline
         return $false
     }
 }
