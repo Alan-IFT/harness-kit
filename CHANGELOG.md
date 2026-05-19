@@ -7,6 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.1] - 2026-05-19
+
+A patch release that closes a long-standing documentation-drift class. v0.10 (Oct 2025) changed `CLAUDE.md` from a composed file into a static stub, but several user-facing documents and one template kept describing the old composition model. v0.13 / v0.14 then shipped without bumping README surface numbers. This release runs the cleanup to ground (~14 files) and adds a verify-time guard (`I.6`) that FAILs if the retired claims ever resurface.
+
+### Added — `verify_all I.6`: retired-claim phrase guard (FAIL on resurgence)
+
+Scans every git-tracked file (except a small history exemption list: `CHANGELOG.md`, `architecture.html`, `docs/walkthrough.html`, `scripts/verify_all.*`, `docs/features/_archived/`, `参考/`) for any of 13 banned literal substrings that used to be accurate but were retired by a documented architectural change. Two retirement classes are covered:
+
+- **v0.10 composition retirement** — phrases like `Composed into CLAUDE.md`, `composed by filename order`, `composition order in CLAUDE.md`, `regenerates CLAUDE.md`, `regenerated CLAUDE.md`, `.harness/ → CLAUDE.md`, `Generated from .harness/rules`, plus their Chinese variants (`harness-sync 生成 CLAUDE.md`, `harness-sync 合成 CLAUDE.md`, `重新生成的 CLAUDE.md`).
+- **v0.3 adopt-automation retirement** — phrase `scaffolding-only` (the harness-adopt skill has been fully automated since v0.3 but the old "scaffolding-only" framing kept showing up in docs).
+
+The check uses literal substring matching, not regex — easier to reason about, no false-positive surprises from creative quoting. Each entry has a `phrase|reason` pair so the FAIL message tells the reader both what's wrong and why. To extend it, add a line to the banned list in both `verify_all.ps1` and `verify_all.sh`. To retire an entry (because the underlying claim became accurate again), remove the line rather than adding a file-level exception. Drift-tested both ways: temporarily injecting `composed by filename order` into a non-exempt file produces a deterministic FAIL naming the file; restoring brings it back to 28/28 PASS.
+
+verify_all goes from 27 → 28 checks total.
+
+### Fixed — Stale v0.5/v0.6-era references in `architecture.html` and `docs/walkthrough.html`
+
+These two visual essays were frozen at v0.5/v0.6 but described their content as "current state". Pragmatic fix rather than full rewrite:
+
+- **`architecture.html`** — added a yellow "文档时效说明" banner directly under the page header pointing readers at `README.md` roadmap / `CHANGELOG.md` / `AI-GUIDE.md` for current state and explicitly noting that v0.10 changed `CLAUDE.md` to a stub; fixed the three lines that described current behavior wrong (the `/harness-init` skill card, the `harness-sync` comment in the v0.4.1 file tree, and the "Two-layer consistency" panel); the "code vs AI" responsibility table row about composition retitled to describe the actual current sync surface plus a footnote about v0.10's retirement.
+- **`docs/walkthrough.html`** — the single line claiming `harness-sync` generates `.claude/agents + .claude/skills + CLAUDE.md` corrected to describe only the agents+skills sync (with the CLAUDE.md stub being written once at init); sample `/harness-verify` output updated `27 checks: 27 PASS` → `28 checks: 28 PASS`.
+- Both files are added to `I.6`'s exemption list because they're labeled v0.5/v0.6 snapshots — if a future contributor removes that label and starts treating them as current docs, the exemption should be revisited.
+
+A full v0.16-era refresh of both visual essays is queued on the roadmap but out of scope for this patch.
+
+### Fixed — `MIGRATION.md` table entry and troubleshooting
+
+The v0.1 → v0.2 migration table had only two columns; the "After (v0.2)" column was no longer the current state since v0.10. Added a third "Refinement (v0.10+)" column documenting that:
+
+- Rule edits no longer need `harness-sync` (rules are referenced by `AI-GUIDE.md`, not composed).
+- `verify_all` now has 28 checks (up from the v0.2-era count it implied).
+- The troubleshooting entry "My CLAUDE.md edits keep disappearing" was relabeled as `(v0.2–v0.9 behavior)` with a v0.10+ correction noting CLAUDE.md edits now persist (but the right place to encode rules is still `.harness/rules/*.md`).
+
+### Fixed — `tests/fixtures/README.md` integration-test step description
+
+Step 3 ("Run the project's own `scripts/harness-sync` to generate `.claude/` + `CLAUDE.md`") corrected to describe only `.claude/agents/` and `.claude/skills/` being populated (with an explicit note about the v0.10 CLAUDE.md retirement) — the integration test itself was already correct; only the prose description had drifted.
+
+### Fixed — `.harness/rules/40-locations.md` verify-check enumeration
+
+`verify_all` check count `27 items at v0.15` → `28 items at v0.15.1`; new bullet listing `I.6` so the rule file and the script stay in sync (per insight 2026-05-16 about bidirectional assertion drift).
+
+### Changed — Version stamps and surface-count claims
+
+- `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`: `0.15.0` → `0.15.1` (kept in sync by `verify_all G.3`).
+- `README.md` / `README.zh-CN.md` badges: `version-0.15.0` → `0.15.1`, `verify_all-27/27` → `28/28`. "Three layers of regression testing" updated to `28 checks`.
+- `AI-GUIDE.md`: `27/27 at v0.15` → `28/28 at v0.15.1`, scripts entry now mentions `I.6 retired-claim phrase guard`.
+- `docs/dev-map.md` + `docs/walkthrough.html`: `27 checks at v0.15` → `28 checks at v0.15.1`.
+
+No behavioral change to any agent contract, template, or skill — pure documentation + verification surface alignment.
+
 ### Fixed — Stale v0.9-era composition references in user-facing docs and templates
 
 The v0.10 progressive-disclosure rework changed `CLAUDE.md` from a generated composition of `.harness/rules/*.md` into a ~15-line static stub pointing at `AI-GUIDE.md`. The architectural change shipped, but several user-facing documents and one template kept claiming "harness-sync regenerates CLAUDE.md" or "rules are composed by filename order". A new user reading any of these would build a wrong mental model and waste time looking for behavior that does not exist.

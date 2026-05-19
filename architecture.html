@@ -321,6 +321,14 @@
     <span class="pill">v0.5.0 backend 分区 (NEW)</span>
     <span class="pill">v0.6.0 设计中</span>
   </div>
+  <div style="margin-top: 16px; padding: 12px 16px; background: rgba(210, 153, 34, 0.10); border-left: 3px solid var(--yellow); border-radius: 4px; font-size: 13px; color: var(--text-dim);">
+    ⚠️ <b>文档时效说明</b>：本页是 v0.5/v0.6 时期的架构演进可视化快照，commit 列表与
+    skill 计数停在那时。当前实际版本是 <b>v0.15.1</b>（9 个 skill / 27 个 verify_all 检查 /
+    177 个 test-init 断言），并且 <b>v0.10 起 <code>CLAUDE.md</code> 已变成 ~15 行 stub，
+    不再被 <code>harness-sync</code> 合成</b>。最新事实见 <code>README.md</code> roadmap
+    表、<code>CHANGELOG.md</code>、<code>AI-GUIDE.md</code>。本 HTML 的全量 refresh 列在
+    v0.16+ roadmap。
+  </div>
 </header>
 
 <div class="tabs">
@@ -415,7 +423,7 @@
       <span class="status ok">✅ 可用 (v0.2 升级)</span>
     </div>
     <div class="desc">
-      新项目生成 <code>.harness/</code> SOT + 跑 <code>harness-sync</code> 生成 <code>.claude/</code> + <code>CLAUDE.md</code>。
+      新项目生成 <code>.harness/</code> SOT + 跑 <code>harness-sync</code> 同步 <code>.claude/agents/</code> 和 <code>.claude/skills/</code>，并写一次性的 <code>CLAUDE.md</code> stub 指向 <code>AI-GUIDE.md</code>（v0.10+）。
     </div>
   </div>
 
@@ -492,7 +500,7 @@
 │
 ├── <span class="dir">scripts/</span>
 │   ├── <span class="file">verify_all.{ps1,sh}</span>           <span class="cmt"># 19 项检查（v0.1 是 15）</span>
-│   ├── <span class="new file">harness-sync.{ps1,sh}</span>      <span class="cmt"># Layer 2：.harness/ → .claude/ + CLAUDE.md</span>
+│   ├── <span class="new file">harness-sync.{ps1,sh}</span>      <span class="cmt"># Layer 2：.harness/{agents,skills} → .claude/（v0.10 起 CLAUDE.md 是 stub，不再合成）</span>
 │   ├── <span class="file">sync-self.{ps1,sh}</span>             <span class="cmt"># Layer 1：templates/ → repo SOT</span>
 │   ├── <span class="file">test-init.{ps1,sh}</span>             <span class="cmt"># 98 断言（含 v0.4 分区）</span>
 │   └── <span class="new file">test-real-project.{ps1,sh}</span> <span class="cmt"># 70 断言（fixture overlay）</span>
@@ -506,7 +514,7 @@
   <h4>🔄 Two-layer consistency</h4>
   <p style="margin: 0;">
     <b>Layer 1（<code>sync-self</code>）</b>：把 <code>templates/common/</code>（分发 SOT）同步到本仓库的 <code>.harness/</code> + <code>scripts/harness-sync</code>。<br>
-    <b>Layer 2（<code>harness-sync</code>）</b>：把 <code>.harness/</code> 同步到 <code>.claude/</code> + <code>CLAUDE.md</code>（Claude Code binding）。<br>
+    <b>Layer 2（<code>harness-sync</code>）</b>：把 <code>.harness/agents/</code> 和 <code>.harness/skills/</code> 同步到 <code>.claude/</code>（Claude Code binding）。v0.10 起 <code>CLAUDE.md</code> 是 ~15 行 stub 不再被合成；规则由 <code>AI-GUIDE.md</code> 索引，AI 按需 lazy-load。<br>
     <code>verify_all</code> 自动检查两层。任何一层 drift → FAIL，提示跑对应的 sync 脚本。
   </p>
 </div>
@@ -890,7 +898,7 @@
   <tr><td>写代码</td><td><b>AI</b>（developer / dev-*）</td><td>核心智能工作</td></tr>
   <tr><td>审查代码</td><td><b>AI</b>（code-reviewer）</td><td>需要语义比对</td></tr>
   <tr><td>路由任务到合适 agent</td><td><b>AI</b>（pm-orchestrator）</td><td>需要读 Architect 的 partition 决策</td></tr>
-  <tr><td>合成 CLAUDE.md（rules/ 文件按名次序拼接）</td><td><b>代码</b>（harness-sync）</td><td>机械操作，每次结果应当一致</td></tr>
+  <tr><td>同步 .harness/agents 和 .harness/skills 到 .claude/</td><td><b>代码</b>（harness-sync）</td><td>机械 byte 复制，每次结果应当一致。<br><span style="color: var(--text-dim); font-size: 12px;">注：v0.10 起规则不再合成进 CLAUDE.md，改由 AI-GUIDE.md 索引 + AI 按需 lazy-load。</span></td></tr>
   <tr><td>检查 .harness/ 与 .claude/ 一致</td><td><b>代码</b>（harness-sync --check）</td><td>byte 比对，AI 容易看走眼</td></tr>
   <tr><td>检查仓库结构完整性</td><td><b>代码</b>（verify_all）</td><td>CI 友好；秒级执行</td></tr>
   <tr><td>跑测试 / 编译 / lint</td><td><b>代码 + 项目工具链</b></td><td>已有工具，AI 不需要重做</td></tr>

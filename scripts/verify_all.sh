@@ -331,6 +331,58 @@ else
     step "I.5" "docs/tasks.md ≤300 lines" "PASS"
 fi
 
+# I.6 — Banned literal substrings that used to be accurate but were retired by a
+# documented architectural change. Resurgence = drift, not history.
+# History-bearing files (CHANGELOG, _archived/, verify_all itself) are exempt.
+i6_banned_phrases=(
+    "scaffolding-only|harness-adopt has been fully automated since v0.3"
+    "Composed into \`CLAUDE.md\`|rules are not composed into CLAUDE.md since v0.10"
+    "composed by filename order|rules not composed since v0.10"
+    "composition order in CLAUDE.md|no composition in CLAUDE.md since v0.10"
+    "regenerates CLAUDE.md|harness-sync does not regenerate CLAUDE.md since v0.10"
+    "regenerates \`CLAUDE.md\`|harness-sync does not regenerate CLAUDE.md since v0.10"
+    "regenerated CLAUDE.md|CLAUDE.md is a static stub since v0.10"
+    "regenerated \`CLAUDE.md\`|CLAUDE.md is a static stub since v0.10"
+    "Generated from .harness/rules|CLAUDE.md not generated from rules since v0.10"
+    ".harness/ → CLAUDE.md|harness-sync target is .claude/, not CLAUDE.md, since v0.10"
+    "harness-sync 生成 CLAUDE.md|v0.10 起 harness-sync 不再生成 CLAUDE.md"
+    "harness-sync 合成 CLAUDE.md|v0.10 起规则不再合成进 CLAUDE.md"
+    "重新生成的 CLAUDE.md|v0.10 起 CLAUDE.md 是 stub，不再被重新生成"
+)
+i6_exempt_files=(
+    "CHANGELOG.md"
+    "architecture.html"
+    "docs/walkthrough.html"
+    "scripts/verify_all.ps1"
+    "scripts/verify_all.sh"
+)
+i6_exempt_dirs=(
+    "docs/features/_archived/"
+    "参考/"
+)
+i6_hits=""
+while IFS= read -r f; do
+    skip=0
+    for ex in "${i6_exempt_files[@]}"; do [[ "$f" == "$ex" ]] && { skip=1; break; }; done
+    (( skip == 1 )) && continue
+    for ed in "${i6_exempt_dirs[@]}"; do [[ "$f" == "$ed"* ]] && { skip=1; break; }; done
+    (( skip == 1 )) && continue
+    [[ -f "$f" ]] || continue
+    for entry in "${i6_banned_phrases[@]}"; do
+        phrase="${entry%%|*}"
+        reason="${entry#*|}"
+        if grep -F -q -- "$phrase" "$f" 2>/dev/null; then
+            i6_hits="${i6_hits}${f} : '${phrase}' — ${reason}"$'\n'
+        fi
+    done
+done < <(git ls-files 2>/dev/null)
+if [[ -n "$i6_hits" ]]; then
+    step "I.6" "No retired-claim phrases in current docs/templates" "FAIL" "Retired-claim phrases found in live files:
+${i6_hits}"
+else
+    step "I.6" "No retired-claim phrases in current docs/templates" "PASS"
+fi
+
 # Summary
 echo ""
 echo "=== Summary ==="

@@ -19,7 +19,7 @@
 
 ## Verify before declaring done
 
-`scripts/verify_all` checks (27 items at v0.15, all must PASS — count grows with releases):
+`scripts/verify_all` checks (28 items at v0.15.1, all must PASS — count grows with releases):
 
 - No secrets / committed env files
 - `参考/` not tracked
@@ -37,5 +37,6 @@
 - Version stamps consistent across `plugin.json` / `marketplace.json` / both README badges (G.3, v0.14.x+; FAIL on drift)
 - `.harness/intervention.md` not tracked (ephemeral file; v0.13+)
 - Document size soft caps (I.1-I.5, v0.14+; WARN-level)
+- Retired-claim phrase guard (I.6, v0.15.1+; FAIL if any banned phrase from past architectural retirements resurfaces in a live file)
 
 Run after every change; do not skip.

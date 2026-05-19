@@ -329,6 +329,63 @@ Step "I.5" "docs/tasks.md <=300 lines" {
     }
 }
 
+Step "I.6" "No retired-claim phrases in current docs/templates (FAIL on resurgence)" {
+    # Banned literal substrings — phrases that used to be accurate but became wrong
+    # after a documented architectural change. If you see one of these in a live file
+    # outside the historical exemption list, it's drift, not history.
+    #
+    # When a retired claim becomes accurate again (e.g. composition returns), remove
+    # the line from this list rather than carve a new file-level exception.
+    $banned = @(
+        @{ phrase = "scaffolding-only"; reason = "harness-adopt has been fully automated since v0.3" },
+        @{ phrase = "Composed into ``CLAUDE.md``"; reason = "rules are not composed into CLAUDE.md since v0.10" },
+        @{ phrase = "composed by filename order"; reason = "rules not composed since v0.10" },
+        @{ phrase = "composition order in CLAUDE.md"; reason = "no composition in CLAUDE.md since v0.10" },
+        @{ phrase = "regenerates CLAUDE.md"; reason = "harness-sync does not regenerate CLAUDE.md since v0.10" },
+        @{ phrase = 'regenerates `CLAUDE.md`'; reason = "harness-sync does not regenerate CLAUDE.md since v0.10" },
+        @{ phrase = "regenerated CLAUDE.md"; reason = "CLAUDE.md is a static stub since v0.10" },
+        @{ phrase = 'regenerated `CLAUDE.md`'; reason = "CLAUDE.md is a static stub since v0.10" },
+        @{ phrase = "Generated from .harness/rules"; reason = "CLAUDE.md not generated from rules since v0.10" },
+        @{ phrase = ".harness/ → CLAUDE.md"; reason = "harness-sync target is .claude/, not CLAUDE.md, since v0.10" },
+        @{ phrase = "harness-sync 生成 CLAUDE.md"; reason = "v0.10 起 harness-sync 不再生成 CLAUDE.md" },
+        @{ phrase = "harness-sync 合成 CLAUDE.md"; reason = "v0.10 起规则不再合成进 CLAUDE.md" },
+        @{ phrase = "重新生成的 CLAUDE.md"; reason = "v0.10 起 CLAUDE.md 是 stub，不再被重新生成" }
+    )
+    # Files exempt because they record history honestly: CHANGELOG describes what each
+    # release did, MIGRATION.md compares old/new behavior, _archived/ holds per-task
+    # docs from past releases, architecture.html / walkthrough.html are
+    # v0.5/v0.6-era visual snapshots with explicit "v0.5 snapshot" banners pointing
+    # readers at AI-GUIDE.md and CHANGELOG.md for current state, and verify_all
+    # itself stores the banned-phrase strings.
+    $exempt = @(
+        "CHANGELOG.md",
+        "architecture.html",
+        "docs/walkthrough.html",
+        "scripts/verify_all.ps1",
+        "scripts/verify_all.sh"
+    )
+    $exemptDirs = @("docs/features/_archived/", "参考/")
+    $hits = @()
+    $tracked = git ls-files 2>$null
+    foreach ($file in $tracked) {
+        if ($exempt -contains $file) { continue }
+        $skipDir = $false
+        foreach ($d in $exemptDirs) { if ($file.StartsWith($d)) { $skipDir = $true; break } }
+        if ($skipDir) { continue }
+        if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { continue }
+        $content = Get-Content -LiteralPath $file -Raw -ErrorAction SilentlyContinue
+        if (-not $content) { continue }
+        foreach ($b in $banned) {
+            if ($content.Contains($b.phrase)) {
+                $hits += "$file : '$($b.phrase)' — $($b.reason)"
+            }
+        }
+    }
+    if ($hits.Count -gt 0) {
+        throw ("Retired-claim phrases found in live files:`n" + ($hits -join "`n"))
+    }
+}
+
 # Summary
 Write-Host ""
 Write-Host "=== Summary ===" -ForegroundColor Cyan

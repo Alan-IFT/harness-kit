@@ -375,7 +375,7 @@ claude     <span style="color:var(--text-dim)"># 启动 Claude Code</span></pre>
   <ol>
     <li>复制模板（<code>templates/common/</code> + <code>templates/fullstack/</code>）到当前目录</li>
     <li>占位符替换（PROJECT_NAME=my-todo-app, STACK=...）</li>
-    <li>跑 <code>scripts/harness-sync.ps1</code> 生成 <code>.claude/agents/</code>、<code>.claude/skills/</code>、<code>CLAUDE.md</code></li>
+    <li>跑 <code>scripts/harness-sync.ps1</code> 同步 <code>.claude/agents/</code> 和 <code>.claude/skills/</code>；并写一次性的 <code>CLAUDE.md</code> stub（~15 行，指向 <code>AI-GUIDE.md</code>，之后不再被合成）</li>
     <li>写 <code>scripts/baseline.json</code> 初始基线（测试数=0）</li>
     <li><code>git init -b main</code>（如果还不是 git repo）</li>
     <li>输出汇总</li>
@@ -714,7 +714,7 @@ export function ExportButton() {
   <h3 style="margin-top: 8px;"><code>/harness-verify</code> — 验仓库健康</h3>
   <pre>&gt; /harness-verify
 verify_all: PASS
-  27 checks: 27 PASS, 0 WARN, 0 FAIL
+  28 checks: 28 PASS, 0 WARN, 0 FAIL
   Baseline: test_count 43
   Last run: just now</pre>
 
