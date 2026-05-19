@@ -38,7 +38,7 @@
 
 ### 工具特有说明
 
-- **Claude Code**：PM Orchestrator 是路由 agent。它读 PM_LOG，派 sub-agents。完整 7-stage 流水线是原生能力。`.claude/settings.json` 里的 Stop hook 会在 session 结束时自动跑 `scripts/harness-sync`，所以 `.harness/` 的编辑会自动流到 `CLAUDE.md` + `.github/copilot-instructions.md`，用户什么都不用做。
+- **Claude Code**：PM Orchestrator 是路由 agent。它读 PM_LOG，派 sub-agents。完整 7-stage 流水线是原生能力。`.claude/settings.json` 里的 Stop hook 会在 session 结束时自动跑 `scripts/harness-sync`，把 `.harness/agents/` 和 `.harness/skills/` 同步到 `.claude/`，用户什么都不用做。（v0.10 起 `CLAUDE.md` 和 `.github/copilot-instructions.md` 是 init 一次性生成的 stub，不再被 harness-sync 重新合成。）
 - **GitHub Copilot**：没有 sub-agent 派发。你（Copilot）按协议指向扮演哪个角色。**一次只扮演一个角色**。完成你的 stage 后停下来，让用户"switch to next agent" — **不要悄悄换成另一个角色继续**。跨 stage 交接经过用户（通常用户会切回 Claude Code 让 PM 路由，或者手动告诉你扮演下一角色）。
 
 ### Copilot 连续模式（可选）
@@ -63,14 +63,16 @@ Copilot 默认是一次一个角色。用户可以用一个明确短语切换到
 
 ### 非 Claude Code 工具的文档同步责任
 
-上面的 Stop hook 是 **Claude Code 专属** — Copilot、Cursor、手工编辑都不会触发它。如果你（Copilot 或任何非 Claude Code 的 AI）编辑了 `.harness/` 下的任何文件，有两种同样有效的方式来防止 `CLAUDE.md` 和 `.github/copilot-instructions.md` 过时：
+上面的 Stop hook 是 **Claude Code 专属** — Copilot、Cursor、手工编辑都不会触发它。如果你（Copilot 或任何非 Claude Code 的 AI）编辑了 `.harness/agents/` 或 `.harness/skills/` 下的文件，有两种同样有效的方式来防止 `.claude/agents/` 和 `.claude/skills/` 过时：
 
-1. **声明本轮完成前先跑 sync。** 编辑后立刻执行 `pwsh -File scripts/harness-sync.ps1`（Windows）或 `bash scripts/harness-sync.sh`（macOS / Linux）。然后把重新生成的 `CLAUDE.md` / `.github/copilot-instructions.md` 跟你的 `.harness/` 改动一起 stage。
+1. **声明本轮完成前先跑 sync。** 编辑后立刻执行 `pwsh -File scripts/harness-sync.ps1`（Windows）或 `bash scripts/harness-sync.sh`（macOS / Linux）。然后把重新生成的 `.claude/agents/` / `.claude/skills/` 跟你的 `.harness/` 改动一起 stage。
 2. **靠 git pre-commit hook 兜底。** 如果 init 时跑过 `scripts/install-hooks.{ps1,sh}`，`.git/hooks/pre-commit` 会跑 `harness-sync --check`，任何带漂移的 commit 会被拦下来，错误信息会告诉你跑 sync。
 
 pre-commit hook 是工具无关的兜底 — 任何工具、任何人编辑都能抓到。"完成前跑 sync"是更温和、更快的路径，保证整个 session 期间工作树始终一致。
 
-**手工编辑生成文件**（`CLAUDE.md`、`.github/copilot-instructions.md`、`.claude/agents/*.md`、`.claude/skills/*/SKILL.md`）**永远是错的** — 下次 sync 会清掉。编辑 `.harness/` 后 sync。
+注意：`.harness/rules/` 下的规则片段从 v0.10 起**不会**同步到任何地方。它们由 `AI-GUIDE.md` 索引，AI 工具按需 lazy-load。如果新增规则片段，在 `AI-GUIDE.md` 加一行索引（verify_all 步骤 E.4b 会强制检查）。
+
+**手工编辑生成副本**（`.claude/agents/*.md`、`.claude/skills/*/SKILL.md`）**永远是错的** — 下次 sync 会清掉。编辑 `.harness/` 后 sync。`CLAUDE.md` 和 `.github/copilot-instructions.md` 是 init 一次性生成的 stub，不重新合成 — 除非要修复 AI-GUIDE.md 指针，否则不要碰。
 
 ### 跨工具的硬规则
 

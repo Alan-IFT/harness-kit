@@ -99,13 +99,15 @@ Project types live under `skills/harness-init/templates/<type>/`:
 
 Rules:
 
-1. **Only the 5 documented placeholders are allowed**:
-   `{{PROJECT_NAME}}`, `{{PROJECT_TYPE}}`, `{{STACK}}`, `{{TODAY}}`, `{{ENABLE_HOOK}}`.
-   verify_all step `D.2` enforces this whitelist.
+1. **Only the 7 documented placeholders are allowed**:
+   `{{PROJECT_NAME}}`, `{{PROJECT_TYPE}}`, `{{STACK}}`, `{{TODAY}}`, `{{ENABLE_HOOK}}`,
+   `{{SYNC_COMMAND}}`, `{{GUARD_COMMAND}}`. verify_all step `D.2` enforces this
+   whitelist — and any new placeholder MUST be added to BOTH `verify_all.ps1` AND
+   `verify_all.sh` whitelists or the check fails.
 2. **Extend `scripts/test-init.{ps1,sh}`** with a `test_type` call for the new type.
 3. **Add a section** in `docs/dev-map.md` under the templates layout.
 4. **Update CHANGELOG** under `[Unreleased]`.
-5. **Rule fragment naming**: use `NN-name.md` with 50–79 for project-type overlays. Filename order determines composition order in CLAUDE.md.
+5. **Rule fragment naming**: use `NN-name.md` with 50–79 for project-type overlays. The numeric prefix is a sort convention only — since v0.10, fragments are not composed into CLAUDE.md; `AI-GUIDE.md` indexes them and AI tools lazy-load on demand.
 
 ## Changing an agent definition
 

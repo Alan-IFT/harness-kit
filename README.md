@@ -192,7 +192,7 @@ harness-kit/
 │
 ├── scripts/
 │   ├── verify_all.{ps1,sh}       Total verification
-│   ├── harness-sync.{ps1,sh}     .harness/ → CLAUDE.md + .github/copilot-instructions.md
+│   ├── harness-sync.{ps1,sh}     .harness/agents + .harness/skills → .claude/ (CLAUDE.md is a static stub since v0.10)
 │   ├── sync-self.{ps1,sh}        templates/common/ → repo SOT
 │   ├── test-init.{ps1,sh}        Init regression
 │   └── test-real-project.{ps1,sh}  Integration regression

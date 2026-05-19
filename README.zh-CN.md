@@ -187,13 +187,14 @@ harness-kit/
 ├── .harness/                     本仓库 SOT（dogfood）
 │   ├── agents/                   与 templates/common/.harness/agents/ byte 一致
 │   └── rules/                    本仓库特定规则
-├── .claude/                      生成（不要编辑）
-├── CLAUDE.md                     生成（不要编辑）
-├── .github/copilot-instructions.md  生成（不要编辑）
+├── AI-GUIDE.md                   工具无关入口（索引 .harness/rules/）
+├── .claude/                      Claude Code binding（harness-sync 重新生成）
+├── CLAUDE.md                     ~15 行 stub，指向 AI-GUIDE.md（init 时一次性生成，不重新合成）
+├── .github/copilot-instructions.md  ~15 行 stub，指向 AI-GUIDE.md
 │
 ├── scripts/
 │   ├── verify_all.{ps1,sh}       总验证
-│   ├── harness-sync.{ps1,sh}     .harness/ → CLAUDE.md + .github/copilot-instructions.md
+│   ├── harness-sync.{ps1,sh}     .harness/agents + .harness/skills → .claude/（v0.10 起 CLAUDE.md 已变 stub，不再合成）
 │   ├── sync-self.{ps1,sh}        templates/common/ → 本仓库 SOT
 │   ├── test-init.{ps1,sh}        init 回归
 │   └── test-real-project.{ps1,sh}  集成回归

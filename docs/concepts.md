@@ -3,16 +3,20 @@
 This document explains **why** each Harness component exists, not just what it does.
 For the "what", see [getting-started.md](getting-started.md).
 
-## The big picture (v0.2)
+## The big picture (v0.10)
 
 ```
 Layer 2: Project tool-agnostic SOT      (this repo provides templates)
-  .harness/{agents, rules, skills}
+  .harness/{agents, rules, skills}     ← edit here
+  AI-GUIDE.md                          ← tool-agnostic index; references .harness/rules/
 
-       ↓ harness-sync (binding)
+       ↓ harness-sync (binding)        (agents + skills only; rules are referenced, not copied)
 
-Layer 1: Claude Code binding artifacts  (generated; do not hand-edit)
-  .claude/{agents, skills, settings.json} + CLAUDE.md
+Layer 1: Claude Code binding artifacts
+  .claude/{agents, skills}             ← regenerated from .harness/{agents, skills}
+  .claude/settings.json                ← direct binding glue (hand-edited)
+  CLAUDE.md                            ← ~15-line stub pointing at AI-GUIDE.md
+  .github/copilot-instructions.md      ← ~15-line stub pointing at AI-GUIDE.md
 
        ↓ runs on
 
@@ -20,12 +24,12 @@ Layer 0: Claude Code platform           (already shipped, we don't rebuild)
   Permission / sub-agents / Hooks / MCP / Memory / Skills / auto-compaction
 ```
 
-**Layer 0 = mechanism. Layer 1 = generated binding artifacts. Layer 2 = your content.**
+**Layer 0 = mechanism. Layer 1 = binding artifacts. Layer 2 = your content.**
 Claude Code provides the engine. We provide the rails. You write the content.
 
 The split between Layer 1 and Layer 2 (introduced in v0.2) is what lets project
 knowledge survive when you switch IDEs or add a Cursor binding later. Edit Layer 2;
-Layer 1 regenerates.
+Layer 1 stays small and disposable.
 
 ## Why a tool-agnostic source-of-truth layer?
 
@@ -94,24 +98,32 @@ is to route back via PM — the cost of one rollback is tiny compared to lost ac
 
 The progression is: write a rule, see if AI follows it; if not, encode it as a check.
 
-## Why CLAUDE.md is generated, not hand-edited
+## Why rule fragments are referenced, not composed (v0.10 progressive disclosure)
 
-`CLAUDE.md` is what Claude Code actually reads at session start. But it's also what
-**users want to author and maintain**. Two competing pressures:
+`CLAUDE.md` is what Claude Code reads at session start. The original v0.2 design
+composed `.harness/rules/*.md` into a single `CLAUDE.md` so the AI always saw the
+full ruleset. That worked, but the assembled file grew to ~3500 tokens — every
+session paid that cost even for trivial questions.
 
-- Author-friendly: short, organized by topic, easy to edit.
-- Tool-friendly: a single file at the project root with a fixed name.
+The v0.10 design splits the two pressures:
 
-The v0.2 answer: author multiple short fragments in `.harness/rules/NN-topic.md`,
-and let `harness-sync` compose them into `CLAUDE.md`. Best of both: human edits the
-fragments; tool sees the assembled file.
+- **Author-friendly**: short fragments at `.harness/rules/NN-topic.md`, each with a
+  "when to read" trigger in `AI-GUIDE.md`.
+- **Tool-friendly**: `CLAUDE.md` is now a ~15-line static stub that points at
+  `AI-GUIDE.md`. AI tools read the stub, follow the pointer, and lazy-load only the
+  fragments whose triggers match the current task.
 
-The filename prefix (`00-` < `99-`) determines composition order. Convention:
+The numeric filename prefix (`00-` < `99-`) is now just a sort convention — it does
+**not** drive composition (there is no composition). Convention:
 
 - `00-19`: core / always-applicable
 - `20-49`: cross-cutting topics (security, perf, testing)
 - `50-79`: project-type overlays (fullstack-specific, backend-specific)
 - `80-99`: project-specific custom rules
+
+Effect: persistent always-loaded ruleset drops from ~3500 tokens (pre-v0.10) to
+~250 tokens. Big tasks load 1-3 relevant fragments on demand — typically ~50%
+total saving vs the old composition design.
 
 ## Why is verify_all a single entry point?
 
@@ -121,10 +133,15 @@ that choice. Done = this command exited 0.
 
 ## Why does verify_all check binding consistency?
 
-`harness-sync` is the bridge between Layer 2 (your content) and Layer 1 (generated
-binding). If a user edits `.harness/` but forgets to sync, Claude Code sees stale
-content in `.claude/` and behaves wrong. Adding `harness-sync --check` to `verify_all`
-means **a forgotten sync becomes a failed verify**, caught immediately.
+`harness-sync` is the bridge between Layer 2 (your content) and Layer 1 (binding
+artifacts). If a user edits `.harness/agents/` or `.harness/skills/` but forgets
+to sync, Claude Code sees stale content in `.claude/` and behaves wrong. Adding
+`harness-sync --check` to `verify_all` means **a forgotten sync becomes a failed
+verify**, caught immediately.
+
+`verify_all` also checks the reference layer: `AI-GUIDE.md` must index every
+`.harness/rules/*.md` file and vice versa (step E.4b). A new rule fragment that
+nobody indexed will FAIL the next verify run.
 
 ## Why baseline only goes up?
 

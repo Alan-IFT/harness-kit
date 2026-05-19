@@ -107,14 +107,15 @@ self-dispatching flow with an explicit phrase.
 
 The Stop hook above is **Claude-Code-specific** — it does NOT fire for
 Copilot, Cursor, or hand-edits. If you (Copilot or any non-Claude-Code AI)
-edit any file under `.harness/`, you have two equally valid ways to keep
-`CLAUDE.md` and `.github/copilot-instructions.md` from going stale:
+edit anything under `.harness/agents/` or `.harness/skills/`, you have two
+equally valid ways to keep `.claude/agents/` and `.claude/skills/` from
+going stale:
 
 1. **Run sync before declaring your turn done.** Execute
    `pwsh -File scripts/harness-sync.ps1` (Windows) or
    `bash scripts/harness-sync.sh` (macOS / Linux) immediately after the edit.
-   Then stage the regenerated `CLAUDE.md` / `.github/copilot-instructions.md`
-   along with your `.harness/` change.
+   Then stage the regenerated `.claude/agents/` / `.claude/skills/`
+   alongside your `.harness/` change.
 2. **Let the git pre-commit hook catch it.** If `scripts/install-hooks.{ps1,sh}`
    was run during init, `.git/hooks/pre-commit` runs `harness-sync --check`
    and blocks any commit with drift. You'll see a clear error telling you
@@ -124,9 +125,15 @@ The pre-commit hook is the tool-agnostic backstop — it catches any tool,
 any human. The "run sync before done" rule is the gentler, faster path
 and keeps the working tree always consistent during the session.
 
-Hand-edits to generated files (`CLAUDE.md`, `.github/copilot-instructions.md`,
-`.claude/agents/*.md`, `.claude/skills/*/SKILL.md`) are **always wrong** —
-they get clobbered by the next sync. Edit `.harness/` and sync.
+Note: rule fragments under `.harness/rules/` are **not** synced anywhere
+(since v0.10). They're referenced by `AI-GUIDE.md` and lazy-loaded by AI
+tools on demand. If you add a new rule fragment, add a one-line index entry
+in `AI-GUIDE.md` (verify_all step E.4b enforces this).
+
+Hand-edits to generated copies (`.claude/agents/*.md`, `.claude/skills/*/SKILL.md`)
+are **always wrong** — they get clobbered by the next sync. Edit `.harness/`
+and sync. `CLAUDE.md` and `.github/copilot-instructions.md` are init-time
+stubs, not regenerated — touch them only to fix the AI-GUIDE.md pointer.
 
 ### Hard rules across all tools
 
