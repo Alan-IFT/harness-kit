@@ -14,6 +14,7 @@
 |---|---|---|---|---|
 | T-000 | initial-bootstrap | Delivered | 2026-05-15 | _(bootstrap, no docs/features/ folder)_ |
 | T-001 | ai-safety-guardrails | Delivered v0.15.0 (1 rollback) | 2026-05-17 | `docs/features/_archived/ai-safety-guardrails/` |
+| T-002 | ai-native-init | Delivered v0.16.0 (2 rollbacks: M-1/M-2/M-3 from CR; BUG-2 from QA via PM override) | 2026-05-19 | `docs/features/_archived/ai-native-init/` |
 
 ## Notes
 

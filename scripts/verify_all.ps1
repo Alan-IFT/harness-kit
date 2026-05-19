@@ -98,12 +98,95 @@ Step "D.2" "Placeholders limited to documented set" {
     $bad = @()
     foreach ($f in $tmplFiles) {
         $content = Get-Content $f.FullName -Raw
-        $found = [regex]::Matches($content, '\{\{[A-Z_]+\}\}') | ForEach-Object { $_.Value } | Sort-Object -Unique
+        # v0.16.0 BUG-2 rollback round 2: broaden regex to catch whitespace-padded
+        # ('{{ PROJECT_NAME }}') and lowercase ('{{project_name}}') variants. AI
+        # output can drift in either direction; allowlist still polices the form.
+        # NOTE: -cnotin (case-sensitive) is intentional — PowerShell's default
+        # -notin is case-insensitive, which would silently treat '{{stack}}' as
+        # allowed because '{{STACK}}' is in the whitelist. With -cnotin we match
+        # the bash twin's case-sensitive 'case' statement at verify_all.sh:78-80.
+        $found = [regex]::Matches($content, '\{\{\s*[A-Za-z_][A-Za-z0-9_]*\s*\}\}') | ForEach-Object { $_.Value } | Sort-Object -Unique
         foreach ($p in $found) {
-            if ($p -notin $allowed) { $bad += "$($f.Name): unknown placeholder $p" }
+            if ($p -cnotin $allowed) { $bad += "$($f.Name): unknown placeholder $p" }
         }
     }
     if ($bad.Count -gt 0) { throw "Unknown placeholders:`n$($bad -join "`n")" }
+}
+
+Step "D.3" "AI-generated 50-*.md sanity (per-section sources, headings, no placeholders)" {
+    # Per Gate Finding G: per-section, not file-global. Every `## ` or `### ` section
+    # in every `.harness/rules/50-*.md` whose content is non-template must have
+    # >=1 `<!-- source: <tag> -->` annotation. Plus: all six required headings
+    # present in order; zero `{{...}}` literals.
+    if (-not (Test-Path ".harness/rules")) { return }
+    $files = Get-ChildItem -Path ".harness/rules" -Filter "50-*.md" -File -ErrorAction SilentlyContinue
+    if (-not $files -or $files.Count -eq 0) { return }  # vacuously true; nothing to check
+
+    $requiredHeadings = @(
+        "## When to read",
+        "## Build / test / verify",
+        "## Project structure",
+        "## Stack-specific conventions",
+        "## Partitioning",
+        "## Stack-specific verify_all checks"
+    )
+    $allowedSourceTags = @(
+        "user-q2", "top-level-glob",
+        "package.json", "Cargo.toml", "pyproject.toml", "requirements.txt",
+        "go.mod", "pom.xml", "README.md"
+    )
+
+    $problems = @()
+    foreach ($f in $files) {
+        $content = Get-Content $f.FullName -Raw
+        # (b) zero {{...}} literals
+        # v0.16.0 BUG-2 rollback round 2: regex broadened to catch whitespace-padded
+        # ('{{ PROJECT_NAME }}') and lowercase ('{{project_name}}') variants too.
+        if ($content -match '\{\{\s*[A-Za-z_][A-Za-z0-9_]*\s*\}\}') {
+            $problems += "$($f.Name): leaked placeholder {{...}}"
+        }
+        # (a) six required headings present in order
+        $idx = 0
+        foreach ($h in $requiredHeadings) {
+            $i = $content.IndexOf($h, $idx)
+            if ($i -lt 0) { $problems += "$($f.Name): missing required heading '$h' (or out of order)"; break }
+            $idx = $i + $h.Length
+        }
+        # Per-section: split on ## / ###, every non-empty body must contain >=1 source annotation
+        # Split the file into sections by '## ' or '### ' lines; skip the leading preamble before the first '##'.
+        $lines = $content -split "`r?`n"
+        $sections = @()
+        $current = $null
+        foreach ($line in $lines) {
+            if ($line -match '^(##|###)\s+\S') {
+                if ($null -ne $current) { $sections += ,$current }
+                $current = [pscustomobject]@{ heading = $line; body = [System.Text.StringBuilder]::new() }
+            } elseif ($null -ne $current) {
+                [void]$current.body.AppendLine($line)
+            }
+        }
+        if ($null -ne $current) { $sections += ,$current }
+        foreach ($s in $sections) {
+            $body = $s.body.ToString()
+            # "template" section = body is empty or contains only the literal '<your ...>' placeholder text
+            $trim = ($body -replace '\s', '')
+            if ([string]::IsNullOrWhiteSpace($body)) { continue }
+            if ($trim -match '^(<your[^>]+>|<command[^>]*>|-)*$') { continue }
+            # Non-template section: must have at least one annotation
+            $m = [regex]::Matches($body, '<!-- source: ([^\s>]+) -->')
+            if ($m.Count -lt 1) {
+                $problems += "$($f.Name): section '$($s.heading.Trim())' has non-template content but no <!-- source: ... --> annotation"
+            } else {
+                foreach ($match in $m) {
+                    $tag = $match.Groups[1].Value
+                    if ($tag -notin $allowedSourceTags) {
+                        $problems += "$($f.Name): section '$($s.heading.Trim())' has unknown source tag '$tag' (must be one of: $($allowedSourceTags -join ', '))"
+                    }
+                }
+            }
+        }
+    }
+    if ($problems.Count -gt 0) { throw ($problems -join "`n") }
 }
 
 # E. Self-consistency (dogfood — two layers)

@@ -2,7 +2,7 @@
 
 **English** · [简体中文](README.zh-CN.md)
 
-![version](https://img.shields.io/badge/version-0.15.1-blue) ![verify_all](https://img.shields.io/badge/verify__all-28%2F28-brightgreen) ![test-init](https://img.shields.io/badge/test--init-177%2F177-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.16.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-29%2F29-brightgreen) ![test-init](https://img.shields.io/badge/test--init-227%2F227-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
 > **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (9 skills + project templates) that brings disciplined AI-driven development to fullstack and backend projects.
 >
@@ -154,8 +154,8 @@ Hit Claude Code's rate limit mid-task? Switch to GitHub Copilot in VS Code and k
 
 ### Three layers of regression testing
 
-- `verify_all` (28 checks) — repo health
-- `test-init` (177 assertions) — init template logic on empty dirs
+- `verify_all` (29 checks) — repo health
+- `test-init` (227 assertions on PowerShell; 191 on Bash without python3) — init template logic on empty dirs (3 project types × 75 PS / 63 Bash, plus 2 shell-agnostic BUG-2 placeholder-regex regression assertions)
 - `test-real-project` (82 assertions) — overlay onto real fixtures (todo-fullstack, todo-backend)
 
 Every commit must pass all three. `test-init` and `test-real-project` exercise the generated project's structure end-to-end with no network needed.
@@ -253,7 +253,8 @@ Markdown docs:
 | 0.14.0 | done | **Document size policy**: numeric caps for 8 document classes (rules / agents / per-task docs / insight-index / tasks.md) + WARN-level size checks in `verify_all` (I.1-I.5 here, F.1-F.6 in user-project templates). "Reference, don't paste" + always-archive-task discipline. |
 | 0.15.0 | done | **AI safety guardrails**: cross-platform `guard-rm.{ps1,sh}` PreToolUse hook blocks destructive commands (`rm` / `Remove-Item` / `find -delete` / nested `pwsh -c`) targeting paths outside the project root; per-call override via `HARNESS_ALLOW_OUTSIDE_RM=1`. New `.harness/rules/75-safety-hook.md`. Plus D1+D2 docs: AI tool flow modes (Claude Code auto-dispatch / Copilot manual / Copilot opt-in "continuous mode" with HARD STOP after Gate Review) and an explicit Claude-Code-sub-agent-dispatch callout. verify_all 26 → 27 (new F.2). |
 | 0.15.1 | done | **Documentation-drift cleanup + I.6 retired-claim guard**: closes the v0.10 composition-retirement drift class across 14 files (docs / templates / dogfood rules / Chinese overlay), and adds a literal-substring banned-phrase guard in `verify_all` (FAIL if any retired claim resurfaces). verify_all 27 → 28 (new I.6). |
-| 0.16+ | planned | True **AI-native init** (AI analyzes user description + existing code, generates custom 50-*.md and partition agents); supervisor agent observing pipeline progress |
+| 0.16.0 | done | **AI-native init / adopt**: opt-in `/harness-init` Q6 and `/harness-adopt` Q6 ask whether to let AI draft a tailored `.harness/rules/50-<project-slug>.md` (and optional `dev-*` partition agents) grounded in the user's Q2 stack string plus top-level filenames + named manifest contents. Static-stub fallback if the four invariants fail (sections, no `{{...}}`, ≤200 lines, no reserved partition names). Inline source citations (`<!-- source: ... -->`). Mock fixture for test/dry-run via `HARNESS_AI_NATIVE_MOCK`. verify_all 28 → 29 (new D.3 per-section sanity check). |
+| 0.17+ | planned | Supervisor agent observing pipeline progress |
 
 ## Design principles
 

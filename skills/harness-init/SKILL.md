@@ -44,7 +44,7 @@ they back up or run `/harness-adopt`.
 
 ### 2. Gather project info via `AskUserQuestion`
 
-Ask **five questions** in a single `AskUserQuestion` call:
+Ask **six questions** in a single `AskUserQuestion` call:
 
 1. **Project type** — options. The choice determines `PROJECT_TYPE` placeholder and which overlay is copied.
    - `Fullstack (frontend + backend + DB)` — `PROJECT_TYPE=fullstack`; copies fullstack overlay (partition agents, fullstack rules, verify_all preset for Node/web stacks).
@@ -72,6 +72,12 @@ Ask **five questions** in a single `AskUserQuestion` call:
    - `中文 (Chinese)` — **项目内 AI 全程使用中文输出**。包括：对话回复、agent 间交接、所有任务阶段文档、tasks.md / dev-map.md 更新、错误消息、状态报告。即使用户用其他语言提问，AI 也用中文回答。
    - The policy is enforced by an "Output language" section at the top of CLAUDE.md. Agents read CLAUDE.md and follow the rule.
    - Agent definitions and verify_all scripts stay in English regardless (LLM reads English fine, file count manageable). Only output is constrained.
+
+6. **AI customization of `50-<project>.md` rule fragment (v0.16+)** — opt-in. Default: `No (static template only)`.
+   - `No (default) — keep static stub` — copies the static `50-<type>.md` template unchanged (byte-identical to v0.15.1 behavior). Fastest, most predictable init. The user/AI can edit the stub later by hand.
+   - `Yes — let AI draft a tailored 50-<project-slug>.md` — after the static templates are copied (step 4) and placeholders are substituted (step 5), the skill runs an inline AI customization step (5b) that: (a) reads the user's Q2 stack string, the target directory's top-level filenames (Glob `*`, capped at 100 entries), and the contents of any of these manifest files if present (`package.json`, `pyproject.toml`, `requirements.txt`, `go.mod`, `Cargo.toml`, `pom.xml`, `README.md`, each capped at 50 KB); (b) drafts `.harness/rules/50-<project-slug>.md` whose six section headings match the static stub but whose body is grounded in the inputs above (every non-template section carries an inline `<!-- source: ... -->` HTML comment with the file or tag the claim came from); (c) optionally proposes one or more `.harness/agents/dev-<name>.md` partition drafts that the user accepts / renames / rejects individually before any file is written.
+   - Tradeoff: ~10s extra in init; AI output is non-deterministic (mitigated by mandatory source citations and a fall-back to the static stub if the four invariants fail — see step 5b.5). The user can always edit the file after init.
+   - Reserved-name guard: partition names matching the seven pipeline-agent names (`pm-orchestrator`, `requirement-analyst`, `solution-architect`, `gate-reviewer`, `developer`, `code-reviewer`, `qa-tester`) are silently dropped before the Accept prompt.
 
 ### 3. Locate the template directory
 
@@ -142,6 +148,142 @@ Replace these placeholders in any `.tmpl` file:
 | `{{LANG}}` | `en` (default) or `zh` from Q5 |
 | `{{SYNC_COMMAND}}` | OS-detected harness-sync invocation for the Stop hook. **Windows** → `pwsh -NoProfile -File scripts/harness-sync.ps1`. **macOS / Linux** → `bash scripts/harness-sync.sh`. Detect via `$IsWindows` (PowerShell) or `[[ "$OSTYPE" == "msys"* \|\| "$OSTYPE" == "cygwin"* \|\| "$OSTYPE" == "win32" ]]` (bash). Used only in `.claude/settings.json`. The Windows `-NoProfile` flag avoids loading the user's `$PROFILE` on every hook invocation (measured 3-4s → 10ms in QA 06_TEST_REPORT.md D-3). |
 | `{{GUARD_COMMAND}}` | OS-detected guard-rm invocation for the PreToolUse hook (destructive-command safety, v0.15+). **Windows** → `pwsh -NoProfile -File scripts/guard-rm.ps1`. **macOS / Linux** → `bash scripts/guard-rm.sh`. Mirror the same OS detection used for `{{SYNC_COMMAND}}`. Used only in `.claude/settings.json`. See `.harness/rules/75-safety-hook.md` for the contract. The Windows `-NoProfile` flag is essential here — without it, every Bash tool call eats the user's `$PROFILE` startup cost (NFR-Perf was violated in QA testing; see 06_TEST_REPORT.md D-3). |
+
+### 5b. AI customization (opt-in, v0.16+)
+
+This step runs **only if Q6 = `Yes`**. If Q6 = `No`, skip to step 6 — the static
+`50-<type>.md` copied by step 4 is the final rule file.
+
+The step is **inline** — the orchestrator model executing this skill performs
+the draft itself; no separate Bash call, no MCP, no new tool surface. The
+canonical drafting prompt is shipped at `.harness/rules/_ai-native-prompt.md`
+(copied to the user project by step 4); the skill quotes the four invariants
+from that file when invoking the model.
+
+#### 5b.1 — Slug sanitization
+
+Compute the project slug from the cwd basename. The slug MUST match
+`^[a-z0-9][a-z0-9-]{0,40}$`. Sanitizer (in order):
+
+1. Lowercase the basename.
+2. Replace every character not in `[a-z0-9]` with `-`.
+3. Collapse runs of `-` into a single `-`; strip leading/trailing `-`.
+4. Truncate to 40 characters.
+5. If the result starts with a digit, prefix with `p-` (so `2025-app` → `p-2025-app`).
+6. If the result is empty after sanitization, fall back to the static stub path
+   (log a one-line note to the user) and SKIP the rest of step 5b.
+
+#### 5b.2 — Gather inputs
+
+- The user's Q2 stack string.
+- `Glob *` in the target directory; cap the list at 100 entries; the overflow
+  is summarized as a single `... (N more)` line in the prompt.
+- For each of these manifest files **if present**, Read the first 50 KB:
+  `package.json`, `pyproject.toml`, `requirements.txt`, `go.mod`, `Cargo.toml`,
+  `pom.xml`, `README.md`. Skip silently if absent.
+
+#### 5b.3 — Build the AI prompt
+
+Quote the contract from `.harness/rules/_ai-native-prompt.md` (copied into the
+user project at step 4). The prompt names exactly: `PROJECT_NAME`, `PROJECT_TYPE`,
+`STACK`, `TOP_LEVEL`, `MANIFESTS`, and `RESERVED_NAMES`. Output contract: a
+single JSON object `{ "rule_md": "...", "partition_agents": [{ "name": ..., "body": ...}] }`.
+`partition_agents` MAY be `[]`.
+
+#### 5b.4 — Mock short-circuit (`HARNESS_AI_NATIVE_MOCK`)
+
+If the environment variable `HARNESS_AI_NATIVE_MOCK` is set and points at a
+readable file, use that file's content as the AI response **instead of calling
+the model**. Used by `scripts/test-init.{ps1,sh}` to exercise this flow without
+a live LLM call. A shipped fixture lives at
+`scripts/ai-native-mock.json` (copied from `templates/common/scripts/`) for
+users who want to dry-run the AI-native path locally.
+
+On parse error of the mock file, fall through to the fallback path (5b.5) — this
+also exercises the fallback branch in tests.
+
+#### 5b.5 — Validate the four invariants
+
+Parse the response as JSON. Then validate the `rule_md` body against four
+invariants. ANY failure ⇒ fall back to the static `50-<type>.md` stub and log
+one line to PM_LOG.md (or stdout if no task slug) explaining which invariant
+failed; continue at step 6.
+
+1. **All six required headings present in order** (regex per line, top-to-bottom):
+   `## When to read`, `## Build / test / verify`, `## Project structure`,
+   `## Stack-specific conventions`, `## Partitioning`,
+   `## Stack-specific verify_all checks`.
+2. **No `{{...}}` literals** — regex `\{\{[A-Z_]+\}\}` over the body MUST match
+   zero. This protects `verify_all` D.2 on the user's first run.
+3. **Line count ≤200** — soft cap; over the cap, write the file anyway but
+   surface a one-time warning that I.2 will WARN on next verify_all.
+4. **No reserved partition names** — drop any `partition_agents[i]` whose
+   `name` is in `{pm-orchestrator, requirement-analyst, solution-architect,
+   gate-reviewer, developer, code-reviewer, qa-tester}`. Continue with the
+   remainder (an empty `partition_agents` list is acceptable).
+
+Quoted from `.harness/rules/_ai-native-prompt.md`:
+
+> If you cannot satisfy all four, the skill drops your output and falls back
+> to the static `50-<PROJECT_TYPE>.md` stub. Do not try to be clever; the safe
+> default beats a malformed customization.
+
+#### 5b.6 — Write `.harness/rules/50-<slug>.md`
+
+Use the Write tool to create `.harness/rules/50-<slug>.md` containing the
+validated `rule_md` body. After Write, **re-Read the file with `Get-Content -Raw`**
+and compare byte-for-byte to the string passed to Write. On mismatch, retry
+the Write once; on a second mismatch, fall back to the static stub (per
+insight-index line 10 on Edit-tool false-success).
+
+#### 5b.7 — Delete the static stub `50-<type>.md`
+
+The AI-authored file fully replaces the static stub. Use the Delete operation
+on `.harness/rules/50-<PROJECT_TYPE>.md` (which step 4 copied). On Windows
+`Remove-Item`; on Unix `rm`. The `_ai-native-prompt.md` reference file stays
+in place.
+
+#### 5b.8 — Update `AI-GUIDE.md` index entry
+
+The freshly-copied `AI-GUIDE.md` has a line of the form:
+
+```
+- **`.harness/rules/50-<PROJECT_TYPE>.md`** (**when touching code**): ...
+```
+
+Replace `50-<PROJECT_TYPE>.md` with `50-<slug>.md` in that line (a single Edit
+on `AI-GUIDE.md`). After the Edit, **re-Read AI-GUIDE.md** and confirm the line
+now references `50-<slug>.md`. This keeps `verify_all` E.4b (AI-GUIDE ↔ rules
+bidirectional index) green on the user's first run.
+
+#### 5b.9 — Partition agent Accept / Rename / Reject loop
+
+For each item in `partition_agents`:
+
+1. After the reserved-name filter from 5b.5, present the proposed name and the
+   first ~10 lines of the body to the user via `AskUserQuestion`:
+   "Accept this draft as `.harness/agents/<name>.md`? [Accept / Rename / Reject]".
+2. **Accept** → write `.harness/agents/<name>.md` with the body; re-Read to confirm.
+3. **Rename** → take user input via a follow-up `AskUserQuestion`; verify the new
+   name does not collide with `RESERVED_NAMES` and does not duplicate another
+   accepted partition. Write the file with the new `name:` substituted.
+4. **Reject** → skip; do not write.
+
+Mock-test override: if `HARNESS_AI_NATIVE_PARTITION_DECISION` is set in the env
+(values: `accept` / `reject`), apply that decision to every partition without
+asking. Used by test-init only.
+
+#### 5b.10 — 5-line summary to user (NFR-UX-2)
+
+Print:
+
+```
+AI-native customization summary
+  File written:        .harness/rules/50-<slug>.md (<N> lines)
+  Source citations:    <M> annotations across <K> sections
+  Partitions accepted: <P> / <Q> proposed
+  Fallback fired:      <Yes|No>
+```
 
 ### 6. Run the initial binding sync
 

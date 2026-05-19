@@ -12,13 +12,15 @@ harness-kit/
 │   │   └── templates/                  ← Project templates (SOURCE OF TRUTH for distribution)
 │   │       ├── common/                 ← Shared assets all projects get
 │   │       │   ├── .harness/agents/    ← 7 agent definitions (tool-agnostic SOT)
-│   │       │   ├── .harness/rules/00-core.md.tmpl  ← base rule fragments
-│   │       │   ├── .claude/settings.json.tmpl       ← Claude Code binding glue
+│   │       │   ├── .harness/rules/00-core.md.tmpl       ← base rule fragments
+│   │       │   ├── .harness/rules/_ai-native-prompt.md  ← canonical AI-customization prompt (v0.16+; reference only, indexed by AI-GUIDE.md)
+│   │       │   ├── .claude/settings.json.tmpl          ← Claude Code binding glue
 │   │       │   ├── docs/workflow.md
 │   │       │   ├── docs/dev-map.md.tmpl
 │   │       │   ├── docs/tasks.md.tmpl
 │   │       │   ├── docs/spec/README.md
 │   │       │   ├── scripts/harness-sync.{ps1,sh}    ← Binding sync (distributed)
+│   │       │   ├── scripts/ai-native-mock.json     ← Mock AI response for HARNESS_AI_NATIVE_MOCK (v0.16+; test & dry-run)
 │   │       │   └── evals/golden-tasks.md.tmpl
 │   │       ├── fullstack/              ← Fullstack-only overlays
 │   │       │   ├── .harness/rules/50-fullstack.md
@@ -67,10 +69,10 @@ harness-kit/
 │   └── features/                       ← Per-task documents
 │
 ├── scripts/
-│   ├── verify_all.{ps1,sh}             ← Total verification (28 checks at v0.15.1)
+│   ├── verify_all.{ps1,sh}             ← Total verification (29 checks at v0.16.0)
 │   ├── harness-sync.{ps1,sh}           ← Layer 2: .harness/agents + .harness/skills → .claude/
 │   ├── sync-self.{ps1,sh}              ← Layer 1: templates/common/ → repo SOT
-│   ├── test-init.{ps1,sh}              ← Init+sync regression on EMPTY dir (177 assertions at v0.15)
+│   ├── test-init.{ps1,sh}              ← Init+sync regression on EMPTY dir (227 assertions PS / 191 Bash-no-python3 at v0.16.0)
 │   ├── test-real-project.{ps1,sh}      ← Integration regression on REAL fixture (82 assertions)
 │   ├── install-hooks.{ps1,sh}          ← One-shot git pre-commit installer
 │   ├── archive-task.{ps1,sh}           ← Insight-harvest + stage-doc archive
@@ -121,8 +123,8 @@ Both layers are checked by `scripts/verify_all` and FAIL on drift.
 |---|---|---|
 | Layer 1 sync (templates → repo SOT) | `sync-self` | Run before commit if you edited `templates/common/.harness/agents/` or one of the 4 mirrored script pairs (`harness-sync`, `install-hooks`, `archive-task`, `guard-rm`) |
 | Layer 2 sync (repo SOT → binding) | `harness-sync` | Run before commit if you edited `.harness/agents/` or `.harness/skills/`. Rule edits do NOT require sync — they're referenced, not copied. |
-| Total verification | `verify_all` | Single source of truth for "is the repo healthy" — runs all 28 checks (at v0.15.1) including both `--check` modes |
-| Init regression | `test-init` | Simulates full init + sync in temp dir (177 assertions at v0.15) |
+| Total verification | `verify_all` | Single source of truth for "is the repo healthy" — runs all 29 checks (at v0.16.0) including both `--check` modes |
+| Init regression | `test-init` | Simulates full init + sync in temp dir (227 assertions on PS / 191 Bash without python3 at v0.16.0; +50 vs v0.15 on PS from AI-native opt-in/opt-out bidirectional cases × 3 project types, plus AC-10 byte-compare in a discrete fresh-temp-dir pass, plus 2 shell-agnostic BUG-2 placeholder-regex regression assertions from rollback round 2) |
 
 ## Patterns to follow
 

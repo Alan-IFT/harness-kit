@@ -20,11 +20,12 @@ This project uses the **Harness 7-agent pipeline**: PM Orchestrator → Requirem
 
 - **`.harness/rules/00-core.md`** (**always**): 7-stage pipeline, hard rules, default output formats
 - **`.harness/rules/05-insight-index.md`** (**at the start of design/implementation tasks**): how cross-task hard-won truths are captured; check `.harness/insight-index.md` before deciding anything non-trivial
-- **`.harness/rules/50-{{PROJECT_TYPE}}.md`** (**when touching code**): project-type overlay, partitioning, stack conventions
+- **`.harness/rules/50-{{PROJECT_TYPE}}.md`** (**when touching code**): project-type overlay, partitioning, stack conventions <!-- ai-native-init: when /harness-init Q6 = Yes, the skill's step 5b.8 Edits this line to point at `50-<project-slug>.md` instead -->
 - **`.harness/rules/60-tool-handoff.md`** (**when switching Claude Code ↔ Copilot**): state lives in files, not chat memory
 - **`.harness/rules/65-intervention.md`** (**when running, observing, or redirecting any `/harness*` task**): `.harness/intervention.md` is a single-shot signal file (STOP / REDIRECT / SKIP / NOTE) that PM consumes at every stage boundary
 - **`.harness/rules/70-doc-size.md`** (**when adding or reviewing long-lived docs, or when `verify_all` flags an `F.*` WARN**): soft caps on AI-GUIDE / rules / agents / insight-index / tasks.md / per-task docs; "reference don't paste" + PM_LOG compaction + always-archive discipline
 - **`.harness/rules/75-safety-hook.md`** (**when running, observing, or disabling the destructive-command guardrail**): `PreToolUse` hook on Bash tool calls; blocks destructive commands targeting paths outside the `.git/` ancestor of cwd; override `HARNESS_ALLOW_OUTSIDE_RM=1`.
+- **`.harness/rules/_ai-native-prompt.md`** (**reference only — only read if customizing the AI-native init/adopt drafting prompt**): canonical prompt the `/harness-init` step 5b and `/harness-adopt` step 4b hand to the orchestrator model when drafting a tailored `50-<project-slug>.md`. Not a runtime rule; the leading `_` marks it as documentation.
 
 If you add a new fragment, append a line above with its filename, a 1-line description, and the trigger condition.
 

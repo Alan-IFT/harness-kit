@@ -20,11 +20,12 @@
 
 - **`.harness/rules/00-core.md`**（**总是**）：7-stage pipeline、红线、默认产出格式
 - **`.harness/rules/05-insight-index.md`**（**设计/实现任务开始时**）：跨任务踩坑事实的捕获机制；非琐碎决策前先看 `.harness/insight-index.md`
-- **`.harness/rules/50-{{PROJECT_TYPE}}.md`**（**碰代码时**）：项目类型 overlay、分区、stack 约定
+- **`.harness/rules/50-{{PROJECT_TYPE}}.md`**（**碰代码时**）：项目类型 overlay、分区、stack 约定 <!-- ai-native-init: 当 /harness-init Q6 = Yes 时，skill 在 step 5b.8 通过 Edit 把这一行改为指向 `50-<project-slug>.md` -->
 - **`.harness/rules/60-tool-handoff.md`**（**切 Claude Code ↔ Copilot 时**）：状态在文件、不在记忆
 - **`.harness/rules/65-intervention.md`**（**跑、观察、调整任何 `/harness*` 任务时**）：`.harness/intervention.md` 是单次信号文件（STOP / REDIRECT / SKIP / NOTE），PM 在每次阶段切换时消费
 - **`.harness/rules/70-doc-size.md`**（**添加/评审长存文档时，或 `verify_all` 报 `F.*` WARN 时**）：AI-GUIDE / rules / agents / insight-index / tasks.md / 每任务文档的软上限；"引用不要粘贴" + PM_LOG 压缩 + 强制 archive-task
 - **`.harness/rules/75-safety-hook.md`**（**运行、观察、或禁用破坏性命令防护时**）：Bash 工具调用的 `PreToolUse` hook；阻断目标路径解析到 cwd 的 `.git/` 祖先之外的破坏性命令；override `HARNESS_ALLOW_OUTSIDE_RM=1`。
+- **`.harness/rules/_ai-native-prompt.md`**（**仅参考——定制 AI-native init/adopt 草拟提示词时才读**）：`/harness-init` step 5b 与 `/harness-adopt` step 4b 在请编排模型起草定制版 `50-<project-slug>.md` 时使用的标准提示。不是运行时规则；`_` 前缀表示这是文档。
 
 如果新加片段，在上面追加一行：文件名 + 1 行描述 + 触发条件。
 

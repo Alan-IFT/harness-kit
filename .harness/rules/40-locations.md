@@ -19,7 +19,7 @@
 
 ## Verify before declaring done
 
-`scripts/verify_all` checks (28 items at v0.15.1, all must PASS — count grows with releases):
+`scripts/verify_all` checks (29 items at v0.16.0, all must PASS — count grows with releases):
 
 - No secrets / committed env files
 - `参考/` not tracked
@@ -38,5 +38,6 @@
 - `.harness/intervention.md` not tracked (ephemeral file; v0.13+)
 - Document size soft caps (I.1-I.5, v0.14+; WARN-level)
 - Retired-claim phrase guard (I.6, v0.15.1+; FAIL if any banned phrase from past architectural retirements resurfaces in a live file)
+- AI-generated `50-*.md` sanity (D.3, v0.16.0+; FAIL if a `50-*.md` rule fragment is missing any of the six required headings, leaks a `{{...}}` placeholder, or has a non-template `##`/`###` section without a `<!-- source: ... -->` annotation)
 
 Run after every change; do not skip.

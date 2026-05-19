@@ -6,5 +6,8 @@
   "skill_count_baseline": 4,
   "template_agent_count_baseline": 7,
   "project_template_count_baseline": 2,
-  "last_verify": "2026-05-17"
+  "last_verify": "2026-05-19",
+  "verify_all_checks": 29,
+  "test_init_ps_assertions": 227,
+  "test_init_bash_no_python3_assertions": 191
 }

@@ -192,7 +192,7 @@ git commit -m "chore: upgrade Harness to v0.2 (tool-agnostic .harness/ layer)"
 | Edit a project rule | Edit `CLAUDE.md` directly | Edit a `.harness/rules/NN-*.md` fragment, run `harness-sync` | Edit the fragment; **no sync needed** — rules are referenced by `AI-GUIDE.md`, not composed |
 | Add a project skill | `mkdir .claude/skills/foo`, write SKILL.md | `mkdir .harness/skills/foo`, write SKILL.md, run `harness-sync` | Unchanged |
 | Edit settings.json | Direct edit | Direct edit (still in `.claude/`, not part of sync) | Unchanged |
-| Verify project | `verify_all` | `verify_all` (now also checks E.4 Binding in sync) | `verify_all` now has 28 checks (E.2 byte-identity + E.4b AI-GUIDE ↔ rules drift + I.* doc-size + G.3 version stamps + F.2 guard-rm + I.6 retired-claim guard) |
+| Verify project | `verify_all` | `verify_all` (now also checks E.4 Binding in sync) | `verify_all` now has 29 checks (E.2 byte-identity + E.4b AI-GUIDE ↔ rules drift + I.* doc-size + G.3 version stamps + F.2 guard-rm + I.6 retired-claim guard + D.3 AI-generated 50-*.md sanity) |
 
 ## Troubleshooting
 

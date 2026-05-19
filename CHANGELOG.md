@@ -7,7 +7,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.15.1] - 2026-05-19
+## [0.16.0] - 2026-05-19
+
+The first **AI-native** release. `/harness-init` and `/harness-adopt` gain a Q6 opt-in step that lets the orchestrator model draft a tailored `.harness/rules/50-<project-slug>.md` (and optional `dev-*` partition agents) grounded in the user's Q2 stack description, the target directory's top-level filenames, and the contents of named manifests (`package.json`, `Cargo.toml`, `pyproject.toml`, etc.) — replacing the previous static-stub-only path. Opt-out remains the default and produces byte-identical v0.15.1 output (AC-10). A new `verify_all` check (`D.3`) keeps the new file shape honest.
+
+### Added — AI customization step in `/harness-init` and `/harness-adopt` (opt-in)
+
+- **`skills/harness-init/SKILL.md` step 5b "AI customization (opt-in)"** — runs between the existing template-copy step 5 and the binding-sync step 6. New Q6 in the AskUserQuestion batch (default `No`). When `Yes`: enumerate top-level files (capped at 100), read any of seven named manifests (capped at 50 KB each), draft a JSON `{ "rule_md": ..., "partition_agents": [...] }`, validate four invariants, write `.harness/rules/50-<slug>.md` (slug sanitized to `^[a-z0-9][a-z0-9-]{0,40}$`), delete the static `50-<type>.md` stub, Edit `AI-GUIDE.md` to swap the index line, and run the partition-agent Accept / Rename / Reject loop.
+- **`skills/harness-adopt/SKILL.md` step 4b "AI rule synthesis (opt-in)"** — symmetric to init step 5b but seeded from this skill's step-2 reconnaissance profile; writes the draft to `.harness-adopt/PROPOSED_RULES/50-<slug>.md` so the user can review before approving the plan in step 5.
+- **`skills/harness-init/templates/common/.harness/rules/_ai-native-prompt.md`** — canonical drafting prompt shipped into every user project. Documents the input contract (`PROJECT_NAME`, `PROJECT_TYPE`, `STACK`, `TOP_LEVEL`, `MANIFESTS`, `RESERVED_NAMES`), the JSON output contract, the four invariants (six required headings in order, zero `{{...}}` literals, ≤200 lines, no reserved partition names), the per-section source-citation rule (every non-template `## ` or `### ` section MUST have ≥1 `<!-- source: ... -->` annotation with a tag from a small allowed set), and the "don't guess" rule. Leading `_` flags it as documentation rather than a numerically-ordered rule fragment; it is indexed in `AI-GUIDE.md.tmpl` under the "reference only" trigger so `verify_all` E.4b stays happy.
+- **`skills/harness-init/templates/common/scripts/ai-native-mock.json`** — shipped mock fixture (`rule_md` + `partition_agents`) for `HARNESS_AI_NATIVE_MOCK`. Used by `scripts/test-init.{ps1,sh}` to exercise the opt-in flow without a live LLM call. Also useful for users who want to dry-run the AI-native path locally after init.
+- **`scripts/verify_all.{ps1,sh}` D.3 — AI-generated 50-*.md sanity (FAIL)** — for every `.harness/rules/50-*.md` file: asserts all six required headings present in order, zero `{{...}}` literals, and (per Gate Finding G) **every non-template `##` or `###` section has ≥1 `<!-- source: <tag> -->` annotation** with `<tag>` from the allowed set (`user-q2`, `top-level-glob`, `package.json`, `Cargo.toml`, `pyproject.toml`, `requirements.txt`, `go.mod`, `pom.xml`, `README.md`). Per-section enforcement (not file-global) keeps D.3 aligned with AC-7 in the requirement.
+- **`AI-GUIDE.md.tmpl` conditional index line** (both English and Chinese overlays) — annotated with `<!-- ai-native-init: ... -->` so the skill's step 5b.8 can find and rewrite the line when Q6 = Yes. The template still ships with the legacy `50-{{PROJECT_TYPE}}.md` reference; opt-out is byte-identical to v0.15.1.
+
+### Three architect decisions (recorded in `docs/features/ai-native-init/02_SOLUTION_DESIGN.md` §3)
+
+- **A1 Direct prompt by orchestrator AI** (not a new sub-agent, not a Bash call to a CLI, no MCP) — keeps the skill tool-agnostic; the same skill text runs under Claude Code, Copilot, or Cursor.
+- **A2 Four-invariant detector with deterministic fallback to the static stub** — sections present, no `{{...}}`, line cap 200, no reserved names. Single fail-fast check; keeps the failure mode predictable.
+- **A3 Env-var-controlled canned-response file (`HARNESS_AI_NATIVE_MOCK`)** for tests — avoids needing a real LLM in CI; the fixture is also useful for user dry-runs. Bash tests gate on `python3` availability (parallel to the existing `init_have_python` guard-rm assertion gate).
+
+### Four Gate-Review dev-time conditions honored (`docs/features/ai-native-init/03_GATE_REVIEW.md`)
+
+- **Finding A** — `templates/i18n/zh/common/AI-GUIDE.md.tmpl` exists and got the conditional-marker comment treatment, parallel to the English overlay. The design's "likely does NOT have its own AI-GUIDE.md.tmpl" assumption was wrong; the gate caught it.
+- **Finding D** — both `AI-GUIDE.md:35` ("28/28 at v0.15.1") AND `AI-GUIDE.md:67` ("28 checks at v0.15.1") bumped to v0.16.0 / 29. Same sweep covered `README.md` (badges + "Three layers of regression testing"), `README.zh-CN.md`, `docs/dev-map.md` (3 lines), `docs/walkthrough.html`, `architecture.html`, `MIGRATION.md`, and `.harness/rules/40-locations.md`.
+- **Finding F** — every Write/Edit in this delivery was followed by a re-Read or Grep verification before moving on (per insight-index line 10 on Edit-tool false-success).
+- **Finding G** — D.3 implementation is per-section, not file-global. Two adversarial fragments confirmed the check FAILs on missing-source / leaked-placeholder rules and PASSes on well-formed ones.
+
+### Two Gate cosmetic findings (B + C) annotated
+
+Inline `<!-- gate-finding-B -->` / `<!-- gate-finding-C -->` HTML comments in `02_SOLUTION_DESIGN.md` at the cited lines explain the two off-by-N citation mis-pointers (Decision Q2 rationale and §7 skeleton-match claim respectively). The design body is intentionally not rewritten — Gate Reviewer is read-only by contract.
+
+### Changed — Version stamps and surface-count claims
+
+- `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`: `0.15.1` → `0.16.0` (G.3 keeps these in sync).
+- `README.md` / `README.zh-CN.md` badges: `version-0.15.1` → `0.16.0`, `verify_all-28/28` → `29/29`, `test-init-177/177` → `227/227` (post-rollback-2: includes the AC-10 byte-compare assertion AND the two shell-agnostic BUG-2 placeholder-regex regression assertions). Roadmap row for v0.16.0 added; `0.16+ planned` → `0.17+ planned`.
+- `AI-GUIDE.md`: `28/28 at v0.15.1` → `29/29 at v0.16.0`; scripts entry now mentions `D.3 AI-generated 50-*.md sanity`.
+- `docs/dev-map.md`: verify_all comment `28 checks at v0.15.1` → `29 checks at v0.16.0`; test-init `177 assertions at v0.15` → `227 PS / 191 Bash-no-python3 at v0.16.0` (rollback round 1 +3 byte-compare; rollback round 2 +2 BUG-2 regex regression; full surface is 227 on both shells when python3 is present).
+- `docs/walkthrough.html`: sample `/harness-verify` output `28 checks: 28 PASS` → `29 checks: 29 PASS`.
+- `architecture.html`: 文档时效说明 banner v0.15.1 / 27 checks / 177 assertions → v0.16.0 / 29 / 227 (PS) / 191 (Bash without python3).
+- `MIGRATION.md`: `verify_all now has 28 checks (...)` updated to 29 with the D.3 entry appended.
+- `.harness/rules/40-locations.md`: verify_all check enumeration bumped to 29 items at v0.16.0; new bullet for D.3.
+- `docs/manual-e2e-test.md`: assertion count updated to reflect the new test-init total (measured post-implementation).
+
+### Notes on regression surface
+
+- `verify_all` 28 → 29 (one new FAIL-severity check, D.3). Dogfood repo has no `.harness/rules/50-*.md` files so D.3 is vacuously true here; the check fires on user projects that opt in to AI-native at init time.
+- `test-init.ps1` 177 → 227 PASS (the bash twin reports 191 here because Windows ships a Microsoft Store python3 stub that fails the `init_have_python` probe and the python-gated subset of the new AI-native block is conditional, same pattern as the existing guard-rm assertion gate; on Linux/macOS both shells run the full 227-assertion surface. The AC-10 byte-compare (rollback round 1, +3) and the two BUG-2 placeholder-regex assertions (rollback round 2, +2) are python3-free so they run on every host).
+- `test-real-project` unchanged at 82/82.
+- No agent contract or pipeline-stage behavior changed. AI-native is a step *inside* two skills, not a new stage in the 7-agent pipeline.
+
+### Rollback round 2 — BUG-2 placeholder-regex broadening (QA finding)
+
+QA's `06_TEST_REPORT.md` flagged one MAJOR bug in the v0.16.0 safety net: the D.2 + D.3 unsubstituted-placeholder regex `\{\{[A-Z_]+\}\}` did NOT match whitespace-padded variants (`{{ PROJECT_NAME }}`) or lowercase variants (`{{project_name}}`). An AI emitting either form would slip past both gates, leaving a placeholder-looking literal in a user-facing rule file — exactly the failure mode D.3 was added to prevent. Fix: regex broadened to `\{\{\s*[A-Za-z_][A-Za-z0-9_]*\s*\}\}` in both `scripts/verify_all.ps1` (D.2 ~L101 and D.3 ~L136) and `scripts/verify_all.sh` (D.2 ~L82 and D.3 ~L111). The allowlist still constrains which forms are legal in D.2 — every existing `.tmpl` placeholder is still in the strict `{{UPPER_CASE}}` form, so the broadening is purely safety-tightening, not behavior-changing. Added two in-process unit-test assertions to `test-init.{ps1,sh}` that exercise both variants (single-shot, not per-project-type). Adversarial fragments with `{{ PROJECT_NAME }}` and `{{project_name}}` confirmed in both shells that D.3 now FAILs deterministically.
+
+### Known limitations — deferred to v0.16.1
+
+- **BUG-1 (reserved-name filter shell asymmetry, MINOR)** — QA's `06_TEST_REPORT.md` also flagged that the PowerShell and Bash test-init paths exercise the reserved-name partition filter at slightly different scope: the PS path uses an inline `Where-Object` check against the literal `developer` name; the Bash path simulates via a python3 helper that exits the gate cleanly when the stub probe fails. The happy path (a valid mock with no reserved-name collision) is correct in both shells; the bug surfaces only when an AI proposes a partition named after one of the seven core agents (`pm-orchestrator`, `requirement-analyst`, `solution-architect`, `gate-reviewer`, `developer`, `code-reviewer`, `qa-tester`). Defense-in-depth rationale for deferral: the canonical drafting prompt (`_ai-native-prompt.md`) already instructs the AI to never use reserved names, and the validator filter is a second line of defense that activates only when the prompt is ignored — which is itself an edge case. Tracked for v0.16.1.
+- **Five MINOR coverage gaps in `06_TEST_REPORT.md`** also deferred to v0.16.1; this release prioritized closing BUG-2 (the user-facing safety-net hole) over additional coverage.
+
+
 
 A patch release that closes a long-standing documentation-drift class. v0.10 (Oct 2025) changed `CLAUDE.md` from a composed file into a static stub, but several user-facing documents and one template kept describing the old composition model. v0.13 / v0.14 then shipped without bumping README surface numbers. This release runs the cleanup to ground (~14 files) and adds a verify-time guard (`I.6`) that FAILs if the retired claims ever resurface.
 

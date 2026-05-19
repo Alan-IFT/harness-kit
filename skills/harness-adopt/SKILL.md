@@ -105,6 +105,12 @@ Use `AskUserQuestion`:
    - Pre-fill: detect existing README/CONTRIBUTING language; if dominantly Chinese,
      recommend Chinese. Agent prompts stay in English regardless.
 
+6. **AI customization of `50-<project>.md` rule fragment (v0.16+)** — opt-in. Default: `No (static template only)`.
+   - `No (default) — keep static stub` — the static `50-<type>.md` template is the rule fragment in the apply plan. Byte-identical to v0.15.1 adopt behavior.
+   - `Yes — let AI draft a tailored 50-<project-slug>.md` — between step 4 (extract rule candidates) and step 5 (write plan), the skill runs step 4b: it seeds the same drafting prompt as `/harness-init`'s step 5b.3 from this skill's step-2 reconnaissance profile (already in memory: detected languages / frameworks / test runners / CI / existing docs), validates the AI output against the four invariants (`.harness/rules/_ai-native-prompt.md` documents them), and writes the proposed fragment to `.harness-adopt/PROPOSED_RULES/50-<project-slug>.md` for review. The plan template in step 5 mentions this fragment so the user sees it before "apply".
+   - Tradeoff: same as `/harness-init` (~10s extra; non-deterministic output mitigated by source-citation discipline and a four-invariant validator that falls back to the static stub).
+   - Reserved-name guard: partition names matching the seven pipeline-agent names are dropped before being shown to the user (same as `/harness-init`).
+
 ### 4. Extract rule candidates
 
 Read existing convention files and extract rule candidates:
@@ -116,6 +122,49 @@ Read existing convention files and extract rule candidates:
 - From `pyproject.toml` `[tool.ruff]`, `[tool.black]`: line length, exclusion patterns.
 
 Write the draft to `.harness-adopt/CLAUDE.draft.md`. **Do not** yet move it to `.harness/rules/`.
+
+### 4b. AI rule synthesis (opt-in, v0.16+)
+
+This step runs **only if Q6 = `Yes`**. If Q6 = `No`, skip to step 5 — the static
+`50-<type>.md` is the rule fragment in the apply plan, identical to v0.15.1.
+
+This step is symmetric with `/harness-init`'s step 5b but **seeded from the
+step-2 reconnaissance profile** instead of re-Globbing. The skill is otherwise
+identical, including the four invariants and the slug sanitizer (see
+`skills/harness-init/SKILL.md:5b.1`). Quote the prompt contract from the
+shipped `templates/common/.harness/rules/_ai-native-prompt.md` (already present
+in this repo even before adopt-apply — it ships with the skill, not the user
+project).
+
+Differences from init step 5b:
+
+- **Slug source**: cwd basename (same sanitizer as init).
+- **Inputs**: the reconnaissance profile (languages, frameworks, test runners,
+  CI, existing docs) plus any manifest contents already read in step 2; no
+  fresh Glob pass needed.
+- **Output path** (not yet applied): `.harness-adopt/PROPOSED_RULES/50-<slug>.md`.
+  The PROPOSED_RULES directory is created if absent.
+- **Partition drafts** (if any, after the reserved-name filter): written to
+  `.harness-adopt/PROPOSED_AGENTS/dev-<name>.md` — also a draft, not applied.
+- **Mock short-circuit**: same `HARNESS_AI_NATIVE_MOCK` env var as init.
+- **Re-Read after Write**: same discipline as init step 5b.6.
+
+The plan template in step 5 gets a new bullet under "Files I will add (NEW)":
+
+```
+- .harness/rules/50-<slug>.md (AI-drafted; replaces the static 50-<type>.md.
+  Review the draft at .harness-adopt/PROPOSED_RULES/50-<slug>.md before
+  approving the plan.)
+```
+
+If any invariant fails, fall back: keep `.harness-adopt/PROPOSED_RULES/` empty
+and log `[AI-FALLBACK]` reason to `.harness-adopt/CONFLICTS.md`. The plan template
+omits the AI bullet and uses the static stub. The user is told once at end of
+step 5.
+
+When the user says "apply" in step 5, step 6 moves the proposed files into
+`.harness/` (and `.harness/agents/` for accepted partitions) as part of the
+normal apply flow.
 
 ### 5. Write the plan and ask user to confirm
 

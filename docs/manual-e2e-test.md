@@ -1,6 +1,6 @@
 # Manual End-to-End Test Checklist
 
-Automated regression (`scripts/test-init`, `scripts/verify_all`) covers everything
+Automated regression (`scripts/test-init.ps1` at 227 assertions; `scripts/test-init.sh` at 191 when python3 is unavailable (e.g. Windows Microsoft Store stub) / 227 when present; `scripts/verify_all` at 29 checks at v0.16.0) covers everything
 that runs from a shell. But two things must be exercised in a real Claude Code
 session to confirm the experience:
 
@@ -93,12 +93,13 @@ In Claude Code:
 **Expected flow**:
 
 1. Claude confirms the target directory.
-2. Claude asks **five** questions via the AskUserQuestion UI:
+2. Claude asks **six** questions via the AskUserQuestion UI:
    - Project type (Fullstack / Backend / Generic)
    - Stack (free text)
    - Enable verify_all Stop hook (Yes / No)
    - Developer partitioning (Partitioned / Single — skipped for Generic)
    - Output language (English / 中文)
+   - AI customization of `50-<project>.md` (Yes / **No (default)**) — v0.16+. On Yes, the skill reads the stack string + top-level filenames + named manifests and drafts a tailored rule fragment with `<!-- source: ... -->` annotations; on No (default), the static `50-<type>.md` stub is used (byte-identical to v0.15.1).
 3. Claude copies templates, substitutes placeholders, runs `harness-sync`.
 4. Claude prints a summary listing source-of-truth vs generated artifacts.
 

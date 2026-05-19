@@ -79,9 +79,111 @@ while IFS= read -r f; do
             "{{PROJECT_NAME}}"|"{{PROJECT_TYPE}}"|"{{STACK}}"|"{{TODAY}}"|"{{ENABLE_HOOK}}"|"{{SYNC_COMMAND}}"|"{{GUARD_COMMAND}}") ;;
             *) bad_ph="$bad_ph\n$f: $ph" ;;
         esac
-    done < <(grep -oE '\{\{[A-Z_]+\}\}' "$f" | sort -u)
+    done < <(grep -oE '\{\{[[:space:]]*[A-Za-z_][A-Za-z0-9_]*[[:space:]]*\}\}' "$f" | sort -u)
 done < <(find skills/harness-init/templates -type f \( -name '*.tmpl' -o -name '*.append' \))
 [[ -z "$bad_ph" ]] && step "D.2" "Placeholders documented" "PASS" || step "D.2" "Placeholders documented" "FAIL" "$(echo -e $bad_ph)"
+
+# D.3 — AI-generated 50-*.md sanity (per-section, per Gate Finding G)
+# For every .harness/rules/50-*.md:
+#   (a) all six required headings present in order
+#   (b) zero {{...}} literals
+#   (c) every non-template '## ' / '### ' section has >=1 <!-- source: <tag> -->
+#       annotation with a tag in the allowed set
+d3_problems=""
+d3_required_headings=(
+    "## When to read"
+    "## Build / test / verify"
+    "## Project structure"
+    "## Stack-specific conventions"
+    "## Partitioning"
+    "## Stack-specific verify_all checks"
+)
+d3_allowed_tags=(user-q2 top-level-glob package.json Cargo.toml pyproject.toml requirements.txt go.mod pom.xml README.md)
+d3_files=()
+if [[ -d .harness/rules ]]; then
+    while IFS= read -r f; do d3_files+=("$f"); done < <(find .harness/rules -maxdepth 1 -name '50-*.md' -type f 2>/dev/null)
+fi
+if (( ${#d3_files[@]} > 0 )); then
+    for f in "${d3_files[@]}"; do
+        fname=$(basename "$f")
+        content=$(cat "$f")
+        # (b) zero {{...}} literals
+        # v0.16.0 BUG-2 rollback round 2: regex broadened to catch whitespace-padded
+        # ('{{ PROJECT_NAME }}') and lowercase ('{{project_name}}') variants too.
+        if grep -qE '\{\{[[:space:]]*[A-Za-z_][A-Za-z0-9_]*[[:space:]]*\}\}' "$f"; then
+            d3_problems="${d3_problems}${fname}: leaked placeholder {{...}}"$'\n'
+        fi
+        # (a) six required headings present in order
+        idx=0
+        for h in "${d3_required_headings[@]}"; do
+            # find first occurrence of $h starting at offset $idx
+            sub="${content:idx}"
+            # use grep -F with -b for byte offset
+            pos=$(printf '%s' "$sub" | grep -bF -- "$h" 2>/dev/null | head -1 | cut -d: -f1)
+            if [[ -z "$pos" ]]; then
+                d3_problems="${d3_problems}${fname}: missing required heading '$h' (or out of order)"$'\n'
+                break
+            fi
+            idx=$((idx + pos + ${#h}))
+        done
+        # (c) per-section sources. Split by '^## ' or '^### ' lines using awk.
+        # For each section, capture its body; if body has non-whitespace content
+        # that isn't only `<your ...>` placeholders, require >=1 <!-- source: tag -->.
+        awk_out=$(awk -v file="$fname" -v allowed_tags="${d3_allowed_tags[*]}" '
+            BEGIN {
+                in_section = 0
+                heading = ""
+                body = ""
+                n_allowed = split(allowed_tags, tags, " ")
+                for (i = 1; i <= n_allowed; i++) allowed[tags[i]] = 1
+            }
+            function check_section() {
+                if (!in_section) return
+                # Trim body and check if it is template-only
+                gsub(/^[[:space:]]+|[[:space:]]+$/, "", body)
+                if (body == "") return
+                # template-only heuristic: body is just `<your ...>` placeholders / bullets / whitespace
+                tmp = body
+                gsub(/<your[^>]*>/, "", tmp)
+                gsub(/<command[^>]*>/, "", tmp)
+                gsub(/[-[:space:]]/, "", tmp)
+                if (tmp == "") return
+                # Non-template: require at least one <!-- source: tag -->
+                n = 0
+                src = body
+                while (match(src, /<!-- source: [^ >]+ -->/)) {
+                    n++
+                    tag = substr(src, RSTART + length("<!-- source: "))
+                    sub(/ -->.*/, "", tag)
+                    if (!(tag in allowed)) {
+                        print file ": section " heading " has unknown source tag " tag
+                    }
+                    src = substr(src, RSTART + RLENGTH)
+                }
+                if (n == 0) {
+                    print file ": section " heading " has non-template content but no <!-- source: ... --> annotation"
+                }
+            }
+            /^##[#]?[[:space:]]+[^[:space:]]/ {
+                check_section()
+                heading = $0
+                body = ""
+                in_section = 1
+                next
+            }
+            in_section { body = body $0 "\n" }
+            END { check_section() }
+        ' "$f")
+        if [[ -n "$awk_out" ]]; then
+            d3_problems="${d3_problems}${awk_out}"$'\n'
+        fi
+    done
+fi
+if [[ -z "$d3_problems" ]]; then
+    step "D.3" "AI-generated 50-*.md sanity (per-section sources, headings, no placeholders)" "PASS"
+else
+    step "D.3" "AI-generated 50-*.md sanity (per-section sources, headings, no placeholders)" "FAIL" "$d3_problems"
+fi
 
 # E.1 — Layer 1: templates/common/ → repo .harness/ + harness-sync
 if bash "$repo_root/scripts/sync-self.sh" --check &>/dev/null; then
