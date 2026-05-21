@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Harness Kit · 项目详情与使用场景</title>
+<style>
+  :root {
+    --bg: #0f1419;
+    --panel: #161b22;
+    --panel-2: #1c2128;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-dim: #8b949e;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --yellow: #d29922;
+    --red: #f85149;
+    --purple: #bc8cff;
+    --orange: #ffa657;
+    --cyan: #39d3bb;
+    --pink: #ff7b9c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.65;
+  }
+  .container { max-width: 1280px; margin: 0 auto; padding: 40px 32px 80px; }
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 28px;
+    margin-bottom: 24px;
+  }
+  h1 {
+    font-size: 34px;
+    margin: 0 0 12px;
+    background: linear-gradient(135deg, #58a6ff 0%, #bc8cff 50%, #39d3bb 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .subtitle { color: var(--text-dim); font-size: 16px; max-width: 900px; }
+  .pill {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    background: rgba(88, 166, 255, 0.12);
+    color: var(--accent);
+    border: 1px solid rgba(88, 166, 255, 0.3);
+    margin-right: 6px;
+  }
+  .pill.green { background: rgba(63, 185, 80, 0.12); color: var(--green); border-color: rgba(63, 185, 80, 0.3); }
+  .pill.purple { background: rgba(188, 140, 255, 0.12); color: var(--purple); border-color: rgba(188, 140, 255, 0.3); }
+  .pill.orange { background: rgba(255, 166, 87, 0.12); color: var(--orange); border-color: rgba(255, 166, 87, 0.3); }
+  h2 {
+    font-size: 24px;
+    margin: 44px 0 18px;
+    padding-left: 14px;
+    border-left: 4px solid var(--accent);
+  }
+  h3 { font-size: 18px; margin: 28px 0 10px; color: var(--text); }
+  h4 { font-size: 15px; margin: 16px 0 6px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+  p, li { color: var(--text); }
+  .muted { color: var(--text-dim); font-size: 14px; }
+  code {
+    background: var(--panel-2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--orange);
+    font-family: "JetBrains Mono", Consolas, monospace;
+  }
+  pre {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    overflow-x: auto;
+    font-size: 13px;
+    color: var(--cyan);
+    font-family: "JetBrains Mono", Consolas, monospace;
+    line-height: 1.55;
+  }
+  pre code { background: transparent; padding: 0; color: inherit; font-size: inherit; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 18px 0; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 18px 0; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 18px 0; }
+  @media (max-width: 900px) {
+    .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+  }
+  .card.accent { border-color: rgba(88, 166, 255, 0.4); }
+  .card.green { border-color: rgba(63, 185, 80, 0.4); }
+  .card.purple { border-color: rgba(188, 140, 255, 0.4); }
+  .card.orange { border-color: rgba(255, 166, 87, 0.4); }
+  .card.cyan { border-color: rgba(57, 211, 187, 0.4); }
+  .card-title { font-weight: 600; font-size: 16px; margin-bottom: 8px; }
+  .card-title .badge {
+    font-size: 11px; font-weight: 400;
+    padding: 2px 8px; border-radius: 10px;
+    margin-left: 8px;
+    background: var(--panel-2);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+  .stack {
+    display: flex; gap: 14px; flex-wrap: wrap;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin: 14px 0;
+  }
+  .stack-item {
+    display: flex; flex-direction: column;
+    padding: 6px 14px;
+    border-left: 3px solid var(--accent);
+  }
+  .stack-item .label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+  .stack-item .value { font-size: 14px; color: var(--text); }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0;
+    font-size: 14px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  th, td {
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th { background: var(--panel-2); color: var(--text-dim); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.3px; }
+  tr:last-child td { border-bottom: none; }
+  .flow {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    margin: 18px 0;
+    overflow-x: auto;
+    padding-bottom: 6px;
+  }
+  .flow-node {
+    flex: 1;
+    min-width: 130px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 10px;
+    text-align: center;
+    position: relative;
+    margin-right: 18px;
+  }
+  .flow-node:last-child { margin-right: 0; }
+  .flow-node::after {
+    content: "→";
+    position: absolute;
+    right: -16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-dim);
+    font-size: 18px;
+    font-weight: bold;
+  }
+  .flow-node:last-child::after { display: none; }
+  .flow-node .stage-num {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+  .flow-node .stage-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .flow-node .stage-out {
+    font-size: 11px;
+    color: var(--cyan);
+    font-family: "JetBrains Mono", Consolas, monospace;
+  }
+  .scenario {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 18px 0;
+  }
+  .scenario h3 { margin-top: 0; display: flex; align-items: center; gap: 10px; }
+  .scenario.new { border-left: 4px solid var(--green); }
+  .scenario.existing { border-left: 4px solid var(--purple); }
+  .scenario-steps {
+    counter-reset: step;
+    list-style: none;
+    padding-left: 0;
+  }
+  .scenario-steps > li {
+    counter-increment: step;
+    position: relative;
+    padding: 10px 0 10px 44px;
+    border-bottom: 1px dashed var(--border);
+  }
+  .scenario-steps > li:last-child { border-bottom: none; }
+  .scenario-steps > li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 11px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--panel-2);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    text-align: center;
+    line-height: 26px;
+    font-weight: 600;
+    font-size: 13px;
+  }
+  .scenario.existing .scenario-steps > li::before { color: var(--purple); border-color: var(--purple); }
+  .callout {
+    background: rgba(88, 166, 255, 0.08);
+    border-left: 3px solid var(--accent);
+    padding: 10px 16px;
+    border-radius: 4px;
+    margin: 12px 0;
+    font-size: 14px;
+    color: var(--text);
+  }
+  .callout.warn { background: rgba(210, 153, 34, 0.08); border-left-color: var(--yellow); }
+  .callout.good { background: rgba(63, 185, 80, 0.08); border-left-color: var(--green); }
+  .callout strong { color: var(--accent); }
+  .callout.warn strong { color: var(--yellow); }
+  .callout.good strong { color: var(--green); }
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    font-size: 11px;
+    border-radius: 10px;
+    margin-right: 4px;
+    background: var(--panel-2);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+  .mode-table td.mode-name { font-weight: 600; color: var(--accent); font-family: "JetBrains Mono", Consolas, monospace; font-size: 13px; }
+  .arch-diagram {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 22px;
+    margin: 18px 0;
+    font-family: "JetBrains Mono", Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--text);
+    white-space: pre;
+    overflow-x: auto;
+  }
+  .arch-diagram .layer-sot { color: var(--green); font-weight: 600; }
+  .arch-diagram .layer-entry { color: var(--accent); font-weight: 600; }
+  .arch-diagram .layer-binding { color: var(--purple); }
+  .arch-diagram .note { color: var(--text-dim); }
+  footer {
+    margin-top: 60px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>Harness Kit · 项目详情与使用场景</h1>
+  <div class="subtitle">
+    一个 Claude Code Plugin（10 个 skills + 项目模板），把"有纪律的 AI 驱动开发"装到任何全栈 / 后端 / 通用项目里。
+    人工只做"描述需求"和"AI 卡住时介入"，其他 — 7-Agent 流水线、验证闸门、结构化文档 — 自动跑。
+  </div>
+  <div style="margin-top:14px;">
+    <span class="pill">v0.17.0</span>
+    <span class="pill green">verify_all 30/30</span>
+    <span class="pill green">test-init 227/227</span>
+    <span class="pill green">integration 82/82</span>
+    <span class="pill purple">MIT</span>
+    <span class="pill orange">Dogfood</span>
+  </div>
+</header>
+
+<!-- ─────────────────────────────────────────── -->
+<h2>一、项目身份</h2>
+
+<div class="stack">
+  <div class="stack-item"><span class="label">项目本质</span><span class="value">Claude Code Plugin（工具包，不是框架）</span></div>
+  <div class="stack-item"><span class="label">承载形态</span><span class="value">10 skills + 项目模板</span></div>
+  <div class="stack-item"><span class="label">主语言</span><span class="value">Markdown + PowerShell + Bash</span></div>
+  <div class="stack-item"><span class="label">主工具</span><span class="value">Claude Code（兼容 Copilot 切换）</span></div>
+  <div class="stack-item"><span class="label">输出语言策略</span><span class="value">项目级（init 时选；中文项目全程中文）</span></div>
+  <div class="stack-item"><span class="label">特殊性</span><span class="value">Dogfood — 自己用自己开发</span></div>
+</div>
+
+<p>
+  Harness Kit 不重造平台机制（Sandbox、Hooks、Sub-agents、MCP、Memory 是 Claude Code 已有的），
+  它只提供<strong style="color:var(--accent)">内容</strong>：把 7 个角色 agent、规则片段、验证脚本、项目骨架打包好，
+  让任何项目装上就能跑"7-stage 流水线"开发。
+</p>
+
+<div class="callout">
+  <strong>定位关键词</strong>：工具无关 SOT 层 + 工具特定 binding 层 + 渐进披露（progressive disclosure）+ 对抗性验证 + 跨任务 insight 累积。
+</div>
+
+<!-- ─────────────────────────────────────────── -->
+<h2>二、核心架构</h2>
+
+<h3>两层模型：SOT vs Binding</h3>
+
+<div class="arch-diagram"><span class="layer-sot">.harness/rules/*.md</span>              <span class="note">← 单一真相源（你只编辑这里）</span>
+        ↑
+        │ 引用
+        │
+<span class="layer-entry">AI-GUIDE.md</span>                       <span class="note">← 工具无关入口（~50 行索引）</span>
+        ↑
+        │ 指向
+        │
+<span class="layer-binding">CLAUDE.md</span>                          <span class="note">~15 行 stub  (Claude Code 读)</span>
+<span class="layer-binding">.github/copilot-instructions.md</span>    <span class="note">~15 行 stub  (Copilot 读)</span></div>
+
+<div class="grid-2">
+  <div class="card cyan">
+    <div class="card-title">Context 预算节省</div>
+    <p class="muted" style="margin:6px 0;">v0.9.x 全量 CLAUDE.md = <strong>~3500 token</strong> 常驻</p>
+    <p class="muted" style="margin:6px 0;">v0.10 stub 模型 = <strong>~250 token</strong> 常驻</p>
+    <p style="margin:6px 0;">小问答 <strong style="color:var(--green)">~92% 节省</strong> · 中等任务平均 <strong style="color:var(--green)">~50% 节省</strong></p>
+  </div>
+  <div class="card accent">
+    <div class="card-title">规则片段按需懒加载</div>
+    <p class="muted" style="margin:6px 0;">每个 <code>.harness/rules/*.md</code> 顶上写"什么时候读"</p>
+    <p style="margin:6px 0;">AI 跟着 AI-GUIDE.md 的触发条件，只加载相关 1-3 个片段，<strong style="color:var(--accent)">不全量装载</strong>。</p>
+  </div>
+</div>
+
+<h3>10 个 Skills（产品形态）</h3>
+
+<div class="grid-4">
+  <div class="card accent">
+    <div class="card-title">流水线类 <span class="badge">4</span></div>
+    <p style="margin:4px 0;"><code>/harness</code> — 完整 7-stage</p>
+    <p style="margin:4px 0;"><code>/harness-plan</code> — 仅设计 (1-3)</p>
+    <p style="margin:4px 0;"><code>/harness-explore</code> — 调研</p>
+    <p style="margin:4px 0;"><code>/harness-goal</code> — 循环改进</p>
+  </div>
+  <div class="card green">
+    <div class="card-title">安装类 <span class="badge">2</span></div>
+    <p style="margin:4px 0;"><code>/harness-init</code> — 新项目</p>
+    <p style="margin:4px 0;"><code>/harness-adopt</code> — 接入现有项目</p>
+  </div>
+  <div class="card orange">
+    <div class="card-title">运维类 <span class="badge">3</span></div>
+    <p style="margin:4px 0;"><code>/harness-verify</code> — 总验证</p>
+    <p style="margin:4px 0;"><code>/harness-status</code> — 健康度</p>
+    <p style="margin:4px 0;"><code>/harness-intervene</code> — 中途介入</p>
+  </div>
+  <div class="card purple">
+    <div class="card-title">观察类 <span class="badge">1</span></div>
+    <p style="margin:4px 0;"><code>/harness-supervise</code></p>
+    <p class="muted" style="margin:4px 0;font-size:12px;">v0.17+ 旁观者 agent，检测 anti-pattern，产出 HEALTHY/WATCH/INTERVENE 判决</p>
+  </div>
+</div>
+
+<h3>7-Agent 流水线（每个非琐碎任务流经）</h3>
+
+<div class="flow">
+  <div class="flow-node">
+    <div class="stage-num">Stage 1</div>
+    <div class="stage-name">Requirement Analyst</div>
+    <div class="stage-out">01_REQUIREMENT</div>
+  </div>
+  <div class="flow-node">
+    <div class="stage-num">Stage 2</div>
+    <div class="stage-name">Solution Architect</div>
+    <div class="stage-out">02_DESIGN</div>
+  </div>
+  <div class="flow-node">
+    <div class="stage-num">Stage 3</div>
+    <div class="stage-name">Gate Reviewer</div>
+    <div class="stage-out">03_GATE_REVIEW</div>
+  </div>
+  <div class="flow-node">
+    <div class="stage-num">Stage 4</div>
+    <div class="stage-name">Developer</div>
+    <div class="stage-out">04_DEVELOPMENT</div>
+  </div>
+  <div class="flow-node">
+    <div class="stage-num">Stage 5</div>
+    <div class="stage-name">Code Reviewer</div>
+    <div class="stage-out">05_CODE_REVIEW</div>
+  </div>
+  <div class="flow-node">
+    <div class="stage-num">Stage 6</div>
+    <div class="stage-name">QA Tester</div>
+    <div class="stage-out">06_TEST_REPORT</div>
+  </div>
+  <div class="flow-node">
+    <div class="stage-num">Stage 7</div>
+    <div class="stage-name">Delivery (PM)</div>
+    <div class="stage-out">07_DELIVERY</div>
+  </div>
+</div>
+
+<p class="muted" style="margin-top:6px;">
+  <strong>PM Orchestrator</strong> 只负责路由，永不做专业判断。每个 stage 产出一份独立文档；下游不能改上游，
+  发现问题只能写 <code>PM_LOG.md</code> 阻塞回退。<strong>declare-done gate</strong>：<code>scripts/verify_all</code> PASS 且
+  QA 报告有 <code>## Adversarial tests</code> 段。
+</p>
+
+<!-- ─────────────────────────────────────────── -->
+<h2>三、4 种执行模式（同一项目里按任务形态选）</h2>
+
+<table class="mode-table">
+  <thead>
+    <tr>
+      <th style="width:160px;">Skill</th>
+      <th style="width:130px;">代价</th>
+      <th>什么时候用</th>
+      <th>什么时候不用</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="mode-name">/harness</td>
+      <td><span class="pill orange">100% 基线</span></td>
+      <td>真实功能 / bug / 重构，有清晰验收标准</td>
+      <td>调研、可行性、纯设计、循环改进</td>
+    </tr>
+    <tr>
+      <td class="mode-name">/harness-plan</td>
+      <td><span class="pill">~35%</span></td>
+      <td>投入工程时间前先验证设计（RA → SA → GR 停）</td>
+      <td>已经知道怎么做 → 直接 <code>/harness</code></td>
+    </tr>
+    <tr>
+      <td class="mode-name">/harness-explore</td>
+      <td><span class="pill green">~15%</span></td>
+      <td>"能不能做" / "库 Y 行不行" — 出 <code>findings.md</code></td>
+      <td>已经决定要做 → 走 plan 或 harness</td>
+    </tr>
+    <tr>
+      <td class="mode-name">/harness-goal</td>
+      <td><span class="pill purple">预算限定</span></td>
+      <td>"循环改进直到 X"（覆盖率到 80%、verify_all 全绿）</td>
+      <td>有清晰单次定义的任务</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="callout warn">
+  <strong>反模式</strong>：单行 typo / 改注释 → 直接编辑 + 跑 <code>verify_all</code>，<strong>不要</strong>走 7-stage。
+  误用流水线 = 把简单事情仪式化。
+</div>
+
+<!-- ─────────────────────────────────────────── -->
+<h2>四、两类项目的使用方式</h2>
+
+<!-- ===== 新项目 ===== -->
+<div class="scenario new">
+  <h3>🟢 场景 A · 新项目（空目录 / 刚 git init）</h3>
+  <p>从零开始 — 让 AI 从第一天就以 7-Agent 纪律开发。</p>
+
+  <h4>具体例子：用 Next.js + NestJS + Postgres 起一个订单管理系统</h4>
+
+  <ol class="scenario-steps">
+    <li>
+      <strong>建空目录 + 启动 Claude Code</strong>
+<pre><code>mkdir order-system && cd order-system
+git init
+claude</code></pre>
+    </li>
+    <li>
+      <strong>调 init skill</strong>
+<pre><code>/harness-kit:harness-init</code></pre>
+      AI 弹 <code>AskUserQuestion</code>，问 5-6 个问题（弹窗式，不用敲字）：
+      <ul style="margin:8px 0;">
+        <li>项目类型 → <code>Fullstack</code></li>
+        <li>技术栈 → <code>Next.js + NestJS + Postgres</code>（自由文本）</li>
+        <li>装 auto-sync hooks → <code>Yes</code></li>
+        <li>Developer 分区 → <code>Partitioned（dev-frontend / dev-backend / dev-db）</code></li>
+        <li>输出语言 → <code>中文</code></li>
+        <li>AI 草拟项目专属规则 → <code>Yes</code>（v0.16+，AI 根据栈描述写 <code>50-order-system.md</code>）</li>
+      </ul>
+    </li>
+    <li>
+      <strong>~30 秒后</strong> 项目里多出：
+<pre><code>order-system/
+├── .harness/                  # 工具无关 SOT
+│   ├── agents/                # 7 个标准 + 1 supervisor
+│   ├── rules/                 # 含 AI 草拟的 50-order-system.md
+│   ├── skills/
+│   └── insight-index.md       # 跨任务 hard-won truths（≤30 行）
+├── .claude/                   # Claude Code binding
+├── .github/copilot-instructions.md  # Copilot binding stub
+├── CLAUDE.md                  # ~15 行 bootstrap stub
+├── AI-GUIDE.md                # 工具无关入口
+├── docs/                      # workflow / dev-map / tasks / features/
+├── scripts/                   # verify_all / harness-sync / install-hooks
+└── evals/                     # 金标准回归任务</code></pre>
+    </li>
+    <li>
+      <strong>开始描述需求</strong>（用自然语言，PM 自动接手）
+<pre><code>用户："在订单页加一个 CSV 导出按钮，支持按日期范围筛选。"
+
+→ PM Orchestrator 自动路由 7 stage
+→ Architect 给出 partition 分配（dev-db → dev-backend → dev-frontend）
+→ 6 份阶段文档自动写到 docs/features/csv-export/
+→ 跑 verify_all PASS
+→ archive-task 把 insight 收割到 .harness/insight-index.md
+→ docs/tasks.md 标 stage:done</code></pre>
+    </li>
+    <li>
+      <strong>中途想介入</strong>（v0.13+）→ 写一条软指令，PM 在下一个阶段边界消费
+<pre><code>/harness-kit:harness-intervene "REDIRECT: 用 streaming export 而不是一次性 dump"</code></pre>
+    </li>
+  </ol>
+
+  <div class="callout good" style="margin-top:14px;">
+    <strong>关键收益</strong>：从第一行代码开始，结构化文档 + 验证闸门 + 跨任务知识累积全部就位。
+    后续任何"看起来简单但容易翻车"的事都被规则拦着，比如：QA 必须写对抗性测试、下游不能改上游、verify_all 不绿就不算完。
+  </div>
+</div>
+
+<!-- ===== 已开发项目 ===== -->
+<div class="scenario existing">
+  <h3>🟣 场景 B · 已开发中项目（有代码、测试、CI 但没 Harness）</h3>
+  <p>非侵入接入 — 不重写、不替换、不破坏现有约定。</p>
+
+  <h4>具体例子：一个已经跑了 1 年的 FastAPI + Postgres 项目，团队想引入 AI 纪律</h4>
+
+  <ol class="scenario-steps">
+    <li>
+      <strong>cd 到项目根目录，启动 Claude Code</strong>
+<pre><code>cd /path/to/existing-fastapi-project
+claude</code></pre>
+    </li>
+    <li>
+      <strong>调 adopt skill</strong>
+<pre><code>/harness-kit:harness-adopt</code></pre>
+      <span class="muted">和 init 的区别：adopt 先<strong>侦察</strong>，再问，再 apply。</span>
+    </li>
+    <li>
+      <strong>AI 自动侦察</strong>（不写任何文件）：
+      <ul style="margin:8px 0;">
+        <li>读 <code>pyproject.toml</code> → 检测到 FastAPI、SQLAlchemy、alembic、pytest</li>
+        <li>读 <code>.github/workflows/</code> → 检测到 CI 用 GitHub Actions</li>
+        <li>读 <code>README.md</code> / <code>CONTRIBUTING.md</code> → 提取既有约定</li>
+        <li>看目录结构（无 <code>apps/web</code>）→ 推断为 <strong>backend</strong></li>
+      </ul>
+      产出一份"侦察报告"打到屏幕。
+    </li>
+    <li>
+      <strong>用户确认推断值</strong>（<code>AskUserQuestion</code> 弹窗）
+      <ul style="margin:8px 0;">
+        <li>类型确认：Backend ✅</li>
+        <li>是否启用分区（dev-api / dev-services / dev-db）→ Yes</li>
+        <li>输出语言 → 中文</li>
+        <li>是否让 AI 草拟项目专属 <code>50-&lt;slug&gt;.md</code> 规则（基于已读到的代码约定）→ Yes</li>
+      </ul>
+    </li>
+    <li>
+      <strong>冲突处理</strong>（关键差异点）：
+      <ul style="margin:8px 0;">
+        <li>如果项目已有 <code>CLAUDE.md</code> / <code>.harness/</code> → AI <strong>询问</strong>：[A] Cancel / [B] Merge / [C] Overwrite</li>
+        <li>Merge 模式 → 只补缺失的，绝不动既有文件</li>
+        <li>Overwrite 模式 → 每个冲突文件单独再问一次</li>
+      </ul>
+    </li>
+    <li>
+      <strong>Apply 阶段</strong>（用户明确 "yes" 后才动文件）
+      <ul style="margin:8px 0;">
+        <li>写入 <code>.harness/</code>（含 AI 草拟的 <code>50-&lt;slug&gt;.md</code>，每段带 <code>&lt;!-- source: ... --&gt;</code> 来源标注）</li>
+        <li>写入 <code>.claude/</code> + <code>CLAUDE.md</code> stub + <code>copilot-instructions.md</code> stub</li>
+        <li>生成 <code>scripts/verify_all</code> — 自动接到项目已有的 <code>pytest</code> / <code>alembic check</code> 上，不替换</li>
+        <li>不动 <code>src/</code>、<code>tests/</code>、<code>migrations/</code> 任何一个字节</li>
+      </ul>
+    </li>
+    <li>
+      <strong>第一次试跑</strong>
+<pre><code>用户："优化 /orders 列表接口的 N+1 查询。"
+
+→ PM 路由 7 stage
+→ Architect 读项目 dev-map.md（adopt 时已根据真实代码生成）
+→ dev-services / dev-db 分区按 Architect 指派工作
+→ QA 写对抗性测试（包含 explain analyze 验证、压力测试）
+→ verify_all 串上项目原有 pytest，全绿才算完</code></pre>
+    </li>
+  </ol>
+
+  <div class="callout good" style="margin-top:14px;">
+    <strong>关键收益</strong>：保留所有现有代码和测试；规则文件 <code>50-&lt;slug&gt;.md</code> 基于真实代码起草，
+    AI 后续操作都会遵守项目本身的约定（比如已有的 lint 规则、命名约定、目录分层），不会强加 harness 的偏见。
+  </div>
+
+  <div class="callout warn" style="margin-top:14px;">
+    <strong>注意</strong>：adopt 不会自动把<strong>已有任务</strong>塞进 7-stage 流程；老 issue / 老 PR 不动。
+    流水线只对"接入后新发起的任务"生效。
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────── -->
+<h2>五、新 vs 已有项目 — 核心差异对照</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th></th>
+      <th>新项目 (/harness-init)</th>
+      <th>已开发项目 (/harness-adopt)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>前置条件</strong></td>
+      <td>空目录或刚 git init</td>
+      <td>已有源码 / 测试 / package manifest</td>
+    </tr>
+    <tr>
+      <td><strong>是否侦察现状</strong></td>
+      <td>否 — 直接问</td>
+      <td>是 — 先扫栈、CI、测试、既有约定</td>
+    </tr>
+    <tr>
+      <td><strong>问题数量</strong></td>
+      <td>5-6 个（一次性弹窗）</td>
+      <td>侦察后再 1 次 <code>AskUserQuestion</code> 让用户确认推断值</td>
+    </tr>
+    <tr>
+      <td><strong>verify_all 接什么</strong></td>
+      <td>模板版（npm test / pytest 占位 — 你后续补）</td>
+      <td>自动接到项目已有的 lint / test / migration check</td>
+    </tr>
+    <tr>
+      <td><strong>50-&lt;slug&gt;.md 规则来源</strong></td>
+      <td>AI 根据 Q2 stack 描述 + 顶层文件名 起草</td>
+      <td>AI 额外读项目已有 README/CONTRIBUTING 提取约定</td>
+    </tr>
+    <tr>
+      <td><strong>冲突处理</strong></td>
+      <td>遇到已有 <code>.harness/</code> 就停（叫你跑 adopt）</td>
+      <td>三选一：Cancel / Merge / Overwrite，每个冲突文件再确认</td>
+    </tr>
+    <tr>
+      <td><strong>对既有代码影响</strong></td>
+      <td>无（本来就是空）</td>
+      <td><strong>零字节修改</strong> — 仅添加新文件</td>
+    </tr>
+    <tr>
+      <td><strong>第一次任务可用时间</strong></td>
+      <td>init 完成后立即</td>
+      <td>adopt apply 后立即；既有任务不溯及既往</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ─────────────────────────────────────────── -->
+<h2>六、装这个 Plugin 的三种方式</h2>
+
+<div class="grid-3">
+  <div class="card green">
+    <div class="card-title">方式 1 · Plugin Marketplace <span class="badge">推荐</span></div>
+<pre style="margin-top:10px;"><code>/plugin marketplace add Alan-IFT/harness-kit
+/plugin install harness-kit@harness-kit-marketplace</code></pre>
+    <p class="muted" style="margin:8px 0 0;">命令带 namespace：<code>/harness-kit:harness-init</code></p>
+  </div>
+  <div class="card accent">
+    <div class="card-title">方式 2 · 一行 curl / PowerShell</div>
+<pre style="margin-top:10px;"><code># macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/Alan-IFT/harness-kit/main/install.sh | sh
+
+# Windows
+iwr -useb https://raw.githubusercontent.com/Alan-IFT/harness-kit/main/install.ps1 | iex</code></pre>
+    <p class="muted" style="margin:8px 0 0;">复制到 <code>~/.claude/skills/</code>，命令无 namespace</p>
+  </div>
+  <div class="card purple">
+    <div class="card-title">方式 3 · 本地 clone（开发模式）</div>
+<pre style="margin-top:10px;"><code>git clone https://github.com/Alan-IFT/harness-kit ~/harness-kit
+~/harness-kit/install.sh
+~/harness-kit/install.sh --project .  # 项目级
+~/harness-kit/install.sh --dry-run    # 预览</code></pre>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────── -->
+<h2>七、设计原则（八条红线）</h2>
+
+<div class="grid-2">
+  <div class="card">1. 不重造平台机制 — Sandbox/Hooks/Sub-agents/MCP/Memory 是 Claude Code 的事</div>
+  <div class="card">2. 机制 vs 内容 — 平台给机制，本仓库给内容</div>
+  <div class="card">3. 工具无关 SOT vs binding 层 — <code>.harness/</code> 真相；其余生成</div>
+  <div class="card">4. 演化式交付 — MVP → Hardening → Scale，不大爆炸</div>
+  <div class="card">5. 基线只升不降 — 测试数、规则覆盖永不悄悄退步</div>
+  <div class="card">6. 发现者不修 — Reviewer 不改代码，Gate 不改需求</div>
+  <div class="card">7. 下游不能改上游 — 只能通过 PM 提阻塞回退</div>
+  <div class="card">8. PM 只路由 — 永不给专业判断</div>
+</div>
+
+<!-- ─────────────────────────────────────────── -->
+<h2>八、版本进展（关键里程碑）</h2>
+
+<table>
+  <thead>
+    <tr><th style="width:80px;">版本</th><th>重点</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>0.10.0</strong></td><td>Progressive-disclosure 布局：AI-GUIDE.md + stub CLAUDE.md，~50% context 节省</td></tr>
+    <tr><td><strong>0.11.x</strong></td><td>三种执行模式 + 对抗性验证 + 跨任务 insight index + 对称 /harness skill</td></tr>
+    <tr><td><strong>0.12.0</strong></td><td>Generic 项目类型升一等公民（CLI/库/移动/ML/嵌入式）</td></tr>
+    <tr><td><strong>0.13.0</strong></td><td>中途介入协议 <code>/harness-intervene</code></td></tr>
+    <tr><td><strong>0.14.0</strong></td><td>文档大小策略 + 8 类文档数值上限 + WARN 级 size 检查</td></tr>
+    <tr><td><strong>0.15.0</strong></td><td>AI 安全护栏 <code>guard-rm</code> PreToolUse hook（项目 root 外破坏命令拦截）</td></tr>
+    <tr><td><strong>0.16.0</strong></td><td>AI 原生 init / adopt — AI 草拟项目专属 <code>50-&lt;slug&gt;.md</code> 规则</td></tr>
+    <tr><td><strong>0.17.0</strong></td><td>Supervisor agent + <code>/harness-supervise</code>（旁观者，4 个 anti-pattern 检测）</td></tr>
+    <tr><td class="muted">0.18+</td><td class="muted">PM 在阶段边界自动派发 supervisor（≥10 个真实任务验证误报预算后启用）</td></tr>
+  </tbody>
+</table>
+
+<!-- ─────────────────────────────────────────── -->
+<h2>九、相关文档导航</h2>
+
+<div class="grid-3">
+  <div class="card">
+    <div class="card-title">📐 架构</div>
+    <p style="margin:4px 0;"><a href="../architecture.html" style="color:var(--accent);">architecture.html</a></p>
+    <p style="margin:4px 0;"><a href="concepts.md" style="color:var(--accent);">concepts.md</a></p>
+    <p style="margin:4px 0;"><a href="dev-map.md" style="color:var(--accent);">dev-map.md</a></p>
+  </div>
+  <div class="card">
+    <div class="card-title">🚀 上手</div>
+    <p style="margin:4px 0;"><a href="getting-started.md" style="color:var(--accent);">getting-started.md</a></p>
+    <p style="margin:4px 0;"><a href="workflow.md" style="color:var(--accent);">workflow.md</a></p>
+    <p style="margin:4px 0;"><a href="walkthrough.html" style="color:var(--accent);">walkthrough.html</a></p>
+  </div>
+  <div class="card">
+    <div class="card-title">📋 规则源</div>
+    <p style="margin:4px 0;"><a href="../AI-GUIDE.md" style="color:var(--accent);">AI-GUIDE.md</a></p>
+    <p style="margin:4px 0;"><a href="../README.zh-CN.md" style="color:var(--accent);">README.zh-CN.md</a></p>
+    <p style="margin:4px 0;"><a href="../CHANGELOG.md" style="color:var(--accent);">CHANGELOG.md</a></p>
+  </div>
+</div>
+
+<footer>
+  生成于 2026-05-19 · Harness Kit v0.17.0 · 本页面归档于 <code>docs/project-overview.html</code>
+</footer>
+
+</div>
+</body>
+</html>

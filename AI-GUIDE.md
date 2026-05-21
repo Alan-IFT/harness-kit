@@ -61,6 +61,7 @@ Three flows are supported, picked by the tool the user is in:
 - `docs/getting-started.md` — quick onboarding for contributors
 - `docs/walkthrough.html` — full user-flow demo (HTML)
 - `architecture.html` — visualized architecture and evolution
+- `docs/project-overview.html` — project identity, usage scenarios, version milestones (HTML, v0.17.0 snapshot)
 
 ## Scripts (the moving parts)
 
