@@ -1,6 +1,6 @@
 # Dev Map — Harness Kit repo
 
-> Where things live and the conventions to follow when changing them. (v0.6 layout)
+> Where things live and the conventions to follow when changing them.
 
 ## Top-level layout
 

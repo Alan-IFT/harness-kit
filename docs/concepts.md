@@ -158,6 +158,50 @@ bridge that gap:
 
 Without them, AI reinvents wheels (dev-map missing) or contradicts past decisions (task board missing).
 
+## What the project remembers — and what it deliberately doesn't
+
+Harness keeps exactly one kind of memory and delegates the other.
+
+**Project memory — `.harness/insight-index.md` (kept).** Cross-task truths the
+project learned the hard way: tool bugs, shell asymmetries, drift patterns. Each
+task's `07_DELIVERY.md` surfaces an `## Insight` section; `archive-task` harvests
+it into the index, capped at 30 lines with the oldest rotated to
+`_archived/insight-history.md`. The PM reads the index at task start and threads
+the relevant lines into the agents it dispatches. This is how the *project* gets
+smarter over time — not the model.
+
+**Per-user memory — delegated to Layer 0, not rebuilt.** "Learning the user" —
+their preferences, style, recurring decisions — is the AI tool's job. Claude Code
+ships a native Memory mechanism (Layer 0, see the big-picture diagram); Cursor and
+Copilot have their own. Harness sits *above* that layer. A second, Harness-owned
+per-user store would duplicate a platform feature, break tool-agnosticism (the
+`.harness/` layer must mean the same thing under any IDE), and add weight for no
+gain — so Harness keeps **no** per-user memory. The Layer 0 / Layer 2 line drawn
+everywhere else applies here too: the platform remembers the *person*; `.harness/`
+remembers the *project*.
+
+### What evolves during development, and what doesn't
+
+A natural expectation is that agent definitions should auto-update as a project
+grows — new module, new stack, so "retrain" the Developer. Harness splits
+"evolving" from "fixed" deliberately:
+
+| Artifact | Evolves | How |
+|---|---|---|
+| `docs/dev-map.md` | continuously | Developer appends new modules/folders as part of the done-ritual. |
+| `.harness/rules/50-*.md`, `80-*.md` | continuously | Project-type / project-specific rules; edited as the stack changes. |
+| `.harness/insight-index.md` | continuously | Harvested per task by `archive-task`. |
+| `.harness/agents/*.md` role contracts | only per release | Deliberate, reviewed, version-bundled — never per-task drift. |
+
+The Developer's *contract* — "implement the approved design, update dev-map, run
+verify_all" — is stack-independent; it does not change when the project adopts a
+new language. What changes is the **project knowledge** the agent loads on the way
+in: dev-map, the `50-`/`80-` rules, the insight-index. That is the lever for "we
+introduced a new tech stack" — you add a rule fragment, not retrain an agent.
+Letting role contracts mutate per task would be uncontrolled drift with no audit
+trail; even agent frameworks built to optimize their own prompts gate every change
+behind tests plus human review rather than committing it live.
+
 ## Why golden tasks instead of full Eval pipeline?
 
 For team/production scale, you need a real Eval Pipeline (component / trajectory /
@@ -177,6 +221,7 @@ for init regression, or by manually invoking PM on a representative task.
 | OpenTelemetry / production trace system | Session transcript + verification_history.log suffices. |
 | Multi-platform binding (Cursor / Copilot) | The `.harness/` layer makes future bindings straightforward, but only Claude Code ships today. |
 | Multi-brain / multi-sandbox parallelism | Not supported by current platform primitives at MVP scope. |
+| Harness-owned per-user memory | Layer 0 (Claude Code Memory) already learns the person; `.harness/` tracks only the project. See "What the project remembers". |
 
 These can be added later if scale demands. **Avoid premature scaffolding.**
 
