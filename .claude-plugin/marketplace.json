@@ -14,7 +14,7 @@
         "repo": "Alan-IFT/harness-kit"
       },
       "description": "7-agent pipeline + tool-agnostic .harness/ SOT + partition Developers + verify_all gates. See README.",
-      "version": "0.17.0",
+      "version": "0.17.1",
       "author": {
         "name": "Harness Kit Contributors",
         "url": "https://github.com/Alan-IFT/harness-kit"

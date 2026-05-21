@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test-supervisor.sh — Regression for the supervisor agent + /harness-supervise skill (v0.17.0)
+# test-supervisor.sh — Regression for the supervisor agent + /harness-supervise skill (v0.17.1)
 # Bash twin of test-supervisor.ps1. Mirrors the same assertion set.
 set -uo pipefail
 
@@ -341,6 +341,28 @@ printf '# Title\n\nSome body.\n\nverdict: intervene\n' > "$i7_tmp/report-lowerca
     && assert "I.7-emu BUG-1 guard: lowercase 'verdict: intervene' does NOT parse (Q-1 fixed-case)" 1 \
     || assert "I.7-emu BUG-1 guard: lowercase 'verdict: intervene' does NOT parse (Q-1 fixed-case)" 0
 
+# --- BUG-2 (v0.17.1): I.7 active-row slug match is column-anchored
+echo ""
+echo "--- BUG-2: I.7 active-row slug match is column-anchored (no substring collision) ---"
+# Emulates the verify_all.sh I.7 active-row grep — column-anchored, not substring.
+# A slug `foo` must NOT be flagged active by an Active row for `foo-extra` (ADV-8).
+bug2_tasks="$i7_tmp/bug2-tasks.md"
+printf '| ID | Slug | Stage | Mode |\n|---|---|---|---|\n| T-1 | foo-extra | development | full |\n| T-2 | foo | done | full |\n' > "$bug2_tasks"
+bug2_match=$(grep -E -- "\|[[:space:]]*foo[[:space:]]*\|" "$bug2_tasks" || true)
+if [[ "$bug2_match" != *foo-extra* ]]; then
+    assert "BUG-2 guard: slug 'foo' does NOT match the 'foo-extra' row (substring collision blocked)" 1
+else
+    assert "BUG-2 guard: slug 'foo' does NOT match the 'foo-extra' row (substring collision blocked)" 0
+fi
+bug2_count=$(printf '%s\n' "$bug2_match" | grep -c . || true)
+[[ "$bug2_count" == "1" ]] \
+    && assert "BUG-2 guard: slug 'foo' matches exactly its own column-anchored row" 1 \
+    || assert "BUG-2 guard: slug 'foo' matches exactly its own column-anchored row (got $bug2_count)" 0
+bug2_path=$(grep -E -- "\|[[:space:]]*foo[[:space:]]*\|" <<< '| T-3 | bar | done | full | docs/features/_archived/foo/ |' || true)
+[[ -z "$bug2_path" ]] \
+    && assert "BUG-2 guard: slug 'foo' does NOT match a substring inside a path cell" 1 \
+    || assert "BUG-2 guard: slug 'foo' does NOT match a substring inside a path cell" 0
+
 # --- F-4 binding
 echo ""
 echo "--- F-4: AP-3 round-to-round does NOT count as missing intervention check ---"
@@ -354,30 +376,30 @@ echo "--- Doc fan-out spot checks ---"
 grep -qE 'auxiliary.*supervisor' AI-GUIDE.md \
     && assert "fan-out: AI-GUIDE.md mentions 'auxiliary (supervisor)' phrasing" 1 \
     || assert "fan-out: AI-GUIDE.md mentions 'auxiliary (supervisor)' phrasing" 0
-grep -qE '30/30 at v0\.17\.0' AI-GUIDE.md \
-    && assert "fan-out: AI-GUIDE.md has '30/30 at v0.17.0'" 1 \
-    || assert "fan-out: AI-GUIDE.md has '30/30 at v0.17.0'" 0
-grep -qE '30 checks at v0\.17\.0' AI-GUIDE.md \
-    && assert "fan-out: AI-GUIDE.md says '30 checks at v0.17.0'" 1 \
-    || assert "fan-out: AI-GUIDE.md says '30 checks at v0.17.0'" 0
-grep -qF '[0.17.0]' CHANGELOG.md \
-    && assert "fan-out: CHANGELOG.md has v0.17.0 entry" 1 \
-    || assert "fan-out: CHANGELOG.md has v0.17.0 entry" 0
-grep -qE 'version-0\.17\.0-' README.md \
-    && assert "fan-out: README.md badge = 0.17.0" 1 \
-    || assert "fan-out: README.md badge = 0.17.0" 0
-grep -qE 'version-0\.17\.0-' README.zh-CN.md \
-    && assert "fan-out: README.zh-CN.md badge = 0.17.0" 1 \
-    || assert "fan-out: README.zh-CN.md badge = 0.17.0" 0
-grep -qE '"version"[[:space:]]*:[[:space:]]*"0\.17\.0"' .claude-plugin/plugin.json \
-    && assert "fan-out: plugin.json version = 0.17.0" 1 \
-    || assert "fan-out: plugin.json version = 0.17.0" 0
-grep -qE '"version"[[:space:]]*:[[:space:]]*"0\.17\.0"' .claude-plugin/marketplace.json \
-    && assert "fan-out: marketplace.json version = 0.17.0" 1 \
-    || assert "fan-out: marketplace.json version = 0.17.0" 0
-grep -qE '30 checks at v0\.17\.0' docs/dev-map.md \
-    && assert "fan-out: dev-map.md mentions '30 checks at v0.17.0'" 1 \
-    || assert "fan-out: dev-map.md mentions '30 checks at v0.17.0'" 0
+grep -qE '30/30 at v0\.17\.1' AI-GUIDE.md \
+    && assert "fan-out: AI-GUIDE.md has '30/30 at v0.17.1'" 1 \
+    || assert "fan-out: AI-GUIDE.md has '30/30 at v0.17.1'" 0
+grep -qE '30 checks at v0\.17\.1' AI-GUIDE.md \
+    && assert "fan-out: AI-GUIDE.md says '30 checks at v0.17.1'" 1 \
+    || assert "fan-out: AI-GUIDE.md says '30 checks at v0.17.1'" 0
+grep -qF '[0.17.1]' CHANGELOG.md \
+    && assert "fan-out: CHANGELOG.md has v0.17.1 entry" 1 \
+    || assert "fan-out: CHANGELOG.md has v0.17.1 entry" 0
+grep -qE 'version-0\.17\.1-' README.md \
+    && assert "fan-out: README.md badge = 0.17.1" 1 \
+    || assert "fan-out: README.md badge = 0.17.1" 0
+grep -qE 'version-0\.17\.1-' README.zh-CN.md \
+    && assert "fan-out: README.zh-CN.md badge = 0.17.1" 1 \
+    || assert "fan-out: README.zh-CN.md badge = 0.17.1" 0
+grep -qE '"version"[[:space:]]*:[[:space:]]*"0\.17\.1"' .claude-plugin/plugin.json \
+    && assert "fan-out: plugin.json version = 0.17.1" 1 \
+    || assert "fan-out: plugin.json version = 0.17.1" 0
+grep -qE '"version"[[:space:]]*:[[:space:]]*"0\.17\.1"' .claude-plugin/marketplace.json \
+    && assert "fan-out: marketplace.json version = 0.17.1" 1 \
+    || assert "fan-out: marketplace.json version = 0.17.1" 0
+grep -qE '30 checks at v0\.17\.1' docs/dev-map.md \
+    && assert "fan-out: dev-map.md mentions '30 checks at v0.17.1'" 1 \
+    || assert "fan-out: dev-map.md mentions '30 checks at v0.17.1'" 0
 grep -qE 'upervisor.*auxiliary' skills/harness-status/SKILL.md \
     && assert "fan-out: harness-status SKILL.md has supervisor (auxiliary) row" 1 \
     || assert "fan-out: harness-status SKILL.md has supervisor (auxiliary) row" 0

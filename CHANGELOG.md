@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.1] - 2026-05-21
+
+Patch release. Sweeps the two MINOR adversarial findings that v0.17.0 explicitly deferred (see v0.17.0 "Known limitations — deferred to v0.17.1"). No feature change, no new `verify_all` check, no agent-contract behavior change — `verify_all` stays at 30 checks. Reproducers: `docs/features/_archived/supervisor-agent/06_TEST_REPORT.md` ADV-8 (BUG-2) and ADV-7 (BUG-3).
+
+### Fixed — BUG-2: I.7 active-row slug match was substring-based (both shells)
+
+The `verify_all` I.7 guard decided whether a `SUPERVISION_REPORT.md`'s slug was an *active* task by substring-matching the slug against `docs/tasks.md`. A slug `foo` was therefore matched by an Active row for `foo-extra` — a latent false-positive WARN for any adopter whose task slugs share a prefix (`auth` / `auth-v2`).
+
+- **`scripts/verify_all.ps1`** I.7 — active-row filter changed from `$_ -match [regex]::Escape($slug)` to a column-anchored `$_ -match "\|\s*$([regex]::Escape($slug))\s*\|"`. The slug must now occupy a full pipe-delimited table cell.
+- **`scripts/verify_all.sh`** I.7 — active-row filter changed from `grep -F -- "$slug"` to `grep -E -- "\|[[:space:]]*${slug}[[:space:]]*\|"`. Cross-shell symmetric with the PS twin.
+- **`scripts/test-supervisor.{ps1,sh}`** — new `BUG-2` regression block (3 assertions per shell): slug `foo` does NOT match a `foo-extra` row, DOES match its own column-anchored row, and does NOT match a slug substring inside a path cell. Counts: PS 54 → 57, Bash-no-python3 50 → 53.
+
+### Fixed — BUG-3: `supervisor.md` boundary-table doc-drift on cross-task N=0
+
+`.harness/agents/supervisor.md` said *"Cross-task `N=0` or `N>archived-count` → Clamp to `[1, archived-count]`"* — when `archived-count` is 0 that clamp is mathematically undefined, and it disagreed with the authoritative behavior in `skills/harness-supervise/SKILL.md:129` (*one-line `Verdict: HEALTHY` + INFO "no archived tasks"*). No runtime impact (the SKILL.md path is the one that executes); doc-only drift.
+
+- **`.harness/agents/supervisor.md`** (+ byte-identical `skills/harness-init/templates/common/.harness/agents/supervisor.md` mirror) — the one ambiguous row is split into two: `N=0` / `archived-count == 0` → one-line `Verdict: HEALTHY` + INFO "no archived tasks" (consistent with the skill's boundary table); `N > archived-count` (with `archived-count >= 1`) → clamp `N` down to `archived-count` and INFO-log it. supervisor.md: 255 → 256 lines (still well under the 300 cap).
+- `.claude/agents/supervisor.md` updated via `harness-sync` (Layer-2 binding).
+
+### Changed — Version stamps
+
+- `.claude-plugin/plugin.json` / `.claude-plugin/marketplace.json`: `0.17.0` → `0.17.1` (G.3 keeps these in sync with the README badges).
+- `README.md` / `README.zh-CN.md`: version badge `0.17.0` → `0.17.1`; new `0.17.1` Roadmap row.
+- `AI-GUIDE.md`, `docs/dev-map.md`, `docs/manual-e2e-test.md`, `.harness/rules/40-locations.md`, `architecture.html`: `at v0.17.0` freshness stamps → `at v0.17.1`; test-supervisor assertion counts `54/50` → `57/53`.
+- `scripts/baseline.json`: `test_supervisor_ps_assertions` 54 → 57, `test_supervisor_bash_no_python3_assertions` 50 → 53, `last_verify` → `2026-05-21`. `verify_all_checks` unchanged at 30.
+
+### Notes on regression surface
+
+- `verify_all` unchanged at 30 checks (I.7 internals tightened, no check added or removed). On a clean repo I.7 stays vacuously PASS — no `SUPERVISION_REPORT.md` files exist.
+- `test-init` unchanged at 227 PS / 191 Bash-no-python3.
+- `test-real-project` unchanged at 82/82.
+- `test-supervisor` 54 → 57 PS / 50 → 53 Bash-no-python3 (BUG-2 regression block).
+
 ## [0.17.0] - 2026-05-19
 
 The first **observer-only** release. A new auxiliary agent (`.harness/agents/supervisor.md`) and a manually-invoked skill (`/harness-kit:harness-supervise`) read an in-flight or archived 7-stage task folder, detect a fixed catalog of anti-patterns, and emit a single `SUPERVISION_REPORT.md` for human review. The supervisor is **not** part of the canonical 7-stage routing; it is purely informational and never modifies upstream documents, dispatches sub-agents, or routes the pipeline. The PM Orchestrator contract is unchanged — running `/harness` end-to-end produces stage docs byte-identical to v0.16.0 whether the supervisor is invoked or not (AC-10).

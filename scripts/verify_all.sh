@@ -473,7 +473,10 @@ if [[ -d docs/features ]]; then
                     is_active=1
                     break
                 fi
-            done < <(grep -F -- "$slug" docs/tasks.md || true)
+            # BUG-2 fix (v0.17.1): column-anchored match — require the slug as a
+            # full pipe-delimited cell, not a bare substring, so `foo` is not
+            # matched by a `foo-extra` row. PS twin: verify_all.ps1 I.7.
+            done < <(grep -E -- "\|[[:space:]]*${slug}[[:space:]]*\|" docs/tasks.md || true)
         fi
         (( is_active == 1 )) || continue
         # mtime > 48h ago?

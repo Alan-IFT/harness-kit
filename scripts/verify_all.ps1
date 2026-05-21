@@ -442,7 +442,12 @@ Step "I.7" "Ignored INTERVENE supervision reports (WARN if >48h old on active ta
         # Is the task active in tasks.md? Heuristic: row contains the slug and is not marked Completed/Archived.
         $isActive = $false
         if ($tasksMd) {
-            $rows = $tasksMd -split "`r?`n" | Where-Object { $_ -match [regex]::Escape($slug) }
+            # BUG-2 fix (v0.17.1): column-anchored match — the slug must appear as a
+            # full pipe-delimited cell in docs/tasks.md, not as a bare substring.
+            # Without the `\|...\|` anchor a slug `foo` is falsely matched by an
+            # Active row for `foo-extra` (substring collision). Bash twin:
+            # verify_all.sh I.7 active-row detection.
+            $rows = $tasksMd -split "`r?`n" | Where-Object { $_ -match "\|\s*$([regex]::Escape($slug))\s*\|" }
             foreach ($row in $rows) {
                 if ($row -notmatch 'Completed' -and $row -notmatch 'Archived') { $isActive = $true; break }
             }

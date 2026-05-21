@@ -1,4 +1,4 @@
-# test-supervisor.ps1 — Regression for the supervisor agent + /harness-supervise skill (v0.17.0)
+# test-supervisor.ps1 — Regression for the supervisor agent + /harness-supervise skill (v0.17.1)
 #
 # Verifies the static contract (agent + skill files) and exercises the anti-pattern
 # detectors against three fixtures plus the T-002 archived snapshot (AC-6).
@@ -374,6 +374,32 @@ try {
     }
 }
 
+# --- BUG-2 (v0.17.1): I.7 active-row slug match must be column-anchored
+Write-Host ""
+Write-Host "--- BUG-2: I.7 active-row slug match is column-anchored (no substring collision) ---" -ForegroundColor Cyan
+# Emulates the verify_all.ps1 I.7 active-row regex. The slug must match a full
+# pipe-delimited cell in docs/tasks.md, NOT a bare substring — otherwise a slug
+# `foo` is falsely flagged active by an Active row for `foo-extra` (ADV-8).
+function Get-ActiveRowMatch($tasksMd, $slug) {
+    $tasksMd -split "`r?`n" | Where-Object { $_ -match "\|\s*$([regex]::Escape($slug))\s*\|" }
+}
+$bug2Tasks = @(
+    "| ID | Slug | Stage | Mode |",
+    "|---|---|---|---|",
+    "| T-1 | foo-extra | development | full |",
+    "| T-2 | foo | done | full |"
+) -join "`n"
+Assert "BUG-2 guard: slug 'foo' does NOT match the 'foo-extra' row (substring collision blocked)" {
+    ((Get-ActiveRowMatch $bug2Tasks "foo") -join "`n") -notmatch 'foo-extra'
+}
+Assert "BUG-2 guard: slug 'foo' matches exactly its own column-anchored row" {
+    ((Get-ActiveRowMatch $bug2Tasks "foo") | Measure-Object).Count -eq 1
+}
+Assert "BUG-2 guard: slug 'foo' does NOT match a substring inside a path cell" {
+    $pathRow = "| T-3 | bar | done | full | docs/features/_archived/foo/ |"
+    ((Get-ActiveRowMatch $pathRow "foo") | Measure-Object).Count -eq 0
+}
+
 # --- AP-3 round-to-round NON-trigger (F-4 binding)
 Write-Host ""
 Write-Host "--- F-4: AP-3 round-to-round must NOT count as missing intervention check ---" -ForegroundColor Cyan
@@ -389,31 +415,31 @@ Write-Host "--- Doc fan-out spot checks ---" -ForegroundColor Cyan
 Assert "fan-out: AI-GUIDE.md has '7 canonical agents + 1 auxiliary (supervisor)' phrasing" {
     (Get-Content "AI-GUIDE.md" -Raw) -match 'auxiliary.*supervisor'
 }
-Assert "fan-out: AI-GUIDE.md has '30/30 at v0.17.0'" {
-    (Get-Content "AI-GUIDE.md" -Raw) -match '30/30 at v0\.17\.0'
+Assert "fan-out: AI-GUIDE.md has '30/30 at v0.17.1'" {
+    (Get-Content "AI-GUIDE.md" -Raw) -match '30/30 at v0\.17\.1'
 }
-Assert "fan-out: AI-GUIDE.md says '30 checks at v0.17.0'" {
-    (Get-Content "AI-GUIDE.md" -Raw) -match '30 checks at v0\.17\.0'
+Assert "fan-out: AI-GUIDE.md says '30 checks at v0.17.1'" {
+    (Get-Content "AI-GUIDE.md" -Raw) -match '30 checks at v0\.17\.1'
 }
-Assert "fan-out: CHANGELOG.md has v0.17.0 entry" {
-    (Get-Content "CHANGELOG.md" -Raw) -match '\[0\.17\.0\]'
+Assert "fan-out: CHANGELOG.md has v0.17.1 entry" {
+    (Get-Content "CHANGELOG.md" -Raw) -match '\[0\.17\.1\]'
 }
-Assert "fan-out: README.md badge bumped to 0.17.0" {
-    (Get-Content "README.md" -Raw) -match 'version-0\.17\.0-'
+Assert "fan-out: README.md badge bumped to 0.17.1" {
+    (Get-Content "README.md" -Raw) -match 'version-0\.17\.1-'
 }
-Assert "fan-out: README.zh-CN.md badge bumped to 0.17.0" {
-    (Get-Content "README.zh-CN.md" -Raw) -match 'version-0\.17\.0-'
+Assert "fan-out: README.zh-CN.md badge bumped to 0.17.1" {
+    (Get-Content "README.zh-CN.md" -Raw) -match 'version-0\.17\.1-'
 }
-Assert "fan-out: plugin.json version = 0.17.0" {
+Assert "fan-out: plugin.json version = 0.17.1" {
     $j = Get-Content ".claude-plugin/plugin.json" -Raw | ConvertFrom-Json
-    $j.version -eq "0.17.0"
+    $j.version -eq "0.17.1"
 }
-Assert "fan-out: marketplace.json plugins[0].version = 0.17.0" {
+Assert "fan-out: marketplace.json plugins[0].version = 0.17.1" {
     $j = Get-Content ".claude-plugin/marketplace.json" -Raw | ConvertFrom-Json
-    $j.plugins[0].version -eq "0.17.0"
+    $j.plugins[0].version -eq "0.17.1"
 }
-Assert "fan-out: dev-map.md mentions '30 checks at v0.17.0'" {
-    (Get-Content "docs/dev-map.md" -Raw) -match '30 checks at v0\.17\.0'
+Assert "fan-out: dev-map.md mentions '30 checks at v0.17.1'" {
+    (Get-Content "docs/dev-map.md" -Raw) -match '30 checks at v0\.17\.1'
 }
 Assert "fan-out: harness-status SKILL.md has a supervisor (auxiliary) row" {
     (Get-Content "skills/harness-status/SKILL.md" -Raw) -match 'upervisor.*auxiliary'

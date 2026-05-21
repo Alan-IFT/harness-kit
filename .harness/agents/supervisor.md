@@ -227,7 +227,8 @@ Always **one Write call**, then re-Read to verify (per insight-index L10 on Edit
 | Slug exists in both active and archived | Prefer active; INFO finding about duplicate |
 | `PM_LOG.md` absent or malformed | AP-1, AP-1b, AP-3 emit `INFO — PM_LOG.md absent or unparseable` only; AP-2, AP-4 still run |
 | `HARNESS_SUPERVISOR_MOCK` set but unreadable | Fall back to live detection; log `[MOCK-FALLBACK] unreadable: <path>` to stdout |
-| Cross-task `N=0` or `N>archived-count` | Clamp to `[1, archived-count]`; INFO-log the clamp |
+| Cross-task `N=0` or `archived-count == 0` | One-line report `Verdict: HEALTHY` + INFO "no archived tasks"; no clamp (matches `harness-supervise` SKILL.md boundary table) |
+| Cross-task `N > archived-count` (with `archived-count >= 1`) | Clamp `N` down to `archived-count`; INFO-log the clamp |
 | Report exceeds 200 lines | Include a `(report truncated: 200-line cap hit)` note in `## Methodology notes`; do NOT fail |
 
 ## What you do NOT do (out-of-scope)

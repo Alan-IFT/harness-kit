@@ -1,6 +1,6 @@
 # Manual End-to-End Test Checklist
 
-Automated regression (`scripts/test-init.ps1` at 227 assertions; `scripts/test-init.sh` at 191 when python3 is unavailable (e.g. Windows Microsoft Store stub) / 227 when present; `scripts/verify_all` at 30 checks at v0.17.0; `scripts/test-supervisor.ps1` at 54 assertions / `scripts/test-supervisor.sh` at 50 (no-python3) covering the supervisor agent contract + AC-4..AC-7 + BUG-1 fixed-case Q-1 negative fixtures) covers everything
+Automated regression (`scripts/test-init.ps1` at 227 assertions; `scripts/test-init.sh` at 191 when python3 is unavailable (e.g. Windows Microsoft Store stub) / 227 when present; `scripts/verify_all` at 30 checks at v0.17.1; `scripts/test-supervisor.ps1` at 57 assertions / `scripts/test-supervisor.sh` at 53 (no-python3) covering the supervisor agent contract + AC-4..AC-7 + BUG-1 fixed-case Q-1 + BUG-2 column-anchored-slug negative fixtures) covers everything
 that runs from a shell. But two things must be exercised in a real Claude Code
 session to confirm the experience:
 

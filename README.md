@@ -2,7 +2,7 @@
 
 **English** · [简体中文](README.zh-CN.md)
 
-![version](https://img.shields.io/badge/version-0.17.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-30%2F30-brightgreen) ![test-init](https://img.shields.io/badge/test--init-227%2F227-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.17.1-blue) ![verify_all](https://img.shields.io/badge/verify__all-30%2F30-brightgreen) ![test-init](https://img.shields.io/badge/test--init-227%2F227-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
 > **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (10 skills + project templates) that brings disciplined AI-driven development to fullstack and backend projects.
 >
@@ -256,6 +256,7 @@ Markdown docs:
 | 0.15.1 | done | **Documentation-drift cleanup + I.6 retired-claim guard**: closes the v0.10 composition-retirement drift class across 14 files (docs / templates / dogfood rules / Chinese overlay), and adds a literal-substring banned-phrase guard in `verify_all` (FAIL if any retired claim resurfaces). verify_all 27 → 28 (new I.6). |
 | 0.16.0 | done | **AI-native init / adopt**: opt-in `/harness-init` Q6 and `/harness-adopt` Q6 ask whether to let AI draft a tailored `.harness/rules/50-<project-slug>.md` (and optional `dev-*` partition agents) grounded in the user's Q2 stack string plus top-level filenames + named manifest contents. Static-stub fallback if the four invariants fail (sections, no `{{...}}`, ≤200 lines, no reserved partition names). Inline source citations (`<!-- source: ... -->`). Mock fixture for test/dry-run via `HARNESS_AI_NATIVE_MOCK`. verify_all 28 → 29 (new D.3 per-section sanity check). |
 | 0.17.0 | done | **Supervisor agent + `/harness-supervise` skill**: observer-only auxiliary agent reads an in-flight or archived 7-stage task folder, detects 4 anti-patterns (AP-1 same-stage rollback rate, AP-1b cross-stage rollback tally, AP-2 stage-doc thinness, AP-3 missing intervention checks, AP-4 missing archive call) with fixed thresholds, classifies findings INFO/WARN/ALERT, emits one `SUPERVISION_REPORT.md` per invocation with a final `Verdict: HEALTHY | WATCH | INTERVENE`. Manual-invocation only (not part of the canonical 7-stage routing); `allowed-tools` whitelist physically excludes `Edit`/`Bash`/`PowerShell`/`Task`/`AskUserQuestion`. New `verify_all I.7` passive guard WARNs when an `INTERVENE` report has been ignored >48h on an active task. verify_all 29 → 30. |
+| 0.17.1 | done | **Patch sweep**: BUG-2 (I.7 active-row slug match column-anchored on both shells — no more `foo` / `foo-extra` substring collision) + BUG-3 (`supervisor.md` boundary-table doc-drift on cross-task N=0 reconciled with `harness-supervise` SKILL.md). No feature change; `verify_all` stays 30 checks. |
 | 0.18+ | planned | Supervisor auto-dispatch by PM at user-configurable stage boundaries (once false-positive budget is proven against ≥10 real tasks) |
 
 ## Design principles
