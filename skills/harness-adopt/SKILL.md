@@ -323,7 +323,7 @@ Baseline captured:
   warnings: <N>
 
 Next steps:
-  1. Review AI-GUIDE.md, the generated CLAUDE.md stub, and
+  1. Review AI-GUIDE.md, the CLAUDE.md stub, and
      .harness/rules/80-existing-conventions.md (auto-extracted from your
      README/CONTRIBUTING/lint configs).
   2. Customize .harness/rules/ to match your project's actual conventions.

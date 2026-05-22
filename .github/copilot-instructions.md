@@ -13,5 +13,4 @@ Red lines (never violate):
 - Do not declare a task done until `scripts/verify_all` PASSes
 - One role at a time **unless the user has explicitly enabled continuous mode** (see `60-tool-handoff.md`). Read the relevant `.harness/agents/<name>.md` and follow that contract; do not silently switch roles mid-turn
 
-
 This file is **static** — written once and intentionally minimal so it never inflates the persistent context budget. Everything else is in `AI-GUIDE.md` or `.harness/`.

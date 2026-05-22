@@ -2,7 +2,7 @@
 
 **English** · [简体中文](README.zh-CN.md)
 
-![version](https://img.shields.io/badge/version-0.17.3-blue) ![verify_all](https://img.shields.io/badge/verify__all-30%2F30-brightgreen) ![test-init](https://img.shields.io/badge/test--init-227%2F227-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.17.4-blue) ![verify_all](https://img.shields.io/badge/verify__all-30%2F30-brightgreen) ![test-init](https://img.shields.io/badge/test--init-227%2F227-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
 > **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (10 skills + project templates) that brings disciplined AI-driven development to fullstack and backend projects.
 >
@@ -97,9 +97,9 @@ Five questions (`AskUserQuestion` popup):
 
 In ~30 seconds your project has:
 - `.harness/` (tool-agnostic source of truth: agents, rules, skills)
-- `.claude/` (generated Claude Code binding)
-- `.github/copilot-instructions.md` (generated Copilot binding)
-- `CLAUDE.md` (generated, the rules Claude Code reads)
+- `.claude/` (Claude Code binding: `agents/` + `skills/` synced from `.harness/`, plus `settings.json`)
+- `.github/copilot-instructions.md` (Copilot bootstrap stub)
+- `CLAUDE.md` (bootstrap stub Claude Code reads — points at `AI-GUIDE.md`)
 - `docs/` (workflow, dev-map, tasks, spec)
 - `scripts/` (verify_all, harness-sync, baseline)
 - `evals/` (golden regression tasks)
@@ -163,7 +163,7 @@ Every commit must pass all three. `test-init` and `test-real-project` exercise t
 
 ### Dogfooded
 
-This repo is itself developed under Harness Kit. The same 7-agent pipeline that ships to users governs work here. The same `.harness/rules/` source produces this repo's `CLAUDE.md` and `.github/copilot-instructions.md`. If we can't develop this repo with it, we shouldn't ship it.
+This repo is itself developed under Harness Kit. The same 7-agent pipeline that ships to users governs work here, off the same `.harness/` source of truth (agents / rules / skills) that init writes into a new project. If we can't develop this repo with it, we shouldn't ship it.
 
 ## Repository layout
 
@@ -187,9 +187,9 @@ harness-kit/
 ├── .harness/                     This repo's SOT (dogfood)
 │   ├── agents/                   Byte-copy of templates/common/.harness/agents/
 │   └── rules/                    Project-specific rule fragments
-├── .claude/                      Generated; do not edit
-├── CLAUDE.md                     Generated; do not edit
-├── .github/copilot-instructions.md  Generated; do not edit
+├── .claude/                      Claude Code binding (agents/ + skills/ synced from .harness/)
+├── CLAUDE.md                     ~15-line stub pointing at AI-GUIDE.md (written once at init)
+├── .github/copilot-instructions.md  ~15-line stub pointing at AI-GUIDE.md
 │
 ├── scripts/
 │   ├── verify_all.{ps1,sh}       Total verification
@@ -259,13 +259,14 @@ Markdown docs:
 | 0.17.1 | done | **Patch sweep**: BUG-2 (I.7 active-row slug match column-anchored on both shells — no more `foo` / `foo-extra` substring collision) + BUG-3 (`supervisor.md` boundary-table doc-drift on cross-task N=0 reconciled with `harness-supervise` SKILL.md). No feature change; `verify_all` stays 30 checks. |
 | 0.17.2 | done | **`settings.json` schema fix**: the Claude Code settings schema declares the `hooks` object `additionalProperties: false` — only real hook-event names are valid keys. harness-kit embedded `_doc_sync_hook` / `_guard_hook` documentation strings *inside* `hooks`, so every generated `.claude/settings.json` failed schema validation. Both keys moved to the root object (`additionalProperties: true`, where `_*` doc keys are valid). No functional change; `verify_all` stays 30 checks. |
 | 0.17.3 | done | **Bootstrap red-line wording fix**: the `CLAUDE.md` / `copilot-instructions.md` red line mislabeled `.claude/` as a "generated or static" file. `.claude/settings.json` is neither — it is the agent's live, hand-maintained startup config. The bullet was split: one for `.claude/` (live config + sync-generated `agents/`/`skills/`, with the correct rationale), one for the genuine static stubs. Fixed in 4 templates + 2 dogfood files. No feature change; `verify_all` stays 30 checks. |
+| 0.17.4 | done | **v0.10 doc-drift cleanup**: swept the residual pre-v0.10 wording out of live docs/comments — `harness-sync` no longer described as regenerating `CLAUDE.md` / `copilot-instructions.md`, and `CLAUDE.md` is no longer mislabeled "generated". Touched the `00-core.md` rule templates (EN + ZH), `settings.json` templates, `dev-frontend` template, README layout boxes, getting-started, CONTRIBUTING, the two init/adopt skills, and reconciled the `verify_all` I.6 exemption comments. No feature change; `verify_all` stays 30 checks. |
 | 0.18+ | planned | Supervisor auto-dispatch by PM at user-configurable stage boundaries (once false-positive budget is proven against ≥10 real tasks) |
 
 ## Design principles
 
 1. **Don't reinvent platform mechanisms** — Sandbox, Hooks, Sub-agents, MCP, Memory are Claude Code's job
 2. **Mechanism vs content** — platform gives mechanism, this repo gives content
-3. **Tool-agnostic SOT vs binding layer** — `.harness/` is truth; `.claude/`, `CLAUDE.md`, `.github/copilot-instructions.md` are generated
+3. **Tool-agnostic SOT vs binding layer** — `.harness/` is truth; `.claude/agents/` + `.claude/skills/` are synced bindings; `CLAUDE.md` + `.github/copilot-instructions.md` are static bootstrap stubs
 4. **Evolutionary delivery** — MVP → Hardening → Scale, not big-bang
 5. **Baseline only goes up** — test counts, rule coverage never regress silently
 6. **Finder doesn't fix** — Reviewer can't edit code, Gate can't edit requirements

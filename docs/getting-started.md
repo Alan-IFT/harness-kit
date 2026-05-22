@@ -88,7 +88,7 @@ your-project/
 │   └── features/                ← per-task documents
 ├── scripts/
 │   ├── verify_all.{ps1,sh}      ← total verification
-│   ├── harness-sync.{ps1,sh}    ← regenerates .claude/ + CLAUDE.md from .harness/
+│   ├── harness-sync.{ps1,sh}    ← syncs .harness/agents/ + .harness/skills/ → .claude/
 │   └── baseline.json            ← test/quality baseline (only goes up)
 └── evals/golden-tasks.md         ← regression set
 ```

@@ -22,7 +22,7 @@
 
 ## Verify before declaring done
 
-`scripts/verify_all` checks (30 items at v0.17.3, all must PASS — count grows with releases):
+`scripts/verify_all` checks (30 items at v0.17.4, all must PASS — count grows with releases):
 
 - No secrets / committed env files
 - `参考/` not tracked

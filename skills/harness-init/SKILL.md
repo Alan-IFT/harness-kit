@@ -401,8 +401,8 @@ Scripts:
   evals/golden-tasks.md    — regression task set
 
 Next steps:
-  1. Read CLAUDE.md (generated) and customize .harness/rules/ if anything is off.
-     After edits: run scripts/harness-sync to regenerate.
+  1. Read CLAUDE.md (the bootstrap stub) and customize .harness/rules/ if anything
+     is off. Rule edits take effect by reference via AI-GUIDE.md — no sync needed.
   2. Write your first feature in docs/spec/.
   3. In Claude Code, start a task by asking PM Orchestrator to take it:
      "Take this task: <description>"
@@ -414,7 +414,7 @@ Estimated time to first delivered feature: 30 min – 1 hour depending on scope.
 ## Anti-patterns
 
 - **Do not** overwrite existing `.harness/`, `.claude/`, or `CLAUDE.md` without explicit user confirmation.
-- **Do not** edit the generated `.claude/agents/` or `CLAUDE.md`. Always edit `.harness/` and re-sync.
+- **Do not** hand-edit the synced `.claude/agents/` or `.claude/skills/`. Edit `.harness/` and re-sync. `CLAUDE.md` is a static stub — leave its `AI-GUIDE.md` pointer intact.
 - **Do not** install npm packages or modify the user's shell config.
 - **Do not** run `verify_all` during init (no project code yet).
 - **Do not** modify files outside the target directory.

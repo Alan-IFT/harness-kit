@@ -500,7 +500,8 @@ fi
 
 # I.6 — Banned literal substrings that used to be accurate but were retired by a
 # documented architectural change. Resurgence = drift, not history.
-# History-bearing files (CHANGELOG, _archived/, verify_all itself) are exempt.
+# History-bearing files (CHANGELOG, _archived/, architecture.html, walkthrough.html,
+# verify_all itself) are exempt.
 i6_banned_phrases=(
     "scaffolding-only|harness-adopt has been fully automated since v0.3"
     "Composed into \`CLAUDE.md\`|rules are not composed into CLAUDE.md since v0.10"

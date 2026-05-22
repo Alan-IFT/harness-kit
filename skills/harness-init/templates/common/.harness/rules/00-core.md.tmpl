@@ -2,8 +2,9 @@
 
 > Project type: **{{PROJECT_TYPE}}** · Stack: **{{STACK}}** · Initialized: {{TODAY}}
 >
-> This file is **generated** from `.harness/rules/*.md` via `scripts/harness-sync.{ps1,sh}`.
-> Edit `.harness/rules/*.md` and re-run sync. Do not edit `CLAUDE.md` directly.
+> This is a project rule fragment — a **source-of-truth** file you edit directly.
+> `AI-GUIDE.md` indexes it by reference; AI tools lazy-load it on demand. No sync step
+> is needed for rule edits (since v0.10 rules are referenced, not composed into `CLAUDE.md`).
 
 ## Output language (project-wide)
 
@@ -18,7 +19,7 @@
 
 **Do not mix languages.** If a user message arrives in another language, still respond in English (translate the user's intent internally; emit English). This keeps every artifact in this repo readable by any contributor.
 
-To change the project language, edit this "Output language" section in `.harness/rules/00-core.md`, then run `scripts/harness-sync`.
+To change the project language, edit this "Output language" section in `.harness/rules/00-core.md` — it takes effect by reference, no sync step needed.
 
 ## How this project is developed
 
@@ -36,7 +37,7 @@ This repo uses the **Harness 7-agent pipeline**. Read `docs/workflow.md` before 
 4. **No secrets in code.** Use `.env` / environment variables; verify_all scans for hardcoded keys.
 5. **No production-destructive actions** (drop table, force push to main, delete branches) without explicit user confirmation.
 6. **Run verify_all before declaring done.** "It compiles" is not done.
-7. **Edit `.harness/`, not `.claude/` or `CLAUDE.md`.** The latter two are generated. A Stop hook auto-runs `scripts/harness-sync` at the end of every session, so manual sync is rarely needed. `verify_all` catches any drift if the hook didn't run.
+7. **Edit `.harness/`, not `.claude/agents/`, `.claude/skills/`, or `CLAUDE.md`.** `.claude/agents/` and `.claude/skills/` are synced from `.harness/` — a Stop hook auto-runs `scripts/harness-sync` each session, so manual sync is rarely needed; `verify_all` catches drift if the hook didn't run. `CLAUDE.md` is a static stub written once at init. `.claude/settings.json` is live config you may hand-edit.
 8. **Prefer asking the AI to edit `.harness/` rather than editing it yourself.** Examples:
    - "Add a rule: never use `MessageBox.Show`." → AI picks the right `.harness/rules/NN-*.md` (or creates a new one), edits it, the Stop hook syncs.
    - "Add a Developer partition for `apps/mobile/`." → AI creates `.harness/agents/dev-mobile.md` with correct owned-paths.
@@ -61,8 +62,9 @@ This repo uses the **Harness 7-agent pipeline**. Read `docs/workflow.md` before 
 | Agent role definitions (SOURCE OF TRUTH) | `.harness/agents/` |
 | Project rule fragments (SOURCE OF TRUTH) | `.harness/rules/` |
 | Build/test/verify procedures (SOURCE OF TRUTH) | `.harness/skills/` |
-| Claude Code binding (generated; do not edit) | `.claude/` + `CLAUDE.md` |
-| Tool binding sync (`.harness/` → `.claude/` + `CLAUDE.md`) | `scripts/harness-sync.{ps1,sh}` |
+| Claude Code agent/skill binding (synced; do not hand-edit) | `.claude/agents/` + `.claude/skills/` |
+| Claude Code bootstrap stub + live config | `CLAUDE.md` + `.claude/settings.json` |
+| Tool binding sync (`.harness/agents/` + `.harness/skills/` → `.claude/`) | `scripts/harness-sync.{ps1,sh}` |
 | Total verification | `scripts/verify_all.{ps1,sh}` |
 | Test count baseline | `scripts/baseline.json` |
 | Regression task set | `evals/golden-tasks.md` |

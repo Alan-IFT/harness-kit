@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.4] - 2026-05-22
+
+Patch release. A documentation-freshness sweep: the v0.10 progressive-disclosure rework turned `CLAUDE.md` / `.github/copilot-instructions.md` into static stubs and narrowed `harness-sync` to copy only `.harness/agents/` + `.harness/skills/` → `.claude/`. The v0.15.1 cleanup caught most of the resulting drift, but a residual set of live docs and inline comments still described the pre-v0.10 behavior. v0.17.3 fixed the same mislabel class in the bootstrap *stubs*; this release finishes the job in the *rule templates, scripts, and prose docs*. No feature change, no `verify_all` check added or removed — stays at 30.
+
+### Fixed — residual pre-v0.10 wording in live docs and comments
+
+The retired claim took three shapes: (a) `harness-sync` described as flowing edits into `CLAUDE.md` / `copilot-instructions.md`; (b) `CLAUDE.md` (and the rule-fragment banner) labeled "generated"; (c) "edit a rule, then re-run sync" — since v0.10 rules take effect by reference via `AI-GUIDE.md`, no sync step. None of these tripped the `verify_all` I.6 literal-substring guard (the surviving phrasings sat between the banned literals), which is why they outlived v0.15.1.
+
+- **`skills/harness-init/templates/common/.harness/rules/00-core.md.tmpl`** + **`.../i18n/zh/common/.harness/rules/00-core.md.tmpl`** — the rendered `00-core.md` is itself a source rule fragment, but its header banner claimed the file was "generated from `.harness/rules/*.md`". Banner rewritten to describe a source-of-truth fragment. Red-line bullet 7 ("edit `.harness/`, not `.claude/` or `CLAUDE.md` — the latter two are generated") re-split to match the v0.17.3 bootstrap wording: `.claude/agents/`+`skills/` are synced, `CLAUDE.md` is a static stub, `.claude/settings.json` is live hand-editable config. "What lives where" table corrected. Language-change instruction no longer tells the user to run `harness-sync`.
+- **`skills/harness-init/templates/common/.claude/settings.json.tmpl`** — `_comment` no longer claims the Stop hook flows `.harness/` edits to `CLAUDE.md`; now states `.harness/agents/` + `.harness/skills/` → `.claude/`.
+- **`skills/harness-init/templates/fullstack/.harness/agents/dev-frontend.md.tmpl`** — "`CLAUDE.md` (generated)" → "`CLAUDE.md` (and the `AI-GUIDE.md` it points to)".
+- **`skills/harness-init/SKILL.md`**, **`skills/harness-adopt/SKILL.md`** — dropped the "(generated)" label on `CLAUDE.md`; init "Next steps" no longer tells the user to re-sync after rule edits.
+- **`README.md`** / **`README.zh-CN.md`** — "In ~30 seconds" file list, the repository-layout box, and the design-principles list all corrected: `CLAUDE.md` / `copilot-instructions.md` are bootstrap stubs, `.claude/agents/`+`skills/` are the synced bindings. (The English layout box still said "Generated; do not edit" — the Chinese one had already been fixed; they now match.) "Dogfooded" paragraph no longer claims `.harness/rules/` produces this repo's `CLAUDE.md`.
+- **`docs/getting-started.md`**, **`CONTRIBUTING.md`** — repo-layout comment and the Layer-2 description corrected to the agents+skills-only sync scope.
+- **`scripts/verify_all.ps1`** / **`scripts/verify_all.sh`** — the I.6 exemption *comment* drifted from the actual exempt array (`.ps1` named `MIGRATION.md` as exempt though it is not; `.sh` omitted `architecture.html` / `walkthrough.html` though they are). Comments reconciled with code — no behavior change.
+
+### Changed — Version stamps
+
+- `.claude-plugin/plugin.json` / `.claude-plugin/marketplace.json`: `0.17.3` → `0.17.4`.
+- `README.md` / `README.zh-CN.md`: version badge `0.17.3` → `0.17.4`; new `0.17.4` Roadmap row.
+- `AI-GUIDE.md`, `docs/dev-map.md`, `docs/manual-e2e-test.md`, `.harness/rules/40-locations.md`, `architecture.html`: `at v0.17.3` freshness stamps → `at v0.17.4` (counts unchanged).
+
+### Notes
+
+- `verify_all` unchanged at 30 checks — a doc-wording fix, no check added or removed. The I.6 exemption array itself was not changed (only its comment); `MIGRATION.md` remains scanned and still passes (its old/new comparisons phrase around the banned literals).
+- `test-init` (227 PS / 191 Bash-no-python3), `test-real-project` (82/82), `test-supervisor` (57 PS / 53 Bash-no-python3) all unaffected — no test asserts on the corrected prose.
+- The dogfood `.claude/settings.json` `_doc_sync_hook` string carried the same stale wording. It is red-line-protected (self-modification classifier + `CLAUDE.md` red line), so it is corrected by hand outside the pipeline.
+
 ## [0.17.3] - 2026-05-22
 
 Patch release. Completes the v0.17.2 `settings.json`-correctness theme by fixing the bootstrap red line that *mislabeled* `.claude/`. The `CLAUDE.md` / `.github/copilot-instructions.md` red line called `.claude/` a "generated or static" file — but `.claude/settings.json` is neither: it is the agent's live, hand-maintained startup config (permissions + hooks). That wrong category label is exactly what made the v0.17.2 fix awkward to reason about. No feature change, no `verify_all` check added or removed — stays at 30.

@@ -36,9 +36,10 @@ templates/common/  ─────────────►   .harness/  ─�
   `templates/common/scripts/harness-sync.{ps1,sh}` byte-identical with the repo's
   `.harness/agents/` and `scripts/harness-sync.{ps1,sh}` copies. Verifies that what
   we ship to users matches what we use ourselves.
-- **Layer 2 (harness-sync)** generates `.claude/agents/`, `.claude/skills/`, and
-  `CLAUDE.md` from `.harness/`. The same script ships to user projects so the
-  binding contract is reusable.
+- **Layer 2 (harness-sync)** syncs `.claude/agents/` and `.claude/skills/` from
+  `.harness/agents/` and `.harness/skills/`. The same script ships to user projects
+  so the binding contract is reusable. (`CLAUDE.md` and `.github/copilot-instructions.md`
+  are static stubs written once at init, not synced.)
 
 `verify_all` enforces both layers (E.1 + E.2) and FAILs on drift. Run sync before commit.
 
@@ -93,7 +94,7 @@ After adding a skill:
 
 Project types live under `skills/harness-init/templates/<type>/`:
 
-- `.harness/rules/50-<type>.md` — overlay rules appended to the generated CLAUDE.md.
+- `.harness/rules/50-<type>.md` — project-type overlay rules, indexed by `AI-GUIDE.md`.
 - `.harness/skills/{build,test,verify}/SKILL.md.tmpl` — stack-specific procedures.
 - `scripts/verify_all.{ps1,sh}.tmpl` — type-specific verification.
 

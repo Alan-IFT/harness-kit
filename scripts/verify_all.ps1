@@ -489,11 +489,11 @@ Step "I.6" "No retired-claim phrases in current docs/templates (FAIL on resurgen
         @{ phrase = "重新生成的 CLAUDE.md"; reason = "v0.10 起 CLAUDE.md 是 stub，不再被重新生成" }
     )
     # Files exempt because they record history honestly: CHANGELOG describes what each
-    # release did, MIGRATION.md compares old/new behavior, _archived/ holds per-task
-    # docs from past releases, architecture.html / walkthrough.html are
-    # v0.5/v0.6-era visual snapshots with explicit "v0.5 snapshot" banners pointing
-    # readers at AI-GUIDE.md and CHANGELOG.md for current state, and verify_all
-    # itself stores the banned-phrase strings.
+    # release did, _archived/ holds per-task docs from past releases, architecture.html
+    # / walkthrough.html are v0.5/v0.6-era visual snapshots with explicit "v0.5 snapshot"
+    # banners pointing readers at AI-GUIDE.md and CHANGELOG.md for current state, and
+    # verify_all itself stores the banned-phrase strings. (MIGRATION.md is NOT exempt —
+    # it is scanned; its old/new comparisons phrase around the banned literals.)
     $exempt = @(
         "CHANGELOG.md",
         "architecture.html",
