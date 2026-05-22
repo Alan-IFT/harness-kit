@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.2] - 2026-05-22
+
+Patch release. Fixes a JSON-schema-validity bug in the generated `.claude/settings.json`: two documentation keys were placed *inside* the `hooks` object, which the official Claude Code settings schema declares `additionalProperties: false`. No feature change, no `verify_all` check added or removed — stays at 30. No runtime behavior change either — Claude Code tolerates unknown keys at load time, so the bug surfaced only as editor / schema-validator errors (red squiggles in VS Code).
+
+### Fixed — `.claude/settings.json` failed schema validation (doc keys inside the strict `hooks` object)
+
+The official schema (`json.schemastore.org/claude-code-settings`, verified via context7/WebFetch) declares the **root** object `additionalProperties: true` but the **`hooks`** object `additionalProperties: false` — `hooks` accepts *only* real hook-event names (`Stop`, `PreToolUse`, …). harness-kit embedded two documentation strings, `_doc_sync_hook` and `_guard_hook`, as keys *inside* `hooks`, so every generated `settings.json` failed validation.
+
+- **`skills/harness-init/templates/common/.claude/settings.json.tmpl`** — `_doc_sync_hook` and `_guard_hook` relocated from inside `hooks` to the root object, where `_*`-prefixed documentation keys are schema-valid. The hook entries themselves (`Stop`, `PreToolUse`) are byte-unchanged. This is the root cause: the single template is consumed by both `/harness-init` and `/harness-adopt`, so the fix propagates to every newly created or adopted project.
+- **`.claude/settings.json`** (this repo's dogfood file) — same relocation. Applied by hand: the file is guarded against AI edits by the self-modification classifier and the `CLAUDE.md` red line, so it cannot be auto-fixed by the pipeline.
+
+`test-init`'s settings.json assertions (JSON-parse, `hooks.PreToolUse[0].matcher == "Bash"`, guard-rm command) are unaffected — none of them touch the relocated keys.
+
+### Changed — Version stamps
+
+- `.claude-plugin/plugin.json` / `.claude-plugin/marketplace.json`: `0.17.1` → `0.17.2` (G.3 keeps these in sync with the README badges).
+- `README.md` / `README.zh-CN.md`: version badge `0.17.1` → `0.17.2`; new `0.17.2` Roadmap row.
+- `AI-GUIDE.md`, `docs/dev-map.md`, `docs/manual-e2e-test.md`, `.harness/rules/40-locations.md`, `architecture.html`: `at v0.17.1` freshness stamps → `at v0.17.2` (counts unchanged).
+- `scripts/baseline.json`: `last_verify` → `2026-05-22`. `verify_all_checks` unchanged at 30.
+
+### Notes on regression surface
+
+- `verify_all` unchanged at 30 checks — the fix is a JSON-key relocation, no check added or removed.
+- `test-init` unchanged at 227 PS / 191 Bash-no-python3; `test-real-project` 82/82; `test-supervisor` 57 PS / 53 Bash-no-python3.
+
 ## [0.17.1] - 2026-05-21
 
 Patch release. Sweeps the two MINOR adversarial findings that v0.17.0 explicitly deferred (see v0.17.0 "Known limitations — deferred to v0.17.1"). No feature change, no new `verify_all` check, no agent-contract behavior change — `verify_all` stays at 30 checks. Reproducers: `docs/features/_archived/supervisor-agent/06_TEST_REPORT.md` ADV-8 (BUG-2) and ADV-7 (BUG-3).

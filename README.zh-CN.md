@@ -2,7 +2,7 @@
 
 [English](README.md) · **简体中文**
 
-![version](https://img.shields.io/badge/version-0.17.1-blue) ![verify_all](https://img.shields.io/badge/verify__all-30%2F30-brightgreen) ![test-init](https://img.shields.io/badge/test--init-227%2F227-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.17.2-blue) ![verify_all](https://img.shields.io/badge/verify__all-30%2F30-brightgreen) ![test-init](https://img.shields.io/badge/test--init-227%2F227-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
 > **Claude Code 的 Harness Engineering 工具包** — 一个 Claude Code Plugin（10 个 skills + 项目模板），把"有纪律的 AI 驱动开发"带到全栈和后端项目里。
 >
@@ -259,6 +259,7 @@ Markdown 文档：
 | 0.16.0 | 已交付 | **AI 原生 init / adopt**：`/harness-init` Q6 与 `/harness-adopt` Q6 可选打开 AI 草拟，让 AI 基于 Q2 stack 描述 + 顶层文件名 + 已读到的 manifest 内容起草定制的 `.harness/rules/50-<project-slug>.md`（以及可选的 `dev-*` 分区 agent）。四条不变量（必须含六个段落、无 `{{...}}`、≤200 行、不撞 7 个保留 agent 名）任一失败就回落到静态 stub。每段都带 `<!-- source: ... -->` 来源标注。测试与 dry-run 走 `HARNESS_AI_NATIVE_MOCK` mock fixture。verify_all 28 → 29（新增 D.3 段级 sanity 检查）。 |
 | 0.17.0 | 已交付 | **Supervisor agent + `/harness-supervise` skill**：旁观者辅助 agent，读取进行中或归档的 7-stage 任务文件夹，检测 4 个 anti-pattern（AP-1 同阶段 rollback 比率、AP-1b 跨阶段 rollback 总数、AP-2 阶段文档过薄、AP-3 缺 intervention check、AP-4 缺 archive 调用），按固定阈值分级 INFO/WARN/ALERT，单次调用产出一份 `SUPERVISION_REPORT.md`，最后一行 `Verdict: HEALTHY | WATCH | INTERVENE`。仅手动调用（不进入 7-stage 路由）；`allowed-tools` 白名单物理排除 `Edit`/`Bash`/`PowerShell`/`Task`/`AskUserQuestion`。新增 `verify_all I.7` 被动守护：`INTERVENE` 报告 >48h 未处理且任务仍 active → WARN。verify_all 29 → 30。 |
 | 0.17.1 | 已交付 | **补丁清扫**：BUG-2（I.7 active-row slug 匹配在两个 shell 上改为列锚定，消除 `foo` / `foo-extra` 子串误判）+ BUG-3（`supervisor.md` 边界表在 cross-task N=0 上的文档漂移，与 `harness-supervise` SKILL.md 对齐）。无功能变更；verify_all 仍 30 项检查。 |
+| 0.17.2 | 已交付 | **`settings.json` schema 修复**：Claude Code settings schema 把 `hooks` 对象声明为 `additionalProperties: false`——只有真实的 hook 事件名才是合法键。harness-kit 把 `_doc_sync_hook` / `_guard_hook` 文档说明字符串放在了 `hooks` 对象*内部*，导致每个生成的 `.claude/settings.json` 都无法通过 schema 校验。两个键已移至根对象（`additionalProperties: true`，根层允许 `_*` 文档键）。无功能变更；verify_all 仍 30 项检查。 |
 | 0.18+ | 规划中 | PM 在用户配置的阶段边界自动派发 supervisor（v0.18+ 在 ≥10 个真实任务证明误报预算后启用） |
 
 ## 设计原则
