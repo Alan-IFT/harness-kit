@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.3] - 2026-05-22
+
+Patch release. Completes the v0.17.2 `settings.json`-correctness theme by fixing the bootstrap red line that *mislabeled* `.claude/`. The `CLAUDE.md` / `.github/copilot-instructions.md` red line called `.claude/` a "generated or static" file — but `.claude/settings.json` is neither: it is the agent's live, hand-maintained startup config (permissions + hooks). That wrong category label is exactly what made the v0.17.2 fix awkward to reason about. No feature change, no `verify_all` check added or removed — stays at 30.
+
+### Fixed — bootstrap red line mislabeled `.claude/` as "generated or static"
+
+`.claude/` holds two distinct things, neither of which is "static": `settings.json` is the agent's *live* startup config (changes need human review — the self-modification classifier guards it), and `agents/`+`skills/` are *sync-generated* copies of `.harness/` (edits belong in the `.harness/` source). The single red-line bullet was split in two so each protected path carries its real rationale; `CLAUDE.md` and `.github/copilot-instructions.md` keep the accurate "static stub" label.
+
+- **`skills/harness-init/templates/common/CLAUDE.md.tmpl`**, **`.../common/.github/copilot-instructions.md.tmpl`**, **`.../i18n/zh/common/CLAUDE.md.tmpl`**, **`.../i18n/zh/common/.github/copilot-instructions.md.tmpl`** — red-line bullet split: one bullet for `.claude/` (live config + sync-generated, with the correct "propose, don't hand-edit" / "edit the `.harness/` source" rationale), one for the genuine static stubs. Propagates to every newly created or adopted project via `/harness-init` and `/harness-adopt`.
+- **`CLAUDE.md`**, **`.github/copilot-instructions.md`** (this repo's dogfood files) — same split. Applied by hand: both are red-line-protected against AI edits, so they cannot be auto-fixed by the pipeline.
+
+### Changed — Version stamps
+
+- `.claude-plugin/plugin.json` / `.claude-plugin/marketplace.json`: `0.17.2` → `0.17.3`.
+- `README.md` / `README.zh-CN.md`: version badge `0.17.2` → `0.17.3`; new `0.17.3` Roadmap row.
+- `AI-GUIDE.md`, `docs/dev-map.md`, `docs/manual-e2e-test.md`, `.harness/rules/40-locations.md`, `architecture.html`: `at v0.17.2` freshness stamps → `at v0.17.3` (counts unchanged).
+
+### Notes
+
+- `verify_all` unchanged at 30 checks — a doc-wording fix, no check added or removed.
+- `test-init` (227 PS / 191 Bash-no-python3), `test-real-project` (82/82), `test-supervisor` (57 PS / 53 Bash-no-python3) all unaffected — no test asserts on the bootstrap red-line text.
+
 ## [0.17.2] - 2026-05-22
 
 Patch release. Fixes a JSON-schema-validity bug in the generated `.claude/settings.json`: two documentation keys were placed *inside* the `hooks` object, which the official Claude Code settings schema declares `additionalProperties: false`. No feature change, no `verify_all` check added or removed — stays at 30. No runtime behavior change either — Claude Code tolerates unknown keys at load time, so the bug surfaced only as editor / schema-validator errors (red squiggles in VS Code).

@@ -32,7 +32,7 @@ Stack: Markdown (skills, agent definitions, docs) + PowerShell + Bash (verify_al
 **Memory layer**:
 - **`.harness/insight-index.md`** — ≤30 evidence-backed lines of project-specific facts. Read at task start; append at task end (only with evidence). Never edit other people's lines.
 
-Before declaring any task complete, run `scripts/verify_all` and confirm all PASS checks are green (30/30 at v0.17.2; check count grows with releases) — this is the gate, not a rule fragment.
+Before declaring any task complete, run `scripts/verify_all` and confirm all PASS checks are green (30/30 at v0.17.3; check count grows with releases) — this is the gate, not a rule fragment.
 
 If you add a new fragment to `.harness/rules/`, append a line above with its filename, a 1-line description, and the trigger condition.
 
@@ -65,7 +65,7 @@ Three flows are supported, picked by the tool the user is in:
 
 ## Scripts (the moving parts)
 
-- `scripts/verify_all.{ps1,sh}` — total verification (30 checks at v0.17.2, including I.1-I.5 doc-size WARN guards + F.2 guard-rm wiring + I.6 retired-claim phrase guard + I.7 ignored-INTERVENE-report guard + D.3 AI-generated 50-*.md sanity). **Must PASS before declaring done.**
+- `scripts/verify_all.{ps1,sh}` — total verification (30 checks at v0.17.3, including I.1-I.5 doc-size WARN guards + F.2 guard-rm wiring + I.6 retired-claim phrase guard + I.7 ignored-INTERVENE-report guard + D.3 AI-generated 50-*.md sanity). **Must PASS before declaring done.**
 - `scripts/harness-sync.{ps1,sh}` — copy `.harness/agents/` + `.harness/skills/` to `.claude/`. v0.10 narrow scope.
 - `scripts/sync-self.{ps1,sh}` — keep this repo's dogfood `.harness/agents/` + 4 script pairs (harness-sync, install-hooks, archive-task, guard-rm) byte-identical with `templates/common/`. **Does NOT sync `.harness/rules/` — those are bespoke per repo.**
 - `scripts/install-hooks.{ps1,sh}` — one-shot installer for `.git/hooks/pre-commit` (runs `harness-sync --check`).
