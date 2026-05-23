@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.18.1] - 2026-05-23
+
+Patch release. Closes the two non-blocking observations left by v0.18.0 (the I.6 gap-tolerant retired-claim guard): (a) the PS-side `test-verify-i6` structural lockstep was weaker than the bash side — it only checked entry count + entry #10's `exclude=@('.claude/')` clause, so a typo in any of entries #1 / #3–9 / #11–13's `reason` / `exclude` / `gap` fields in `scripts/verify_all.ps1` would slip past PS lockstep; (b) AC-8 (`CHANGELOG.md` file-exempt + `docs/features/_archived/` dir-exempt preserved) had no permanent corpus fixture — the v0.18.0 QA validated it via an inline injection probe that did not survive into the regression set. This release adds the missing coverage in both shells; no `verify_all` behavior change.
+
+### Changed — `scripts/test-verify-i6.{ps1,sh}` structural lockstep is now symmetric and full-field
+
+- **Full 2×2 lockstep matrix.** Each driver now does **verbatim per-entry × 4-field (`anchors` / `reason` / `exclude` / `gap`) comparison** of BOTH `verify_all.sh`'s `i6_banned` AND `verify_all.ps1`'s `$banned` against the driver's own canonical copy. No cell of the (driver × live) matrix is "count-only" or "entry #10 only" any longer. New helpers in each shell: a single `<empty>` sentinel (`$script:I6_EMPTY` / `I6_EMPTY`), `Format-I6Field` / `i6_format_field` for empty-value normalization across the bash record `||` form and the PS `$null` / `@()` form, and `Test-I6FieldEq` / `i6_field_eq` as the **only** new comparator (uses `-ceq` in PS / `[[ == ]]` literal in bash — insight L7/L17/L20/L23 hardening).
+- **New parser projections.** `Get-ShI6BannedRecords` (PS) walks `verify_all.sh`'s `i6_banned=(...)` block in pure PS text (no `bash` shell-out) and decodes `\`` → `` ` `` for entries #2 / #6 / #8 (insight L19 backtick hazard); `extract_ps_banned_records` (bash) walks `verify_all.ps1`'s `$banned = @(...)` hashtable array with sed anchored on the literal keywords (`anchors = @(`, `reason = `, `exclude = @(`, `gap = `), failing closed (length ≠ 4) on a future line-wrap.
+- **`I6ExpectedEntryCount` named constant.** Single source of truth for "13 entries" per driver (`$script:I6ExpectedEntryCount` / `i6_expected_entry_count`). Bumping to 14 in a future task = 4 edits (live PS + live bash + each driver's canonical) instead of 10+ hand-edits.
+- **Exempt-FILE + exempt-DIR lockstep is now element-wise.** Each driver hard-codes a canonical `$i6ExemptFiles` / `i6_exempt_files` array (7 paths: `CHANGELOG.md`, `architecture.html`, `docs/walkthrough.html`, `scripts/verify_all.{ps1,sh}`, `scripts/test-verify-i6.{ps1,sh}`) and asserts `verify_all.{ps1,sh}`'s actual `$exempt` / `i6_exempt_files` arrays match element-by-element. The exempt-dir lockstep was upgraded from "contains `docs/features/`" to full element-wise equality against `($i6ExemptDirs = "docs/features/", "参考/")`. The old "entry #10 carries `exclude=@('.claude/')`" bespoke row is removed in both shells — subsumed by the new per-field comparison.
+
+### Added — AC-8 permanent corpus fixture (file-level + dir-level exemption)
+
+- New `Test-I6FileExempt` (PS, uses `-ccontains` — mandatory case-sensitive variant) / `i6_file_exempt` (bash, uses `[[ == ]]` literal) predicate symmetric to the existing `Test-I6DirExempt` / `i6_dir_exempt`. New combined predicate `Test-I6Exempt` / `i6_exempt` mirrors the live `verify_all`'s skip order (file-exempt OR dir-exempt → skip).
+- New Assertion 7 block in each driver: 7 file-exempt positive assertions (one per canonical exempt path), 3 file-exempt negative assertions (`README.md`, `docs/concepts.md`, `scripts/harness-sync.sh`), 1 combined-exempt assertion on the synthetic dir-exempt path `docs/features/some-task/03_GATE_REVIEW.md`, 7 combined-exempt assertions on each canonical exempt-file path, plus 1 AC-14 negative-regression assertion on a fresh physical fixture `fx-ac14-nonexempt.md` (banned content at a non-exempt path) that MUST hit — guards against a future bug that makes the exemption predicate return `true` for all paths.
+
+### Changed — Assertion counts
+
+- `scripts/test-verify-i6.ps1`: **35 → 56** assertions (`+21`).
+- `scripts/test-verify-i6.sh`:  **34 → 56** assertions (`+22`); PS == bash now (empirical-equality contract — see `docs/features/_archived/i6-test-hardening/02_SOLUTION_DESIGN.md` §9). Old PS-vs-bash split-count delta of 1 closed.
+- `scripts/baseline.json` `test_verify_i6_ps_assertions` and `test_verify_i6_bash_assertions` both bumped to 56.
+
+### Changed — Version stamps
+
+- `.claude-plugin/plugin.json` / `.claude-plugin/marketplace.json`: `0.18.0` → `0.18.1`.
+- `README.md` / `README.zh-CN.md`: version badge `0.18.0` → `0.18.1`; new `0.18.1` Roadmap row.
+
+### Notes
+
+- `verify_all` unchanged at 30 checks — a regression-driver-only release, no `verify_all` byte change. `scripts/verify_all.{ps1,sh}` are byte-identical to v0.18.0 (mutation cycle in QA reverted cleanly).
+- `AI-GUIDE.md` / `docs/dev-map.md` freshness stamps intentionally left at `at v0.18.0` per the task's design AC-19 — they describe `verify_all`'s 30-check gate and the gap-tolerant matcher, both unchanged; bumping the stamp would falsely imply a substantive change.
+- One known portability limitation (deferred to a future maintenance pass): `scripts/test-verify-i6.sh:499-500` uses bash 4.3+ `local -n` namerefs; works on Git-bash (Windows ≥5.x) and modern Linux ≥4.4 but would error on macOS default `/usr/bin/env bash` 3.2. Not in T-005 scope; recorded as Code Review's only MINOR finding.
+- `test-init` (227 PS / 191 bash-no-python3), `test-real-project` (82/82), `test-supervisor` (57 PS / 53 bash-no-python3) all unaffected — no test asserts on the I.6 regression-driver internals.
+
 ## [0.18.0] - 2026-05-23
 
 Minor release. Upgrades the `verify_all` **I.6 retired-claim guard** from literal-substring matching to a **gap-tolerant ordered-anchor scan**. The v0.15.1 / v0.17.4 sweeps repeatedly found that a retired claim survives by being *re-phrased* — the same wrong idea with a word inserted between the banned tokens (`composed` … `into` … `` `CLAUDE.md` ``). A literal-substring guard cannot catch that. I.6 now matches on an ordered list of plain-text anchors within a bounded gap, so paraphrased resurgences are caught too. No new `verify_all` check — the count stays **30**.

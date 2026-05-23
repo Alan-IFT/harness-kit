@@ -1,4 +1,4 @@
-# test-verify-i6.ps1 — Regression for the verify_all I.6 gap-tolerant retired-claim matcher (v0.18.0)
+# test-verify-i6.ps1 — Regression for the verify_all I.6 gap-tolerant retired-claim matcher (v0.18.0+)
 #
 # PowerShell twin of test-verify-i6.sh. Mirrors the same fixture corpus + assertion set.
 #
@@ -8,6 +8,13 @@
 # structural assertion (the live $banned array must match this driver's copy,
 # including entry #10's exclude=@('.claude/')).
 #
+# Driver-vs-live lockstep matrix (v0.18+ T-005 hardening — both rows × both columns
+# do verbatim per-entry × 4-field comparison; no cell is count-only):
+#
+#                    | verify_all.sh | verify_all.ps1 |
+#     test-verify.sh | verbatim      | verbatim       |
+#     test-verify.ps1| verbatim      | verbatim       |
+#
 # Usage:
 #   .\scripts\test-verify-i6.ps1                  # full run, temp dir auto-cleaned
 #   .\scripts\test-verify-i6.ps1 -KeepTemp        # keep the fixture temp dir
@@ -16,6 +23,11 @@
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path $PSScriptRoot -Parent
+
+# Single canonical "no value" sentinel (T-005 design §3.2 / Q-1). Used by Format-I6Field
+# so an empty-string field from a bash record and a $null / @() field from a PS hashtable
+# both collapse to one renderable token before the comparator runs.
+$script:I6_EMPTY = '<empty>'
 
 # Args are parsed manually (no param block) so the bash twin can pass the raw
 # `--emit-hits <dir>` flag without tripping PowerShell parameter binding.
@@ -52,6 +64,21 @@ $i6Banned = @(
     @{ anchors = @('重新生成的','CLAUDE.md'); reason = "v0.10 起 CLAUDE.md 是 stub，不再被重新生成"; exclude = @(); gap = $null }
 )
 $i6ExemptDirs = @("docs/features/", "参考/")
+
+# The canonical list for I.6 exempt FILES at this driver's version. Element-wise
+# equality against verify_all.{ps1,sh} is asserted by Assertion 3c (T-005 §3.5).
+$i6ExemptFiles = @(
+    "CHANGELOG.md",
+    "architecture.html",
+    "docs/walkthrough.html",
+    "scripts/verify_all.ps1",
+    "scripts/verify_all.sh",
+    "scripts/test-verify-i6.ps1",
+    "scripts/test-verify-i6.sh"
+)
+# Single source of truth for the banned-list entry count. Bumping to 14 = edit here
+# AND in test-verify-i6.sh's i6_expected_entry_count.
+$script:I6ExpectedEntryCount = 13
 
 function Build-I6Regex($anchors, $gap) {
     ($anchors | ForEach-Object { [regex]::Escape($_) }) -join "(.{0,$gap})"
@@ -91,6 +118,200 @@ function Test-I6DirExempt($p) {
     return $false
 }
 
+# Test-I6FileExempt PATH — byte-mirror of verify_all.ps1's inline `$exempt -contains $file`
+# membership test. `-ccontains` is MANDATORY (insight L7): default `-contains` is
+# case-insensitive and would return $true for CHANGELOG.MD vs CHANGELOG.md, masking
+# a future casing-drift bug between PS and bash.
+function Test-I6FileExempt($p) {
+    return ($i6ExemptFiles -ccontains $p)
+}
+
+# Combined predicate used by Assertion 7 (AC-12 / AC-13): file-exempt OR dir-exempt.
+# Mirrors the live verify_all.ps1 skip order at lines 528-531.
+function Test-I6Exempt($p) {
+    if (Test-I6FileExempt $p) { return $true }
+    return (Test-I6DirExempt $p)
+}
+
+# Format-I6Field VALUE — normalize a field value (string / array / $null) into a
+# single renderable canonical token. Empty / $null / @() all collapse to $script:I6_EMPTY.
+# Arrays render as `~`-joined to match the bash record format (T-005 §3.2 / Q-1).
+function Format-I6Field($value) {
+    if ($null -eq $value) { return $script:I6_EMPTY }
+    if ($value -is [array]) {
+        if ($value.Count -eq 0) { return $script:I6_EMPTY }
+        return ($value -join '~')
+    }
+    # String / int / other scalar
+    $s = [string]$value
+    if ($s -eq '') { return $script:I6_EMPTY }
+    return $s
+}
+
+# Test-I6FieldEq A B — the ONLY new comparator in the lockstep code. `-ceq` is
+# MANDATORY (insight L7/L17/L20/L23 — default `-eq` is case-insensitive and would
+# mojibake-mask a CJK-vs-mojibake mismatch).
+function Test-I6FieldEq($a, $b) {
+    return ((Format-I6Field $a) -ceq (Format-I6Field $b))
+}
+
+# Get-ShI6BannedRecords PATH -> array of [pscustomobject] with properties
+# (anchors[], reason, exclude[], gap). Parses verify_all.sh's i6_banned source text
+# (T-005 §3.3 / Q-2). No bash invocation — pure PS text walk.
+#
+# Backtick-decode (R-1 / insight L19): bash double-quoted strings escape the literal
+# backtick as `\``. The PS array source uses single-quoted strings with literal `,
+# so both sides must decode to the same canonical token. The replace below uses a
+# single-quoted regex literal so PS does not interpret the backslash-backtick.
+function Get-ShI6BannedRecords($path) {
+    $out = @()
+    $inArr = $false
+    $rawIdx = 0
+    foreach ($l in (Get-Content -LiteralPath $path -Encoding UTF8)) {
+        if ($l -cmatch '^i6_banned=\(') { $inArr = $true; continue }
+        if ($inArr -and $l -cmatch '^\)') { $inArr = $false; continue }
+        if (-not $inArr) { continue }
+        $line = $l.Trim()
+        if ($line -eq '') { continue }
+        $rawIdx++
+        # Peel one leading `"` and one trailing `"` (literal bash double-quote wrapper).
+        if ($line.StartsWith('"') -and $line.EndsWith('"')) {
+            $line = $line.Substring(1, $line.Length - 2)
+        }
+        # Decode `\`` -> `` ` `` (entries #2, #6, #8 carry the backtick anchor).
+        $decoded = $line -replace '\\`', '`'
+        # PS `-split` on a regex with no limit preserves trailing empty fields by
+        # default (verified: "a|b||" -> 4 parts). A `-1` limit would NOT split at
+        # all, which is the opposite of what we want.
+        $parts = $decoded -split '\|'
+        if ($parts.Count -ne 4) {
+            throw "Get-ShI6BannedRecords: entry #$rawIdx has $($parts.Count) fields (expected 4): raw=$l"
+        }
+        $anchors = if ($parts[0] -eq '') { @() } else { $parts[0] -split '~' }
+        $exclude = if ($parts[2] -eq '') { @() } else { $parts[2] -split '~' }
+        $out += [pscustomobject]@{
+            anchors = [string[]]$anchors
+            reason  = [string]$parts[1]
+            exclude = [string[]]$exclude
+            gap     = [string]$parts[3]
+        }
+    }
+    return ,$out
+}
+
+# Get-Ps1BannedRecords PATH -> the same shape as Get-ShI6BannedRecords, but parsed
+# from verify_all.ps1's $banned source text. The parser is line-anchored on the
+# literal `@{ anchors = @(` opener (R-2 mitigation: don't depend on column position).
+# A future innocent line-wrap of a record fails closed (count != 13).
+function Get-Ps1BannedRecords($path) {
+    $out = @()
+    $raw = Get-Content -LiteralPath $path -Raw -Encoding UTF8
+    $rawIdx = 0
+    foreach ($l in ($raw -split "`r?`n")) {
+        if ($l -cnotmatch '^\s*@\{\s*anchors\s*=\s*@\(') { continue }
+        $rawIdx++
+        # Extract each field by literal-keyword regex (whitespace-tolerant before
+        # the keyword and between `=` operators).
+        $anchorsRaw = $null; $reason = $null; $excludeRaw = $null; $gap = $null
+        if ($l -cmatch "anchors\s*=\s*@\(([^)]*)\)") { $anchorsRaw = $Matches[1] }
+        if ($l -cmatch 'reason\s*=\s*"([^"]*)"')      { $reason     = $Matches[1] }
+        if ($l -cmatch "exclude\s*=\s*@\(([^)]*)\)") { $excludeRaw = $Matches[1] }
+        if ($l -cmatch 'gap\s*=\s*(\$null|\d+)')     { $gap        = $Matches[1] }
+        if ($null -eq $anchorsRaw -or $null -eq $reason -or $null -eq $excludeRaw -or $null -eq $gap) {
+            throw "Get-Ps1BannedRecords: entry #$rawIdx field-extract failed: raw=$l"
+        }
+        # Split `'tok1','tok2',...` -> ('tok1','tok2'); strip whitespace and the surrounding
+        # single quotes. Empty list ('@()') yields an empty array.
+        $parseList = {
+            param($body)
+            $t = $body.Trim()
+            if ($t -eq '') { return @() }
+            $items = $t -split ','
+            $r = @()
+            foreach ($it in $items) {
+                $s = $it.Trim()
+                if ($s.StartsWith("'") -and $s.EndsWith("'")) {
+                    $s = $s.Substring(1, $s.Length - 2)
+                }
+                $r += $s
+            }
+            return ,$r
+        }
+        $anchors = & $parseList $anchorsRaw
+        $exclude = & $parseList $excludeRaw
+        # Normalize `$null` (the PS literal token) to the empty-sentinel via a blank string —
+        # Format-I6Field will collapse it to <empty>.
+        $gapNorm = if ($gap -ceq '$null') { '' } else { $gap }
+        $out += [pscustomobject]@{
+            anchors = [string[]]$anchors
+            reason  = [string]$reason
+            exclude = [string[]]$exclude
+            gap     = [string]$gapNorm
+        }
+    }
+    return ,$out
+}
+
+# Get-ShI6ExemptFiles PATH -> ordered string[] of the i6_exempt_files entries in
+# verify_all.sh. Extracts the array block, peels the surrounding double quotes.
+function Get-ShI6ExemptFiles($path) {
+    $out = @()
+    $inArr = $false
+    foreach ($l in (Get-Content -LiteralPath $path -Encoding UTF8)) {
+        if ($l -cmatch '^i6_exempt_files=\(') { $inArr = $true; continue }
+        if ($inArr -and $l -cmatch '^\)') { $inArr = $false; continue }
+        if (-not $inArr) { continue }
+        $line = $l.Trim()
+        if ($line -eq '') { continue }
+        if ($line.StartsWith('"') -and $line.EndsWith('"')) {
+            $line = $line.Substring(1, $line.Length - 2)
+        }
+        $out += $line
+    }
+    return ,$out
+}
+
+# Get-ShI6ExemptDirs PATH -> ordered string[] of i6_exempt_dirs from verify_all.sh.
+function Get-ShI6ExemptDirs($path) {
+    $out = @()
+    $inArr = $false
+    foreach ($l in (Get-Content -LiteralPath $path -Encoding UTF8)) {
+        if ($l -cmatch '^i6_exempt_dirs=\(') { $inArr = $true; continue }
+        if ($inArr -and $l -cmatch '^\)') { $inArr = $false; continue }
+        if (-not $inArr) { continue }
+        $line = $l.Trim()
+        if ($line -eq '') { continue }
+        if ($line.StartsWith('"') -and $line.EndsWith('"')) {
+            $line = $line.Substring(1, $line.Length - 2)
+        }
+        $out += $line
+    }
+    return ,$out
+}
+
+# Get-Ps1ExemptList PATH ARRAY_NAME -> ordered string[] of a `$<ArrayName> = @(...)`
+# block in verify_all.ps1. Used for both $exempt (files) and $exemptDirs.
+function Get-Ps1ExemptList($path, $arrayName) {
+    $out = @()
+    $raw = Get-Content -LiteralPath $path -Raw -Encoding UTF8
+    $opener = '\$' + [regex]::Escape($arrayName) + '\s*=\s*@\('
+    $pattern = "(?s)$opener(.*?)\)"
+    $m = [regex]::Match($raw, $pattern)
+    if (-not $m.Success) { return ,$out }
+    $body = $m.Groups[1].Value
+    foreach ($tok in ($body -split ',')) {
+        $s = $tok.Trim().TrimEnd(',').Trim()
+        if ($s -eq '') { continue }
+        if ($s.StartsWith('"') -and $s.EndsWith('"')) {
+            $s = $s.Substring(1, $s.Length - 2)
+        } elseif ($s.StartsWith("'") -and $s.EndsWith("'")) {
+            $s = $s.Substring(1, $s.Length - 2)
+        }
+        $out += $s
+    }
+    return ,$out
+}
+
 # ---------------------------------------------------------------------------
 # Fixture corpus — design §7.2. Written into an isolated temp dir (insight L12).
 # Shared by the full run and by --emit-hits mode.
@@ -117,6 +338,11 @@ function New-FixtureCorpus($dir) {
     & $w "fx-e11.md"            "harness-sync 生成 CLAUDE.md 的过程"
     & $w "fx-e12.md"            "harness-sync 合成 CLAUDE.md 的旧流程"
     & $w "fx-e13.md"            "这是重新生成的 CLAUDE.md 文件"
+    # AC-14 negative-regression fixture (T-005 §6): a banned-phrase file at a
+    # non-exempt path inside the temp dir. The matcher MUST report a hit; if the
+    # exemption predicate ever returns $true for all paths (a future-bug scenario),
+    # this fixture flips first.
+    & $w "fx-ac14-nonexempt.md" "harness-sync regenerates CLAUDE.md"
 }
 
 # fixture name -> expected hit (entry index, 1-based) or 'NONE'
@@ -266,53 +492,102 @@ try {
 
     # -----------------------------------------------------------------------
     # Assertion 3 — structural lockstep with the live verify_all scripts.
+    # T-005 split: 3a = verify_all.sh banned-list, 3b = verify_all.ps1 banned-list,
+    # 3c = exempt-file + exempt-dir lockstep. All four-field verbatim, both shells.
     # -----------------------------------------------------------------------
     Write-Host ""
     Write-Host "--- Assertion 3: structural lockstep with live verify_all ---" -ForegroundColor Cyan
 
-    # verify_all.sh's i6_banned and test-verify-i6.sh's i6_banned are both bash
-    # source with identical escaping — extract the record lines (source text) from
-    # each and compare verbatim. test-verify-i6.sh's $i6Banned is the bash twin of
-    # this driver's $i6Banned, so this transitively locks the PS array too.
-    function Get-ShI6Banned($path) {
-        $out = @()
-        $inArr = $false
-        foreach ($l in (Get-Content $path)) {
-            if ($l -match '^i6_banned=\(') { $inArr = $true; continue }
-            if ($inArr -and $l -match '^\)') { $inArr = $false; continue }
-            if ($inArr) { $out += $l.Trim() }
+    # Parse both sources into the same canonical 4-tuple shape, then per-entry
+    # × 4-field equality through Test-I6FieldEq.
+    $shLiveRecs   = Get-ShI6BannedRecords "scripts/verify_all.sh"
+    $ps1LiveRecs  = Get-Ps1BannedRecords  "scripts/verify_all.ps1"
+    # Driver's own canonical = the $i6Banned hashtable array declared above. Project
+    # it into the same canonical shape.
+    $driverRecs = @()
+    foreach ($b in $i6Banned) {
+        $driverRecs += [pscustomobject]@{
+            anchors = [string[]]$b.anchors
+            reason  = [string]$b.reason
+            exclude = [string[]]($b.exclude)
+            gap     = if ($null -eq $b.gap) { '' } else { [string]$b.gap }
         }
-        $out
     }
-    $liveBanned = Get-ShI6Banned "scripts/verify_all.sh"
-    $selfBanned = Get-ShI6Banned "scripts/test-verify-i6.sh"
-    Assert "structural lockstep: verify_all.sh i6_banned has 13 entries" {
-        $liveBanned.Count -eq 13
-    }
-    Assert "structural lockstep: verify_all.sh i6_banned matches test-verify-i6.sh verbatim" {
-        if ($liveBanned.Count -ne $selfBanned.Count) {
-            throw "count mismatch: verify_all.sh=$($liveBanned.Count) test-verify-i6.sh=$($selfBanned.Count)"
+
+    # ----- 3a — verify_all.sh i6_banned vs driver -----
+    Assert "structural lockstep: verify_all.sh i6_banned entry count equals I6ExpectedEntryCount" {
+        if ($shLiveRecs.Count -ne $script:I6ExpectedEntryCount) {
+            throw "verify_all.sh i6_banned has $($shLiveRecs.Count) entries, expected $($script:I6ExpectedEntryCount)"
         }
-        for ($i = 0; $i -lt $liveBanned.Count; $i++) {
-            if ($liveBanned[$i] -ne $selfBanned[$i]) {
-                throw "entry #$($i+1) mismatch:`n      verify_all.sh    : $($liveBanned[$i])`n      test-verify-i6.sh: $($selfBanned[$i])"
+        $true
+    }
+    Assert "structural lockstep: verify_all.sh i6_banned matches driver verbatim (per-entry x 4 fields)" {
+        if ($shLiveRecs.Count -ne $driverRecs.Count) {
+            throw "count mismatch: verify_all.sh=$($shLiveRecs.Count) driver=$($driverRecs.Count)"
+        }
+        for ($i = 0; $i -lt $shLiveRecs.Count; $i++) {
+            $live = $shLiveRecs[$i]; $self = $driverRecs[$i]
+            foreach ($f in @('anchors','reason','exclude','gap')) {
+                if (-not (Test-I6FieldEq $live.$f $self.$f)) {
+                    throw "entry #$($i+1) field $f mismatch: live=$(Format-I6Field $live.$f) driver=$(Format-I6Field $self.$f)"
+                }
             }
         }
         $true
     }
 
-    # verify_all.ps1: 13 banned hashtables, entry #10 carries exclude=@('.claude/').
-    $ps1Raw = Get-Content "scripts/verify_all.ps1" -Raw
-    $ps1Count = ([regex]::Matches($ps1Raw, '(?m)^\s*@\{ anchors = @\(')).Count
-    Assert "structural lockstep: verify_all.ps1 `$banned has 13 entries" { $ps1Count -eq 13 }
-    Assert "structural lockstep: verify_all.ps1 entry #10 carries exclude=@('.claude/')" {
-        $ps1Raw -match "anchors = @\('\.harness/','$([char]0x2192)','CLAUDE\.md'\); reason = [^\n]*exclude = @\('\.claude/'\)"
+    # ----- 3b — verify_all.ps1 `$banned vs driver -----
+    Assert "structural lockstep: verify_all.ps1 `$banned entry count equals I6ExpectedEntryCount" {
+        if ($ps1LiveRecs.Count -ne $script:I6ExpectedEntryCount) {
+            throw "verify_all.ps1 `$banned has $($ps1LiveRecs.Count) entries, expected $($script:I6ExpectedEntryCount)"
+        }
+        $true
     }
-    Assert "structural lockstep: verify_all.sh exempt-dir includes docs/features/" {
-        (Get-Content "scripts/verify_all.sh" -Raw) -match '"docs/features/"'
+    Assert "structural lockstep: verify_all.ps1 `$banned matches driver verbatim (per-entry x 4 fields)" {
+        if ($ps1LiveRecs.Count -ne $driverRecs.Count) {
+            throw "count mismatch: verify_all.ps1=$($ps1LiveRecs.Count) driver=$($driverRecs.Count)"
+        }
+        for ($i = 0; $i -lt $ps1LiveRecs.Count; $i++) {
+            $live = $ps1LiveRecs[$i]; $self = $driverRecs[$i]
+            foreach ($f in @('anchors','reason','exclude','gap')) {
+                if (-not (Test-I6FieldEq $live.$f $self.$f)) {
+                    throw "entry #$($i+1) field $f mismatch: live=$(Format-I6Field $live.$f) driver=$(Format-I6Field $self.$f)"
+                }
+            }
+        }
+        $true
     }
-    Assert "structural lockstep: verify_all.ps1 exempt-dir includes docs/features/" {
-        $ps1Raw -match '"docs/features/"'
+
+    # ----- 3c — exempt-file + exempt-dir lockstep, element-wise -----
+    $shExemptFiles  = Get-ShI6ExemptFiles "scripts/verify_all.sh"
+    $shExemptDirs   = Get-ShI6ExemptDirs  "scripts/verify_all.sh"
+    $ps1ExemptFiles = Get-Ps1ExemptList   "scripts/verify_all.ps1" "exempt"
+    $ps1ExemptDirs  = Get-Ps1ExemptList   "scripts/verify_all.ps1" "exemptDirs"
+
+    $compareList = {
+        param($live, $canonical, $label)
+        if ($live.Count -ne $canonical.Count) {
+            throw "$label count mismatch: live=$($live.Count) canonical=$($canonical.Count)"
+        }
+        for ($i = 0; $i -lt $live.Count; $i++) {
+            if (-not ($live[$i] -ceq $canonical[$i])) {
+                throw "$label element #$($i+1) mismatch: live='$($live[$i])' canonical='$($canonical[$i])'"
+            }
+        }
+        $true
+    }
+
+    Assert "exempt-file lockstep: verify_all.ps1 `$exempt equals canonical (element-wise)" {
+        & $compareList $ps1ExemptFiles $i6ExemptFiles "verify_all.ps1 `$exempt"
+    }
+    Assert "exempt-file lockstep: verify_all.sh i6_exempt_files equals canonical (element-wise)" {
+        & $compareList $shExemptFiles $i6ExemptFiles "verify_all.sh i6_exempt_files"
+    }
+    Assert "exempt-dir lockstep: verify_all.ps1 `$exemptDirs equals canonical (element-wise)" {
+        & $compareList $ps1ExemptDirs $i6ExemptDirs "verify_all.ps1 `$exemptDirs"
+    }
+    Assert "exempt-dir lockstep: verify_all.sh i6_exempt_dirs equals canonical (element-wise)" {
+        & $compareList $shExemptDirs $i6ExemptDirs "verify_all.sh i6_exempt_dirs"
     }
 
     # -----------------------------------------------------------------------
@@ -358,6 +633,49 @@ try {
     }
     Assert "F-2: a non-exempt path (scripts/verify_all.ps1) is NOT dir-exempt" {
         -not (Test-I6DirExempt "scripts/verify_all.ps1")
+    }
+
+    # -----------------------------------------------------------------------
+    # Assertion 7 — AC-8 permanent fixture coverage (T-005 §3.6 / §8).
+    # File-exempt predicate, dir-exempt fixture path, combined predicate, and
+    # AC-14 negative-regression on a real file at a non-exempt path.
+    # -----------------------------------------------------------------------
+    Write-Host ""
+    Write-Host "--- Assertion 7: AC-8 permanent fixture coverage ---" -ForegroundColor Cyan
+
+    # 7.1 file-exempt predicate positive corpus — every canonical exempt path is exempt.
+    foreach ($exemptPath in $i6ExemptFiles) {
+        Assert "file-exempt predicate: $exemptPath is reported exempt" {
+            Test-I6FileExempt $exemptPath
+        }
+    }
+
+    # 7.2 file-exempt predicate negative corpus — three known non-exempt paths.
+    $negFileCorpus = @("README.md", "docs/concepts.md", "scripts/harness-sync.sh")
+    foreach ($nonExempt in $negFileCorpus) {
+        Assert "file-exempt predicate: $nonExempt is NOT reported exempt" {
+            -not (Test-I6FileExempt $nonExempt)
+        }
+    }
+
+    # 7.3 combined predicate vs dir-exempt synthetic path (AC-12).
+    Assert "combined exempt: docs/features/some-task/03_GATE_REVIEW.md skipped (dir-exempt)" {
+        Test-I6Exempt "docs/features/some-task/03_GATE_REVIEW.md"
+    }
+
+    # 7.4 combined predicate vs every canonical exempt-file path (AC-13).
+    foreach ($exemptPath in $i6ExemptFiles) {
+        Assert "combined exempt: $exemptPath skipped (file-exempt)" {
+            Test-I6Exempt $exemptPath
+        }
+    }
+
+    # 7.5 AC-14 negative regression — physical file at non-exempt path with banned
+    # content MUST hit. This guards against a future bug that makes the exemption
+    # predicate return $true for all paths.
+    Assert "AC-14 negative regression: non-exempt fixture with banned content HITs" {
+        $hits = @(Scan-I6File (Join-Path $fxTmp "fx-ac14-nonexempt.md"))
+        $hits.Count -gt 0
     }
 
 } finally {

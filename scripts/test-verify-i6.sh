@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test-verify-i6.sh — Regression for the verify_all I.6 gap-tolerant retired-claim matcher (v0.18.0)
+# test-verify-i6.sh — Regression for the verify_all I.6 gap-tolerant retired-claim matcher (v0.18.0+)
 # Bash twin of test-verify-i6.ps1. Mirrors the same fixture corpus + assertion set.
 #
 # The driver does NOT source verify_all.sh (that would run all 30 checks). It
@@ -8,10 +8,22 @@
 # structural assertion (the live i6_banned array must match this driver's copy
 # verbatim, including entry #10's exclude=.claude/).
 #
+# Driver-vs-live lockstep matrix (v0.18+ T-005 hardening — both rows × both columns
+# do verbatim per-entry × 4-field comparison; no cell is count-only):
+#
+#                    | verify_all.sh | verify_all.ps1 |
+#     test-verify.sh | verbatim      | verbatim       |
+#     test-verify.ps1| verbatim      | verbatim       |
+#
 # Usage:
 #   bash scripts/test-verify-i6.sh              # full run, temp dir auto-cleaned
 #   bash scripts/test-verify-i6.sh --keep-temp  # keep the fixture temp dir for inspection
 set -uo pipefail
+
+# Single canonical "no value" sentinel (T-005 design §3.2 / Q-1). Used by
+# i6_format_field so empty fields in bash records, `$null` in PS source, and
+# empty PS arrays all collapse to one renderable token before the comparator runs.
+I6_EMPTY='<empty>'
 
 KEEP_TEMP=false
 EMIT_HITS=false
@@ -68,6 +80,20 @@ i6_exempt_dirs=(
     "docs/features/"
     "参考/"
 )
+# The canonical list for I.6 exempt FILES at this driver's version. Element-wise
+# equality against verify_all.{ps1,sh} is asserted by Assertion 3c (T-005 §3.5).
+i6_exempt_files=(
+    "CHANGELOG.md"
+    "architecture.html"
+    "docs/walkthrough.html"
+    "scripts/verify_all.ps1"
+    "scripts/verify_all.sh"
+    "scripts/test-verify-i6.ps1"
+    "scripts/test-verify-i6.sh"
+)
+# Single source of truth for the banned-list entry count. Bumping to 14 = edit here
+# AND in test-verify-i6.ps1's $script:I6ExpectedEntryCount.
+i6_expected_entry_count=13
 
 i6_build_regex() {                       # $1 = ~-joined anchors  $2 = gap budget
     local anchors="$1" gap="$2" out="" first=1 tok esc
@@ -119,6 +145,37 @@ i6_dir_exempt() {
     return 1
 }
 
+# i6_file_exempt PATH — byte-mirror of verify_all.sh's exempt-files membership test.
+# `[[ == ]]` with quoted RHS is case-sensitive literal — symmetric to PS's
+# `-ccontains` (insight L7 / NFR-4).
+i6_file_exempt() {
+    local p="$1" ef
+    for ef in "${i6_exempt_files[@]}"; do
+        [[ "$p" == "$ef" ]] && return 0
+    done
+    return 1
+}
+
+# i6_exempt PATH — combined predicate: file-exempt OR dir-exempt. Mirrors live
+# verify_all.sh skip order at lines 562-565.
+i6_exempt() {
+    i6_file_exempt "$1" && return 0
+    i6_dir_exempt "$1"
+}
+
+# i6_format_field VALUE — normalize a field value to a single renderable canonical
+# token. Empty string collapses to $I6_EMPTY; everything else passes through.
+# Bash records are already `~`-joined for lists, so no array-path branch is needed.
+i6_format_field() {
+    if [[ -z "$1" ]]; then printf '%s' "$I6_EMPTY"; else printf '%s' "$1"; fi
+}
+
+# i6_field_eq A B — the ONLY new comparator in the lockstep code. `[[ == ]]` with
+# explicit double-quoted RHS is case-sensitive literal (no glob, no case-fold).
+i6_field_eq() {
+    [[ "$(i6_format_field "$1")" == "$(i6_format_field "$2")" ]]
+}
+
 # ---------------------------------------------------------------------------
 # Fixture corpus — design §7.2. One file per case. Shared by --emit-hits mode
 # and the full regression run.
@@ -157,6 +214,11 @@ new_fixture_corpus() {                # $1 = target dir
     printf '%s' "harness-sync 生成 CLAUDE.md 的过程"                                              > "$d/fx-e11.md"
     printf '%s' "harness-sync 合成 CLAUDE.md 的旧流程"                                            > "$d/fx-e12.md"
     printf '%s' "这是重新生成的 CLAUDE.md 文件"                                                   > "$d/fx-e13.md"
+    # AC-14 negative-regression fixture (T-005 §6): a banned-phrase file at a
+    # non-exempt path inside the temp dir. The matcher MUST report a hit; if the
+    # exemption predicate ever returns true for all paths (a future-bug scenario),
+    # this fixture flips first.
+    printf '%s' "harness-sync regenerates CLAUDE.md"                                              > "$d/fx-ac14-nonexempt.md"
 }
 
 # --- --emit-hits mode: write the corpus into EMIT_DIR, print "fixture<TAB>idx idx"
@@ -240,12 +302,13 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Assertion 3 — structural lockstep: the live verify_all.sh + verify_all.ps1
-# banned lists match this driver's i6_banned verbatim (13 entries), and the
-# exempt-dir lists contain docs/features/.
+# Assertion 3 — structural lockstep with the live verify_all scripts.
+# T-005 split: 3a = verify_all.sh banned-list, 3b = verify_all.ps1 banned-list,
+# 3c = exempt-file + exempt-dir lockstep. All four-field verbatim, both shells.
 # ---------------------------------------------------------------------------
 echo ""
 echo "--- Assertion 3: structural lockstep with live verify_all ---"
+
 # Extract the i6_banned record lines (source text, trimmed) from a bash file —
 # lines between 'i6_banned=(' and the closing ')'. Both verify_all.sh and this
 # driver use identical bash source escaping, so comparing source text is exact.
@@ -253,46 +316,211 @@ extract_i6_banned() {
     awk '/^i6_banned=\(/{f=1;next} f&&/^\)/{f=0} f{print}' "$1" \
         | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
 }
+
+# Symmetric counterpart for the PS-side: projects verify_all.ps1's $banned array
+# into the same bash-record canonical form `anchors|reason|exclude|gap` so the
+# same i6_field_eq comparator can be used. The sed pipeline extracts each field
+# by literal-keyword anchor (R-2 mitigation: not column-positional). Lists inside
+# `@('a','b',...)` are tokenized and `~`-joined to match the bash record shape.
+# Fails closed: any line whose extraction returns < 4 fields produces a record
+# the count assertion (A3b-1) catches.
+extract_ps_banned_records() {
+    local ps_path="$1" line anchors reason exclude gap parse_list
+    # parse_list `'a','b','c'` -> `a~b~c` (strip surrounding ', join on ~)
+    parse_list() {
+        local body="$1" t s out=""
+        body="${body## }"; body="${body%% }"
+        [[ -z "$body" ]] && { printf ''; return 0; }
+        local IFS=','
+        for t in $body; do
+            s="$t"
+            s="${s##[[:space:]]}"; s="${s%%[[:space:]]}"
+            # strip one leading ' and one trailing ' (PS single-quoted token)
+            [[ "$s" == \'*\' ]] && s="${s#\'}" && s="${s%\'}"
+            if [[ -z "$out" ]]; then out="$s"; else out="${out}~${s}"; fi
+        done
+        printf '%s' "$out"
+    }
+    while IFS= read -r line; do
+        # Match only lines that open an entry (literal-keyword anchored).
+        [[ "$line" =~ ^[[:space:]]*@\{[[:space:]]*anchors[[:space:]]*=[[:space:]]*@\( ]] || continue
+        # Anchors body — between `anchors = @(` and the next `)`
+        anchors=$(printf '%s' "$line" | sed -n 's/.*anchors[[:space:]]*=[[:space:]]*@(\([^)]*\)).*/\1/p')
+        # Reason — between `reason = "` and the next `"`
+        reason=$(printf '%s' "$line"  | sed -n 's/.*reason[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p')
+        # Exclude body — between `exclude = @(` and the next `)`
+        exclude=$(printf '%s' "$line" | sed -n 's/.*exclude[[:space:]]*=[[:space:]]*@(\([^)]*\)).*/\1/p')
+        # Gap — integer or the literal `$null` token; `$null` -> empty
+        gap=$(printf '%s' "$line"     | sed -n 's/.*gap[[:space:]]*=[[:space:]]*\(\$null\|[0-9][0-9]*\).*/\1/p')
+        [[ "$gap" == "\$null" ]] && gap=""
+        anchors=$(parse_list "$anchors")
+        exclude=$(parse_list "$exclude")
+        printf '%s|%s|%s|%s\n' "$anchors" "$reason" "$exclude" "$gap"
+    done < "$ps_path"
+}
+
+# ----- 3a — verify_all.sh i6_banned vs driver -----
 live_banned=()
 while IFS= read -r ln; do live_banned+=("$ln"); done < <(extract_i6_banned scripts/verify_all.sh)
 self_banned=()
 while IFS= read -r ln; do self_banned+=("$ln"); done < <(extract_i6_banned "$0")
+# Strip the literal bash double-quote wrapper "..." from each record and decode
+# the bash backslash-backtick escape (\` -> `). Entries #2 / #6 / #8 use this escape
+# to carry the literal `CLAUDE.md` code-span anchor in a bash double-quoted string;
+# the PS source uses single-quoted strings with literal backticks. Both sides
+# normalize to the same canonical token only after this decode (insight L19 / R-1).
+strip_wrap() {
+    local s="$1"
+    [[ "$s" == \"*\" ]] && { s="${s#\"}"; s="${s%\"}"; }
+    # bash parameter substitution: \\\` matches literal `\``
+    s="${s//\\\`/\`}"
+    printf '%s' "$s"
+}
+
+lockstep_sh_count=1
+if [[ "${#live_banned[@]}" -ne "$i6_expected_entry_count" ]]; then
+    lockstep_sh_count=0
+    echo "    verify_all.sh i6_banned entry count = ${#live_banned[@]}, expected $i6_expected_entry_count"
+fi
+assert "structural lockstep: verify_all.sh i6_banned entry count equals I6ExpectedEntryCount" "$lockstep_sh_count"
+
 lockstep_sh=1
-if [[ "${#live_banned[@]}" -ne 13 ]]; then
+if [[ "${#live_banned[@]}" -ne "${#self_banned[@]}" ]]; then
     lockstep_sh=0
-    echo "    verify_all.sh i6_banned entry count = ${#live_banned[@]}, expected 13"
-elif [[ "${#live_banned[@]}" -ne "${#self_banned[@]}" ]]; then
-    lockstep_sh=0
-    echo "    entry count mismatch: verify_all.sh=${#live_banned[@]} driver=${#self_banned[@]}"
+    echo "    count mismatch: verify_all.sh=${#live_banned[@]} driver=${#self_banned[@]}"
 else
     for i in "${!live_banned[@]}"; do
-        if [[ "${live_banned[$i]}" != "${self_banned[$i]}" ]]; then
-            lockstep_sh=0
-            echo "    entry #$((i+1)) mismatch:"
-            echo "      verify_all.sh: ${live_banned[$i]}"
-            echo "      driver       : ${self_banned[$i]}"
-        fi
+        live_rec=$(strip_wrap "${live_banned[$i]}")
+        self_rec=$(strip_wrap "${self_banned[$i]}")
+        # Split each record on `|` into 4 fields. Use a sentinel index, not the
+        # global `failures` array — insight L24 (loop-var name discipline).
+        IFS='|' read -r live_a live_r live_e live_g <<< "$live_rec"
+        IFS='|' read -r self_a self_r self_e self_g <<< "$self_rec"
+        for f in anchors reason exclude gap; do
+            case "$f" in
+                anchors) lv="$live_a"; sv="$self_a" ;;
+                reason)  lv="$live_r"; sv="$self_r" ;;
+                exclude) lv="$live_e"; sv="$self_e" ;;
+                gap)     lv="$live_g"; sv="$self_g" ;;
+            esac
+            if ! i6_field_eq "$lv" "$sv"; then
+                lockstep_sh=0
+                echo "    entry #$((i+1)) field $f mismatch: live=$(i6_format_field "$lv") driver=$(i6_format_field "$sv")"
+            fi
+        done
     done
 fi
-assert "structural lockstep: verify_all.sh i6_banned (13 entries) matches driver verbatim" "$lockstep_sh"
+assert "structural lockstep: verify_all.sh i6_banned matches driver verbatim (per-entry x 4 fields)" "$lockstep_sh"
 
-# verify_all.ps1 must have exactly 13 banned hashtables and entry #10 carries exclude=.claude/
-ps1_count=$(grep -cE "^\s*@\{ anchors = @\(" scripts/verify_all.ps1 || true)
-[[ "$ps1_count" == "13" ]] \
-    && assert "structural lockstep: verify_all.ps1 \$banned has 13 entries" 1 \
-    || assert "structural lockstep: verify_all.ps1 \$banned has 13 entries (got $ps1_count)" 0
-grep -qF "anchors = @('.harness/','→','CLAUDE.md'); reason" scripts/verify_all.ps1 \
-    && grep -E "anchors = @\('\.harness/'" scripts/verify_all.ps1 | grep -qF "exclude = @('.claude/')" \
-    && assert "structural lockstep: verify_all.ps1 entry #10 carries exclude=@('.claude/')" 1 \
-    || assert "structural lockstep: verify_all.ps1 entry #10 carries exclude=@('.claude/')" 0
+# ----- 3b — verify_all.ps1 $banned vs driver -----
+ps1_recs=()
+while IFS= read -r ln; do ps1_recs+=("$ln"); done < <(extract_ps_banned_records scripts/verify_all.ps1)
+lockstep_ps_count=1
+if [[ "${#ps1_recs[@]}" -ne "$i6_expected_entry_count" ]]; then
+    lockstep_ps_count=0
+    echo "    verify_all.ps1 \$banned entry count = ${#ps1_recs[@]}, expected $i6_expected_entry_count"
+fi
+assert "structural lockstep: verify_all.ps1 \$banned entry count equals I6ExpectedEntryCount" "$lockstep_ps_count"
 
-# exempt-dir docs/features/ present in both scripts
-grep -qE '"docs/features/"' scripts/verify_all.sh \
-    && assert "structural lockstep: verify_all.sh exempt-dir includes docs/features/" 1 \
-    || assert "structural lockstep: verify_all.sh exempt-dir includes docs/features/" 0
-grep -qE '"docs/features/"' scripts/verify_all.ps1 \
-    && assert "structural lockstep: verify_all.ps1 exempt-dir includes docs/features/" 1 \
-    || assert "structural lockstep: verify_all.ps1 exempt-dir includes docs/features/" 0
+lockstep_ps=1
+if [[ "${#ps1_recs[@]}" -ne "${#self_banned[@]}" ]]; then
+    lockstep_ps=0
+    echo "    count mismatch: verify_all.ps1=${#ps1_recs[@]} driver=${#self_banned[@]}"
+else
+    for i in "${!ps1_recs[@]}"; do
+        live_rec="${ps1_recs[$i]}"
+        self_rec=$(strip_wrap "${self_banned[$i]}")
+        IFS='|' read -r live_a live_r live_e live_g <<< "$live_rec"
+        IFS='|' read -r self_a self_r self_e self_g <<< "$self_rec"
+        for f in anchors reason exclude gap; do
+            case "$f" in
+                anchors) lv="$live_a"; sv="$self_a" ;;
+                reason)  lv="$live_r"; sv="$self_r" ;;
+                exclude) lv="$live_e"; sv="$self_e" ;;
+                gap)     lv="$live_g"; sv="$self_g" ;;
+            esac
+            if ! i6_field_eq "$lv" "$sv"; then
+                lockstep_ps=0
+                echo "    entry #$((i+1)) field $f mismatch: live=$(i6_format_field "$lv") driver=$(i6_format_field "$sv")"
+            fi
+        done
+    done
+fi
+assert "structural lockstep: verify_all.ps1 \$banned matches driver verbatim (per-entry x 4 fields)" "$lockstep_ps"
+
+# ----- 3c — exempt-file + exempt-dir lockstep, element-wise -----
+extract_array_block() {                  # $1 = file, $2 = bash array name like i6_exempt_files
+    awk -v name="$2" '
+        $0 ~ "^"name"=\\(" {f=1; next}
+        f && /^\)/ {f=0}
+        f { print }
+    ' "$1" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/^"//' -e 's/"$//'
+}
+extract_ps_exempt_list() {               # $1 = verify_all.ps1, $2 = PS variable name (exempt | exemptDirs)
+    # Capture the body between `$<name> = @(` and the next `)`. The block may be
+    # single-line (e.g. `$exemptDirs = @("docs/features/", "参考/")`) OR multi-line
+    # (e.g. `$exempt = @( ... )`); both cases are handled. Character classes
+    # `[$]` and `[(]` avoid awk's regex-escape pitfalls (literal `$` would be the
+    # end-of-line anchor; literal `(` would open a group).
+    awk -v name="$2" '
+        BEGIN { open = "[$]" name "[[:space:]]*=[[:space:]]*@[(]" }
+        !f && $0 ~ open {
+            sub(open, "", $0)
+            f = 1
+        }
+        f {
+            if (match($0, /[)]/)) {
+                print substr($0, 1, RSTART - 1)
+                f = 0
+                next
+            }
+            print
+        }
+    ' "$1" \
+        | tr ',' '\n' \
+        | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' \
+        | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//" \
+        | grep -v '^$'
+}
+
+sh_exempt_files=()
+while IFS= read -r ln; do sh_exempt_files+=("$ln"); done < <(extract_array_block scripts/verify_all.sh i6_exempt_files)
+sh_exempt_dirs=()
+while IFS= read -r ln; do sh_exempt_dirs+=("$ln"); done < <(extract_array_block scripts/verify_all.sh i6_exempt_dirs)
+ps1_exempt_files=()
+while IFS= read -r ln; do ps1_exempt_files+=("$ln"); done < <(extract_ps_exempt_list scripts/verify_all.ps1 exempt)
+ps1_exempt_dirs=()
+while IFS= read -r ln; do ps1_exempt_dirs+=("$ln"); done < <(extract_ps_exempt_list scripts/verify_all.ps1 exemptDirs)
+
+# i6_compare_lists LABEL LIVE_ARRAY_NAME CANONICAL_ARRAY_NAME — element-wise equality.
+# Sets the global $list_cmp_ok to 1/0 (we cannot return arrays from bash).
+i6_compare_lists() {
+    local label="$1" live_name="$2" canon_name="$3"
+    local -n live_arr="$live_name"
+    local -n canon_arr="$canon_name"
+    list_cmp_ok=1
+    if [[ "${#live_arr[@]}" -ne "${#canon_arr[@]}" ]]; then
+        list_cmp_ok=0
+        echo "    $label count mismatch: live=${#live_arr[@]} canonical=${#canon_arr[@]}"
+        return
+    fi
+    local i
+    for i in "${!live_arr[@]}"; do
+        if [[ "${live_arr[$i]}" != "${canon_arr[$i]}" ]]; then
+            list_cmp_ok=0
+            echo "    $label element #$((i+1)) mismatch: live='${live_arr[$i]}' canonical='${canon_arr[$i]}'"
+        fi
+    done
+}
+
+i6_compare_lists "verify_all.ps1 \$exempt" ps1_exempt_files i6_exempt_files
+assert "exempt-file lockstep: verify_all.ps1 \$exempt equals canonical (element-wise)" "$list_cmp_ok"
+i6_compare_lists "verify_all.sh i6_exempt_files" sh_exempt_files i6_exempt_files
+assert "exempt-file lockstep: verify_all.sh i6_exempt_files equals canonical (element-wise)" "$list_cmp_ok"
+i6_compare_lists "verify_all.ps1 \$exemptDirs" ps1_exempt_dirs i6_exempt_dirs
+assert "exempt-dir lockstep: verify_all.ps1 \$exemptDirs equals canonical (element-wise)" "$list_cmp_ok"
+i6_compare_lists "verify_all.sh i6_exempt_dirs" sh_exempt_dirs i6_exempt_dirs
+assert "exempt-dir lockstep: verify_all.sh i6_exempt_dirs equals canonical (element-wise)" "$list_cmp_ok"
 
 # ---------------------------------------------------------------------------
 # Assertion 4 — no-error: the metacharacter / Unicode fixtures produce no stderr.
@@ -348,6 +576,60 @@ if i6_dir_exempt "scripts/verify_all.sh"; then
     assert "F-2: a non-exempt path (scripts/verify_all.sh) is NOT dir-exempt" 0
 else
     assert "F-2: a non-exempt path (scripts/verify_all.sh) is NOT dir-exempt" 1
+fi
+
+# ---------------------------------------------------------------------------
+# Assertion 7 — AC-8 permanent fixture coverage (T-005 §3.6 / §8).
+# File-exempt predicate, dir-exempt fixture path, combined predicate, and
+# AC-14 negative-regression on a real file at a non-exempt path.
+# ---------------------------------------------------------------------------
+echo ""
+echo "--- Assertion 7: AC-8 permanent fixture coverage ---"
+
+# 7.1 file-exempt predicate positive corpus — every canonical exempt path is exempt.
+for exempt_entry in "${i6_exempt_files[@]}"; do
+    if i6_file_exempt "$exempt_entry"; then
+        assert "file-exempt predicate: $exempt_entry is reported exempt" 1
+    else
+        assert "file-exempt predicate: $exempt_entry is reported exempt" 0
+    fi
+done
+
+# 7.2 file-exempt predicate negative corpus — three known non-exempt paths.
+neg_file_corpus=( "README.md" "docs/concepts.md" "scripts/harness-sync.sh" )
+for nonexempt_entry in "${neg_file_corpus[@]}"; do
+    if i6_file_exempt "$nonexempt_entry"; then
+        assert "file-exempt predicate: $nonexempt_entry is NOT reported exempt" 0
+    else
+        assert "file-exempt predicate: $nonexempt_entry is NOT reported exempt" 1
+    fi
+done
+
+# 7.3 combined predicate vs dir-exempt synthetic path (AC-12).
+if i6_exempt "docs/features/some-task/03_GATE_REVIEW.md"; then
+    assert "combined exempt: docs/features/some-task/03_GATE_REVIEW.md skipped (dir-exempt)" 1
+else
+    assert "combined exempt: docs/features/some-task/03_GATE_REVIEW.md skipped (dir-exempt)" 0
+fi
+
+# 7.4 combined predicate vs every canonical exempt-file path (AC-13).
+for exempt_entry in "${i6_exempt_files[@]}"; do
+    if i6_exempt "$exempt_entry"; then
+        assert "combined exempt: $exempt_entry skipped (file-exempt)" 1
+    else
+        assert "combined exempt: $exempt_entry skipped (file-exempt)" 0
+    fi
+done
+
+# 7.5 AC-14 negative regression — physical file at non-exempt path with banned
+# content MUST hit. This guards against a future bug that makes the exemption
+# predicate return true for all paths.
+ac14_raw=$(i6_scan_file "$fx_tmp/fx-ac14-nonexempt.md")
+ac14_idxs=$(printf '%s\n' "$ac14_raw" | grep -oE '^[0-9]+' | sort -n | tr '\n' ' ' | sed 's/ $//')
+if [[ -n "$ac14_idxs" ]]; then
+    assert "AC-14 negative regression: non-exempt fixture with banned content HITs" 1
+else
+    assert "AC-14 negative regression: non-exempt fixture with banned content HITs" 0
 fi
 
 echo ""

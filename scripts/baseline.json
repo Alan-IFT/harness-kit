@@ -12,6 +12,6 @@
   "test_init_bash_no_python3_assertions": 191,
   "test_supervisor_ps_assertions": 57,
   "test_supervisor_bash_no_python3_assertions": 53,
-  "test_verify_i6_ps_assertions": 35,
-  "test_verify_i6_bash_assertions": 34
+  "test_verify_i6_ps_assertions": 56,
+  "test_verify_i6_bash_assertions": 56
 }

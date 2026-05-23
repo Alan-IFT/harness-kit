@@ -2,7 +2,7 @@
 
 [English](README.md) · **简体中文**
 
-![version](https://img.shields.io/badge/version-0.18.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-30%2F30-brightgreen) ![test-init](https://img.shields.io/badge/test--init-227%2F227-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.18.1-blue) ![verify_all](https://img.shields.io/badge/verify__all-30%2F30-brightgreen) ![test-init](https://img.shields.io/badge/test--init-227%2F227-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
 > **Claude Code 的 Harness Engineering 工具包** — 一个 Claude Code Plugin（10 个 skills + 项目模板），把"有纪律的 AI 驱动开发"带到全栈和后端项目里。
 >
@@ -263,6 +263,7 @@ Markdown 文档：
 | 0.17.3 | 已交付 | **bootstrap 红线措辞修复**：`CLAUDE.md` / `copilot-instructions.md` 的红线把 `.claude/` 错标成"生成/静态文件"。`.claude/settings.json` 两者都不是——它是 agent 活的、手工维护的启动配置。该条拆成两条：一条讲 `.claude/`（活配置 + 同步生成的 `agents/`/`skills/`，附正确理由），一条讲真正的静态 stub。修了 4 个模板 + 2 个 dogfood 文件。无功能变更；verify_all 仍 30 项检查。 |
 | 0.17.4 | 已交付 | **v0.10 文档漂移清扫**：把残留在 live 文档/注释里的 v0.10 之前措辞扫干净 —— 不再把 `harness-sync` 描述成会重新生成 `CLAUDE.md` / `copilot-instructions.md`，也不再把 `CLAUDE.md` 错标成"生成的"。改了 `00-core.md` 规则模板（中英）、`settings.json` 模板、`dev-frontend` 模板、README 布局框、getting-started、CONTRIBUTING、init/adopt 两个 skill，并把 `verify_all` I.6 豁免注释与代码对齐。无功能变更；verify_all 仍 30 项检查。 |
 | 0.18.0 | 已交付 | **I.6 gap-tolerant retired-claim 守护**：`verify_all` I.6 短语守护从字面子串匹配升级为 gap-tolerant 有序锚点扫描 —— 每条黑名单条目是一组纯文本锚点，必须在一行内按顺序出现且间隔在限定范围内，并可带行级 `exclude` token，使准确的否定表述不再误 FAIL。I.6 豁免目录拓宽到整个 `docs/features/` 子树。新增 `scripts/test-verify-i6.{ps1,sh}` 回归脚本对。无新增检查；verify_all 仍 30 项。 |
+| 0.18.1 | 已交付 | **`test-verify-i6` 加固**：结构化锁步升级到完整的 2×2（`test-verify-i6.{ps1,sh}` × `verify_all.{ps1,sh}`）逐条目 × 4 字段（anchors / reason / exclude / gap）逐字比较 —— 修复 v0.18.0 留下的 PS 侧只校 entry count + 第 #10 条 `.claude/` exclude 的缺口。新增与现有 dir-exempt 对称的 file-exempt 谓词，并对 I.6 exempt-file (`CHANGELOG.md`、`architecture.html`、…) 与 exempt-dir 列表做逐元素锁步。AC-8（`CHANGELOG.md` / `_archived/` 豁免）从 v0.18.0 的临时 inline-injection 探针升级为永久 corpus fixture。断言计数：35→56（PS）、34→56（bash）；verify_all 仍 30 项。 |
 | 0.19+ | 规划中 | PM 在用户配置的阶段边界自动派发 supervisor（在 ≥10 个真实任务证明误报预算后启用） |
 
 ## 设计原则
