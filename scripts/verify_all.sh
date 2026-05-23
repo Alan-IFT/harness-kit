@@ -597,6 +597,61 @@ else
     step "I.6" "No retired-claim phrases in current docs/templates" "PASS"
 fi
 
+# J.1 — settings.json schema integrity (v0.18.2+)
+# See .harness/rules/80-settings-schema.md for the workflow contract.
+# Catches the two recurring failure modes hand-edits keep producing:
+#   1. Invalid key inside the `hooks` object (additionalProperties:false in schema).
+#   2. $schema URL missing the `.json` suffix — redirects to a non-JSON MIME so
+#      editors silently flag the whole file as invalid.
+# Pure bash + grep — no python/jq dependency (verify_all must run on the
+# Git-for-Windows MSYS shell that lacks both). The parser only extracts the
+# `$schema` line and the keys inside the top-level `hooks` object; that is
+# sufficient to detect both known failure classes without a full JSON parser.
+j1_canonical='https://json.schemastore.org/claude-code-settings.json'
+j1_valid_hook_events="PreToolUse PostToolUse PostToolUseFailure PermissionRequest PermissionDenied Notification UserPromptSubmit UserPromptExpansion Stop StopFailure SubagentStart SubagentStop PreCompact PostCompact PostToolBatch Elicitation ElicitationResult TeammateIdle TaskCompleted TaskCreated Setup InstructionsLoaded CwdChanged FileChanged ConfigChange WorktreeCreate WorktreeRemove SessionStart SessionEnd"
+j1_targets=(".claude/settings.json" "skills/harness-init/templates/common/.claude/settings.json.tmpl")
+j1_failures=""
+for jt in "${j1_targets[@]}"; do
+    [[ -f "$jt" ]] || continue
+    # $schema URL check
+    schema_url=$(grep -E '^[[:space:]]*"\$schema"[[:space:]]*:' "$jt" | head -1 | \
+        sed -E 's/^[[:space:]]*"\$schema"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')
+    if [[ -n "$schema_url" && "$schema_url" != "$j1_canonical" ]]; then
+        j1_failures="${j1_failures}${jt}: \$schema='${schema_url}' (expected '${j1_canonical}' — non-.json URL serves wrong MIME, breaks editor validation)"$'\n'
+    fi
+    # Extract keys inside the top-level "hooks": { ... } block. The block ends
+    # at the first '}' at indent level 2 (two-space indent matches our template).
+    in_hooks=0
+    while IFS= read -r jline; do
+        if (( in_hooks == 0 )); then
+            [[ "$jline" =~ ^[[:space:]]*\"hooks\"[[:space:]]*: ]] && in_hooks=1
+            continue
+        fi
+        # Stop at the closing brace of the hooks block (assumes 2-space indent).
+        [[ "$jline" =~ ^[[:space:]]{0,2}\}[[:space:]]*,?[[:space:]]*$ ]] && break
+        # Match a key like:   "Foo": ...   at hooks-child indent.
+        if [[ "$jline" =~ ^[[:space:]]+\"([^\"]+)\"[[:space:]]*: ]]; then
+            jkey="${BASH_REMATCH[1]}"
+            # Skip nested keys (hooks[].hooks[] inner objects) — those live
+            # two levels deeper. Only direct children of the hooks object are
+            # at column 4 (4 spaces). Use indent depth as the discriminator.
+            indent="${jline%%\"*}"
+            indent_len="${#indent}"
+            (( indent_len == 4 )) || continue
+            # Is jkey in the valid event list? Word-boundary match.
+            if [[ " $j1_valid_hook_events " != *" $jkey "* ]]; then
+                j1_failures="${j1_failures}${jt}: hooks.${jkey} is not a valid Claude Code hook event (schema rejects; move doc keys to root)"$'\n'
+            fi
+        fi
+    done < "$jt"
+done
+if [[ -n "$j1_failures" ]]; then
+    step "J.1" "settings.json schema integrity (.claude/ + template)" "FAIL" "settings.json schema violations:
+${j1_failures}"
+else
+    step "J.1" "settings.json schema integrity (.claude/ + template)" "PASS"
+fi
+
 # Summary
 echo ""
 echo "=== Summary ==="

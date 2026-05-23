@@ -45,3 +45,6 @@ verification_history.log
 
 # Harness — ephemeral intervention signal (consumed and deleted by PM)
 .harness/intervention.md
+
+# Claude Code runtime — session lockfile, regenerated each session
+.claude/scheduled_tasks.lock

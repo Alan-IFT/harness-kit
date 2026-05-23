@@ -564,6 +564,61 @@ Step "I.6" "No retired-claim phrases in current docs/templates (FAIL on resurgen
     }
 }
 
+# J. Claude Code settings.json schema integrity (v0.18.2+)
+# See .harness/rules/80-settings-schema.md for the workflow contract.
+# Catches the two recurring failure modes hand-edits keep producing:
+#   1. Invalid key inside the `hooks` object (additionalProperties:false in schema).
+#   2. `$schema` URL missing the `.json` suffix — redirects to a non-JSON MIME so
+#      editors silently flag the whole file as invalid.
+Step "J.1" "settings.json schema integrity (.claude/ + template)" {
+    # Canonical list per https://www.schemastore.org/claude-code-settings.json
+    # (fetched 2026-05-23). Update only when the upstream schema adds events.
+    $validHookEvents = @(
+        'PreToolUse', 'PostToolUse', 'PostToolUseFailure', 'PermissionRequest',
+        'PermissionDenied', 'Notification', 'UserPromptSubmit', 'UserPromptExpansion',
+        'Stop', 'StopFailure', 'SubagentStart', 'SubagentStop', 'PreCompact',
+        'PostCompact', 'PostToolBatch', 'Elicitation', 'ElicitationResult',
+        'TeammateIdle', 'TaskCompleted', 'TaskCreated', 'Setup',
+        'InstructionsLoaded', 'CwdChanged', 'FileChanged', 'ConfigChange',
+        'WorktreeCreate', 'WorktreeRemove', 'SessionStart', 'SessionEnd'
+    )
+    $canonicalSchema = 'https://json.schemastore.org/claude-code-settings.json'
+    $targets = @(
+        @{ path = '.claude/settings.json'; isTemplate = $false },
+        @{ path = 'skills/harness-init/templates/common/.claude/settings.json.tmpl'; isTemplate = $true }
+    )
+    $failures = @()
+    foreach ($t in $targets) {
+        if (-not (Test-Path -LiteralPath $t.path)) { continue }
+        $raw = Get-Content -LiteralPath $t.path -Raw -ErrorAction SilentlyContinue
+        if (-not $raw) { $failures += "$($t.path): empty or unreadable"; continue }
+        try {
+            $obj = $raw | ConvertFrom-Json -ErrorAction Stop
+        } catch {
+            $failures += "$($t.path): not valid JSON ($($_.Exception.Message))"
+            continue
+        }
+        if ($obj.PSObject.Properties.Name -contains '$schema') {
+            $s = $obj.'$schema'
+            if ($s -ne $canonicalSchema) {
+                $failures += "$($t.path): `$schema='$s' (expected '$canonicalSchema' — non-.json URL serves wrong MIME, breaks editor validation)"
+            }
+        }
+        if ($obj.PSObject.Properties.Name -contains 'hooks' -and $obj.hooks) {
+            foreach ($k in $obj.hooks.PSObject.Properties.Name) {
+                # Underscore-prefixed keys are NOT valid inside hooks — schema is
+                # additionalProperties:false. Doc keys belong at root.
+                if ($k -notin $validHookEvents) {
+                    $failures += "$($t.path): hooks.$k is not a valid Claude Code hook event (schema rejects; move doc keys to root)"
+                }
+            }
+        }
+    }
+    if ($failures.Count -gt 0) {
+        throw ("settings.json schema violations:`n  " + ($failures -join "`n  "))
+    }
+}
+
 # Summary
 Write-Host ""
 Write-Host "=== Summary ===" -ForegroundColor Cyan

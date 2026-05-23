@@ -2,7 +2,7 @@
 
 **English** · [简体中文](README.zh-CN.md)
 
-![version](https://img.shields.io/badge/version-0.18.1-blue) ![verify_all](https://img.shields.io/badge/verify__all-30%2F30-brightgreen) ![test-init](https://img.shields.io/badge/test--init-227%2F227-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.18.2-blue) ![verify_all](https://img.shields.io/badge/verify__all-31%2F31-brightgreen) ![test-init](https://img.shields.io/badge/test--init-227%2F227-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
 > **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (10 skills + project templates) that brings disciplined AI-driven development to fullstack and backend projects.
 >
@@ -155,7 +155,7 @@ Hit Claude Code's rate limit mid-task? Switch to GitHub Copilot in VS Code and k
 
 ### Three layers of regression testing
 
-- `verify_all` (30 checks) — repo health
+- `verify_all` (31 checks) — repo health
 - `test-init` (227 assertions on PowerShell; 191 on Bash without python3) — init template logic on empty dirs (3 project types × 75 PS / 63 Bash, plus 2 shell-agnostic BUG-2 placeholder-regex regression assertions)
 - `test-real-project` (82 assertions) — overlay onto real fixtures (todo-fullstack, todo-backend)
 
@@ -262,6 +262,7 @@ Markdown docs:
 | 0.17.4 | done | **v0.10 doc-drift cleanup**: swept the residual pre-v0.10 wording out of live docs/comments — `harness-sync` no longer described as regenerating `CLAUDE.md` / `copilot-instructions.md`, and `CLAUDE.md` is no longer mislabeled "generated". Touched the `00-core.md` rule templates (EN + ZH), `settings.json` templates, `dev-frontend` template, README layout boxes, getting-started, CONTRIBUTING, the two init/adopt skills, and reconciled the `verify_all` I.6 exemption comments. No feature change; `verify_all` stays 30 checks. |
 | 0.18.0 | done | **I.6 gap-tolerant retired-claim guard**: the `verify_all` I.6 phrase guard upgrades from literal-substring matching to a gap-tolerant ordered-anchor scan — each banned entry is a list of plain-text anchors that must appear in order on one line within a bounded gap, with optional line-scoped `exclude` tokens so accurate negated prose does not FAIL. I.6 exempt-dir widened to the whole `docs/features/` subtree. New `scripts/test-verify-i6.{ps1,sh}` regression pair. No new check; `verify_all` stays 30. |
 | 0.18.1 | done | **`test-verify-i6` hardening**: structural-lockstep upgraded to a full 2×2 (`test-verify-i6.{ps1,sh}` × `verify_all.{ps1,sh}`) verbatim per-entry × 4-field (anchors / reason / exclude / gap) comparison — closes the v0.18.0 leftover where the PS-side only checked entry count + entry #10's `.claude/` exclude. New file-exempt predicate symmetric to the existing dir-exempt one, plus element-wise lockstep on the I.6 exempt-file (`CHANGELOG.md`, `architecture.html`, …) and exempt-dir lists. AC-8 (`CHANGELOG.md` / `_archived/` exemption) now has a permanent corpus fixture instead of the v0.18.0 inline-injection probe. Assertion counts: 35→56 (PS), 34→56 (bash); `verify_all` stays 30. |
+| 0.18.2 | done | **`settings.json` schema-validation guard (J.1)**: the `$schema` URL in the dogfood + template `.claude/settings.json` was missing the `.json` suffix, so the 301-redirect target served `application/octet-stream` and many editors silently rejected the schema — file flagged invalid even though JSON parsed. Canonical URL restored. New `verify_all` J.1 check parses both files (repo + `.tmpl`), enforces the canonical `$schema`, and rejects any key inside `hooks` that is not in the upstream event enum — catches both v0.17.2 (wrong key placement) and v0.18.2 (wrong URL form) classes at the gate. New rule fragment `.harness/rules/80-settings-schema.md` documents the "consult upstream schema via context7 before editing" workflow. `verify_all` 30 → 31 checks. |
 | 0.19+ | planned | Supervisor auto-dispatch by PM at user-configurable stage boundaries (once false-positive budget is proven against ≥10 real tasks) |
 
 ## Design principles

@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.18.2] - 2026-05-23
+
+Patch release. Fixes a recurring class of `.claude/settings.json` schema-validation bugs (the second one in two consecutive releases) and adds a `verify_all` gate so the class cannot recur silently.
+
+### Why
+
+`.claude/settings.json` broke editor-side schema validation twice in two consecutive minor releases. Both bugs shared the same shape — a tiny textual edit passed `JSON.parse` but failed schema validation, and no `verify_all` check existed to catch it. The writer's editor showed only a subtle squiggle; the file loaded at runtime fine for the writer's session; the next contributor inherited a broken file with no signal.
+
+- **v0.17.2** — doc keys (`_doc_sync_hook`, `_guard_hook`) lived inside `hooks`, but the upstream schema declares `hooks` as `additionalProperties: false`. Fix moved them to root (`additionalProperties: true`).
+- **v0.18.2** — `$schema` URL omitted the `.json` suffix (`https://json.schemastore.org/claude-code-settings`). The non-suffix form 301-redirects to a URL serving `application/octet-stream`, which VS Code / JetBrains silently refuse to load. The whole file flagged invalid even though JSON parsed.
+
+### Fixed — `$schema` URL canonical form
+
+- **`.claude/settings.json`** (dogfood): `$schema` `https://json.schemastore.org/claude-code-settings` → `https://json.schemastore.org/claude-code-settings.json`. Canonical URL serves `application/json; charset=utf-8` per the v0.17.2 verification methodology.
+- **`skills/harness-init/templates/common/.claude/settings.json.tmpl`** (every project from `/harness-init` and `/harness-adopt`): same one-character relocation. Propagates to every new project on next install.
+
+### Added — `verify_all` J.1 settings.json schema integrity (PS + bash twin)
+
+- New check **J.1** parses both `.claude/settings.json` and the `.tmpl` (no `jq` / `python3` dependency — pure shell + grep so it runs on Git-for-Windows MSYS), and FAILs when:
+  1. The file does not parse as JSON.
+  2. `$schema` is present but not exactly the canonical `https://json.schemastore.org/claude-code-settings.json`.
+  3. Any key inside the top-level `hooks` object is not in the upstream hook event enum (29 valid events as of 2026-05-23: `PreToolUse`, `PostToolUse`, `Stop`, `SessionStart`, … — full list in `scripts/verify_all.ps1` `$validHookEvents` and `scripts/verify_all.sh` `j1_valid_hook_events`, kept in lockstep).
+- Catches **both** historical bugs at the gate: the v0.17.2 wrong-key-placement class FAILs on rule (3); the v0.18.2 wrong-URL-form class FAILs on rule (2). Future bugs of either shape will be caught before commit.
+
+### Added — `.harness/rules/80-settings-schema.md`
+
+- New rule fragment documenting the editing contract: **before** editing `.claude/settings.json` or its `.tmpl`, consult the upstream schema via the `context7` MCP tool (or `WebFetch` against `https://www.schemastore.org/claude-code-settings.json` as fallback) — never recall the schema shape from memory or training data. Triggered on edits to either file.
+- Wired into `AI-GUIDE.md` rule index.
+
+### Changed — `verify_all` check count: 30 → 31
+
+- `scripts/baseline.json`: `verify_all_checks` 30 → 31, `last_verify` → `2026-05-23`.
+- Live freshness stamps bumped from `at v0.18.1` / `at v0.18.0` → `at v0.18.2`: `AI-GUIDE.md` (2 places), `docs/dev-map.md`, `docs/manual-e2e-test.md`, `docs/walkthrough.html` sample output.
+
+### Changed — Version stamps
+
+- `.claude-plugin/plugin.json` / `.claude-plugin/marketplace.json`: `0.18.1` → `0.18.2`.
+- `README.md` / `README.zh-CN.md`: version badge `0.18.1` → `0.18.2`; verify_all badge `30/30` → `31/31`; new `0.18.2` Roadmap row.
+
+### Notes
+
+- No functional change to existing hooks or permissions. Both settings.json files remain byte-equivalent in their `hooks` / `permissions` blocks; only `$schema` value changed.
+- Insight added to `.harness/insight-index.md` recording the recurrence pattern (class: "small edit passes JSON-parse but breaks schema validation; verify_all gate must validate URL + key positions, not just parse").
+
 ## [0.18.1] - 2026-05-23
 
 Patch release. Closes the two non-blocking observations left by v0.18.0 (the I.6 gap-tolerant retired-claim guard): (a) the PS-side `test-verify-i6` structural lockstep was weaker than the bash side — it only checked entry count + entry #10's `exclude=@('.claude/')` clause, so a typo in any of entries #1 / #3–9 / #11–13's `reason` / `exclude` / `gap` fields in `scripts/verify_all.ps1` would slip past PS lockstep; (b) AC-8 (`CHANGELOG.md` file-exempt + `docs/features/_archived/` dir-exempt preserved) had no permanent corpus fixture — the v0.18.0 QA validated it via an inline injection probe that did not survive into the regression set. This release adds the missing coverage in both shells; no `verify_all` behavior change.
