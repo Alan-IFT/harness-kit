@@ -467,41 +467,61 @@ Step "I.7" "Ignored INTERVENE supervision reports (WARN if >48h old on active ta
 }
 
 Step "I.6" "No retired-claim phrases in current docs/templates (FAIL on resurgence)" {
-    # Banned literal substrings — phrases that used to be accurate but became wrong
-    # after a documented architectural change. If you see one of these in a live file
-    # outside the historical exemption list, it's drift, not history.
+    # Retired-claim guard (gap-tolerant since v0.18.0). Phrases that used to be accurate
+    # but became wrong after a documented architectural change — resurgence is drift,
+    # not history. As of v0.18.0 the matcher is a gap-tolerant ordered-anchor scan: each
+    # banned entry is an ordered list of literal anchor tokens, and a file hits when all
+    # anchors appear in order on ONE line within a bounded gap (default 40 chars,
+    # per-entry overridable). Each entry may also carry literal `exclude` tokens — if any
+    # appears anywhere on the matched LINE (line-scoped), the match is rejected, so
+    # accurate negated prose ("rules are NOT composed into CLAUDE.md") does not FAIL.
     #
-    # When a retired claim becomes accurate again (e.g. composition returns), remove
-    # the line from this list rather than carve a new file-level exception.
+    # Anchors/exclusions are PLAIN TEXT — [regex]::Escape handles every metacharacter.
+    # Any anchor containing a literal backtick (the `CLAUDE.md` code-span anchors) MUST
+    # be authored in a SINGLE-quoted string: backtick is the PS escape char inside
+    # double quotes. When a retired claim becomes accurate again, delete the entry
+    # rather than carve a file-level exception. This is the 1:1 twin of verify_all.sh's
+    # $i6_banned list — keep both in lockstep (test-verify-i6 asserts it).
+    $gapDefault = 40
     $banned = @(
-        @{ phrase = "scaffolding-only"; reason = "harness-adopt has been fully automated since v0.3" },
-        @{ phrase = "Composed into ``CLAUDE.md``"; reason = "rules are not composed into CLAUDE.md since v0.10" },
-        @{ phrase = "composed by filename order"; reason = "rules not composed since v0.10" },
-        @{ phrase = "composition order in CLAUDE.md"; reason = "no composition in CLAUDE.md since v0.10" },
-        @{ phrase = "regenerates CLAUDE.md"; reason = "harness-sync does not regenerate CLAUDE.md since v0.10" },
-        @{ phrase = 'regenerates `CLAUDE.md`'; reason = "harness-sync does not regenerate CLAUDE.md since v0.10" },
-        @{ phrase = "regenerated CLAUDE.md"; reason = "CLAUDE.md is a static stub since v0.10" },
-        @{ phrase = 'regenerated `CLAUDE.md`'; reason = "CLAUDE.md is a static stub since v0.10" },
-        @{ phrase = "Generated from .harness/rules"; reason = "CLAUDE.md not generated from rules since v0.10" },
-        @{ phrase = ".harness/ → CLAUDE.md"; reason = "harness-sync target is .claude/, not CLAUDE.md, since v0.10" },
-        @{ phrase = "harness-sync 生成 CLAUDE.md"; reason = "v0.10 起 harness-sync 不再生成 CLAUDE.md" },
-        @{ phrase = "harness-sync 合成 CLAUDE.md"; reason = "v0.10 起规则不再合成进 CLAUDE.md" },
-        @{ phrase = "重新生成的 CLAUDE.md"; reason = "v0.10 起 CLAUDE.md 是 stub，不再被重新生成" }
+        @{ anchors = @('scaffolding-only'); reason = "harness-adopt has been fully automated since v0.3"; exclude = @(); gap = $null },
+        @{ anchors = @('Composed','into','`CLAUDE.md`'); reason = "rules are not composed into CLAUDE.md since v0.10"; exclude = @('not','no longer','referenced'); gap = 20 },
+        @{ anchors = @('composed','by','filename','order'); reason = "rules not composed since v0.10"; exclude = @(); gap = $null },
+        @{ anchors = @('composition','order','in','CLAUDE.md'); reason = "no composition in CLAUDE.md since v0.10"; exclude = @('not','no longer'); gap = $null },
+        @{ anchors = @('regenerates','CLAUDE.md'); reason = "harness-sync does not regenerate CLAUDE.md since v0.10"; exclude = @(); gap = $null },
+        @{ anchors = @('regenerates','`CLAUDE.md`'); reason = "harness-sync does not regenerate CLAUDE.md since v0.10"; exclude = @(); gap = $null },
+        @{ anchors = @('regenerated','CLAUDE.md'); reason = "CLAUDE.md is a static stub since v0.10"; exclude = @(); gap = $null },
+        @{ anchors = @('regenerated','`CLAUDE.md`'); reason = "CLAUDE.md is a static stub since v0.10"; exclude = @(); gap = $null },
+        @{ anchors = @('Generated','from','.harness/rules'); reason = "CLAUDE.md not generated from rules since v0.10"; exclude = @(); gap = $null },
+        @{ anchors = @('.harness/','→','CLAUDE.md'); reason = "harness-sync target is .claude/, not CLAUDE.md, since v0.10"; exclude = @('.claude/'); gap = $null },
+        @{ anchors = @('harness-sync','生成','CLAUDE.md'); reason = "v0.10 起 harness-sync 不再生成 CLAUDE.md"; exclude = @('不'); gap = $null },
+        @{ anchors = @('harness-sync','合成','CLAUDE.md'); reason = "v0.10 起规则不再合成进 CLAUDE.md"; exclude = @('不'); gap = $null },
+        @{ anchors = @('重新生成的','CLAUDE.md'); reason = "v0.10 起 CLAUDE.md 是 stub，不再被重新生成"; exclude = @(); gap = $null }
     )
+    # Build an ERE-equivalent .NET pattern from an anchor list — each anchor escaped to
+    # match literally, joined by a bounded gap.
+    function Build-I6Regex($anchors, $gap) {
+        ($anchors | ForEach-Object { [regex]::Escape($_) }) -join "(.{0,$gap})"
+    }
     # Files exempt because they record history honestly: CHANGELOG describes what each
-    # release did, _archived/ holds per-task docs from past releases, architecture.html
-    # / walkthrough.html are v0.5/v0.6-era visual snapshots with explicit "v0.5 snapshot"
-    # banners pointing readers at AI-GUIDE.md and CHANGELOG.md for current state, and
-    # verify_all itself stores the banned-phrase strings. (MIGRATION.md is NOT exempt —
-    # it is scanned; its old/new comparisons phrase around the banned literals.)
+    # release did, architecture.html / walkthrough.html are v0.5/v0.6-era visual
+    # snapshots with explicit "v0.5 snapshot" banners, and verify_all itself stores the
+    # banned-phrase strings. test-verify-i6.{ps1,sh} are the I.6 regression drivers —
+    # they hold a verbatim copy of this banned list plus banned-phrase fixtures, so
+    # they are exempt for the same reason verify_all is. The whole docs/features/
+    # subtree is exempt because per-task stage docs must quote retired claims to design
+    # the guard. (MIGRATION.md is NOT exempt — it is scanned; its old/new comparisons
+    # phrase around the banned literals.)
     $exempt = @(
         "CHANGELOG.md",
         "architecture.html",
         "docs/walkthrough.html",
         "scripts/verify_all.ps1",
-        "scripts/verify_all.sh"
+        "scripts/verify_all.sh",
+        "scripts/test-verify-i6.ps1",
+        "scripts/test-verify-i6.sh"
     )
-    $exemptDirs = @("docs/features/_archived/", "参考/")
+    $exemptDirs = @("docs/features/", "参考/")
     $hits = @()
     $tracked = git ls-files 2>$null
     foreach ($file in $tracked) {
@@ -512,9 +532,30 @@ Step "I.6" "No retired-claim phrases in current docs/templates (FAIL on resurgen
         if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { continue }
         $content = Get-Content -LiteralPath $file -Raw -ErrorAction SilentlyContinue
         if (-not $content) { continue }
+        $lines = $content -split "`r?`n"
         foreach ($b in $banned) {
-            if ($content.Contains($b.phrase)) {
-                $hits += "$file : '$($b.phrase)' — $($b.reason)"
+            $gap = if ($null -ne $b.gap) { $b.gap } else { $gapDefault }
+            # IgnoreCase is the explicit D-2 mechanism — never a PS operator default.
+            # Singleline stays $false so `.` excludes newline (single-line scan).
+            $rx = [regex]::new((Build-I6Regex $b.anchors $gap), [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+            $lineNo = 0
+            foreach ($line in $lines) {
+                $lineNo++
+                $m = $rx.Match($line)
+                if (-not $m.Success) { continue }
+                # Line-scoped exclude: reject if any exclude token appears anywhere on
+                # the WHOLE matched line (not just the matched span).
+                $excluded = $false
+                foreach ($x in $b.exclude) {
+                    if ($line.IndexOf($x, [System.StringComparison]::OrdinalIgnoreCase) -ge 0) {
+                        $excluded = $true; break
+                    }
+                }
+                if ($excluded) { continue }
+                $span = $m.Value
+                if ($span.Length -gt 120) { $span = $span.Substring(0, 120) }
+                $hits += "${file}:$lineNo : [$($b.anchors -join '~')] — $($b.reason) | matched: `"$span`""
+                break
             }
         }
     }

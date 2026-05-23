@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-05-23
+
+Minor release. Upgrades the `verify_all` **I.6 retired-claim guard** from literal-substring matching to a **gap-tolerant ordered-anchor scan**. The v0.15.1 / v0.17.4 sweeps repeatedly found that a retired claim survives by being *re-phrased* — the same wrong idea with a word inserted between the banned tokens (`composed` … `into` … `` `CLAUDE.md` ``). A literal-substring guard cannot catch that. I.6 now matches on an ordered list of plain-text anchors within a bounded gap, so paraphrased resurgences are caught too. No new `verify_all` check — the count stays **30**.
+
+### Changed — I.6 is now a gap-tolerant ordered-anchor scan
+
+- **`scripts/verify_all.ps1`** / **`scripts/verify_all.sh`** — the I.6 block is rewritten in both shells. Each banned entry is now an ordered list of literal **anchor** tokens; a file hits when all anchors appear in order on one line within a bounded **gap** (default 40 chars, per-entry overridable). Every entry may carry literal **`exclude`** tokens — if any appears anywhere on the matched *line* (line-scoped), the match is rejected, so accurate negated prose (`rules are NOT composed into CLAUDE.md`) does not FAIL. The 13-entry banned list is migrated 1:1 — same reasons, only the matching shape changes. Anchors stay plain text; the script escapes every regex metacharacter, so authoring a new entry is still a one-line edit.
+- **I.6 exempt-dir widened** — from `docs/features/_archived/` to the whole **`docs/features/`** subtree, in both scripts. Per-task stage docs must quote retired claims to design and review the guard; widening the exemption removes a fragile commit-ordering dependency (a task's own stage docs would otherwise fail its own gate).
+- The bash line-scoped exclude uses `shopt -s nocasematch` + `[[ == *glob* ]]` (a case-insensitive literal substring test) rather than `grep -F -i` — the GNU grep 3.0 shipped with Git-for-Windows MSYS aborts (SIGABRT) on `-F -i` combined. Behaviorally identical to the PowerShell `String.IndexOf(...,OrdinalIgnoreCase)` twin.
+
+### Added — `scripts/test-verify-i6.{ps1,sh}`
+
+- New cross-shell regression pair for the I.6 matcher, modeled on `test-supervisor.{ps1,sh}`. Runs a fixture corpus (one file per banned entry plus gap-boundary, negation, historical-narration, metacharacter/Unicode, multiline, and empty-file cases) in an isolated temp dir, and asserts: per-fixture hit/no-hit behavior, cross-shell parity, structural lockstep against the live `verify_all` 13-entry list, no-stderr on metacharacter fixtures, gap-boundary, and the F-1/F-2/F-4/Rev-4 regression cases. Repo-bespoke — `sync-self` does not mirror it.
+
+### Changed — Version stamps
+
+- `.claude-plugin/plugin.json` / `.claude-plugin/marketplace.json`: `0.17.4` → `0.18.0`.
+- `README.md` / `README.zh-CN.md`: version badge `0.17.4` → `0.18.0`; new `0.18.0` Roadmap row.
+- `AI-GUIDE.md`, `docs/dev-map.md`, `.harness/rules/40-locations.md`: I.6 description updated to "gap-tolerant"; `at v0.17.4` freshness stamps → `at v0.18.0` (check count unchanged at 30).
+
+### Notes
+
+- `verify_all` unchanged at 30 checks — a matcher upgrade, no check added or removed.
+- `test-init` / `test-real-project` / `test-supervisor` unaffected — no test asserts on the I.6 matcher internals.
+
 ## [0.17.4] - 2026-05-22
 
 Patch release. A documentation-freshness sweep: the v0.10 progressive-disclosure rework turned `CLAUDE.md` / `.github/copilot-instructions.md` into static stubs and narrowed `harness-sync` to copy only `.harness/agents/` + `.harness/skills/` → `.claude/`. The v0.15.1 cleanup caught most of the resulting drift, but a residual set of live docs and inline comments still described the pre-v0.10 behavior. v0.17.3 fixed the same mislabel class in the bootstrap *stubs*; this release finishes the job in the *rule templates, scripts, and prose docs*. No feature change, no `verify_all` check added or removed — stays at 30.

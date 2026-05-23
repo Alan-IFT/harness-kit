@@ -498,50 +498,96 @@ else
     step "I.7" "Ignored INTERVENE supervision reports (WARN if >48h old on active task)" "PASS"
 fi
 
-# I.6 — Banned literal substrings that used to be accurate but were retired by a
-# documented architectural change. Resurgence = drift, not history.
-# History-bearing files (CHANGELOG, _archived/, architecture.html, walkthrough.html,
-# verify_all itself) are exempt.
-i6_banned_phrases=(
-    "scaffolding-only|harness-adopt has been fully automated since v0.3"
-    "Composed into \`CLAUDE.md\`|rules are not composed into CLAUDE.md since v0.10"
-    "composed by filename order|rules not composed since v0.10"
-    "composition order in CLAUDE.md|no composition in CLAUDE.md since v0.10"
-    "regenerates CLAUDE.md|harness-sync does not regenerate CLAUDE.md since v0.10"
-    "regenerates \`CLAUDE.md\`|harness-sync does not regenerate CLAUDE.md since v0.10"
-    "regenerated CLAUDE.md|CLAUDE.md is a static stub since v0.10"
-    "regenerated \`CLAUDE.md\`|CLAUDE.md is a static stub since v0.10"
-    "Generated from .harness/rules|CLAUDE.md not generated from rules since v0.10"
-    ".harness/ → CLAUDE.md|harness-sync target is .claude/, not CLAUDE.md, since v0.10"
-    "harness-sync 生成 CLAUDE.md|v0.10 起 harness-sync 不再生成 CLAUDE.md"
-    "harness-sync 合成 CLAUDE.md|v0.10 起规则不再合成进 CLAUDE.md"
-    "重新生成的 CLAUDE.md|v0.10 起 CLAUDE.md 是 stub，不再被重新生成"
+# I.6 — Retired-claim guard (gap-tolerant since v0.18.0). Phrases that used to be
+# accurate but were retired by a documented architectural change. Resurgence = drift,
+# not history. As of v0.18.0 the matcher is a gap-tolerant ordered-anchor scan: each
+# banned entry is an ordered list of literal anchor tokens, and a file hits when all
+# anchors appear in order on ONE line within a bounded gap (default 40 chars, per-entry
+# overridable). Each entry may also carry literal `exclude` tokens — if any appears
+# anywhere on the matched LINE (line-scoped), the match is rejected, so accurate negated
+# prose ("rules are NOT composed into CLAUDE.md") does not FAIL.
+#
+# Record format (`|`-delimited fields, `~`-delimited inner lists):
+#     anchors~tokens | reason | exclude~tokens | gap
+# Anchors/exclusions are PLAIN TEXT — the script escapes every regex metacharacter, so
+# authoring stays a one-line edit. NEVER put a literal `~` or `|` in any anchor, reason,
+# or exclude token: it corrupts the record split. When a retired claim becomes accurate
+# again, delete the line rather than carve a file-level exception.
+# History-bearing files (CHANGELOG, architecture.html, walkthrough.html, verify_all
+# itself, and the test-verify-i6 regression drivers — which hold a verbatim copy of
+# this banned list) are exempt; the whole docs/features/ subtree is exempt because
+# per-task stage docs must quote retired claims to design the guard.
+i6_gap_default=40
+i6_banned=(
+    "scaffolding-only|harness-adopt has been fully automated since v0.3||"
+    "Composed~into~\`CLAUDE.md\`|rules are not composed into CLAUDE.md since v0.10|not~no longer~referenced|20"
+    "composed~by~filename~order|rules not composed since v0.10||"
+    "composition~order~in~CLAUDE.md|no composition in CLAUDE.md since v0.10|not~no longer|"
+    "regenerates~CLAUDE.md|harness-sync does not regenerate CLAUDE.md since v0.10||"
+    "regenerates~\`CLAUDE.md\`|harness-sync does not regenerate CLAUDE.md since v0.10||"
+    "regenerated~CLAUDE.md|CLAUDE.md is a static stub since v0.10||"
+    "regenerated~\`CLAUDE.md\`|CLAUDE.md is a static stub since v0.10||"
+    "Generated~from~.harness/rules|CLAUDE.md not generated from rules since v0.10||"
+    ".harness/~→~CLAUDE.md|harness-sync target is .claude/, not CLAUDE.md, since v0.10|.claude/|"
+    "harness-sync~生成~CLAUDE.md|v0.10 起 harness-sync 不再生成 CLAUDE.md|不|"
+    "harness-sync~合成~CLAUDE.md|v0.10 起规则不再合成进 CLAUDE.md|不|"
+    "重新生成的~CLAUDE.md|v0.10 起 CLAUDE.md 是 stub，不再被重新生成||"
 )
+# Build an ERE from a ~-delimited anchor list, escaping each token to match literally.
+i6_build_regex() {                       # $1 = ~-joined anchors  $2 = gap budget
+    local anchors="$1" gap="$2" out="" first=1 tok esc
+    local IFS='~'
+    for tok in $anchors; do
+        esc=$(printf '%s' "$tok" | sed 's/[.[\](){}*+?|^$\\]/\\&/g')
+        if (( first )); then out="$esc"; first=0; else out="${out}.{0,${gap}}${esc}"; fi
+    done
+    printf '%s' "$out"
+}
 i6_exempt_files=(
     "CHANGELOG.md"
     "architecture.html"
     "docs/walkthrough.html"
     "scripts/verify_all.ps1"
     "scripts/verify_all.sh"
+    "scripts/test-verify-i6.ps1"
+    "scripts/test-verify-i6.sh"
 )
 i6_exempt_dirs=(
-    "docs/features/_archived/"
+    "docs/features/"
     "参考/"
 )
 i6_hits=""
-while IFS= read -r f; do
+while IFS= read -r scan_file; do
     skip=0
-    for ex in "${i6_exempt_files[@]}"; do [[ "$f" == "$ex" ]] && { skip=1; break; }; done
+    for ex in "${i6_exempt_files[@]}"; do [[ "$scan_file" == "$ex" ]] && { skip=1; break; }; done
     (( skip == 1 )) && continue
-    for ed in "${i6_exempt_dirs[@]}"; do [[ "$f" == "$ed"* ]] && { skip=1; break; }; done
+    for ed in "${i6_exempt_dirs[@]}"; do [[ "$scan_file" == "$ed"* ]] && { skip=1; break; }; done
     (( skip == 1 )) && continue
-    [[ -f "$f" ]] || continue
-    for entry in "${i6_banned_phrases[@]}"; do
-        phrase="${entry%%|*}"
-        reason="${entry#*|}"
-        if grep -F -q -- "$phrase" "$f" 2>/dev/null; then
-            i6_hits="${i6_hits}${f} : '${phrase}' — ${reason}"$'\n'
+    [[ -f "$scan_file" ]] || continue
+    for entry in "${i6_banned[@]}"; do
+        IFS='|' read -r e_anchors e_reason e_exclude e_gap <<< "$entry"
+        rx=$(i6_build_regex "$e_anchors" "${e_gap:-$i6_gap_default}")
+        match=$(grep -E -n -i -m1 -- "$rx" "$scan_file" 2>/dev/null) || continue
+        line_no="${match%%:*}"
+        full_line="${match#*:}"
+        excluded=0
+        if [[ -n "$e_exclude" ]]; then
+            xtoks=()
+            old_ifs="$IFS"; IFS='~'; read -r -a xtoks <<< "$e_exclude"; IFS="$old_ifs"
+            # Line-scoped exclude: literal, case-insensitive substring test over the
+            # whole matched line. Uses bash `nocasematch` glob matching, not
+            # `grep -F -i` — the latter SIGABRTs on the MSYS GNU grep 3.0 shipped with
+            # Git-for-Windows, and pure bash ops mirror the PS `IndexOf` twin exactly.
+            shopt -s nocasematch
+            for xtok in "${xtoks[@]}"; do
+                [[ -z "$xtok" ]] && continue
+                [[ "$full_line" == *"$xtok"* ]] && { excluded=1; break; }
+            done
+            shopt -u nocasematch
         fi
+        (( excluded )) && continue
+        span=$(printf '%s' "$full_line" | grep -E -i -o -m1 -- "$rx")
+        i6_hits="${i6_hits}${scan_file}:${line_no} : [${e_anchors}] — ${e_reason} | matched: \"${span:0:120}\""$'\n'
     done
 done < <(git ls-files 2>/dev/null)
 if [[ -n "$i6_hits" ]]; then

@@ -2,7 +2,7 @@
 
 **English** · [简体中文](README.zh-CN.md)
 
-![version](https://img.shields.io/badge/version-0.17.4-blue) ![verify_all](https://img.shields.io/badge/verify__all-30%2F30-brightgreen) ![test-init](https://img.shields.io/badge/test--init-227%2F227-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.18.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-30%2F30-brightgreen) ![test-init](https://img.shields.io/badge/test--init-227%2F227-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
 > **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (10 skills + project templates) that brings disciplined AI-driven development to fullstack and backend projects.
 >
@@ -260,7 +260,8 @@ Markdown docs:
 | 0.17.2 | done | **`settings.json` schema fix**: the Claude Code settings schema declares the `hooks` object `additionalProperties: false` — only real hook-event names are valid keys. harness-kit embedded `_doc_sync_hook` / `_guard_hook` documentation strings *inside* `hooks`, so every generated `.claude/settings.json` failed schema validation. Both keys moved to the root object (`additionalProperties: true`, where `_*` doc keys are valid). No functional change; `verify_all` stays 30 checks. |
 | 0.17.3 | done | **Bootstrap red-line wording fix**: the `CLAUDE.md` / `copilot-instructions.md` red line mislabeled `.claude/` as a "generated or static" file. `.claude/settings.json` is neither — it is the agent's live, hand-maintained startup config. The bullet was split: one for `.claude/` (live config + sync-generated `agents/`/`skills/`, with the correct rationale), one for the genuine static stubs. Fixed in 4 templates + 2 dogfood files. No feature change; `verify_all` stays 30 checks. |
 | 0.17.4 | done | **v0.10 doc-drift cleanup**: swept the residual pre-v0.10 wording out of live docs/comments — `harness-sync` no longer described as regenerating `CLAUDE.md` / `copilot-instructions.md`, and `CLAUDE.md` is no longer mislabeled "generated". Touched the `00-core.md` rule templates (EN + ZH), `settings.json` templates, `dev-frontend` template, README layout boxes, getting-started, CONTRIBUTING, the two init/adopt skills, and reconciled the `verify_all` I.6 exemption comments. No feature change; `verify_all` stays 30 checks. |
-| 0.18+ | planned | Supervisor auto-dispatch by PM at user-configurable stage boundaries (once false-positive budget is proven against ≥10 real tasks) |
+| 0.18.0 | done | **I.6 gap-tolerant retired-claim guard**: the `verify_all` I.6 phrase guard upgrades from literal-substring matching to a gap-tolerant ordered-anchor scan — each banned entry is a list of plain-text anchors that must appear in order on one line within a bounded gap, with optional line-scoped `exclude` tokens so accurate negated prose does not FAIL. I.6 exempt-dir widened to the whole `docs/features/` subtree. New `scripts/test-verify-i6.{ps1,sh}` regression pair. No new check; `verify_all` stays 30. |
+| 0.19+ | planned | Supervisor auto-dispatch by PM at user-configurable stage boundaries (once false-positive budget is proven against ≥10 real tasks) |
 
 ## Design principles
 
