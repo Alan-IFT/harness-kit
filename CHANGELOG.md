@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-05-23
+
+Minor release. Adds the **batch-mode** entry point — a new `/harness-kit:harness-batch` skill that runs a list of tasks through the full 7-stage pipeline sequentially, each task in its own sub-agent context, stopping only on strong failure signals. Closes the "user has T-01…T-NN and must invoke `/harness` N times by hand" friction documented in the v0.18.x backlog.
+
+### Why
+
+Before v0.19.0, the only way to run multiple tasks (from a `/harness-plan` decomposition, an accumulated bug list, a post-checkup `verify_all` WARN sweep, or an external Linear / Jira import) was to type `/harness` once per task. Each invocation re-loaded `AI-GUIDE.md`, re-read `.harness/insight-index.md`, re-checked `intervention.md` — repeated user-presence cost, repeated cross-task setup waste, and a real risk of context bloat if N tasks ran back-to-back in a single session without sub-agent isolation.
+
+The user explicitly chose "fully autonomous, stop only on strong signals" over per-task supervision; rejected "new program-manager agent on top of pm-orchestrator" (方案 B, would have required 3-level Task-tool nesting); rejected "extend `/harness` to take multiple tasks" (方案 C, would have bloated pm-orchestrator's single responsibility). The chosen approach (方案 A) is a thin skill that sits **strictly above** `pm-orchestrator` and dispatches each task into its own `Task` sub-agent — so the batch orchestrator's own context grows by ~one summary line per task, not by N × full stage docs.
+
+### Added — `/harness-kit:harness-batch` skill
+
+- New `skills/harness-batch/SKILL.md` (~180 lines). Frontmatter declares `Task` in `allowed-tools` (mandatory for sub-agent dispatch). Body covers: when to invoke, when not to, required input, the 7-step procedure (argument validation → pre-flight `verify_all` baseline + `insight-index` read + intervention check → parse `BATCH_PLAN.md` → per-task loop → strong-signal stop conditions → soft-signal NOTE/SKIP handling → terminal `BATCH_REPORT.md`), hard rules, anti-patterns, cost note.
+- Strong-signal stop policy: any of `verify_all` FAIL, dispatched `pm-orchestrator` returns `FAILED`, 3 same-stage rollbacks reported, `.harness/intervention.md` STOP between tasks, safety-hook block. On stop, the skill writes `BATCH_REPORT.md` with stop reason and per-task status.
+- Soft-signal policy: `NOTE` attaches to the next task's dispatch prompt; `SKIP <task-id>` skips that task; `REDIRECT` is rejected (REDIRECT is for stages, not tasks).
+- Resume semantics: `Status: done` skips; otherwise re-evaluate by checking for `07_DELIVERY.md` with `DELIVERED` verdict (primary) or `Final verify_all result: PASS` line (secondary, format-tolerance per Gate Review finding F-7).
+
+### Added — `docs/batches/` directory
+
+- `docs/batches/README.md` — lifecycle explainer (≤80 lines) covering folder layout, the `BATCH_PLAN.md` / `BATCH_LOG.md` / `BATCH_REPORT.md` triple, a worked 3-task example, and a link back to the skill for the full procedure.
+- `docs/batches/_template/BATCH_PLAN.md` — copy-paste template. Users copy the folder to `docs/batches/<their-batch-id>/`, fill in the task table (columns `ID | Slug | Goal | Mode | Depends on | Status`), and invoke `/harness-kit:harness-batch <their-batch-id>`.
+
+### Added — task folder
+
+- `docs/features/harness-batch-skill/` holds the 7 stage docs for T-006 (01_REQUIREMENT_ANALYSIS.md through 07_DELIVERY.md). Archived to `docs/features/_archived/harness-batch-skill/` at delivery via `scripts/archive-task`.
+
+### Changed — `verify_all` skill-count assertions: 10 → 11
+
+- `scripts/verify_all.sh` C.1 / G.1 / G.2 hardcoded skill arrays each grow by one entry (`harness-batch`); the corresponding step descriptions update from "All 10 skills" / "all 10 skills" to "All 11 skills" / "all 11 skills".
+- `scripts/verify_all.ps1` C.1 / G.1 / G.2 mirror the bash edits (per F.1 script-symmetry rule). All six locations (3 arrays × 2 shells) updated in the same change.
+- No new `verify_all` check added; check count stays at 31. The skill count delta is enforced by the existing C.1 / G.1 / G.2 assertions.
+
+### Changed — Version stamps: 0.18.2 → 0.19.0
+
+- `.claude-plugin/plugin.json`: `"version": "0.18.2"` → `"version": "0.19.0"`.
+- `.claude-plugin/marketplace.json`: `plugins[0].version` `"0.18.2"` → `"0.19.0"`.
+- `README.md`: version badge `0.18.2` → `0.19.0`; skill-count phrasing `10 skills` → `11 skills`, `ten AI skills` → `eleven AI skills`, `four task shapes` → `five task shapes`; new `/harness-kit:harness-batch` bullet under "Pipeline skills"; new `0.19.0` Roadmap row; `0.19+` planned row → `0.20+`.
+- `README.zh-CN.md`: version badge `0.18.2` → `0.19.0`; `10 个 skills` → `11 个 skills` / `10 个 AI skill` → `11 个 AI skill`; `4 种任务形态` → `5 种任务形态`; new Chinese bullet for `/harness-kit:harness-batch`; new `0.19.0` Roadmap row; `0.19+` planned row → `0.20+`.
+- `AI-GUIDE.md`: new row in the Workflow-entry table for `/harness-batch` (English + 中文 triggers).
+
+### Notes
+
+- The skill name `harness-batch` is included in this CHANGELOG entry so `verify_all` G.2 (CHANGELOG references all 11 skills) PASSes after the C.1 list grows to 11.
+- No agent-contract change (no new `.harness/agents/*.md`); `pm-orchestrator` is reused unchanged.
+- No template changes (`templates/common/` not touched); skills ship via the Claude Code Plugin manifest `plugin.json` `"skills": "./skills/"` field, so the new skill folder is auto-discovered by the plugin loader on install.
+- No new `.harness/rules/` fragment; the skill operates entirely on existing patterns (`05-insight-index.md`, `65-intervention.md`, `archive-task`).
+- Sequential only in v0.19.0. Parallel batch dispatch is deferred to v0.20+ once sequential stability is proven against real batches.
+
 ## [0.18.2] - 2026-05-23
 
 Patch release. Fixes a recurring class of `.claude/settings.json` schema-validation bugs (the second one in two consecutive releases) and adds a `verify_all` gate so the class cannot recur silently.

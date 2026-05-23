@@ -38,7 +38,8 @@ harness-kit/
 │   ├── harness-goal/SKILL.md           ← Dev + QA loop bounded by criterion + budget
 │   ├── harness/SKILL.md                ← Full 7-stage pipeline
 │   ├── harness-intervene/SKILL.md      ← Soft Ctrl-C for an in-flight pipeline
-│   └── harness-supervise/SKILL.md      ← Observer-only auxiliary skill (v0.17+); emits SUPERVISION_REPORT.md
+│   ├── harness-supervise/SKILL.md      ← Observer-only auxiliary skill (v0.17+); emits SUPERVISION_REPORT.md
+│   └── harness-batch/SKILL.md          ← Batch mode (v0.19+); runs T-01...T-NN via pm-orchestrator sub-agents from docs/batches/<batch-id>/BATCH_PLAN.md
 │
 ├── .harness/                            ← THIS repo's tool-agnostic SOT (dogfood)
 │   ├── agents/                         ← byte-copy of templates/common/.harness/agents/
@@ -68,7 +69,8 @@ harness-kit/
 │   ├── workflow.md                     ← 7-stage pipeline
 │   ├── dev-map.md                      ← This file
 │   ├── spec/                           ← Project SPECs
-│   └── features/                       ← Per-task documents
+│   ├── features/                       ← Per-task documents
+│   └── batches/                        ← Batch-mode artifacts (v0.19+): per-batch BATCH_PLAN.md / BATCH_LOG.md / BATCH_REPORT.md; _template/ for copy-paste
 │
 ├── scripts/
 │   ├── verify_all.{ps1,sh}             ← Total verification (31 checks at v0.18.2)

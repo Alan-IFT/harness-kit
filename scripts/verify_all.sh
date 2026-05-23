@@ -52,10 +52,10 @@ done
 
 # C.1 — skills
 missing_skills=""
-for s in harness harness-init harness-adopt harness-verify harness-status harness-plan harness-explore harness-goal harness-intervene harness-supervise; do
+for s in harness harness-init harness-adopt harness-verify harness-status harness-plan harness-explore harness-goal harness-intervene harness-supervise harness-batch; do
     [[ -f "skills/$s/SKILL.md" ]] || missing_skills="$missing_skills $s"
 done
-[[ -z "$missing_skills" ]] && step "C.1" "All 10 skills present" "PASS" || step "C.1" "All 10 skills present" "FAIL" "missing:$missing_skills"
+[[ -z "$missing_skills" ]] && step "C.1" "All 11 skills present" "PASS" || step "C.1" "All 11 skills present" "FAIL" "missing:$missing_skills"
 
 # C.2 — frontmatter sanity
 bad=""
@@ -326,10 +326,10 @@ fi
 # G.1 — README mentions skills
 readme=$(cat README.md)
 miss_r=""
-for s in harness harness-init harness-adopt harness-verify harness-status harness-plan harness-explore harness-goal harness-intervene harness-supervise; do
+for s in harness harness-init harness-adopt harness-verify harness-status harness-plan harness-explore harness-goal harness-intervene harness-supervise harness-batch; do
     grep -q "$s" <<< "$readme" || miss_r="$miss_r $s"
 done
-[[ -z "$miss_r" ]] && step "G.1" "README references all 10 skills" "PASS" || step "G.1" "README references all 10 skills" "FAIL" "missing:$miss_r"
+[[ -z "$miss_r" ]] && step "G.1" "README references all 11 skills" "PASS" || step "G.1" "README references all 11 skills" "FAIL" "missing:$miss_r"
 
 # H.1 — fixtures
 missing_fix=""
@@ -342,10 +342,10 @@ done
 # G.2 — CHANGELOG mentions skills
 cl=$(cat CHANGELOG.md)
 miss_c=""
-for s in harness harness-init harness-adopt harness-verify harness-status harness-plan harness-explore harness-goal harness-intervene harness-supervise; do
+for s in harness harness-init harness-adopt harness-verify harness-status harness-plan harness-explore harness-goal harness-intervene harness-supervise harness-batch; do
     grep -q "$s" <<< "$cl" || miss_c="$miss_c $s"
 done
-[[ -z "$miss_c" ]] && step "G.2" "CHANGELOG references all 10 skills" "PASS" || step "G.2" "CHANGELOG references all 10 skills" "FAIL" "missing:$miss_c"
+[[ -z "$miss_c" ]] && step "G.2" "CHANGELOG references all 11 skills" "PASS" || step "G.2" "CHANGELOG references all 11 skills" "FAIL" "missing:$miss_c"
 
 # G.3 — Version stamps consistent across plugin.json / marketplace.json / README badges
 # Extracts the FIRST "version": "X.Y.Z" from each JSON (both manifests have a single version field today)

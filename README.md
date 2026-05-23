@@ -2,21 +2,22 @@
 
 **English** · [简体中文](README.zh-CN.md)
 
-![version](https://img.shields.io/badge/version-0.18.2-blue) ![verify_all](https://img.shields.io/badge/verify__all-31%2F31-brightgreen) ![test-init](https://img.shields.io/badge/test--init-227%2F227-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.19.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-31%2F31-brightgreen) ![test-init](https://img.shields.io/badge/test--init-227%2F227-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
-> **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (10 skills + project templates) that brings disciplined AI-driven development to fullstack and backend projects.
+> **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (11 skills + project templates) that brings disciplined AI-driven development to fullstack and backend projects.
 >
 > **Goal**: humans only do "describe the requirement" and "step in when AI can't"; everything else — 7-agent pipeline, verify gates, structured documents — runs automatically.
 
 ## What's inside
 
-This is a Claude Code Plugin packaging that gives any project ten AI skills:
+This is a Claude Code Plugin packaging that gives any project eleven AI skills:
 
-**Pipeline skills** (four task shapes; the AI picks the right one from your natural-language description)
+**Pipeline skills** (five task shapes; the AI picks the right one from your natural-language description)
 - `/harness-kit:harness` — full 7-stage pipeline (RA → SA → GR → Dev → CR → QA → Delivery). Use for real feature / bug / refactor work.
 - `/harness-kit:harness-plan` — design-only mode: runs RA + SA + GR, stops with a verdict before any code is written. Use to vet a design.
 - `/harness-kit:harness-explore` — research / feasibility mode: light RA + a `findings.md` with citations. No design, no code. Use for "can we even do X?"
 - `/harness-kit:harness-goal` — open-ended Dev + QA loop bounded by a measurable success criterion and a budget. Use for "keep improving until coverage > 80%" type tasks.
+- `/harness-kit:harness-batch` — runs `T-01…T-NN` sequentially through pm-orchestrator, each task in its own sub-agent context. Stops on strong signals (`verify_all` FAIL, pm-orchestrator FAIL, intervention STOP, safety hook block). Use for `/harness-plan` decompositions, accumulated backlogs, post-checkup sweeps, or imported task lists — instead of invoking `/harness` N times.
 
 **Setup skills**
 - `/harness-kit:harness-init` — bootstrap Harness skeleton in a new project (asks 5 questions, generates `.harness/` + `.claude/` + `AI-GUIDE.md` + stub CLAUDE.md / copilot-instructions.md in ~30s)
@@ -263,7 +264,8 @@ Markdown docs:
 | 0.18.0 | done | **I.6 gap-tolerant retired-claim guard**: the `verify_all` I.6 phrase guard upgrades from literal-substring matching to a gap-tolerant ordered-anchor scan — each banned entry is a list of plain-text anchors that must appear in order on one line within a bounded gap, with optional line-scoped `exclude` tokens so accurate negated prose does not FAIL. I.6 exempt-dir widened to the whole `docs/features/` subtree. New `scripts/test-verify-i6.{ps1,sh}` regression pair. No new check; `verify_all` stays 30. |
 | 0.18.1 | done | **`test-verify-i6` hardening**: structural-lockstep upgraded to a full 2×2 (`test-verify-i6.{ps1,sh}` × `verify_all.{ps1,sh}`) verbatim per-entry × 4-field (anchors / reason / exclude / gap) comparison — closes the v0.18.0 leftover where the PS-side only checked entry count + entry #10's `.claude/` exclude. New file-exempt predicate symmetric to the existing dir-exempt one, plus element-wise lockstep on the I.6 exempt-file (`CHANGELOG.md`, `architecture.html`, …) and exempt-dir lists. AC-8 (`CHANGELOG.md` / `_archived/` exemption) now has a permanent corpus fixture instead of the v0.18.0 inline-injection probe. Assertion counts: 35→56 (PS), 34→56 (bash); `verify_all` stays 30. |
 | 0.18.2 | done | **`settings.json` schema-validation guard (J.1)**: the `$schema` URL in the dogfood + template `.claude/settings.json` was missing the `.json` suffix, so the 301-redirect target served `application/octet-stream` and many editors silently rejected the schema — file flagged invalid even though JSON parsed. Canonical URL restored. New `verify_all` J.1 check parses both files (repo + `.tmpl`), enforces the canonical `$schema`, and rejects any key inside `hooks` that is not in the upstream event enum — catches both v0.17.2 (wrong key placement) and v0.18.2 (wrong URL form) classes at the gate. New rule fragment `.harness/rules/80-settings-schema.md` documents the "consult upstream schema via context7 before editing" workflow. `verify_all` 30 → 31 checks. |
-| 0.19+ | planned | Supervisor auto-dispatch by PM at user-configurable stage boundaries (once false-positive budget is proven against ≥10 real tasks) |
+| 0.19.0 | done | **Batch mode**: new `/harness-kit:harness-batch <batch-id>` skill runs a list of tasks (`T-01…T-NN` in `docs/batches/<batch-id>/BATCH_PLAN.md`) sequentially through `pm-orchestrator`, dispatched via the `Task` tool so each task gets its own sub-agent context and the batch orchestrator never accumulates more than per-task summaries. Strong-signal-only stop policy (`verify_all` FAIL, pm-orchestrator FAIL, 3 same-stage rollbacks, `intervention.md` STOP, safety hook block). Resumable: re-invoking with the same batch-id skips tasks whose `07_DELIVERY.md` is `DELIVERED`. New `docs/batches/` directory with lifecycle README and `_template/BATCH_PLAN.md`. `verify_all` skill count 10 → 11 (C.1 / G.1 / G.2 in both shells). |
+| 0.20+ | planned | Supervisor auto-dispatch by PM at user-configurable stage boundaries (once false-positive budget is proven against ≥10 real tasks); parallel batch dispatch once sequential batch stability is proven. |
 
 ## Design principles
 

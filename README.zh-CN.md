@@ -2,21 +2,22 @@
 
 [English](README.md) · **简体中文**
 
-![version](https://img.shields.io/badge/version-0.18.2-blue) ![verify_all](https://img.shields.io/badge/verify__all-31%2F31-brightgreen) ![test-init](https://img.shields.io/badge/test--init-227%2F227-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.19.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-31%2F31-brightgreen) ![test-init](https://img.shields.io/badge/test--init-227%2F227-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
-> **Claude Code 的 Harness Engineering 工具包** — 一个 Claude Code Plugin（10 个 skills + 项目模板），把"有纪律的 AI 驱动开发"带到全栈和后端项目里。
+> **Claude Code 的 Harness Engineering 工具包** — 一个 Claude Code Plugin（11 个 skills + 项目模板），把"有纪律的 AI 驱动开发"带到全栈和后端项目里。
 >
 > **目标**：人工只做"描述需求"和"AI 做不到时介入"；其他全部 — 7-Agent 流水线、验证闸门、结构化文档 — 自动运行。
 
 ## 包含什么
 
-这是一个 Claude Code Plugin 包，给任何项目装上 10 个 AI skill：
+这是一个 Claude Code Plugin 包，给任何项目装上 11 个 AI skill：
 
-**流水线类**（4 种任务形态，AI 根据你的自然语言自动挑对应那条）
+**流水线类**（5 种任务形态，AI 根据你的自然语言自动挑对应那条）
 - `/harness-kit:harness` — 完整 7-stage 流水线（RA → SA → GR → Dev → CR → QA → 交付）。用于真正的功能 / bug / 重构。
 - `/harness-kit:harness-plan` — 只做设计：跑 RA + SA + GR，给出判决后停止，**不写代码**。用于"投入工程时间前先验证设计"。
 - `/harness-kit:harness-explore` — 调研/可行性：轻量 RA + 一份带引用的 `findings.md`。**不做设计、不写代码**。用于"这事儿到底能不能做？"
 - `/harness-kit:harness-goal` — 开放式 Dev + QA 循环，由可量化的成功标准 + 预算限定。用于"持续改进直到覆盖率 > 80%"这类任务。
+- `/harness-kit:harness-batch` — 把 `T-01…T-NN`（`docs/batches/<batch-id>/BATCH_PLAN.md` 里的任务表）一条条顺序灌给 pm-orchestrator 跑，每条都派发到独立的 Task 子 agent，主上下文只累加每任务一行的摘要。仅在强信号上停止（`verify_all` FAIL、pm-orchestrator FAIL、intervention STOP、安全 hook 拦截）。适合 `/harness-plan` 拆出来的批、积压 bug 列表、checkup 后修复批、外部任务列表 —— 比手敲 N 次 `/harness` 省力。
 
 **安装类**
 - `/harness-kit:harness-init` — 新项目从零生成 Harness 骨架（问 5 个问题，~30 秒生成 `.harness/` + `.claude/` + `AI-GUIDE.md` + stub CLAUDE.md / copilot-instructions.md）
@@ -265,7 +266,8 @@ Markdown 文档：
 | 0.18.0 | 已交付 | **I.6 gap-tolerant retired-claim 守护**：`verify_all` I.6 短语守护从字面子串匹配升级为 gap-tolerant 有序锚点扫描 —— 每条黑名单条目是一组纯文本锚点，必须在一行内按顺序出现且间隔在限定范围内，并可带行级 `exclude` token，使准确的否定表述不再误 FAIL。I.6 豁免目录拓宽到整个 `docs/features/` 子树。新增 `scripts/test-verify-i6.{ps1,sh}` 回归脚本对。无新增检查；verify_all 仍 30 项。 |
 | 0.18.1 | 已交付 | **`test-verify-i6` 加固**：结构化锁步升级到完整的 2×2（`test-verify-i6.{ps1,sh}` × `verify_all.{ps1,sh}`）逐条目 × 4 字段（anchors / reason / exclude / gap）逐字比较 —— 修复 v0.18.0 留下的 PS 侧只校 entry count + 第 #10 条 `.claude/` exclude 的缺口。新增与现有 dir-exempt 对称的 file-exempt 谓词，并对 I.6 exempt-file (`CHANGELOG.md`、`architecture.html`、…) 与 exempt-dir 列表做逐元素锁步。AC-8（`CHANGELOG.md` / `_archived/` 豁免）从 v0.18.0 的临时 inline-injection 探针升级为永久 corpus fixture。断言计数：35→56（PS）、34→56（bash）；verify_all 仍 30 项。 |
 | 0.18.2 | 已交付 | **`settings.json` schema 校验守护（J.1）**：dogfood 与模板里的 `.claude/settings.json` `$schema` URL 漏写了 `.json` 后缀，导致 301 重定向目标返回 `application/octet-stream`，许多编辑器静默拒绝加载 schema —— 即使 JSON 能解析整个文件仍被标记非法。已恢复为规范 URL。新增 `verify_all` J.1 检查同时解析仓库文件与 `.tmpl`，强制 `$schema` 取规范值，并拒绝 `hooks` 下任何非上游事件枚举里的键 —— 在 gate 一次性拦截 v0.17.2（键位错放）和 v0.18.2（URL 形式错）两类错误。新规则片段 `.harness/rules/80-settings-schema.md` 沉淀"修改前先用 context7 查官方 schema"的工作流。verify_all 30 → 31 项。 |
-| 0.19+ | 规划中 | PM 在用户配置的阶段边界自动派发 supervisor（在 ≥10 个真实任务证明误报预算后启用） |
+| 0.19.0 | 已交付 | **批量模式**：新 skill `/harness-kit:harness-batch <batch-id>`，把 `docs/batches/<batch-id>/BATCH_PLAN.md` 里的 `T-01…T-NN` 顺序灌给 `pm-orchestrator` 执行，每个任务通过 `Task` 工具派发到独立子 agent 上下文，主上下文只累加每任务一行摘要。仅在强信号上停止（`verify_all` FAIL、pm-orchestrator FAIL、3 次同阶段 rollback、`intervention.md` STOP、安全 hook 拦截）。可重入：再次用同一 `<batch-id>` 调用会跳过已 `DELIVERED` 的任务。新增 `docs/batches/` 目录（lifecycle README + `_template/BATCH_PLAN.md`）。`verify_all` skill 数 10 → 11（C.1 / G.1 / G.2 两个 shell 都已对齐）。 |
+| 0.20+ | 规划中 | PM 在用户配置的阶段边界自动派发 supervisor（在 ≥10 个真实任务证明误报预算后启用）；批量并行派发（在顺序批量稳定后启用） |
 
 ## 设计原则
 

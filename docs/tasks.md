@@ -18,6 +18,7 @@
 | T-003 | supervisor-agent | Delivered v0.17.0 (3 rollbacks: F-1 from Gate; BUG-1 from QA via PM override; +1 within-stage round) | 2026-05-19 | `docs/features/_archived/supervisor-agent/` |
 | T-004 | i6-semantic-guard | Delivered v0.18.0 (4 rollbacks: F-1/F-2 from Gate; F-4 from Gate re-review; entry-#10 from Dev; CR-MAJOR 40-locations:25 from Code Review) + in-flight archive-task.sh L13-pattern bug fix | 2026-05-23 | `docs/features/_archived/i6-semantic-guard/` |
 | T-005 | i6-test-hardening | Delivered v0.18.1 (1 rollback: M-1 from Gate Review on §9 baseline; PM-applied §9+§11 patch under user-delegated authority); 12/12 QA mutations detected; PASS:56 both shells | 2026-05-23 | `docs/features/_archived/i6-test-hardening/` |
+| T-006 | harness-batch-skill | Delivered v0.19.0 (1 rollback: M-1 AI-GUIDE.md skill-count drift + m-1 manual-e2e-test drift + m-2 stop-signal clarity, all from Code Review); 10/10 QA adversarial tests survived; PS verify_all 31/31 PASS stable x3 | 2026-05-23 | `docs/features/_archived/harness-batch-skill/` |
 
 ## Notes
 
