@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-06-05
+
+Minor release. Hardened the supervisor regression against version-stamp drift: removed 8 hardcoded `v0.17.1`/`30`-checks fan-out asserts from `test-supervisor.{ps1,sh}` (silently red since v0.17), and added a new standing `verify_all` **G.4** meta-check that derives the version from `plugin.json` and the check count from the live step tally and validates all doc count/version claims — so this drift class now fails at the gate instead of rotting unnoticed. verify_all check count 31 → 32.
+
 ## [0.20.0] - 2026-06-04
 
 Minor release. **Relocates all harness-owned scripts from `scripts/` to `.harness/scripts/`** so they no longer collide with a user project's own `scripts/` directory, and ships a migration helper for existing projects. No behavioral change to the pipeline or any skill — this is a layout/packaging change with full path-reference and self-check fan-out.

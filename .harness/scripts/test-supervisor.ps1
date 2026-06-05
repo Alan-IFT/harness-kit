@@ -416,32 +416,16 @@ Write-Host "--- Doc fan-out spot checks ---" -ForegroundColor Cyan
 Assert "fan-out: AI-GUIDE.md has '7 canonical agents + 1 auxiliary (supervisor)' phrasing" {
     (Get-Content "AI-GUIDE.md" -Raw) -match 'auxiliary.*supervisor'
 }
-Assert "fan-out: AI-GUIDE.md has '30/30 at v0.17.1'" {
-    (Get-Content "AI-GUIDE.md" -Raw) -match '30/30 at v0\.17\.1'
-}
-Assert "fan-out: AI-GUIDE.md says '30 checks at v0.17.1'" {
-    (Get-Content "AI-GUIDE.md" -Raw) -match '30 checks at v0\.17\.1'
-}
-Assert "fan-out: CHANGELOG.md has v0.17.1 entry" {
-    (Get-Content "CHANGELOG.md" -Raw) -match '\[0\.17\.1\]'
-}
-Assert "fan-out: README.md badge bumped to 0.17.1" {
-    (Get-Content "README.md" -Raw) -match 'version-0\.17\.1-'
-}
-Assert "fan-out: README.zh-CN.md badge bumped to 0.17.1" {
-    (Get-Content "README.zh-CN.md" -Raw) -match 'version-0\.17\.1-'
-}
-Assert "fan-out: plugin.json version = 0.17.1" {
-    $j = Get-Content ".claude-plugin/plugin.json" -Raw | ConvertFrom-Json
-    $j.version -eq "0.17.1"
-}
-Assert "fan-out: marketplace.json plugins[0].version = 0.17.1" {
-    $j = Get-Content ".claude-plugin/marketplace.json" -Raw | ConvertFrom-Json
-    $j.plugins[0].version -eq "0.17.1"
-}
-Assert "fan-out: dev-map.md mentions '30 checks at v0.17.1'" {
-    (Get-Content "docs/dev-map.md" -Raw) -match '30 checks at v0\.17\.1'
-}
+# NOTE (T-008): the 8 version/count fan-out asserts that hard-coded a release
+# version + check count (v0.17.1 / 30 on AI-GUIDE×2, CHANGELOG entry, both README
+# badges, plugin.json, marketplace.json, dev-map) were REMOVED here. Their coverage
+# moved to where it belongs: the four-stamp version consistency is verify_all G.3,
+# and the doc count-claim + current-version CHANGELOG-entry consistency is the new
+# standing verify_all G.4 meta-check (derives version from plugin.json + count from
+# the live recorded-step tally). test-supervisor keeps ZERO release-tracking literals
+# so it never drifts on a version/count bump again. Only the 3 version-agnostic
+# structural asserts (auxiliary-supervisor phrasing above, harness-status row +
+# canonical-7 glob below) remain.
 Assert "fan-out: harness-status SKILL.md has a supervisor (auxiliary) row" {
     (Get-Content "skills/harness-status/SKILL.md" -Raw) -match 'upervisor.*auxiliary'
 }

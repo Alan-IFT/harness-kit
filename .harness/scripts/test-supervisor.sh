@@ -377,30 +377,16 @@ echo "--- Doc fan-out spot checks ---"
 grep -qE 'auxiliary.*supervisor' AI-GUIDE.md \
     && assert "fan-out: AI-GUIDE.md mentions 'auxiliary (supervisor)' phrasing" 1 \
     || assert "fan-out: AI-GUIDE.md mentions 'auxiliary (supervisor)' phrasing" 0
-grep -qE '30/30 at v0\.17\.1' AI-GUIDE.md \
-    && assert "fan-out: AI-GUIDE.md has '30/30 at v0.17.1'" 1 \
-    || assert "fan-out: AI-GUIDE.md has '30/30 at v0.17.1'" 0
-grep -qE '30 checks at v0\.17\.1' AI-GUIDE.md \
-    && assert "fan-out: AI-GUIDE.md says '30 checks at v0.17.1'" 1 \
-    || assert "fan-out: AI-GUIDE.md says '30 checks at v0.17.1'" 0
-grep -qF '[0.17.1]' CHANGELOG.md \
-    && assert "fan-out: CHANGELOG.md has v0.17.1 entry" 1 \
-    || assert "fan-out: CHANGELOG.md has v0.17.1 entry" 0
-grep -qE 'version-0\.17\.1-' README.md \
-    && assert "fan-out: README.md badge = 0.17.1" 1 \
-    || assert "fan-out: README.md badge = 0.17.1" 0
-grep -qE 'version-0\.17\.1-' README.zh-CN.md \
-    && assert "fan-out: README.zh-CN.md badge = 0.17.1" 1 \
-    || assert "fan-out: README.zh-CN.md badge = 0.17.1" 0
-grep -qE '"version"[[:space:]]*:[[:space:]]*"0\.17\.1"' .claude-plugin/plugin.json \
-    && assert "fan-out: plugin.json version = 0.17.1" 1 \
-    || assert "fan-out: plugin.json version = 0.17.1" 0
-grep -qE '"version"[[:space:]]*:[[:space:]]*"0\.17\.1"' .claude-plugin/marketplace.json \
-    && assert "fan-out: marketplace.json version = 0.17.1" 1 \
-    || assert "fan-out: marketplace.json version = 0.17.1" 0
-grep -qE '30 checks at v0\.17\.1' docs/dev-map.md \
-    && assert "fan-out: dev-map.md mentions '30 checks at v0.17.1'" 1 \
-    || assert "fan-out: dev-map.md mentions '30 checks at v0.17.1'" 0
+# NOTE (T-008): the 8 version/count fan-out asserts that hard-coded a release
+# version + check count (v0.17.1 / 30 on AI-GUIDE×2, CHANGELOG entry, both README
+# badges, plugin.json, marketplace.json, dev-map) were REMOVED here. Their coverage
+# moved to where it belongs: the four-stamp version consistency is verify_all G.3,
+# and the doc count-claim + current-version CHANGELOG-entry consistency is the new
+# standing verify_all G.4 meta-check (derives version from plugin.json + count from
+# the live recorded-step tally). test-supervisor keeps ZERO release-tracking literals
+# so it never drifts on a version/count bump again. Only the 3 version-agnostic
+# structural asserts (auxiliary-supervisor phrasing above, harness-status row +
+# canonical-7 glob below) remain.
 grep -qE 'upervisor.*auxiliary' skills/harness-status/SKILL.md \
     && assert "fan-out: harness-status SKILL.md has supervisor (auxiliary) row" 1 \
     || assert "fan-out: harness-status SKILL.md has supervisor (auxiliary) row" 0

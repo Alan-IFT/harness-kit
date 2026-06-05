@@ -2,7 +2,7 @@
 
 **English** · [简体中文](README.zh-CN.md)
 
-![version](https://img.shields.io/badge/version-0.20.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-31%2F31-brightgreen) ![test-init](https://img.shields.io/badge/test--init-227%2F227-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.21.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-32%2F32-brightgreen) ![test-init](https://img.shields.io/badge/test--init-227%2F227-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
 > **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (11 skills + project templates) that brings disciplined AI-driven development to fullstack and backend projects.
 >
@@ -156,7 +156,7 @@ Hit Claude Code's rate limit mid-task? Switch to GitHub Copilot in VS Code and k
 
 ### Three layers of regression testing
 
-- `verify_all` (31 checks) — repo health
+- `verify_all` (32 checks) — repo health
 - `test-init` (227 assertions on PowerShell; 191 on Bash without python3) — init template logic on empty dirs (3 project types × 75 PS / 63 Bash, plus 2 shell-agnostic BUG-2 placeholder-regex regression assertions)
 - `test-real-project` (82 assertions) — overlay onto real fixtures (todo-fullstack, todo-backend)
 

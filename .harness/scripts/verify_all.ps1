@@ -620,10 +620,83 @@ Step "J.1" "settings.json schema integrity (.claude/ + template)" {
     }
 }
 
+# G.4 — Doc count/version claims consistent with plugin.json + live check count (T-008).
+# Every place a consumer doc states the verify_all check count and/or the release
+# version must agree with (a) plugin.json.version and (b) the live recorded-step count;
+# plus a CHANGELOG heading for the current version must exist. This is the standing
+# forcing-function that kills the count/version doc-drift class at the gate (G.3's
+# neighbour): test-supervisor no longer carries any release-tracking literal.
+#
+# ┌─────────────────────────────────────────────────────────────────────────────┐
+# │ G.4 MUST remain the LAST check. Its count is derived as `$report.Count + 1`   │
+# │ (PS) / `${#report[@]} + 1` (sh), where the `+1` is G.4 itself (its own record │
+# │ is appended only AFTER this body returns). Adding ANY check after G.4 makes    │
+# │ that derivation undercount — insert new checks ABOVE this block, never below.  │
+# │ The Summary tripwire below cross-checks $report.Count vs this derived value.   │
+# └─────────────────────────────────────────────────────────────────────────────┘
+Step "G.4" "Doc count/version claims consistent with plugin.json + live check count" {
+    $manifest = Get-Content ".claude-plugin/plugin.json" -Raw | ConvertFrom-Json
+    $version = $manifest.version
+    if (-not $version) { throw "could not read version from .claude-plugin/plugin.json" }
+    # Count = recorded steps so far (31) + G.4 itself = the shipped check count (32).
+    # Status-independent: a WARN on a doc-size check does NOT change the *check* count.
+    $count = $report.Count + 1
+
+    # Each row: doc path, a regex to confirm the claim shape exists, and the exact
+    # SOT-derived substring the doc must contain. FAIL lists every doc whose claim
+    # is missing or stale. Patterns stay anchored (parenthesized / version-anchored /
+    # full-width-paren) so historical bare Roadmap/CHANGELOG rows are never matched.
+    $claims = @(
+        @{ file = "AI-GUIDE.md";                  shape = '\d+/\d+ at v\d+\.\d+\.\d+';                       expect = "$count/$count at v$version" }
+        @{ file = "AI-GUIDE.md";                  shape = '\d+ checks at v\d+\.\d+\.\d+';                    expect = "$count checks at v$version" }
+        @{ file = "docs/dev-map.md";              shape = '\d+ checks at v\d+\.\d+\.\d+';                    expect = "$count checks at v$version" }
+        @{ file = "docs/dev-map.md";              shape = 'runs all \d+ checks \(at v\d+\.\d+\.\d+\)';       expect = "runs all $count checks (at v$version)" }
+        @{ file = ".harness/rules/40-locations.md"; shape = '\(\d+ checks at v\d+\.\d+\.\d+';                 expect = "($count checks at v$version" }
+        @{ file = "README.md";                    shape = 'verify__all-\d+%2F\d+';                           expect = "verify__all-$count%2F$count" }
+        @{ file = "README.zh-CN.md";              shape = 'verify__all-\d+%2F\d+';                           expect = "verify__all-$count%2F$count" }
+        @{ file = "README.md";                    shape = '\(\d+ checks\)';                                  expect = "($count checks)" }
+        @{ file = "README.zh-CN.md";              shape = '（\d+ 项检查）';                                  expect = "（$count 项检查）" }
+        @{ file = "docs/manual-e2e-test.md";      shape = '\d+ checks at v\d+\.\d+\.\d+';                    expect = "$count checks at v$version" }
+        @{ file = ".harness/scripts/baseline.json"; shape = '"verify_all_checks": \d+';                       expect = ('"verify_all_checks": ' + $count) }
+    )
+    $bad = @()
+    foreach ($c in $claims) {
+        if (-not (Test-Path $c.file)) { $bad += "$($c.file): file missing (expected '$($c.expect)')"; continue }
+        $raw = Get-Content $c.file -Raw
+        if ($raw.Contains($c.expect)) { continue }
+        if ($raw -match $c.shape) {
+            $bad += "$($c.file): found '$($Matches[0])', expected '$($c.expect)'"
+        } else {
+            $bad += "$($c.file): no '$($c.shape)' claim found, expected '$($c.expect)'"
+        }
+    }
+    # CHANGELOG heading for the current version must exist (re-homed from the removed
+    # test-supervisor CHANGELOG assert; G.3 never reads CHANGELOG).
+    $changelog = Get-Content "CHANGELOG.md" -Raw
+    if (-not $changelog.Contains("[$version]")) {
+        $bad += "CHANGELOG.md: missing '[$version]' heading for current version"
+    }
+    if ($bad.Count -gt 0) {
+        throw ("doc count/version claims out of sync with plugin.json=$version, live count=${count}:`n  " + ($bad -join "`n  "))
+    }
+}
+
 # Summary
 Write-Host ""
 Write-Host "=== Summary ===" -ForegroundColor Cyan
 $pass = ($report | Where-Object status -eq "PASS").Count
+
+# G.4 self-reference tripwire: G.4 derived the expected count as ($report.Count + 1)
+# from INSIDE its own body (where its record was not yet appended). Now that every
+# record IS appended, the G.4 record must be the LAST one. If a check was added after
+# G.4, $report.Count no longer matches G.4's view and the derived count under-counted —
+# FAIL loudly rather than ship a silently-wrong gate. (Mechanical backstop for the
+# binding "G.4 must stay last" pin-comment above the G.4 block.)
+if ($report.Count -gt 0 -and $report[-1].id -ne "G.4") {
+    Write-Host "  TRIPWIRE FAIL: G.4 is not the last recorded check (last='$($report[-1].id)') — a check was added after G.4; its count derivation under-counts. Move new checks ABOVE G.4." -ForegroundColor Red
+    $errors++
+}
+
 Write-Host "  PASS: $pass" -ForegroundColor Green
 Write-Host "  WARN: $warns" -ForegroundColor Yellow
 Write-Host "  FAIL: $errors" -ForegroundColor Red

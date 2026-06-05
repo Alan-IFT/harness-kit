@@ -653,10 +653,118 @@ else
     step "J.1" "settings.json schema integrity (.claude/ + template)" "PASS"
 fi
 
+# G.4 — Doc count/version claims consistent with plugin.json + live check count (T-008).
+# Every place a consumer doc states the verify_all check count and/or the release
+# version must agree with (a) plugin.json.version and (b) the live recorded-step count;
+# plus a CHANGELOG heading for the current version must exist. This is the standing
+# forcing-function that kills the count/version doc-drift class at the gate (G.3's
+# neighbour); test-supervisor no longer carries any release-tracking literal.
+#
+# +-----------------------------------------------------------------------------+
+# | G.4 MUST remain the LAST check. Its count is derived as ${#report[@]} + 1    |
+# | (sh) / $report.Count + 1 (PS), where the +1 is G.4 itself (its own record    |
+# | is appended only AFTER this branch runs). Adding ANY check after G.4 makes   |
+# | that derivation undercount -- insert new checks ABOVE this block, never below|
+# | The Summary tripwire below cross-checks ${#report[@]} vs this derived value. |
+# +-----------------------------------------------------------------------------+
+g4_version=$(extract_json_version .claude-plugin/plugin.json)
+# Count = recorded steps so far (31) + G.4 itself = the shipped check count (32).
+# Status-independent: a WARN on a doc-size check does NOT change the *check* count.
+g4_count=$(( ${#report[@]} + 1 ))
+g4_bad=""
+if [[ -z "$g4_version" ]]; then
+    step "G.4" "Doc count/version claims consistent with plugin.json + live check count" "FAIL" \
+        "could not read version from .claude-plugin/plugin.json"
+else
+    # Parallel arrays (file | shape-ERE | exact SOT-derived expected substring).
+    # Patterns stay anchored (parenthesized / version-anchored / full-width-paren)
+    # so historical bare Roadmap/CHANGELOG rows are never matched. The expected
+    # substring is the load-bearing test (literal `[[ == *..* ]]`, mirrors PS
+    # `.Contains()`); the shape ERE only improves the FAIL message.
+    g4_files=(
+        "AI-GUIDE.md"
+        "AI-GUIDE.md"
+        "docs/dev-map.md"
+        "docs/dev-map.md"
+        ".harness/rules/40-locations.md"
+        "README.md"
+        "README.zh-CN.md"
+        "README.md"
+        "README.zh-CN.md"
+        "docs/manual-e2e-test.md"
+        ".harness/scripts/baseline.json"
+    )
+    g4_shapes=(
+        '[0-9]+/[0-9]+ at v[0-9]+\.[0-9]+\.[0-9]+'
+        '[0-9]+ checks at v[0-9]+\.[0-9]+\.[0-9]+'
+        '[0-9]+ checks at v[0-9]+\.[0-9]+\.[0-9]+'
+        'runs all [0-9]+ checks \(at v[0-9]+\.[0-9]+\.[0-9]+\)'
+        '\([0-9]+ checks at v[0-9]+\.[0-9]+\.[0-9]+'
+        'verify__all-[0-9]+%2F[0-9]+'
+        'verify__all-[0-9]+%2F[0-9]+'
+        '\([0-9]+ checks\)'
+        '（[0-9]+ 项检查）'
+        '[0-9]+ checks at v[0-9]+\.[0-9]+\.[0-9]+'
+        '"verify_all_checks": [0-9]+'
+    )
+    g4_expects=(
+        "$g4_count/$g4_count at v$g4_version"
+        "$g4_count checks at v$g4_version"
+        "$g4_count checks at v$g4_version"
+        "runs all $g4_count checks (at v$g4_version)"
+        "($g4_count checks at v$g4_version"
+        "verify__all-$g4_count%2F$g4_count"
+        "verify__all-$g4_count%2F$g4_count"
+        "($g4_count checks)"
+        "（$g4_count 项检查）"
+        "$g4_count checks at v$g4_version"
+        "\"verify_all_checks\": $g4_count"
+    )
+    for i in "${!g4_files[@]}"; do
+        g4_f="${g4_files[$i]}"
+        g4_shape="${g4_shapes[$i]}"
+        g4_expect="${g4_expects[$i]}"
+        if [[ ! -f "$g4_f" ]]; then
+            g4_bad="${g4_bad}${g4_f}: file missing (expected '${g4_expect}')"$'\n'
+            continue
+        fi
+        g4_raw=$(cat "$g4_f")
+        [[ "$g4_raw" == *"$g4_expect"* ]] && continue
+        g4_found=$(grep -oE -m1 -- "$g4_shape" "$g4_f" 2>/dev/null || true)
+        if [[ -n "$g4_found" ]]; then
+            g4_bad="${g4_bad}${g4_f}: found '${g4_found}', expected '${g4_expect}'"$'\n'
+        else
+            g4_bad="${g4_bad}${g4_f}: no '${g4_shape}' claim found, expected '${g4_expect}'"$'\n'
+        fi
+    done
+    # CHANGELOG heading for the current version must exist (re-homed from the removed
+    # test-supervisor CHANGELOG assert; G.3 never reads CHANGELOG).
+    if ! grep -qF -- "[$g4_version]" CHANGELOG.md 2>/dev/null; then
+        g4_bad="${g4_bad}CHANGELOG.md: missing '[$g4_version]' heading for current version"$'\n'
+    fi
+    if [[ -n "$g4_bad" ]]; then
+        step "G.4" "Doc count/version claims consistent with plugin.json + live check count" "FAIL" \
+            "doc count/version claims out of sync with plugin.json=$g4_version, live count=$g4_count:
+${g4_bad}"
+    else
+        step "G.4" "Doc count/version claims consistent with plugin.json + live check count" "PASS"
+    fi
+fi
+
 # Summary
 echo ""
 echo "=== Summary ==="
 pass_count=$(printf '%s\n' "${report[@]}" | grep -c PASS || true)
+# G.4 self-reference tripwire: G.4 derived the expected count as (${#report[@]} + 1)
+# from inside its own branch (before its record was appended). Now that every record
+# IS appended, the G.4 record must be the LAST one. If a check was added after G.4,
+# the derived count under-counts -- FAIL loudly. (Mechanical backstop for the binding
+# "G.4 must stay last" pin-comment above the G.4 block.)
+g4_last="${report[${#report[@]}-1]}"
+if [[ "${g4_last%%|*}" != "G.4" ]]; then
+    echo "  TRIPWIRE FAIL: G.4 is not the last recorded check (last='${g4_last%%|*}') — a check was added after G.4; its count derivation under-counts. Move new checks ABOVE G.4."
+    ((errors++))
+fi
 echo "  PASS: $pass_count"
 echo "  WARN: $warns"
 echo "  FAIL: $errors"
