@@ -393,12 +393,12 @@ Step "I.3" "Agent definitions <=300 lines each" {
     }
 }
 
-Step "I.4" "insight-index.md <=30 lines" {
+Step "I.4" "insight-index.md <=30 evidence lines" {
     if (-not (Test-Path ".harness/insight-index.md")) { return }
-    $n = (Get-Content ".harness/insight-index.md" | Measure-Object -Line).Lines
+    $n = @(Get-Content ".harness/insight-index.md" | Where-Object { $_ -match '^\s*-\s+' }).Count
     if ($n -gt 30) {
         Write-Host "" -NoNewline
-        Write-Host " ($n lines — archive-task auto-rotates; manual overflow)" -ForegroundColor Yellow -NoNewline
+        Write-Host " ($n evidence lines — archive-task auto-rotates; manual overflow)" -ForegroundColor Yellow -NoNewline
         return $false
     }
 }

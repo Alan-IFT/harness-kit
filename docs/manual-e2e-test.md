@@ -1,6 +1,6 @@
 # Manual End-to-End Test Checklist
 
-Automated regression (`.harness/scripts/test-init.ps1` at 227 assertions; `.harness/scripts/test-init.sh` at 191 when python3 is unavailable (e.g. Windows Microsoft Store stub) / 227 when present; `.harness/scripts/verify_all` at 32 checks at v0.21.0; `.harness/scripts/test-supervisor.ps1` at 49 assertions / `.harness/scripts/test-supervisor.sh` at 45 (no-python3) covering the supervisor agent contract + AC-4..AC-7 + BUG-1 fixed-case Q-1 + BUG-2 column-anchored-slug negative fixtures; `.harness/scripts/test-verify-i6.{ps1,sh}` at 56/56 covering the I.6 gap-tolerant matcher + 2×2 structural lockstep + AC-8 permanent fixture) covers everything
+Automated regression (`.harness/scripts/test-init.ps1` at 251 assertions; `.harness/scripts/test-init.sh` at 213 when python3 is unavailable (e.g. Windows Microsoft Store stub) / 251 when present; `.harness/scripts/verify_all` at 32 checks at v0.21.1; `.harness/scripts/test-supervisor.ps1` at 49 assertions / `.harness/scripts/test-supervisor.sh` at 45 (no-python3) covering the supervisor agent contract + AC-4..AC-7 + BUG-1 fixed-case Q-1 + BUG-2 column-anchored-slug negative fixtures; `.harness/scripts/test-verify-i6.{ps1,sh}` at 56/56 covering the I.6 gap-tolerant matcher + 2×2 structural lockstep + AC-8 permanent fixture) covers everything
 that runs from a shell. But two things must be exercised in a real Claude Code
 session to confirm the experience:
 

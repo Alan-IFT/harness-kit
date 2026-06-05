@@ -414,16 +414,16 @@ else
     step "I.3" "Agent definitions ≤300 lines each" "PASS"
 fi
 
-# I.4 — insight-index ≤30 lines (defense-in-depth; archive-task normally rotates)
+# I.4 — insight-index ≤30 evidence lines (defense-in-depth; archive-task normally rotates)
 if [[ -f .harness/insight-index.md ]]; then
-    n=$(wc -l < .harness/insight-index.md)
+    n=$(grep -c '^[[:space:]]*-[[:space:]]' .harness/insight-index.md || true)
     if (( n > 30 )); then
-        step "I.4" "insight-index.md ≤30 lines" "WARN" "$n lines — archive-task auto-rotates; manual overflow"
+        step "I.4" "insight-index.md ≤30 evidence lines" "WARN" "$n evidence lines — archive-task auto-rotates; manual overflow"
     else
-        step "I.4" "insight-index.md ≤30 lines" "PASS"
+        step "I.4" "insight-index.md ≤30 evidence lines" "PASS"
     fi
 else
-    step "I.4" "insight-index.md ≤30 lines" "PASS"
+    step "I.4" "insight-index.md ≤30 evidence lines" "PASS"
 fi
 
 # I.5 — docs/tasks.md ≤300 lines

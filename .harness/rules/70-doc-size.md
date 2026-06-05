@@ -24,7 +24,7 @@ discipline** (how to live under the cap without losing information).
 | `CLAUDE.md` | 50 lines | Static bootstrap stub; not a content destination. | Move content into `.harness/rules/*.md` |
 | `.harness/rules/*.md` (each) | 200 lines | Loaded selectively; should fit comfortably with 2–3 siblings. | Split into `70a-…` / `70b-…` with distinct triggers |
 | `.harness/agents/*.md` (each) | 300 lines | Loaded when the agent is dispatched. | Refactor responsibilities, or move stable doc to `docs/` |
-| `.harness/insight-index.md` | 30 lines | Loaded at every task start by PM. | `.harness/scripts/archive-task` auto-rotates oldest to `docs/features/_archived/insight-history.md` |
+| `.harness/insight-index.md` | 30 evidence lines | Loaded at every task start by PM. | `.harness/scripts/archive-task` auto-rotates oldest to `docs/features/_archived/insight-history.md` |
 | `docs/tasks.md` | 300 lines | Loaded at every task start by PM. | Move oldest Completed rows to `docs/tasks-archive.md` (manual today; tooling later) |
 | Per-task `PM_LOG.md` | 500 lines | PM rereads for resume; downstream agents read for context. | "Compaction" pattern below |
 | Per-task stage doc (`0[1-7]_*.md`) | 500 lines each | Read by the next stage's agent. | "Reference, don't paste" pattern below |

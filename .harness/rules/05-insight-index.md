@@ -2,7 +2,7 @@
 
 ## What this is
 
-`.harness/insight-index.md` is a **≤30-line append-only file** capturing truths about the harness-kit project itself that were hard to discover — facts the AI (or human) would otherwise rediscover the hard way every new task.
+`.harness/insight-index.md` is a **≤30-evidence-line append-only file** capturing truths about the harness-kit project itself that were hard to discover — facts the AI (or human) would otherwise rediscover the hard way every new task.
 
 For this repo specifically, valid insight examples are things like:
 - "Edit tool occasionally reports SUCCESS but doesn't apply the change — re-Read to verify (seen 2026-05-16 during v0.9.1 verify_all whitelist edit)"
@@ -22,7 +22,7 @@ After completing a task, if you uncovered a non-obvious truth that the next pers
 ```
 
 Rules:
-- Max 30 lines total. If full, archive oldest to `docs/features/_archived/insight-history.md` (use `.harness/scripts/archive-task` which handles rotation).
+- Max 30 evidence (data) lines (header lines are free). If full, archive oldest to `docs/features/_archived/insight-history.md` (use `.harness/scripts/archive-task` which handles rotation).
 - One line, one fact. Need a paragraph → not insight, just documentation.
 - Always include evidence so future readers can verify.
 - **Adversarial test**: ask "would someone reasonable, reading the repo fresh, derive this in <10 min?" If yes, don't write.

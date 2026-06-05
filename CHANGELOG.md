@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.21.1] - 2026-06-05
+
+Patch release. Fixed the `verify_all` I.4 insight-index cap to count evidence (data) lines instead of total physical lines, identically in both shells — resolving a PS/bash cross-shell divergence (bash WARNed on the 9-line header while PS passed) and aligning I.4 with archive-task's existing rotation metric and the documented "≤30 evidence-backed lines" intent. Reconciled the baseline.json / manual-e2e-test `test_init` counts to a captured run. No check added (count stays 32).
+
 ## [0.21.0] - 2026-06-05
 
 Minor release. Hardened the supervisor regression against version-stamp drift: removed 8 hardcoded `v0.17.1`/`30`-checks fan-out asserts from `test-supervisor.{ps1,sh}` (silently red since v0.17), and added a new standing `verify_all` **G.4** meta-check that derives the version from `plugin.json` and the check count from the live step tally and validates all doc count/version claims — so this drift class now fails at the gate instead of rotting unnoticed. verify_all check count 31 → 32.
