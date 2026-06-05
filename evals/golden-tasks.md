@@ -5,7 +5,7 @@
 > - `skills/harness-init/templates/`
 > - `.claude/agents/*.md`
 > - `docs/workflow.md`
-> - `scripts/verify_all.*`
+> - `.harness/scripts/verify_all.*`
 
 Personal-project scale — keep this list short and focused. If you need more, you're scaling up.
 
@@ -13,14 +13,14 @@ Personal-project scale — keep this list short and focused. If you need more, y
 
 ### Golden #0 — Integration on real project shape (`test-real-project`)
 
-**Automated** — run [`scripts/test-real-project.ps1`](../scripts/test-real-project.ps1) or `.sh`.
+**Automated** — run [`.harness/scripts/test-real-project.ps1`](../.harness/scripts/test-real-project.ps1) or `.sh`.
 
 ```powershell
 .\scripts\test-real-project.ps1
 ```
 
 ```bash
-./scripts/test-real-project.sh
+./.harness/scripts/test-real-project.sh
 ```
 
 Overlays templates onto `tests/fixtures/todo-fullstack/` and `tests/fixtures/todo-backend/`
@@ -32,8 +32,8 @@ by catching integration bugs that only show up on non-empty projects.
 
 ### Golden #1 & #2 — harness-init creates clean fullstack & backend skeletons
 
-**Automated** — run [`scripts/test-init.ps1`](../scripts/test-init.ps1) (Windows) or
-[`scripts/test-init.sh`](../scripts/test-init.sh) (Unix). The script:
+**Automated** — run [`.harness/scripts/test-init.ps1`](../.harness/scripts/test-init.ps1) (Windows) or
+[`.harness/scripts/test-init.sh`](../.harness/scripts/test-init.sh) (Unix). The script:
 
 - Creates a temp dir.
 - Simulates `/harness-init`: copies common + project-type templates, substitutes
@@ -54,9 +54,9 @@ by catching integration bugs that only show up on non-empty projects.
 ```
 
 ```bash
-./scripts/test-init.sh
-./scripts/test-init.sh --type fullstack
-./scripts/test-init.sh --keep
+./.harness/scripts/test-init.sh
+./.harness/scripts/test-init.sh --type fullstack
+./.harness/scripts/test-init.sh --keep
 ```
 
 **Expected**: `PASS: 64 / FAIL: 0`. Exits non-zero on any failure.
@@ -69,7 +69,7 @@ placeholder substitution worked, no `.tmpl`/`.append` leaked.
 
 **Setup**:
 1. Edit `.claude/agents/developer.md` and add a junk line.
-2. Run `pwsh -File scripts/verify_all.ps1`.
+2. Run `pwsh -File .harness/scripts/verify_all.ps1`.
 
 **Expected**: `E.4 Self-template consistency` step FAIL with a diff message.
 

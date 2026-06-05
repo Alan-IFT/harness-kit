@@ -20,7 +20,7 @@ Stack: Markdown (skills, agent definitions, docs) + PowerShell + Bash (verify_al
 
 - **`.harness/rules/00-core.md`** (**always**): this repo's identity (tooling library + Claude Code Plugin), how development flows, trivial vs non-trivial
 - **`.harness/rules/05-insight-index.md`** (**at the start of design/implementation tasks**): how cross-task hard-won truths are captured in `.harness/insight-index.md`; read `insight-index.md` itself before deciding anything non-trivial
-- **`.harness/rules/10-self-consistency.md`** (**when touching `templates/`, `.harness/`, or scripts/sync-self**): the two consistency layers (templates ↔ this repo, `.harness` ↔ `.claude`/`CLAUDE.md`)
+- **`.harness/rules/10-self-consistency.md`** (**when touching `templates/`, `.harness/`, or .harness/scripts/sync-self**): the two consistency layers (templates ↔ this repo, `.harness` ↔ `.claude`/`CLAUDE.md`)
 - **`.harness/rules/20-documentation.md`** (**when touching README / CHANGELOG / docs**): doc-sync rules, what README must reference
 - **`.harness/rules/30-engineering.md`** (**before commits**): commit message conventions, file hygiene, no secrets, PS/Bash symmetry
 - **`.harness/rules/40-locations.md`** (**when looking for "where does X live"**): file-location lookup table (read this if you'd otherwise guess a path)
@@ -33,7 +33,7 @@ Stack: Markdown (skills, agent definitions, docs) + PowerShell + Bash (verify_al
 **Memory layer**:
 - **`.harness/insight-index.md`** — ≤30 evidence-backed lines of project-specific facts. Read at task start; append at task end (only with evidence). Never edit other people's lines.
 
-Before declaring any task complete, run `scripts/verify_all` and confirm all PASS checks are green (31/31 at v0.18.2; check count grows with releases) — this is the gate, not a rule fragment.
+Before declaring any task complete, run `.harness/scripts/verify_all` and confirm all PASS checks are green (31/31 at v0.20.0; check count grows with releases) — this is the gate, not a rule fragment.
 
 If you add a new fragment to `.harness/rules/`, append a line above with its filename, a 1-line description, and the trigger condition.
 
@@ -66,15 +66,15 @@ Three flows are supported, picked by the tool the user is in:
 
 ## Scripts (the moving parts)
 
-- `scripts/verify_all.{ps1,sh}` — total verification (31 checks at v0.18.2, including I.1-I.5 doc-size WARN guards + F.2 guard-rm wiring + I.6 gap-tolerant retired-claim guard + I.7 ignored-INTERVENE-report guard + D.3 AI-generated 50-*.md sanity + J.1 settings.json schema integrity). **Must PASS before declaring done.**
-- `scripts/harness-sync.{ps1,sh}` — copy `.harness/agents/` + `.harness/skills/` to `.claude/`. v0.10 narrow scope.
-- `scripts/sync-self.{ps1,sh}` — keep this repo's dogfood `.harness/agents/` + 4 script pairs (harness-sync, install-hooks, archive-task, guard-rm) byte-identical with `templates/common/`. **Does NOT sync `.harness/rules/` — those are bespoke per repo.**
-- `scripts/install-hooks.{ps1,sh}` — one-shot installer for `.git/hooks/pre-commit` (runs `harness-sync --check`).
-- `scripts/archive-task.{ps1,sh}` — archive a completed task: harvest `## Insight` section from 07_DELIVERY.md to `.harness/insight-index.md`, move 7 stage docs to `docs/features/_archived/<task>/`, rotate old insights to `docs/features/_archived/insight-history.md` if >30 lines.
-- `scripts/test-init.{ps1,sh}` — regression for `/harness-init` on empty dirs.
-- `scripts/test-real-project.{ps1,sh}` — regression overlaying templates on real fixtures.
-- `scripts/test-supervisor.{ps1,sh}` — regression for the supervisor agent + `/harness-supervise` skill (v0.17+).
-- `scripts/test-verify-i6.{ps1,sh}` — regression for the `verify_all` I.6 gap-tolerant retired-claim matcher (v0.18+).
+- `.harness/scripts/verify_all.{ps1,sh}` — total verification (31 checks at v0.20.0, including I.1-I.5 doc-size WARN guards + F.2 guard-rm wiring + I.6 gap-tolerant retired-claim guard + I.7 ignored-INTERVENE-report guard + D.3 AI-generated 50-*.md sanity + J.1 settings.json schema integrity). **Must PASS before declaring done.**
+- `.harness/scripts/harness-sync.{ps1,sh}` — copy `.harness/agents/` + `.harness/skills/` to `.claude/`. v0.10 narrow scope.
+- `.harness/scripts/sync-self.{ps1,sh}` — keep this repo's dogfood `.harness/agents/` + 4 script pairs (harness-sync, install-hooks, archive-task, guard-rm) byte-identical with `templates/common/`. **Does NOT sync `.harness/rules/` — those are bespoke per repo.**
+- `.harness/scripts/install-hooks.{ps1,sh}` — one-shot installer for `.git/hooks/pre-commit` (runs `harness-sync --check`).
+- `.harness/scripts/archive-task.{ps1,sh}` — archive a completed task: harvest `## Insight` section from 07_DELIVERY.md to `.harness/insight-index.md`, move 7 stage docs to `docs/features/_archived/<task>/`, rotate old insights to `docs/features/_archived/insight-history.md` if >30 lines.
+- `.harness/scripts/test-init.{ps1,sh}` — regression for `/harness-init` on empty dirs.
+- `.harness/scripts/test-real-project.{ps1,sh}` — regression overlaying templates on real fixtures.
+- `.harness/scripts/test-supervisor.{ps1,sh}` — regression for the supervisor agent + `/harness-supervise` skill (v0.17+).
+- `.harness/scripts/test-verify-i6.{ps1,sh}` — regression for the `verify_all` I.6 gap-tolerant retired-claim matcher (v0.18+).
 
 ## Workflow entry — pick the right mode
 
@@ -85,15 +85,15 @@ Three flows are supported, picked by the tool the user is in:
 | Explore / feasibility | "Can we do X?" / "Is library Y feasible?" — research | "能不能..." / "可行吗" / "调研一下" | `/harness-explore` |
 | Goal loop (Dev + QA) | "Keep improving until X" / "iterate to N% coverage" | "持续优化到..." / "循环改进直到..." | `/harness-goal` |
 | Batch (list of tasks) | "Run T-01...T-NN as a batch" / "batch the backlog" | "批量跑 T-01~T-09" / "把这批一起跑了" | `/harness-batch` |
-| Trivial | Typo, comment, single-line dependency bump | typo / 注释 / 改个变量名 | Direct edit + `scripts/verify_all` |
+| Trivial | Typo, comment, single-line dependency bump | typo / 注释 / 改个变量名 | Direct edit + `.harness/scripts/verify_all` |
 | Mid-task redirect | "stop the pipeline" / "tell dev to skip X" / "leave a note for QA" | "停一下" / "让 dev 别动 X" / "顺便告诉 QA…" | `/harness-intervene` |
 
-Declare-done gate (**all non-trivial modes**): `scripts/verify_all` PASS + (if 7-stage or goal) QA's `06_TEST_REPORT.md` has an `## Adversarial tests` section.
+Declare-done gate (**all non-trivial modes**): `.harness/scripts/verify_all` PASS + (if 7-stage or goal) QA's `06_TEST_REPORT.md` has an `## Adversarial tests` section.
 
 ## Editing rules
 
 - To change a rule: edit the relevant `.harness/rules/*.md` fragment. **No sync needed.** AI tools follow the reference from this file.
-- To change an agent or skill: edit `.harness/agents/<name>.md` (or `.harness/skills/<name>/SKILL.md`), then run `scripts/harness-sync` so `.claude/` picks it up. The Stop hook in `.claude/settings.json` does this automatically at session end.
-- To change a template: edit `skills/harness-init/templates/common/` (or `<type>/` overlay), then run `scripts/sync-self` to update this repo's dogfood, then `harness-sync`.
+- To change an agent or skill: edit `.harness/agents/<name>.md` (or `.harness/skills/<name>/SKILL.md`), then run `.harness/scripts/harness-sync` so `.claude/` picks it up. The Stop hook in `.claude/settings.json` does this automatically at session end.
+- To change a template: edit `skills/harness-init/templates/common/` (or `<type>/` overlay), then run `.harness/scripts/sync-self` to update this repo's dogfood, then `harness-sync`.
 
 No regeneration of `AI-GUIDE.md`, `CLAUDE.md`, or `.github/copilot-instructions.md`. They reference `.harness/`; updates flow by reference.

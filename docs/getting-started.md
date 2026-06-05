@@ -144,7 +144,7 @@ vim .harness/rules/00-core.md
 # (verify_all step E.4b enforces this).
 
 # Verify
-pwsh -File scripts/verify_all.ps1
+pwsh -File .harness/scripts/verify_all.ps1
 ```
 
 No `harness-sync` needed for rule edits — rules are referenced by AI-GUIDE.md, not copied.
@@ -153,8 +153,8 @@ No `harness-sync` needed for rule edits — rules are referenced by AI-GUIDE.md,
 
 ```bash
 vim .harness/agents/developer.md
-pwsh -File scripts/harness-sync.ps1     # syncs .harness/agents/ → .claude/agents/
-pwsh -File scripts/verify_all.ps1
+pwsh -File .harness/scripts/harness-sync.ps1     # syncs .harness/agents/ → .claude/agents/
+pwsh -File .harness/scripts/verify_all.ps1
 ```
 
 ### To add a project-specific skill
@@ -162,7 +162,7 @@ pwsh -File scripts/verify_all.ps1
 ```bash
 mkdir -p .harness/skills/<name>
 # Write .harness/skills/<name>/SKILL.md with proper Claude Code frontmatter
-pwsh -File scripts/harness-sync.ps1     # syncs .harness/skills/ → .claude/skills/
+pwsh -File .harness/scripts/harness-sync.ps1     # syncs .harness/skills/ → .claude/skills/
 ```
 
 After sync, the skill appears in `.claude/skills/<name>/SKILL.md` and is usable
@@ -227,7 +227,7 @@ On Windows you may need `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
 
 **verify_all step E.2 fails: ".claude/agents and .claude/skills synced from .harness/".**
 You edited `.harness/agents/` or `.harness/skills/` but forgot to sync. Run
-`scripts/harness-sync.{ps1,sh}` and re-verify.
+`.harness/scripts/harness-sync.{ps1,sh}` and re-verify.
 
 **The PM keeps rolling back to the analyst.**
 Probably an ambiguous requirement. Read the analyst's questions and answer them — the loop ends when nothing is ambiguous.

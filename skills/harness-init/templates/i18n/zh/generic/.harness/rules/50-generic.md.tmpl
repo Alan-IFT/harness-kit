@@ -9,7 +9,7 @@
 
 ## Build / test / verify
 
-项目实际的 build / test / lint 命令在 `scripts/verify_all.{ps1,sh}`。init 模板里是个通用骨架 —— **第一个实际任务时根据你的 stack 改一次**。
+项目实际的 build / test / lint 命令在 `.harness/scripts/verify_all.{ps1,sh}`。init 模板里是个通用骨架 —— **第一个实际任务时根据你的 stack 改一次**。
 
 对 {{STACK}}，典型命令可能是：
 - Build: `<你的 build 命令>`（Rust 可能是 `cargo build`、Node 可能是 `pnpm build`、Python 可能是 `pip install -e .`）
@@ -48,14 +48,14 @@
 1. 识别自然分区边界（比如移动 app 的 `dev-mobile-ios` + `dev-mobile-android`；ML 项目的 `dev-data-pipeline` + `dev-data-api`；Tauri 应用的 `dev-rust` + `dev-react`）
 2. 给每个分区创建 `.harness/agents/dev-<name>.md`，写明 owned-paths globs
 3. 在本文件（或新加的 `55-partitioning.md`）里写分区方案
-4. 跑 `scripts/harness-sync` 把新 agent 文件复制到 `.claude/agents/`
+4. 跑 `.harness/scripts/harness-sync` 把新 agent 文件复制到 `.claude/agents/`
 5. 更新 `AI-GUIDE.md` 的 "Agents" 段列出新分区
 
 分区 agent 存在时，Solution Architect 必须为跨分区任务在 `02_SOLUTION_DESIGN.md` 里产出分区分配表。
 
 ## 栈特定 verify_all check（可选）
 
-栈有 build / test / lint 之外值得验证的特性的话，往 `scripts/verify_all.{ps1,sh}` 加 step。例子：
+栈有 build / test / lint 之外值得验证的特性的话，往 `.harness/scripts/verify_all.{ps1,sh}` 加 step。例子：
 
 - Rust：`cargo audit` 检安全漏洞
 - Python：`pip-audit` 或 `safety check`

@@ -39,7 +39,7 @@ If the folder or the plan file is missing, point the user at `docs/batches/_temp
 
 2. **Pre-flight checks** (once, at batch start):
    - `.harness/intervention.md` — if present, consume it per `.harness/rules/65-intervention.md` BEFORE starting any task. A STOP keyword aborts the batch entirely.
-   - `scripts/verify_all` baseline — run once, capture PASS/WARN/FAIL counts. If the repo is already at FAIL, **refuse to start** the batch (a broken baseline makes per-task regression detection impossible). Surface the failure and exit.
+   - `.harness/scripts/verify_all` baseline — run once, capture PASS/WARN/FAIL counts. If the repo is already at FAIL, **refuse to start** the batch (a broken baseline makes per-task regression detection impossible). Surface the failure and exit.
    - `.harness/insight-index.md` — read once; surface relevant lines into each task's pm-orchestrator dispatch prompt.
 
 3. **Parse `BATCH_PLAN.md`**: extract the task table (columns `ID | Slug | Goal | Mode | Depends on | Status`). Validate:
@@ -53,16 +53,16 @@ If the folder or the plan file is missing, point the user at `docs/batches/_temp
    - **b.** Append to `docs/batches/<batch-id>/BATCH_LOG.md`: `<ISO-8601 UTC> · <task-id> · dispatching pm-orchestrator · slug=<slug> · mode=<mode>`.
    - **c.** **Dispatch `pm-orchestrator` via the `Task` tool.** The prompt includes: task slug, the one-sentence goal, the mode (`full` / `plan` / `goal`), any `insight-index.md` lines that match the task topic, plus the standard instruction "run /harness for this task; produce the 7 stage docs under `docs/features/<slug>/`; archive at the end". The sub-agent runs in its OWN context — the batch skill never sees the full stage docs, only the return summary.
    - **d.** Read the sub-agent's return summary line. Expected fields: verdict (`DELIVERED` / `BLOCKED` / `FAILED`), path to `07_DELIVERY.md`, files-changed count, final `verify_all` status. Append a one-line summary to `BATCH_LOG.md`.
-   - **e.** **Run `scripts/verify_all` after each task.** If it returns FAIL (exit code 2), the task caused a regression — stop the batch immediately (strong signal).
+   - **e.** **Run `.harness/scripts/verify_all` after each task.** If it returns FAIL (exit code 2), the task caused a regression — stop the batch immediately (strong signal).
    - **f.** Update the task's `Status` in `BATCH_PLAN.md`: `done` / `failed` / `blocked`.
    - **g.** Check `.harness/intervention.md` between tasks; consume + act per `.harness/rules/65-intervention.md`.
    - **h.** If the task `FAILED`, mark every task whose `Depends on` chain includes it as `blocked` (skip without dispatching), then stop the batch (do not auto-continue after a failure).
 
 5. **Strong-signal stop conditions** (any one → stop the batch, write `BATCH_REPORT.md`, surface to user):
    - The dispatched pm-orchestrator returns `FAILED` verdict (the externally-visible form of pm-orchestrator's "3 same-stage rollbacks → STOP" hard rule — either signal alone triggers stop).
-   - `scripts/verify_all` returns FAIL after a task — the change broke the baseline.
+   - `.harness/scripts/verify_all` returns FAIL after a task — the change broke the baseline.
    - `.harness/intervention.md` contains `STOP` between tasks.
-   - The safety hook (`scripts/guard-rm`) blocked a destructive Bash call inside a task — the sub-agent will surface the block in its return summary.
+   - The safety hook (`.harness/scripts/guard-rm`) blocked a destructive Bash call inside a task — the sub-agent will surface the block in its return summary.
 
 6. **Soft-signal NOTE / SKIP** between tasks (per `.harness/rules/65-intervention.md`):
    - `NOTE — <text>` → attach the text to the **next** task's pm-orchestrator dispatch prompt, then delete the file. Batch continues.
@@ -88,7 +88,7 @@ When the loop exits (all done, or stopped early), write `docs/batches/<batch-id>
 - Aggregate stats: tasks done, failed, blocked, elapsed wall time, final `verify_all` summary.
 - Stop reason if applicable (which strong signal fired).
 
-Per-task stage docs ARE archived by each task's own pm-orchestrator (it calls `scripts/archive-task` at delivery). The batch artifacts (`BATCH_PLAN.md`, `BATCH_LOG.md`, `BATCH_REPORT.md`) stay in `docs/batches/<batch-id>/` for user reference — they are **not** auto-archived.
+Per-task stage docs ARE archived by each task's own pm-orchestrator (it calls `.harness/scripts/archive-task` at delivery). The batch artifacts (`BATCH_PLAN.md`, `BATCH_LOG.md`, `BATCH_REPORT.md`) stay in `docs/batches/<batch-id>/` for user reference — they are **not** auto-archived.
 
 ## Hard rules
 

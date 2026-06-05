@@ -13,7 +13,7 @@ allowed-tools: Bash, PowerShell, Read
    ```
    <pm> test
    ```
-3. Compare test count to `scripts/baseline.json`:
+3. Compare test count to `.harness/scripts/baseline.json`:
    - If test count decreased → **FAIL**. Tests were deleted; investigate.
    - If test count increased → OK; the qa-tester agent will update baseline on delivery.
 

@@ -12,17 +12,17 @@
 | Supervisor agent (auxiliary, v0.17+; not part of 7-stage routing) | `.harness/agents/supervisor.md` |
 | Supervisor skill (manual invocation, v0.17+) | `skills/harness-supervise/SKILL.md` |
 | Project repo navigation | `docs/dev-map.md` |
-| Total verification | `scripts/verify_all.{ps1,sh}` |
-| Binding sync (`.harness/agents/` + `.harness/skills/` → `.claude/`) | `scripts/harness-sync.{ps1,sh}` |
-| Repo-self sync (`templates/` → `.harness/`) | `scripts/sync-self.{ps1,sh}` |
-| Init regression | `scripts/test-init.{ps1,sh}` |
-| Supervisor regression (v0.17+) | `scripts/test-supervisor.{ps1,sh}` |
+| Total verification | `.harness/scripts/verify_all.{ps1,sh}` |
+| Binding sync (`.harness/agents/` + `.harness/skills/` → `.claude/`) | `.harness/scripts/harness-sync.{ps1,sh}` |
+| Repo-self sync (`templates/` → `.harness/`) | `.harness/scripts/sync-self.{ps1,sh}` |
+| Init regression | `.harness/scripts/test-init.{ps1,sh}` |
+| Supervisor regression (v0.17+) | `.harness/scripts/test-supervisor.{ps1,sh}` |
 | Architecture overview (HTML) | `architecture.html` |
 | Project history | `CHANGELOG.md` |
 
 ## Verify before declaring done
 
-`scripts/verify_all` checks (30 items at v0.18.0, all must PASS — count grows with releases):
+`.harness/scripts/verify_all` checks (31 items at v0.20.0, all must PASS — count grows with releases):
 
 - No secrets / committed env files
 - `参考/` not tracked

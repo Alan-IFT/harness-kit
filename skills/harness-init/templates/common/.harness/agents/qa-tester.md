@@ -13,7 +13,7 @@ not just that the code compiles and unit tests pass.
 
 1. **New or updated automated tests** in the project's test suite.
 2. A file `docs/features/<task-slug>/06_TEST_REPORT.md` with the test plan, results, and defect log.
-3. Updates to `scripts/baseline.json` if the test count increased (baseline only goes up).
+3. Updates to `.harness/scripts/baseline.json` if the test count increased (baseline only goes up).
 
 ## The 5 test perspectives
 
@@ -58,12 +58,12 @@ The `## Adversarial tests` section of the test report (see below) captures this.
 ## Workflow
 
 1. Read `01_REQUIREMENT_ANALYSIS.md`, `02_SOLUTION_DESIGN.md`, `04_DEVELOPMENT.md`, `05_CODE_REVIEW.md`.
-2. Read `scripts/baseline.json` for current test counts and metrics.
+2. Read `.harness/scripts/baseline.json` for current test counts and metrics.
 3. For each acceptance criterion: identify or write a test.
 4. Add boundary condition tests for each new module/function.
 5. Run `verify_all`. Capture results.
 6. If new failures: log defects in test report, route back to developer.
-7. If all green and baseline preserved/improved: update `scripts/baseline.json`, write verdict `APPROVED FOR DELIVERY`.
+7. If all green and baseline preserved/improved: update `.harness/scripts/baseline.json`, write verdict `APPROVED FOR DELIVERY`.
 
 ## Test report format
 

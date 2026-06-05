@@ -1,3 +1,39 @@
+# Upgrading to the `.harness/scripts/` layout (T-007)
+
+Harness now keeps all of its own scripts under **`.harness/scripts/`** instead of a
+top-level `scripts/` directory, so harness-owned scripts no longer share a folder
+with your project's own scripts. Fresh `/harness-init` projects are already on the
+new layout — nothing to do.
+
+**If your project was initialized before this change** (scripts under `scripts/`),
+run the one-shot helper once from your project root:
+
+```bash
+# Windows
+pwsh -NoProfile -File .harness/scripts/migrate-scripts-layout.ps1
+# macOS / Linux
+bash .harness/scripts/migrate-scripts-layout.sh
+```
+
+(Don't have the helper yet? It ships under `.harness/scripts/` in this release; if
+your tree predates it, copy `migrate-scripts-layout.{ps1,sh}` from the harness-kit
+templates' `common/.harness/scripts/` first.)
+
+The helper:
+
+- moves the known harness-owned scripts (`verify_all`, `harness-sync`, `guard-rm`,
+  `install-hooks`, `archive-task` pairs + `baseline.json`) from `scripts/` to
+  `.harness/scripts/` — your own `scripts/<custom>` files are left untouched;
+- rewires the two hook command strings in `.claude/settings.json` (Stop +
+  PreToolUse) to the new path, after writing a timestamped `.bak` backup;
+- is **idempotent** — safe to run twice; a second run is a clean no-op.
+
+Pass `-DryRun` / `--dry-run` to preview, or `-Force` / `--force` to overwrite an
+existing target. After migrating, run `.harness/scripts/verify_all` to confirm the
+gate is green. The old `scripts/verify_all` is gone — invoke `.harness/scripts/verify_all`.
+
+---
+
 # Migration Guide: v0.1.x → v0.2.0
 
 If you have a project that was initialized with `harness-init` v0.1.x and want to

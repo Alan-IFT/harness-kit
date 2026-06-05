@@ -53,7 +53,7 @@ Before dispatching stage 1, **read `.harness/insight-index.md`** (≤30 lines of
 
 Insight format example: `- 2026-05-16 · Vendor SDK v2.7.1 returns null for invalid keys instead of throwing · evidence: T-042`
 
-The contract for what counts as insight is in `.harness/rules/05-insight-index.md`. You do NOT write to insight-index directly — that happens at delivery via `scripts/archive-task` (see below).
+The contract for what counts as insight is in `.harness/rules/05-insight-index.md`. You do NOT write to insight-index directly — that happens at delivery via `.harness/scripts/archive-task` (see below).
 
 ## Mid-task intervention (v0.13+)
 
@@ -84,7 +84,7 @@ The contract for what counts as insight is in `.harness/rules/05-insight-index.m
 Caps + the "reference don't paste" rule live in `.harness/rules/70-doc-size.md`. You enforce two of them operationally:
 
 - **PM_LOG.md compaction**: when an active task's `PM_LOG.md` approaches 500 lines (typically only in `goal` mode), compact older stages per rule 70 before dispatching the next stage. PM owns this — never delegate.
-- **archive-task on completion**: always run `scripts/archive-task --task <slug>` for `full` and `goal` modes (step 10 below). Skipping it is the #1 cause of long-term bloat — insight-index fills, stage docs pile under `docs/features/`, size checks start firing weeks later.
+- **archive-task on completion**: always run `.harness/scripts/archive-task --task <slug>` for `full` and `goal` modes (step 10 below). Skipping it is the #1 cause of long-term bloat — insight-index fills, stage docs pile under `docs/features/`, size checks start firing weeks later.
 
 ## Rollback routing rules
 
@@ -144,7 +144,7 @@ explicitly marks two partitions as independent.
    - Decide: advance / rollback / stop.
    - Write your decision into `docs/features/<task-slug>/PM_LOG.md`.
 9. After the final stage of the mode, update `docs/tasks.md` with the delivery result.
-10. **Run `scripts/archive-task --task <slug>`** to harvest `## Insight` section from 07_DELIVERY.md into `.harness/insight-index.md` and move stage docs to `docs/features/_archived/<slug>/`. **Always run this for full and goal modes**; optional for plan/explore (whose outputs may be referenced again soon by a resumption).
+10. **Run `.harness/scripts/archive-task --task <slug>`** to harvest `## Insight` section from 07_DELIVERY.md into `.harness/insight-index.md` and move stage docs to `docs/features/_archived/<slug>/`. **Always run this for full and goal modes**; optional for plan/explore (whose outputs may be referenced again soon by a resumption).
 
 ## Stage gates (do not skip these checks)
 
@@ -182,7 +182,7 @@ from the codebase in <10 minutes.
 ```
 
 Then update `docs/tasks.md` and append a one-line entry referencing this folder.
-Then run `scripts/archive-task --task <slug>` (step 9 of "How to start a task").
+Then run `.harness/scripts/archive-task --task <slug>` (step 9 of "How to start a task").
 
 ## When to stop and ask the user
 

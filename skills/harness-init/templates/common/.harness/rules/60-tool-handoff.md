@@ -67,7 +67,7 @@ switching IDE, end of session:
 
 - **Claude Code**: PM Orchestrator is the routing agent. It reads PM_LOG,
   dispatches sub-agents. The full 7-stage pipeline is native. The Stop hook
-  in `.claude/settings.json` auto-runs `scripts/harness-sync` at session
+  in `.claude/settings.json` auto-runs `.harness/scripts/harness-sync` at session
   end, so `.harness/` edits flow to `CLAUDE.md` + `.github/copilot-instructions.md`
   without user intervention.
 - **GitHub Copilot**: No sub-agent dispatch. You (Copilot) play whichever
@@ -112,11 +112,11 @@ equally valid ways to keep `.claude/agents/` and `.claude/skills/` from
 going stale:
 
 1. **Run sync before declaring your turn done.** Execute
-   `pwsh -File scripts/harness-sync.ps1` (Windows) or
-   `bash scripts/harness-sync.sh` (macOS / Linux) immediately after the edit.
+   `pwsh -File .harness/scripts/harness-sync.ps1` (Windows) or
+   `bash .harness/scripts/harness-sync.sh` (macOS / Linux) immediately after the edit.
    Then stage the regenerated `.claude/agents/` / `.claude/skills/`
    alongside your `.harness/` change.
-2. **Let the git pre-commit hook catch it.** If `scripts/install-hooks.{ps1,sh}`
+2. **Let the git pre-commit hook catch it.** If `.harness/scripts/install-hooks.{ps1,sh}`
    was run during init, `.git/hooks/pre-commit` runs `harness-sync --check`
    and blocks any commit with drift. You'll see a clear error telling you
    to run sync.

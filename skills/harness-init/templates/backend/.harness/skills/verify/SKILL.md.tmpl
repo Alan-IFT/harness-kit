@@ -1,17 +1,17 @@
 ---
 name: verify
-description: Run scripts/verify_all - the single hard gate for backend task completion. Returns PASS / WARN / FAIL.
+description: Run .harness/scripts/verify_all - the single hard gate for backend task completion. Returns PASS / WARN / FAIL.
 allowed-tools: Bash, PowerShell, Read
 ---
 
 # Verify skill — {{PROJECT_NAME}} backend
 
-Single entry: `scripts/verify_all.*` (PowerShell or Bash, auto-detect stack).
+Single entry: `.harness/scripts/verify_all.*` (PowerShell or Bash, auto-detect stack).
 
 ## Steps
 
-1. Windows: `pwsh -File scripts/verify_all.ps1`
-   Unix: `bash scripts/verify_all.sh`
+1. Windows: `pwsh -File .harness/scripts/verify_all.ps1`
+   Unix: `bash .harness/scripts/verify_all.sh`
 2. Read exit code (0/1/2 = PASS/WARN/FAIL).
 3. Save full output to the current task's `04_DEVELOPMENT.md`.
 

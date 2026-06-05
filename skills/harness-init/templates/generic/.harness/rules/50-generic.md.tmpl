@@ -9,7 +9,7 @@ Carry this in mind when touching code in this project. Skip for typo fixes / com
 
 ## Build / test / verify
 
-The project's actual build / test / lint commands live in `scripts/verify_all.{ps1,sh}`. The init template ships a generic skeleton — **customize it for your stack on the first real task**.
+The project's actual build / test / lint commands live in `.harness/scripts/verify_all.{ps1,sh}`. The init template ships a generic skeleton — **customize it for your stack on the first real task**.
 
 For {{STACK}}, typical commands might include:
 - Build: `<your build command>` (e.g. `cargo build` for Rust, `pnpm build` for Node, `pip install -e .` for Python)
@@ -48,14 +48,14 @@ If the project becomes large enough that partitioned developers would help, ask 
 1. Identify natural partition boundaries (e.g. `dev-mobile-ios` + `dev-mobile-android` for a mobile app; `dev-data-pipeline` + `dev-data-api` for an ML project; `dev-rust` + `dev-react` for a Tauri app)
 2. Create `.harness/agents/dev-<name>.md` for each partition with explicit owned-paths globs
 3. Update this file (or a new `55-partitioning.md`) to document the partitioning scheme
-4. Run `scripts/harness-sync` to copy the new agent files to `.claude/agents/`
+4. Run `.harness/scripts/harness-sync` to copy the new agent files to `.claude/agents/`
 5. Update `AI-GUIDE.md`'s "Agents" section to list the new partitions
 
 The Solution Architect, when partition agents exist, must produce a partition-assignment table in `02_SOLUTION_DESIGN.md` for any task that touches multiple partitions.
 
 ## Stack-specific verify_all checks (optional)
 
-If your stack has properties worth verifying beyond build / test / lint, add steps to `scripts/verify_all.{ps1,sh}`. Examples:
+If your stack has properties worth verifying beyond build / test / lint, add steps to `.harness/scripts/verify_all.{ps1,sh}`. Examples:
 
 - Rust: `cargo audit` for security
 - Python: `pip-audit` or `safety check`

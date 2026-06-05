@@ -2,7 +2,7 @@
 
 [English](README.md) · **简体中文**
 
-![version](https://img.shields.io/badge/version-0.19.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-31%2F31-brightgreen) ![test-init](https://img.shields.io/badge/test--init-227%2F227-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.20.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-31%2F31-brightgreen) ![test-init](https://img.shields.io/badge/test--init-227%2F227-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
 > **Claude Code 的 Harness Engineering 工具包** — 一个 Claude Code Plugin（11 个 skills + 项目模板），把"有纪律的 AI 驱动开发"带到全栈和后端项目里。
 >
@@ -134,7 +134,7 @@ CLAUDE.md                            (~15 行 bootstrap stub；Claude Code 读)
 
 **Context 预算**：常驻 system prompt 的规则集从 ~3500 token（v0.9.x 全量 CLAUDE.md）降到 ~250 token（v0.10 stub）。小问答里（~92% 节省）AI 甚至不读 AI-GUIDE.md。中等任务读 AI-GUIDE.md 一次 + 触发条件命中的 1-3 个片段，平均 ~50% 节省。
 
-`harness-sync` 还在，但只复制 `.harness/agents/` 和 `.harness/skills/` 到 `.claude/`（Claude Code 强要求这些路径）。规则不 sync。git pre-commit hook（来自 `scripts/install-hooks`）兜底保证 Copilot / Cursor / 手编辑用户的 `.claude/` 也跟得上 `.harness/`，工具无关。
+`harness-sync` 还在，但只复制 `.harness/agents/` 和 `.harness/skills/` 到 `.claude/`（Claude Code 强要求这些路径）。规则不 sync。git pre-commit hook（来自 `.harness/scripts/install-hooks`）兜底保证 Copilot / Cursor / 手编辑用户的 `.claude/` 也跟得上 `.harness/`，工具无关。
 
 ### 项目级语言策略
 
@@ -263,10 +263,11 @@ Markdown 文档：
 | 0.17.2 | 已交付 | **`settings.json` schema 修复**：Claude Code settings schema 把 `hooks` 对象声明为 `additionalProperties: false`——只有真实的 hook 事件名才是合法键。harness-kit 把 `_doc_sync_hook` / `_guard_hook` 文档说明字符串放在了 `hooks` 对象*内部*，导致每个生成的 `.claude/settings.json` 都无法通过 schema 校验。两个键已移至根对象（`additionalProperties: true`，根层允许 `_*` 文档键）。无功能变更；verify_all 仍 30 项检查。 |
 | 0.17.3 | 已交付 | **bootstrap 红线措辞修复**：`CLAUDE.md` / `copilot-instructions.md` 的红线把 `.claude/` 错标成"生成/静态文件"。`.claude/settings.json` 两者都不是——它是 agent 活的、手工维护的启动配置。该条拆成两条：一条讲 `.claude/`（活配置 + 同步生成的 `agents/`/`skills/`，附正确理由），一条讲真正的静态 stub。修了 4 个模板 + 2 个 dogfood 文件。无功能变更；verify_all 仍 30 项检查。 |
 | 0.17.4 | 已交付 | **v0.10 文档漂移清扫**：把残留在 live 文档/注释里的 v0.10 之前措辞扫干净 —— 不再把 `harness-sync` 描述成会重新生成 `CLAUDE.md` / `copilot-instructions.md`，也不再把 `CLAUDE.md` 错标成"生成的"。改了 `00-core.md` 规则模板（中英）、`settings.json` 模板、`dev-frontend` 模板、README 布局框、getting-started、CONTRIBUTING、init/adopt 两个 skill，并把 `verify_all` I.6 豁免注释与代码对齐。无功能变更；verify_all 仍 30 项检查。 |
-| 0.18.0 | 已交付 | **I.6 gap-tolerant retired-claim 守护**：`verify_all` I.6 短语守护从字面子串匹配升级为 gap-tolerant 有序锚点扫描 —— 每条黑名单条目是一组纯文本锚点，必须在一行内按顺序出现且间隔在限定范围内，并可带行级 `exclude` token，使准确的否定表述不再误 FAIL。I.6 豁免目录拓宽到整个 `docs/features/` 子树。新增 `scripts/test-verify-i6.{ps1,sh}` 回归脚本对。无新增检查；verify_all 仍 30 项。 |
+| 0.18.0 | 已交付 | **I.6 gap-tolerant retired-claim 守护**：`verify_all` I.6 短语守护从字面子串匹配升级为 gap-tolerant 有序锚点扫描 —— 每条黑名单条目是一组纯文本锚点，必须在一行内按顺序出现且间隔在限定范围内，并可带行级 `exclude` token，使准确的否定表述不再误 FAIL。I.6 豁免目录拓宽到整个 `docs/features/` 子树。新增 `.harness/scripts/test-verify-i6.{ps1,sh}` 回归脚本对。无新增检查；verify_all 仍 30 项。 |
 | 0.18.1 | 已交付 | **`test-verify-i6` 加固**：结构化锁步升级到完整的 2×2（`test-verify-i6.{ps1,sh}` × `verify_all.{ps1,sh}`）逐条目 × 4 字段（anchors / reason / exclude / gap）逐字比较 —— 修复 v0.18.0 留下的 PS 侧只校 entry count + 第 #10 条 `.claude/` exclude 的缺口。新增与现有 dir-exempt 对称的 file-exempt 谓词，并对 I.6 exempt-file (`CHANGELOG.md`、`architecture.html`、…) 与 exempt-dir 列表做逐元素锁步。AC-8（`CHANGELOG.md` / `_archived/` 豁免）从 v0.18.0 的临时 inline-injection 探针升级为永久 corpus fixture。断言计数：35→56（PS）、34→56（bash）；verify_all 仍 30 项。 |
 | 0.18.2 | 已交付 | **`settings.json` schema 校验守护（J.1）**：dogfood 与模板里的 `.claude/settings.json` `$schema` URL 漏写了 `.json` 后缀，导致 301 重定向目标返回 `application/octet-stream`，许多编辑器静默拒绝加载 schema —— 即使 JSON 能解析整个文件仍被标记非法。已恢复为规范 URL。新增 `verify_all` J.1 检查同时解析仓库文件与 `.tmpl`，强制 `$schema` 取规范值，并拒绝 `hooks` 下任何非上游事件枚举里的键 —— 在 gate 一次性拦截 v0.17.2（键位错放）和 v0.18.2（URL 形式错）两类错误。新规则片段 `.harness/rules/80-settings-schema.md` 沉淀"修改前先用 context7 查官方 schema"的工作流。verify_all 30 → 31 项。 |
 | 0.19.0 | 已交付 | **批量模式**：新 skill `/harness-kit:harness-batch <batch-id>`，把 `docs/batches/<batch-id>/BATCH_PLAN.md` 里的 `T-01…T-NN` 顺序灌给 `pm-orchestrator` 执行，每个任务通过 `Task` 工具派发到独立子 agent 上下文，主上下文只累加每任务一行摘要。仅在强信号上停止（`verify_all` FAIL、pm-orchestrator FAIL、3 次同阶段 rollback、`intervention.md` STOP、安全 hook 拦截）。可重入：再次用同一 `<batch-id>` 调用会跳过已 `DELIVERED` 的任务。新增 `docs/batches/` 目录（lifecycle README + `_template/BATCH_PLAN.md`）。`verify_all` skill 数 10 → 11（C.1 / G.1 / G.2 两个 shell 都已对齐）。 |
+| 0.20.0 | 已交付 | **脚本搬迁**：所有 harness 自带脚本从 `scripts/` 移到 `.harness/scripts/`，不再与用户项目自己的 `scripts/` 目录冲突。新增幂等的 `.harness/scripts/migrate-scripts-layout.{ps1,sh}` 助手，为既有项目迁移（带时间戳 `.bak`、`-DryRun`/`-Force`、外科式路径改写）。所有 live 路径引用、hook 接线（模板 + 仅提议的 dogfood settings）、`verify_all` 自检（两个 shell）、贡献者文档 + `MIGRATION.md` 同步更新。`verify_all` 仍 31 项检查。 |
 | 0.20+ | 规划中 | PM 在用户配置的阶段边界自动派发 supervisor（在 ≥10 个真实任务证明误报预算后启用）；批量并行派发（在顺序批量稳定后启用） |
 
 ## 设计原则

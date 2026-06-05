@@ -1,12 +1,12 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "_comment": "Dogfood: this repo uses the same Stop-hook auto-sync that harness-init ships to new projects (v0.9.0).",
-  "_doc_sync_hook": "Stop hook auto-runs harness-sync at session end so .harness/agents/ and .harness/skills/ edits flow to .claude/ without manual sync. On macOS/Linux without pwsh, change the Stop hook command to: bash scripts/harness-sync.sh",
+  "_doc_sync_hook": "Stop hook auto-runs harness-sync at session end so .harness/agents/ and .harness/skills/ edits flow to .claude/ without manual sync. On macOS/Linux without pwsh, change the Stop hook command to: bash .harness/scripts/harness-sync.sh",
   "_guard_hook": "PreToolUse hook auto-runs guard-rm before every Bash tool call. Blocks destructive commands targeting paths outside this repo. Override per-call with HARNESS_ALLOW_OUTSIDE_RM=1. See .harness/rules/75-safety-hook.md to fully disable.",
   "permissions": {
     "allow": [
       "Bash(pwsh:*)",
-      "Bash(bash scripts/harness-sync.sh:*)",
+      "Bash(bash .harness/scripts/harness-sync.sh:*)",
       "Bash(git status:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
@@ -21,10 +21,10 @@
   },
   "hooks": {
     "Stop": [
-      { "hooks": [ { "type": "command", "command": "pwsh -NoProfile -File scripts/harness-sync.ps1" } ] }
+      { "hooks": [ { "type": "command", "command": "pwsh -NoProfile -File .harness/scripts/harness-sync.ps1" } ] }
     ],
     "PreToolUse": [
-      { "matcher": "Bash", "hooks": [ { "type": "command", "command": "pwsh -NoProfile -File scripts/guard-rm.ps1" } ] }
+      { "matcher": "Bash", "hooks": [ { "type": "command", "command": "pwsh -NoProfile -File .harness/scripts/guard-rm.ps1" } ] }
     ]
   }
 }

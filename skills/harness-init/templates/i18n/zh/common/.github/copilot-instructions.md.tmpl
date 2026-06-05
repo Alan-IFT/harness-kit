@@ -10,7 +10,7 @@ applyTo: "**"
 红线（永不违反）：
 - 别手改 `.claude/` —— 它是 agent 运行时配置：`settings.json` 是活的启动配置（改动请提议、由用户应用），`agents/`+`skills/` 由 `.harness/` 同步生成（要改去改 `.harness/` 源文件）。
 - 禁编辑 `CLAUDE.md` 和本文件 —— init 时写一次的静态 stub。
-- 声明完成前必须跑 `scripts/verify_all` PASS
+- 声明完成前必须跑 `.harness/scripts/verify_all` PASS
 - 一次一个角色**除非用户已明确启用连续模式**（见 `60-tool-handoff.md`）。读对应 `.harness/agents/<name>.md` 按契约工作，不要中途悄悄换角色
 
 本文件是**静态**的 —— init 时写一次，刻意精简，永不膨胀持久 context 预算。其余全在 `AI-GUIDE.md` 或 `.harness/`。

@@ -38,8 +38,8 @@ The PM Orchestrator (you, if you're the PM, or a dispatched sub-agent) routes th
 8. **Dispatch Code Reviewer** via Task tool. Output: `05_CODE_REVIEW.md`. If issues, route back to Developer. Update `stage: qa`.
 9. **Dispatch QA Tester** via Task tool — **with the adversarial verification contract enforced** (see `.harness/agents/qa-tester.md`). Output: `06_TEST_REPORT.md` that MUST include `## Adversarial tests` section per acceptance criterion. Update `stage: delivery`.
 10. **Write `07_DELIVERY.md`** (PM does this directly): summary + verify_all output + any `## Insight` section if the task surfaced non-obvious project truths.
-11. **Run `scripts/verify_all`**. Task is **not done** until it PASSes.
-12. **Run `scripts/archive-task --task <task-slug>`** to harvest insights to `.harness/insight-index.md` and move stage docs to `docs/features/_archived/`.
+11. **Run `.harness/scripts/verify_all`**. Task is **not done** until it PASSes.
+12. **Run `.harness/scripts/archive-task --task <task-slug>`** to harvest insights to `.harness/insight-index.md` and move stage docs to `docs/features/_archived/`.
 13. **Update tasks.md** `stage: done` and report to user.
 
 ## Resuming from a partial run

@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-06-04
+
+Minor release. **Relocates all harness-owned scripts from `scripts/` to `.harness/scripts/`** so they no longer collide with a user project's own `scripts/` directory, and ships a migration helper for existing projects. No behavioral change to the pipeline or any skill — this is a layout/packaging change with full path-reference and self-check fan-out.
+
+### Why
+
+When harness-kit was overlaid onto a real project, its operational scripts (`verify_all`, `harness-sync`, `guard-rm`, `archive-task`, the test drivers, …) landed in the project's top-level `scripts/` directory — the exact place a typical project keeps its OWN build/deploy/CI scripts. Two source-of-truth trees collided in one folder, making it ambiguous which `scripts/foo.sh` belonged to whom and risking accidental clobber on the next overlay. Moving every harness script under `.harness/scripts/` puts them inside the namespace the toolkit already owns (`.harness/`), leaving the project's `scripts/` untouched.
+
+### Changed — script location: `scripts/` → `.harness/scripts/`
+
+- All 23 tracked harness scripts (`verify_all`, `harness-sync`, `sync-self`, `install-hooks`, `archive-task`, `guard-rm`, `test-init`, `test-real-project`, `test-supervisor`, `test-verify-i6`, `test-guard-rm` — each `.ps1` + `.sh` — plus `baseline.json`) `git mv`'d from `scripts/` to `.harness/scripts/`. The distribution templates (`templates/common/.harness/scripts/` + the 3 stack `verify_all.{ps1,sh}.tmpl` overlays) moved in the same shape.
+- Every live path constant / self-check / sync mapping retargeted in BOTH shells, including each script's repo-root derivation (now two directory levels up, not one). Hook wiring updated in the `settings.json.tmpl` and proposed for the propose-only dogfood `.claude/settings.json`. `verify_all` self-checks (A.1 / E.1 / E.2 / F.1 / F.2 / I.6 exempt list / history-append path) updated in both shells.
+- Contributor docs (`AI-GUIDE.md`, `README.md`, `README.zh-CN.md`, `CONTRIBUTING.md`, `docs/getting-started.md`, `docs/concepts.md`, `docs/manual-e2e-test.md`, `docs/dev-map.md`, all `.harness/rules/*.md`, all `skills/**/SKILL.md`) swept to the new path, and `MIGRATION.md` gained a top "Upgrading to the `.harness/scripts/` layout" section.
+
+### Added — `migrate-scripts-layout.{ps1,sh}` helper
+
+- New `.harness/scripts/migrate-scripts-layout.{ps1,sh}` (+ template copy). Idempotent migration for existing projects: moves the known harness scripts from `scripts/` to `.harness/scripts/`, rewrites `scripts/harness-sync.` / `scripts/guard-rm.` references in `.claude/settings.json` (and its `_doc_sync_hook` doc string), writes a timestamped `.bak`, supports `-DryRun` / `-Force`, and is a no-op (no `.bak`, no write) when the project is already migrated. Does NOT touch a project's own non-harness `scripts/` files. Regression-covered by the `test-init` migrate fixture in both shells.
+
+### Changed — Version stamps: 0.19.0 → 0.20.0
+
+- `.claude-plugin/plugin.json`: `"version": "0.19.0"` → `"version": "0.20.0"`.
+- `.claude-plugin/marketplace.json`: `plugins[0].version` `"0.19.0"` → `"0.20.0"`.
+- `README.md`: version badge `0.19.0` → `0.20.0`; new `0.20.0` Roadmap row.
+- `README.zh-CN.md`: version badge `0.19.0` → `0.20.0`; new `0.20.0` Roadmap row.
+
+### Notes
+
+- No new `verify_all` check; the gate count stays at **31** (both shells). The relocation is enforced by the existing F.1 / F.2 pair-existence + wiring checks now pointing at `.harness/scripts/`.
+- No skill added or removed; the 11-skill set (`harness`, `harness-init`, `harness-adopt`, `harness-verify`, `harness-status`, `harness-plan`, `harness-explore`, `harness-goal`, `harness-intervene`, `harness-supervise`, `harness-batch`) is unchanged.
+- The dogfood `.claude/settings.json` hook paths are proposed-only (CLAUDE.md red line); the user applies the path diff (or runs `migrate-scripts-layout`) so the live Stop / PreToolUse hooks resolve correctly.
+
 ## [0.19.0] - 2026-05-23
 
 Minor release. Adds the **batch-mode** entry point — a new `/harness-kit:harness-batch` skill that runs a list of tasks through the full 7-stage pipeline sequentially, each task in its own sub-agent context, stopping only on strong failure signals. Closes the "user has T-01…T-NN and must invoke `/harness` N times by hand" friction documented in the v0.18.x backlog.

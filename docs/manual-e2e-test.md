@@ -1,6 +1,6 @@
 # Manual End-to-End Test Checklist
 
-Automated regression (`scripts/test-init.ps1` at 227 assertions; `scripts/test-init.sh` at 191 when python3 is unavailable (e.g. Windows Microsoft Store stub) / 227 when present; `scripts/verify_all` at 31 checks at v0.18.2; `scripts/test-supervisor.ps1` at 57 assertions / `scripts/test-supervisor.sh` at 53 (no-python3) covering the supervisor agent contract + AC-4..AC-7 + BUG-1 fixed-case Q-1 + BUG-2 column-anchored-slug negative fixtures; `scripts/test-verify-i6.{ps1,sh}` at 56/56 covering the I.6 gap-tolerant matcher + 2×2 structural lockstep + AC-8 permanent fixture) covers everything
+Automated regression (`.harness/scripts/test-init.ps1` at 227 assertions; `.harness/scripts/test-init.sh` at 191 when python3 is unavailable (e.g. Windows Microsoft Store stub) / 227 when present; `.harness/scripts/verify_all` at 31 checks at v0.20.0; `.harness/scripts/test-supervisor.ps1` at 57 assertions / `.harness/scripts/test-supervisor.sh` at 53 (no-python3) covering the supervisor agent contract + AC-4..AC-7 + BUG-1 fixed-case Q-1 + BUG-2 column-anchored-slug negative fixtures; `.harness/scripts/test-verify-i6.{ps1,sh}` at 56/56 covering the I.6 gap-tolerant matcher + 2×2 structural lockstep + AC-8 permanent fixture) covers everything
 that runs from a shell. But two things must be exercised in a real Claude Code
 session to confirm the experience:
 
@@ -132,7 +132,7 @@ cat AI-GUIDE.md | head -5  # the tool-agnostic entry, indexes every rule fragmen
 ### B.4 Verify binding consistency
 
 ```bash
-bash scripts/harness-sync.sh --check
+bash .harness/scripts/harness-sync.sh --check
 # Expected: "In sync."
 ```
 

@@ -94,7 +94,7 @@ is to route back via PM — the cost of one rollback is tiny compared to lost ac
 |---|---|---|---|
 | Rule | Soft constraints, natural language | `.harness/rules/*.md` | AI reads it but may forget under long context. Good for principles. |
 | Skill | Standard operating procedure | `.harness/skills/<name>/SKILL.md` | Codifies repeated actions so AI doesn't improvise. |
-| Script | Hard gate | `scripts/verify_all.{ps1,sh}` | Machine-checkable. AI cannot "interpret it away". |
+| Script | Hard gate | `.harness/scripts/verify_all.{ps1,sh}` | Machine-checkable. AI cannot "interpret it away". |
 
 The progression is: write a rule, see if AI follows it; if not, encode it as a check.
 
@@ -128,7 +128,7 @@ total saving vs the old composition design.
 ## Why is verify_all a single entry point?
 
 If checks are scattered (`npm run lint`, `npm test`, `npm run schema-check`, ...),
-agents will run some and skip others. A single command `scripts/verify_all` removes
+agents will run some and skip others. A single command `.harness/scripts/verify_all` removes
 that choice. Done = this command exited 0.
 
 ## Why does verify_all check binding consistency?
@@ -209,7 +209,7 @@ completion / e2e), in CI, with judges and metrics. For personal projects that's
 massively over-engineered.
 
 The minimum viable version: 2-5 small representative tasks in `evals/golden-tasks.md`.
-After any change to `.harness/` or `templates/`, re-run them via `scripts/test-init.{ps1,sh}`
+After any change to `.harness/` or `templates/`, re-run them via `.harness/scripts/test-init.{ps1,sh}`
 for init regression, or by manually invoking PM on a representative task.
 
 ## What's deliberately not in this design

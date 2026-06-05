@@ -22,7 +22,7 @@ After completing a task, if you uncovered a non-obvious truth that the next pers
 ```
 
 Rules:
-- Max 30 lines total. If full, archive oldest to `docs/features/_archived/insight-history.md` (use `scripts/archive-task` which handles rotation).
+- Max 30 lines total. If full, archive oldest to `docs/features/_archived/insight-history.md` (use `.harness/scripts/archive-task` which handles rotation).
 - One line, one fact. Need a paragraph → not insight, just documentation.
 - Always include evidence so future readers can verify.
 - **Adversarial test**: ask "would someone reasonable, reading the repo fresh, derive this in <10 min?" If yes, don't write.

@@ -14,7 +14,7 @@ The skeleton uses a **two-layer model**:
 
 - `.harness/` is the tool-agnostic source of truth (agents, rules, skills).
 - `.claude/agents/` and `.claude/skills/` are regenerated from `.harness/agents/` and
-  `.harness/skills/` via `scripts/harness-sync`.
+  `.harness/skills/` via `.harness/scripts/harness-sync`.
 - `CLAUDE.md` and `.github/copilot-instructions.md` are ~15-line static stubs
   written once during init; they point at `AI-GUIDE.md`, which indexes
   `.harness/rules/*.md` by reference (since v0.10 rules are not composed).
@@ -52,8 +52,8 @@ Ask **six questions** in a single `AskUserQuestion` call:
    - `Generic (CLI / library / mobile / ML / embedded / etc.)` — `PROJECT_TYPE=generic`; copies generic overlay (`50-generic.md` stub for project-specific rules + a generic `verify_all` you customize for your actual build/test commands). No partition agents by default. The AI fills in `50-generic.md` based on your Q2 stack description and any existing code in the target directory.
 2. **Primary language / framework stack** — free text via "Other" option (e.g. "Next.js + NestJS + Postgres", "FastAPI + Postgres", "Rust CLI tool", "PyTorch training pipeline").
 3. **Install auto-sync hooks?** — options:
-   - `Yes (recommended)` — installs **both** the Claude Code Stop hook (in `.claude/settings.json`) **and** the git pre-commit hook (via `scripts/install-hooks.{ps1,sh}`). Stop hook keeps `CLAUDE.md` + `.github/copilot-instructions.md` fresh while you work in Claude Code. Pre-commit hook is the tool-agnostic backstop — blocks any commit (Claude Code, Copilot, Cursor, hand-edits) that includes drifted generated artifacts.
-   - `No, manual only` — you run `scripts/harness-sync` yourself after `.harness/` edits. `verify_all` will still catch drift after the fact, but you lose the auto-fresh guarantee.
+   - `Yes (recommended)` — installs **both** the Claude Code Stop hook (in `.claude/settings.json`) **and** the git pre-commit hook (via `.harness/scripts/install-hooks.{ps1,sh}`). Stop hook keeps `CLAUDE.md` + `.github/copilot-instructions.md` fresh while you work in Claude Code. Pre-commit hook is the tool-agnostic backstop — blocks any commit (Claude Code, Copilot, Cursor, hand-edits) that includes drifted generated artifacts.
+   - `No, manual only` — you run `.harness/scripts/harness-sync` yourself after `.harness/` edits. `verify_all` will still catch drift after the fact, but you lose the auto-fresh guarantee.
 4. **Developer partitioning** — options depend on Q1:
 
    For **Fullstack**:
@@ -98,7 +98,7 @@ Copy in this order (later layer overwrites earlier):
 
 1. Everything under `templates/common/` → target root.
 2. Everything under `templates/<project-type>/` → target root.
-   - Fullstack overlay adds `.harness/rules/50-fullstack.md`, `.harness/skills/{build,test,verify}/SKILL.md.tmpl`, `scripts/verify_all.{ps1,sh}.tmpl`, **and** `.harness/agents/dev-{frontend,backend,db}.md.tmpl` (partition agents).
+   - Fullstack overlay adds `.harness/rules/50-fullstack.md`, `.harness/skills/{build,test,verify}/SKILL.md.tmpl`, `.harness/scripts/verify_all.{ps1,sh}.tmpl`, **and** `.harness/agents/dev-{frontend,backend,db}.md.tmpl` (partition agents).
    - Backend overlay adds `.harness/rules/50-backend.md` etc.
    - **Generic** overlay adds `.harness/rules/50-generic.md` (a near-empty stub the user/AI fills in based on the actual stack). No partition agents. No project-type-specific `verify_all` template — the project gets the generic `verify_all` from `common/` (TODO: ship a `verify_all.tmpl` in `generic/` once the common one has stack-agnostic skeleton).
 3. **If Q5 ≠ English**, apply the language overlay:
@@ -146,8 +146,8 @@ Replace these placeholders in any `.tmpl` file:
 | `{{ENABLE_HOOK}}` | `true` or `false` from Q3 |
 | `{{PARTITIONED}}` | `true` or `false` from Q4 (default `false` if Q4 was skipped) |
 | `{{LANG}}` | `en` (default) or `zh` from Q5 |
-| `{{SYNC_COMMAND}}` | OS-detected harness-sync invocation for the Stop hook. **Windows** → `pwsh -NoProfile -File scripts/harness-sync.ps1`. **macOS / Linux** → `bash scripts/harness-sync.sh`. Detect via `$IsWindows` (PowerShell) or `[[ "$OSTYPE" == "msys"* \|\| "$OSTYPE" == "cygwin"* \|\| "$OSTYPE" == "win32" ]]` (bash). Used only in `.claude/settings.json`. The Windows `-NoProfile` flag avoids loading the user's `$PROFILE` on every hook invocation (measured 3-4s → 10ms in QA 06_TEST_REPORT.md D-3). |
-| `{{GUARD_COMMAND}}` | OS-detected guard-rm invocation for the PreToolUse hook (destructive-command safety, v0.15+). **Windows** → `pwsh -NoProfile -File scripts/guard-rm.ps1`. **macOS / Linux** → `bash scripts/guard-rm.sh`. Mirror the same OS detection used for `{{SYNC_COMMAND}}`. Used only in `.claude/settings.json`. See `.harness/rules/75-safety-hook.md` for the contract. The Windows `-NoProfile` flag is essential here — without it, every Bash tool call eats the user's `$PROFILE` startup cost (NFR-Perf was violated in QA testing; see 06_TEST_REPORT.md D-3). |
+| `{{SYNC_COMMAND}}` | OS-detected harness-sync invocation for the Stop hook. **Windows** → `pwsh -NoProfile -File .harness/scripts/harness-sync.ps1`. **macOS / Linux** → `bash .harness/scripts/harness-sync.sh`. Detect via `$IsWindows` (PowerShell) or `[[ "$OSTYPE" == "msys"* \|\| "$OSTYPE" == "cygwin"* \|\| "$OSTYPE" == "win32" ]]` (bash). Used only in `.claude/settings.json`. The Windows `-NoProfile` flag avoids loading the user's `$PROFILE` on every hook invocation (measured 3-4s → 10ms in QA 06_TEST_REPORT.md D-3). |
+| `{{GUARD_COMMAND}}` | OS-detected guard-rm invocation for the PreToolUse hook (destructive-command safety, v0.15+). **Windows** → `pwsh -NoProfile -File .harness/scripts/guard-rm.ps1`. **macOS / Linux** → `bash .harness/scripts/guard-rm.sh`. Mirror the same OS detection used for `{{SYNC_COMMAND}}`. Used only in `.claude/settings.json`. See `.harness/rules/75-safety-hook.md` for the contract. The Windows `-NoProfile` flag is essential here — without it, every Bash tool call eats the user's `$PROFILE` startup cost (NFR-Perf was violated in QA testing; see 06_TEST_REPORT.md D-3). |
 
 ### 5b. AI customization (opt-in, v0.16+)
 
@@ -194,9 +194,9 @@ single JSON object `{ "rule_md": "...", "partition_agents": [{ "name": ..., "bod
 
 If the environment variable `HARNESS_AI_NATIVE_MOCK` is set and points at a
 readable file, use that file's content as the AI response **instead of calling
-the model**. Used by `scripts/test-init.{ps1,sh}` to exercise this flow without
+the model**. Used by `.harness/scripts/test-init.{ps1,sh}` to exercise this flow without
 a live LLM call. A shipped fixture lives at
-`scripts/ai-native-mock.json` (copied from `templates/common/scripts/`) for
+`.harness/scripts/ai-native-mock.json` (copied from `templates/common/scripts/`) for
 users who want to dry-run the AI-native path locally.
 
 On parse error of the mock file, fall through to the fallback path (5b.5) — this
@@ -291,8 +291,8 @@ After all files are in place, run the binding sync to copy `.harness/agents/`
 and `.harness/skills/` into the Claude-Code-required `.claude/` paths:
 
 ```powershell
-pwsh -File scripts/harness-sync.ps1     # Windows
-bash scripts/harness-sync.sh            # Unix
+pwsh -File .harness/scripts/harness-sync.ps1     # Windows
+bash .harness/scripts/harness-sync.sh            # Unix
 ```
 
 **v0.10 scope (much narrower than v0.9.x)**: `harness-sync` only copies
@@ -319,8 +319,8 @@ If the user answered Q3 = `Yes (recommended)`, run the hook installer
 right after `git init`:
 
 ```powershell
-pwsh -File scripts/install-hooks.ps1   # Windows
-bash scripts/install-hooks.sh          # macOS / Linux
+pwsh -File .harness/scripts/install-hooks.ps1   # Windows
+bash .harness/scripts/install-hooks.sh          # macOS / Linux
 ```
 
 This writes `.git/hooks/pre-commit` which runs `harness-sync --check`
@@ -335,8 +335,8 @@ If Q3 = `No, manual only`, skip this step. The Stop hook in
 (it does no harm if Claude Code is never used); only the pre-commit hook
 is conditional on Q3.
 
-**Note on the safety guard (v0.15+)**: `scripts/guard-rm.{ps1,sh}` is shipped
-via the `templates/common/scripts/` copy in step 4, and the PreToolUse hook in
+**Note on the safety guard (v0.15+)**: `.harness/scripts/guard-rm.{ps1,sh}` is shipped
+via the `templates/common/.harness/scripts/` copy in step 4, and the PreToolUse hook in
 `.claude/settings.json` is wired with `{{GUARD_COMMAND}}` substituted in step 5.
 No separate installer step is needed — the guard is always on after init. The
 disable path is documented in `.harness/rules/75-safety-hook.md`.
@@ -347,7 +347,7 @@ Create `docs/spec/README.md` if missing (the template usually provides one).
 
 ### 10. Initialize baseline
 
-Create `scripts/baseline.json` with empty defaults:
+Create `.harness/scripts/baseline.json` with empty defaults:
 
 ```json
 {
@@ -393,7 +393,7 @@ Project documentation (tool-agnostic, edit freely):
     tasks.md      (task board)
 
 Scripts:
-  scripts/
+  .harness/scripts/
     verify_all.{ps1,sh}    — total verification gate
     harness-sync.{ps1,sh}  — binding sync (.harness/agents + .harness/skills → .claude/)
     guard-rm.{ps1,sh}      — destructive-command safety hook (PreToolUse; v0.15+)

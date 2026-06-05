@@ -1,6 +1,6 @@
 # guard-rm cases — acceptance B2 fixture
 
-> Driven by `scripts/test-guard-rm.{ps1,sh}` (added v0.15.0). Each row is one
+> Driven by `.harness/scripts/test-guard-rm.{ps1,sh}` (added v0.15.0). Each row is one
 > simulated PreToolUse invocation: the input command is sent on stdin as the
 > minimal `{"tool_input":{"command":"…"}}` JSON shape Claude Code emits, and
 > the guard's exit code (0 = ALLOW, 2 = BLOCK) is compared against the

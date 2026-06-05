@@ -1,18 +1,18 @@
 ---
 name: harness-verify
-description: Run the project's total verification (scripts/verify_all). Use when any agent claims a task is done. Returns PASS / WARN / FAIL with structured report.
+description: Run the project's total verification (.harness/scripts/verify_all). Use when any agent claims a task is done. Returns PASS / WARN / FAIL with structured report.
 allowed-tools: Bash, PowerShell, Read, Write
 ---
 
 # /harness-verify
 
-Single command to invoke `scripts/verify_all` and capture the result.
+Single command to invoke `.harness/scripts/verify_all` and capture the result.
 
 ## Procedure
 
 1. Detect OS:
-   - Windows → `pwsh -File scripts/verify_all.ps1`
-   - Unix-like → `bash scripts/verify_all.sh`
+   - Windows → `pwsh -File .harness/scripts/verify_all.ps1`
+   - Unix-like → `bash .harness/scripts/verify_all.sh`
 2. If neither script exists → tell user the project isn't Harness-initialized; suggest `/harness-init` or `/harness-adopt`.
 3. Capture stdout + stderr.
 4. Parse exit code:
@@ -25,7 +25,7 @@ Single command to invoke `scripts/verify_all` and capture the result.
 ```
 verify_all: PASS
   - 12 checks: 11 PASS, 1 WARN, 0 FAIL
-  - History appended: scripts/verification_history.log
+  - History appended: .harness/scripts/verification_history.log
 ```
 
 or on failure:
@@ -44,7 +44,7 @@ Recommendation: route back to the developer / fix the missing agent.
 
 ## Hard rules
 
-- Never modify `scripts/verify_all.*` to bypass a check.
+- Never modify `.harness/scripts/verify_all.*` to bypass a check.
 - Never delete tests to make this pass.
 - On WARN, the task may proceed but warnings must be logged.
 - On FAIL, the task is not done. Do not declare delivery.

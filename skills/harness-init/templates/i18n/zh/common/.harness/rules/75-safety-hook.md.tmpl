@@ -3,7 +3,7 @@
 ## 这是什么
 
 `.claude/settings.json` 里的一个 `PreToolUse` hook，在 Claude Code 每次调用 Bash
-工具前先跑 `scripts/guard-rm.{ps1,sh}`。当任何破坏性动词的目标路径解析到
+工具前先跑 `.harness/scripts/guard-rm.{ps1,sh}`。当任何破坏性动词的目标路径解析到
 **当前工作目录最近的 `.git/` 祖先之外** 时，guard 阻断该调用。
 
 `/harness-init` 和 `/harness-adopt`（带合并提示）会自动装这个 hook。默认 **始终
@@ -76,7 +76,7 @@ matcher==="Bash"、指向 `guard-rm` 的条目）。要重新启用：重跑 `/h
 
 | 故障 | 表现 | 修复 |
 |---|---|---|
-| 磁盘上 guard 脚本缺失 | PreToolUse hook 本身失败 → Claude Code 用 hook 错误 BLOCK 调用，错误显示在 transcript 里 | 重装：`/harness-adopt`，或者从 harness-kit 模板复制 `scripts/guard-rm.{ps1,sh}` |
+| 磁盘上 guard 脚本缺失 | PreToolUse hook 本身失败 → Claude Code 用 hook 错误 BLOCK 调用，错误显示在 transcript 里 | 重装：`/harness-adopt`，或者从 harness-kit 模板复制 `.harness/scripts/guard-rm.{ps1,sh}` |
 | 嵌套 pwsh 解析失败 / 引号不闭合 | 用明确的 "could not parse …" 消息 BLOCK | 换种不嵌套引号的写法，或者你确认命令安全时用 override |
 | cwd 向上没有 `.git/` | 向 stderr 打 WARN，exit 0（工具调用继续） | 确认在真实项目里，或者 `git init` |
 | 性能超 50 ms | 不算故障，但记录 | guard 是直行代码、不 spawn 子进程；如果遇到慢 block，提 issue 附上耗时 |

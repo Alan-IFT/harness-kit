@@ -26,16 +26,16 @@ Check each of these and report concisely:
 | Build skill | `.claude/skills/build/SKILL.md` | ? |
 | Test skill | `.claude/skills/test/SKILL.md` | ? |
 | Verify skill | `.claude/skills/verify/SKILL.md` | ? |
-| verify_all script | `scripts/verify_all.ps1` or `.sh` | ? |
-| Baseline | `scripts/baseline.json` | ? |
+| verify_all script | `.harness/scripts/verify_all.ps1` or `.sh` | ? |
+| Baseline | `.harness/scripts/baseline.json` | ? |
 | Golden tasks | `evals/golden-tasks.md` | ? |
-| Guard-rm script (ps1) | `scripts/guard-rm.ps1` | ? |
-| Guard-rm script (sh) | `scripts/guard-rm.sh` | ? |
+| Guard-rm script (ps1) | `.harness/scripts/guard-rm.ps1` | ? |
+| Guard-rm script (sh) | `.harness/scripts/guard-rm.sh` | ? |
 | PreToolUse hook | `.claude/settings.json` (has `hooks.PreToolUse` array referencing guard-rm) | ? |
 
 ### 2. Baseline state
 
-If `scripts/baseline.json` exists, print:
+If `.harness/scripts/baseline.json` exists, print:
 
 ```
 Baseline:
@@ -48,7 +48,7 @@ Baseline:
 
 ### 3. Last verify result
 
-If `scripts/verification_history.log` exists, show the most recent entry:
+If `.harness/scripts/verification_history.log` exists, show the most recent entry:
 
 ```
 Last verify: 2026-06-01T14:32:11Z
@@ -70,8 +70,8 @@ programmatic dispatch (`Task` tool). Other tools always show `n/a`. The
 "Safety hook" value is computed by parsing `.claude/settings.json`:
 
 - `enabled` if `hooks.PreToolUse[*].matcher == "Bash"` AND its first hook's
-  `command` references `guard-rm.{ps1,sh}` AND both `scripts/guard-rm.ps1` and
-  `scripts/guard-rm.sh` exist.
+  `command` references `guard-rm.{ps1,sh}` AND both `.harness/scripts/guard-rm.ps1` and
+  `.harness/scripts/guard-rm.sh` exist.
 - `DISABLED — .claude/settings.json has no PreToolUse for Bash` if the array
   is absent or no Bash matcher exists.
 - `scripts missing` if the wiring is present but the script files are gone.

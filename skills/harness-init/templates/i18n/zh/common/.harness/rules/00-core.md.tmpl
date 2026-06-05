@@ -37,7 +37,7 @@
 4. **代码里不能有 secret。** 用 `.env` / 环境变量；verify_all 会扫描硬编码 key。
 5. **不允许未确认的生产破坏性操作**（drop table、force push main、删分支）。
 6. **声明完成前必须跑 verify_all。** "能编译"不等于完成。
-7. **编辑 `.harness/`，不编辑 `.claude/agents/`、`.claude/skills/` 或 `CLAUDE.md`。** `.claude/agents/` 和 `.claude/skills/` 由 `.harness/` 同步而来 —— Stop hook 每次 session 自动跑 `scripts/harness-sync`，手动 sync 很少需要；hook 没跑成功时 `verify_all` 会拦下漂移。`CLAUDE.md` 是 init 时写一次的静态 stub。`.claude/settings.json` 是活的配置，可以手改。
+7. **编辑 `.harness/`，不编辑 `.claude/agents/`、`.claude/skills/` 或 `CLAUDE.md`。** `.claude/agents/` 和 `.claude/skills/` 由 `.harness/` 同步而来 —— Stop hook 每次 session 自动跑 `.harness/scripts/harness-sync`，手动 sync 很少需要；hook 没跑成功时 `verify_all` 会拦下漂移。`CLAUDE.md` 是 init 时写一次的静态 stub。`.claude/settings.json` 是活的配置，可以手改。
 8. **优先让 AI 帮你编辑 `.harness/`，而不是自己手编。** 例：
    - "加一条规则：禁止用 `MessageBox.Show`。" → AI 选合适的 `.harness/rules/NN-*.md`（或新建一个），编辑，Stop hook 同步。
    - "为 `apps/mobile/` 加一个 Developer 分区。" → AI 在 `.harness/agents/dev-mobile.md` 写正确的 owned-paths。
@@ -64,9 +64,9 @@
 | Build/test/verify 标准操作（**真相源**） | `.harness/skills/` |
 | Claude Code agent/skill 绑定（同步生成，别手改） | `.claude/agents/` + `.claude/skills/` |
 | Claude Code bootstrap stub + 活配置 | `CLAUDE.md` + `.claude/settings.json` |
-| 工具绑定同步（`.harness/agents/` + `.harness/skills/` → `.claude/`） | `scripts/harness-sync.{ps1,sh}` |
-| 总验证 | `scripts/verify_all.{ps1,sh}` |
-| 测试基线 | `scripts/baseline.json` |
+| 工具绑定同步（`.harness/agents/` + `.harness/skills/` → `.claude/`） | `.harness/scripts/harness-sync.{ps1,sh}` |
+| 总验证 | `.harness/scripts/verify_all.{ps1,sh}` |
+| 测试基线 | `.harness/scripts/baseline.json` |
 | 回归任务集 | `evals/golden-tasks.md` |
 
 ## 拿不准时

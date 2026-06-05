@@ -5,7 +5,7 @@ how to make changes that don't break the system, and how to verify your change.
 
 > This repo dogfoods its own Harness. Non-trivial changes should flow through the
 > 7-agent pipeline ([docs/workflow.md](docs/workflow.md)). Trivial changes (typos,
-> single-line tweaks) can go direct — but must still pass `scripts/verify_all`.
+> single-line tweaks) can go direct — but must still pass `.harness/scripts/verify_all`.
 
 ## Setup
 
@@ -15,8 +15,8 @@ git clone <repo-url>
 cd harness-kit
 
 # Run verify_all to confirm a clean baseline
-pwsh -File scripts/verify_all.ps1     # Windows
-bash scripts/verify_all.sh            # Unix
+pwsh -File .harness/scripts/verify_all.ps1     # Windows
+bash .harness/scripts/verify_all.sh            # Unix
 ```
 
 Expected output: 18 PASS / 0 WARN / 0 FAIL.
@@ -33,8 +33,8 @@ templates/common/  ─────────────►   .harness/  ─�
 ```
 
 - **Layer 1 (sync-self)** keeps `templates/common/.harness/agents/` and
-  `templates/common/scripts/harness-sync.{ps1,sh}` byte-identical with the repo's
-  `.harness/agents/` and `scripts/harness-sync.{ps1,sh}` copies. Verifies that what
+  `templates/common/.harness/scripts/harness-sync.{ps1,sh}` byte-identical with the repo's
+  `.harness/agents/` and `.harness/scripts/harness-sync.{ps1,sh}` copies. Verifies that what
   we ship to users matches what we use ourselves.
 - **Layer 2 (harness-sync)** syncs `.claude/agents/` and `.claude/skills/` from
   `.harness/agents/` and `.harness/skills/`. The same script ships to user projects
@@ -81,7 +81,7 @@ Rules for skills:
 1. **Frontmatter is mandatory.** Must have `name:` and `description:`. verify_all checks this.
 2. **`description` is what Claude Code uses to decide when to invoke.** Be specific about *when to use* and *when not to use*. First sentence is the most important.
 3. **`allowed-tools` is the strictest necessary subset.** Don't grant Bash if Read is enough.
-4. **Test it** by running it in Claude Code at least once before committing. For init/template flows, also extend `scripts/test-init.{ps1,sh}`.
+4. **Test it** by running it in Claude Code at least once before committing. For init/template flows, also extend `.harness/scripts/test-init.{ps1,sh}`.
 
 After adding a skill:
 
@@ -96,7 +96,7 @@ Project types live under `skills/harness-init/templates/<type>/`:
 
 - `.harness/rules/50-<type>.md` — project-type overlay rules, indexed by `AI-GUIDE.md`.
 - `.harness/skills/{build,test,verify}/SKILL.md.tmpl` — stack-specific procedures.
-- `scripts/verify_all.{ps1,sh}.tmpl` — type-specific verification.
+- `.harness/scripts/verify_all.{ps1,sh}.tmpl` — type-specific verification.
 
 Rules:
 
@@ -105,7 +105,7 @@ Rules:
    `{{SYNC_COMMAND}}`, `{{GUARD_COMMAND}}`. verify_all step `D.2` enforces this
    whitelist — and any new placeholder MUST be added to BOTH `verify_all.ps1` AND
    `verify_all.sh` whitelists or the check fails.
-2. **Extend `scripts/test-init.{ps1,sh}`** with a `test_type` call for the new type.
+2. **Extend `.harness/scripts/test-init.{ps1,sh}`** with a `test_type` call for the new type.
 3. **Add a section** in `docs/dev-map.md` under the templates layout.
 4. **Update CHANGELOG** under `[Unreleased]`.
 5. **Rule fragment naming**: use `NN-name.md` with 50–79 for project-type overlays. The numeric prefix is a sort convention only — since v0.10, fragments are not composed into CLAUDE.md; `AI-GUIDE.md` indexes them and AI tools lazy-load on demand.
@@ -115,9 +115,9 @@ Rules:
 Edit `skills/harness-init/templates/common/.harness/agents/<agent>.md`. Then:
 
 ```bash
-./scripts/sync-self.sh        # Layer 1 → Layer 2
-./scripts/harness-sync.sh     # Layer 2 → bindings (regenerates this repo's .claude/agents/)
-./scripts/verify_all.sh       # confirm E.1 and E.2 pass
+./.harness/scripts/sync-self.sh        # Layer 1 → Layer 2
+./.harness/scripts/harness-sync.sh     # Layer 2 → bindings (regenerates this repo's .claude/agents/)
+./.harness/scripts/verify_all.sh       # confirm E.1 and E.2 pass
 ```
 
 Re-run `test-init.{ps1,sh}` if you changed the agent's declared frontmatter or core
@@ -151,7 +151,7 @@ Reference relevant issues / tasks. Group related changes; don't bundle.
 Every commit should leave `verify_all` green. Run it locally:
 
 ```powershell
-pwsh -File scripts/verify_all.ps1
+pwsh -File .harness/scripts/verify_all.ps1
 ```
 
 Exit 0 = ready to commit. Exit 1 (warnings) = your call. Exit 2 (failures) = fix first.

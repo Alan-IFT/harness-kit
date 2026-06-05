@@ -42,7 +42,7 @@ Insight is **discovered fact that beat someone's prior**, not "we decided X" and
 
 ## Archival
 
-The PM Orchestrator runs `scripts/archive-task` at the end of every task, which:
+The PM Orchestrator runs `.harness/scripts/archive-task` at the end of every task, which:
 1. If the task's final 07_DELIVERY.md contained an `## Insight` section, appends its lines to `.harness/insight-index.md`.
 2. Moves the task's 7 stage documents to `docs/features/_archived/<task-slug>/summary.md` (compressed to one file) + keeps the raw 7 files alongside.
 3. If `.harness/insight-index.md` exceeds 30 lines, rotates the oldest to `docs/features/_archived/insight-history.md`.

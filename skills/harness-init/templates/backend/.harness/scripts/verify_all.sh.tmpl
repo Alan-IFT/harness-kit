@@ -1,0 +1,294 @@
+#!/usr/bin/env bash
+# verify_all.sh — Backend project total verification
+# Generated for {{PROJECT_NAME}} ({{STACK}}) on {{TODAY}}
+#
+# SKIPs do not affect exit code (a check is SKIP when its prerequisites are absent).
+
+set -uo pipefail
+
+QUICK=false
+for arg in "$@"; do
+    case $arg in --quick) QUICK=true ;; esac
+done
+
+errors=0
+warns=0
+skips=0
+declare -a report
+
+step() {
+    local id="$1" name="$2" status="$3" detail="${4:-}"
+    case "$status" in
+        PASS) echo "[$id] $name ... PASS" ;;
+        SKIP) echo "[$id] $name ... SKIP"; ((skips++)) ;;
+        WARN) echo "[$id] $name ... WARN"; ((warns++)) ;;
+        FAIL) echo "[$id] $name ... FAIL"; [[ -n "$detail" ]] && echo "      $detail"; ((errors++)) ;;
+    esac
+    report+=("$id|$name|$status")
+}
+
+detect_stack() {
+    if [[ -f pyproject.toml ]]; then echo python
+    elif [[ -f go.mod ]]; then echo go
+    elif [[ -f Cargo.toml ]]; then echo rust
+    elif [[ -f package.json ]]; then echo node
+    else echo unknown
+    fi
+}
+
+pkgmgr() {
+    if [[ -f pnpm-lock.yaml ]]; then echo pnpm
+    elif [[ -f yarn.lock ]]; then echo yarn
+    else echo npm
+    fi
+}
+
+stack=$(detect_stack)
+echo "=== verify_all (backend) ==="
+echo "Project: {{PROJECT_NAME}}"
+echo "Stack:   {{STACK}} (detected: $stack)"
+echo ""
+
+# A.1 / A.2 — git-required
+if [[ ! -d .git ]]; then
+    step "A.1" "No hardcoded secrets" "SKIP"
+    step "A.2" "No .env files committed" "SKIP"
+else
+    if git grep -E "(api[_-]?key|secret|password|token)[[:space:]]*[:=][[:space:]]*[\"'][^\"']{8,}[\"']" \
+        -- ':!*.md' ':!.harness/scripts/verify_all*' &>/dev/null; then
+        step "A.1" "No hardcoded secrets" "FAIL"
+    else
+        step "A.1" "No hardcoded secrets" "PASS"
+    fi
+
+    env_committed=$(git ls-files '*.env' '.env*' 2>/dev/null | grep -vE 'example|sample' || true)
+    [[ -z "$env_committed" ]] && step "A.2" "No .env files committed" "PASS" || step "A.2" "No .env files committed" "FAIL" "$env_committed"
+fi
+
+# B.* per stack
+case "$stack" in
+    node)
+        if [[ ! -f package.json ]]; then
+            step "B.1" "Install / typecheck" "SKIP"
+            step "B.2" "Lint" "SKIP"
+            step "B.3" "Unit tests" "SKIP"
+        else
+            PM=$(pkgmgr)
+            $PM install --frozen-lockfile &>/dev/null && \
+            { [[ ! -f tsconfig.json ]] || $PM exec tsc --noEmit &>/dev/null; } && \
+                step "B.1" "Install / typecheck" "PASS" || step "B.1" "Install / typecheck" "FAIL"
+
+            has_eslint=false
+            for f in .eslintrc .eslintrc.js .eslintrc.cjs .eslintrc.json eslint.config.js eslint.config.mjs; do
+                [[ -f "$f" ]] && has_eslint=true && break
+            done
+            if [[ "$has_eslint" == false ]]; then
+                step "B.2" "Lint" "SKIP"
+            elif $PM exec eslint . &>/dev/null; then
+                step "B.2" "Lint" "PASS"
+            else
+                step "B.2" "Lint" "FAIL"
+            fi
+
+            if ! grep -q '"test"' package.json; then
+                step "B.3" "Unit tests" "SKIP"
+            elif $PM test &>/dev/null; then
+                step "B.3" "Unit tests" "PASS"
+            else
+                step "B.3" "Unit tests" "FAIL"
+            fi
+        fi
+        ;;
+    python)
+        if [[ ! -f pyproject.toml && ! -f requirements.txt ]]; then
+            step "B.1" "Dependency lock" "SKIP"
+            step "B.2" "Lint (ruff)" "SKIP"
+            step "B.3" "Type check (mypy)" "SKIP"
+            step "B.4" "Unit tests (pytest)" "SKIP"
+        else
+            if [[ -f uv.lock ]]; then
+                uv sync &>/dev/null && step "B.1" "Dependency lock" "PASS" || step "B.1" "Dependency lock" "FAIL"
+            elif [[ -f poetry.lock ]]; then
+                poetry install --no-root &>/dev/null && step "B.1" "Dependency lock" "PASS" || step "B.1" "Dependency lock" "FAIL"
+            elif [[ -f requirements.txt ]]; then
+                pip install -r requirements.txt &>/dev/null && step "B.1" "Dependency lock" "PASS" || step "B.1" "Dependency lock" "FAIL"
+            else
+                step "B.1" "Dependency lock" "SKIP"
+            fi
+
+            if ! command -v ruff &>/dev/null; then
+                step "B.2" "Lint (ruff)" "SKIP"
+            elif ruff check . &>/dev/null; then
+                step "B.2" "Lint (ruff)" "PASS"
+            else
+                step "B.2" "Lint (ruff)" "FAIL"
+            fi
+
+            if ! command -v mypy &>/dev/null; then
+                step "B.3" "Type check (mypy)" "SKIP"
+            elif mypy . &>/dev/null; then
+                step "B.3" "Type check (mypy)" "PASS"
+            else
+                step "B.3" "Type check (mypy)" "WARN"
+            fi
+
+            if [[ ! -d tests && ! -d test ]]; then
+                step "B.4" "Unit tests (pytest)" "SKIP"
+            elif pytest -q &>/dev/null; then
+                step "B.4" "Unit tests (pytest)" "PASS"
+            else
+                step "B.4" "Unit tests (pytest)" "FAIL"
+            fi
+        fi
+        ;;
+    go)
+        if [[ ! -f go.mod ]]; then
+            step "B.1" "Build" "SKIP"
+            step "B.2" "Vet" "SKIP"
+            step "B.3" "Unit tests" "SKIP"
+        else
+            go build ./... &>/dev/null && step "B.1" "Build" "PASS" || step "B.1" "Build" "FAIL"
+            go vet ./... &>/dev/null && step "B.2" "Vet" "PASS" || step "B.2" "Vet" "FAIL"
+            go test ./... &>/dev/null && step "B.3" "Unit tests" "PASS" || step "B.3" "Unit tests" "FAIL"
+        fi
+        ;;
+    *)
+        step "B.1" "Build / test" "SKIP"
+        ;;
+esac
+
+# C.1 — migrations
+if [[ ! -d .git ]]; then
+    step "C.1" "Migrations reversible" "SKIP"
+elif [[ ! -d migrations && ! -d src/migrations && ! -d alembic ]]; then
+    step "C.1" "Migrations reversible" "SKIP"
+elif git grep -E -i "DROP\s+COLUMN|DROP\s+TABLE|TRUNCATE" -- 'migrations/*' 'src/migrations/*' 'alembic/*' &>/dev/null; then
+    step "C.1" "Migrations reversible" "WARN" "irreversible patterns detected"
+else
+    step "C.1" "Migrations reversible" "PASS"
+fi
+
+# D.* — structure
+[[ -f CLAUDE.md ]] && step "D.1" "CLAUDE.md present" "PASS" || step "D.1" "CLAUDE.md present" "FAIL"
+[[ -f docs/workflow.md ]] && step "D.2" "workflow.md present" "PASS" || step "D.2" "workflow.md present" "FAIL"
+
+missing=""
+for a in pm-orchestrator requirement-analyst solution-architect gate-reviewer developer code-reviewer qa-tester; do
+    [[ -f ".harness/agents/$a.md" ]] || missing="$missing $a"
+done
+[[ -z "$missing" ]] && step "D.3" "All 7 agents in .harness/agents/" "PASS" || step "D.3" "All 7 agents in .harness/agents/" "FAIL" "Missing:$missing"
+
+if [[ -f .harness/scripts/harness-sync.sh ]] && bash .harness/scripts/harness-sync.sh --check &>/dev/null; then
+    step "D.4" "Binding in sync (.harness/ -> .claude/)" "PASS"
+else
+    step "D.4" "Binding in sync (.harness/ -> .claude/)" "FAIL" "Run .harness/scripts/harness-sync.sh"
+fi
+
+# D.5 — AI-GUIDE.md indexes every .harness/rules/*.md (and vice versa)
+if [[ ! -f AI-GUIDE.md || ! -d .harness/rules ]]; then
+    step "D.5" "AI-GUIDE.md indexes every .harness/rules/*.md" "SKIP"
+else
+    d5_problems=""
+    while IFS= read -r r; do
+        name=$(basename "$r")
+        if ! grep -qF ".harness/rules/$name" AI-GUIDE.md; then
+            d5_problems="$d5_problems\nNot indexed: $name"
+        fi
+    done < <(find .harness/rules -maxdepth 1 -name '*.md' -type f)
+    while IFS= read -r ref; do
+        if [[ ! -f ".harness/rules/$ref" ]]; then
+            d5_problems="$d5_problems\nReferences non-existent: .harness/rules/$ref"
+        fi
+    done < <(grep -oE '\.harness/rules/[0-9A-Za-z_\-]+\.md' AI-GUIDE.md | sed 's|\.harness/rules/||' | sort -u)
+    if [[ -z "$d5_problems" ]]; then
+        step "D.5" "AI-GUIDE.md indexes every .harness/rules/*.md" "PASS"
+    else
+        step "D.5" "AI-GUIDE.md indexes every .harness/rules/*.md" "FAIL" "$(echo -e $d5_problems)"
+    fi
+fi
+
+# D.6 — Adversarial tests section required in every 06_TEST_REPORT.md
+if [[ ! -d docs/features ]]; then
+    step "D.6" "Adversarial tests section in completed task reports" "SKIP"
+else
+    bad_reports=""
+    while IFS= read -r r; do
+        if ! grep -qE '^##\s+Adversarial\s+tests' "$r"; then
+            bad_reports="$bad_reports\n$r"
+        fi
+    done < <(find docs/features -name '06_TEST_REPORT.md' -type f 2>/dev/null)
+    if [[ -z "$bad_reports" ]]; then
+        step "D.6" "Adversarial tests section in completed task reports" "PASS"
+    else
+        step "D.6" "Adversarial tests section in completed task reports" "FAIL" "Missing section:$(echo -e $bad_reports)"
+    fi
+fi
+
+# --- F. Document size caps (v0.14+, WARN-only; see .harness/rules/70-doc-size.md) ---
+
+# F.1 — AI-GUIDE.md <=200 lines
+if [[ -f AI-GUIDE.md ]]; then
+    n=$(wc -l < AI-GUIDE.md)
+    if (( n > 200 )); then step "F.1" "AI-GUIDE.md <=200 lines" "WARN" "$n lines (cap 200)"; else step "F.1" "AI-GUIDE.md <=200 lines" "PASS"; fi
+else
+    step "F.1" "AI-GUIDE.md <=200 lines" "SKIP"
+fi
+
+# F.2 — Rule fragments <=200 lines each
+f2_over=""
+if [[ -d .harness/rules ]]; then
+    while IFS= read -r f; do
+        n=$(wc -l < "$f"); (( n > 200 )) && f2_over="$f2_over $f:${n}L"
+    done < <(find .harness/rules -maxdepth 1 -name '*.md' -type f)
+fi
+[[ -n "$f2_over" ]] && step "F.2" "Rule fragments <=200 lines each" "WARN" "over cap:$f2_over" || step "F.2" "Rule fragments <=200 lines each" "PASS"
+
+# F.3 — Agent definitions <=300 lines each
+f3_over=""
+if [[ -d .harness/agents ]]; then
+    while IFS= read -r f; do
+        n=$(wc -l < "$f"); (( n > 300 )) && f3_over="$f3_over $f:${n}L"
+    done < <(find .harness/agents -maxdepth 1 -name '*.md' -type f)
+fi
+[[ -n "$f3_over" ]] && step "F.3" "Agent definitions <=300 lines each" "WARN" "over cap:$f3_over" || step "F.3" "Agent definitions <=300 lines each" "PASS"
+
+# F.4 — insight-index <=30 lines
+if [[ -f .harness/insight-index.md ]]; then
+    n=$(wc -l < .harness/insight-index.md)
+    if (( n > 30 )); then step "F.4" "insight-index.md <=30 lines" "WARN" "$n lines — run .harness/scripts/archive-task to rotate"; else step "F.4" "insight-index.md <=30 lines" "PASS"; fi
+else
+    step "F.4" "insight-index.md <=30 lines" "SKIP"
+fi
+
+# F.5 — docs/tasks.md <=300 lines
+if [[ -f docs/tasks.md ]]; then
+    n=$(wc -l < docs/tasks.md)
+    if (( n > 300 )); then step "F.5" "docs/tasks.md <=300 lines" "WARN" "$n lines — rotate Completed rows to docs/tasks-archive.md"; else step "F.5" "docs/tasks.md <=300 lines" "PASS"; fi
+else
+    step "F.5" "docs/tasks.md <=300 lines" "SKIP"
+fi
+
+# F.6 — Active task docs <=500 lines each (excludes _archived/)
+f6_over=""
+if [[ -d docs/features ]]; then
+    while IFS= read -r f; do
+        case "$f" in *"/_archived/"*) continue ;; esac
+        n=$(wc -l < "$f"); (( n > 500 )) && f6_over="$f6_over $f:${n}L"
+    done < <(find docs/features -type f \( -name 'PM_LOG.md' -o -name '0[1-7]_*.md' \) 2>/dev/null)
+fi
+[[ -n "$f6_over" ]] && step "F.6" "Active task docs <=500 lines each" "WARN" "over cap:$f6_over (see rule 70: compact PM_LOG or reference don't paste)" || step "F.6" "Active task docs <=500 lines each" "PASS"
+
+echo ""
+echo "=== Summary ==="
+pass_count=$(printf '%s\n' "${report[@]}" | grep -c PASS || true)
+echo "  PASS: $pass_count"
+echo "  WARN: $warns"
+echo "  FAIL: $errors"
+echo "  SKIP: $skips"
+
+ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+printf '{"timestamp":"%s","pass":%d,"warn":%d,"fail":%d,"skip":%d}\n' "$ts" "$pass_count" "$warns" "$errors" "$skips" >> .harness/scripts/verification_history.log
+
+(( errors > 0 )) && exit 2
+(( warns > 0 )) && exit 1
+exit 0

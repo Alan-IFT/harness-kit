@@ -50,7 +50,7 @@ If env var `HARNESS_SUPERVISOR_MOCK` is set:
 2. If readable, parse as JSON; extract the `report_md` string field.
 3. Write `report_md` verbatim to the destination path. Re-Read to confirm. Exit.
 
-This path bypasses all anti-pattern detection. Used by `scripts/test-supervisor` for offline regression coverage.
+This path bypasses all anti-pattern detection. Used by `.harness/scripts/test-supervisor` for offline regression coverage.
 
 ### Step 4 — Read inputs
 
@@ -138,6 +138,6 @@ If you cannot fit findings under the cap, emit a single `(report truncated: 200-
 
 ## Relationship to verify_all I.7
 
-`scripts/verify_all` gained a passive guard (`I.7`) in v0.17.0: it Globs every `docs/features/<slug>/SUPERVISION_REPORT.md`, reads the last 5 lines, and emits a WARN if `Verdict: INTERVENE` appears AND the task is still listed as Active in `docs/tasks.md` AND the file mtime is > 48h old. This catches "user ran supervisor, got ALERT, ignored it" rot.
+`.harness/scripts/verify_all` gained a passive guard (`I.7`) in v0.17.0: it Globs every `docs/features/<slug>/SUPERVISION_REPORT.md`, reads the last 5 lines, and emits a WARN if `Verdict: INTERVENE` appears AND the task is still listed as Active in `docs/tasks.md` AND the file mtime is > 48h old. This catches "user ran supervisor, got ALERT, ignored it" rot.
 
 The supervisor itself does not trigger or interact with `I.7`; it just writes the file that `I.7` later observes.

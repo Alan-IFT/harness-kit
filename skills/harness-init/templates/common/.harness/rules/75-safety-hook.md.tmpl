@@ -3,7 +3,7 @@
 ## What this is
 
 A `PreToolUse` hook in `.claude/settings.json` that runs
-`scripts/guard-rm.{ps1,sh}` before every Claude Code Bash tool call. The guard
+`.harness/scripts/guard-rm.{ps1,sh}` before every Claude Code Bash tool call. The guard
 blocks the call when any destructive verb targets a path that resolves outside
 the nearest `.git/` ancestor of the current working directory.
 
@@ -82,7 +82,7 @@ the matcher==="Bash" entry pointing at `guard-rm`). To re-enable, re-run
 
 | Failure | What happens | Fix |
 |---|---|---|
-| Guard script missing on disk | PreToolUse hook itself fails → Claude Code blocks the call with the hook error in the transcript | Reinstall: `/harness-adopt`, or copy `scripts/guard-rm.{ps1,sh}` from the harness-kit templates |
+| Guard script missing on disk | PreToolUse hook itself fails → Claude Code blocks the call with the hook error in the transcript | Reinstall: `/harness-adopt`, or copy `.harness/scripts/guard-rm.{ps1,sh}` from the harness-kit templates |
 | Parse failure on nested pwsh / unbalanced quotes | BLOCK with explicit "could not parse …" message | Re-issue without the nested quoting, or use override if you know the command is safe |
 | `.git/` not found anywhere up the cwd chain | WARN to stderr, exit 0 (tool call proceeds) | Make sure you're in a real project, or initialize git |
 | Performance over 50 ms | Not a failure, but log it | The guard is straight-line code and avoids spawning subprocesses; if you see slow blocks, file an issue with timings |

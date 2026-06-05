@@ -81,4 +81,4 @@ Intervention is **transient task-scoped redirection only**. If the same interven
 
 ## Verification
 
-`scripts/verify_all` does **not** validate `.harness/intervention.md` schema — the file is meant to be ephemeral and is normally absent. If a stale intervention.md is found in CI (i.e., committed by accident), the project's gitignore convention is to ignore `.harness/intervention.md`; verify_all logs a WARN if a tracked one exists.
+`.harness/scripts/verify_all` does **not** validate `.harness/intervention.md` schema — the file is meant to be ephemeral and is normally absent. If a stale intervention.md is found in CI (i.e., committed by accident), the project's gitignore convention is to ignore `.harness/intervention.md`; verify_all logs a WARN if a tracked one exists.

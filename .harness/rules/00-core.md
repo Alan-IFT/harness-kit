@@ -25,7 +25,7 @@ For this repo specifically, "non-trivial" means:
 - Change to verify_all or its checks
 - Change to workflow or rules
 
-Trivial (single typo, comment update, dependency bump): direct edit + `scripts/verify_all`.
+Trivial (single typo, comment update, dependency bump): direct edit + `.harness/scripts/verify_all`.
 
 ## When in doubt
 
