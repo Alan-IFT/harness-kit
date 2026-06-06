@@ -677,10 +677,14 @@ if [[ -z "$g4_version" ]]; then
         "could not read version from .claude-plugin/plugin.json"
 else
     # Parallel arrays (file | shape-ERE | exact SOT-derived expected substring).
-    # Patterns stay anchored (parenthesized / version-anchored / full-width-paren)
-    # so historical bare Roadmap/CHANGELOG rows are never matched. The expected
-    # substring is the load-bearing test (literal `[[ == *..* ]]`, mirrors PS
-    # `.Contains()`); the shape ERE only improves the FAIL message.
+    # Patterns stay count-anchored (parenthesized `(N checks)` / `runs all N checks` /
+    # `N/N` ratio / badge `verify__all-N%2FN` / full-width-paren `（N 项检查）` /
+    # JSON-field forms) so historical bare Roadmap/CHANGELOG rows are never matched.
+    # The expected substring is the load-bearing test (literal `[[ == *..* ]]`, mirrors
+    # PS `.Contains()`); the shape ERE only improves the FAIL message. NOTE: two rows
+    # can target the SAME file (dev-map.md L60+L133, AI-GUIDE.md L36+L69) — because the
+    # test is whole-file, each row's expect MUST be unique within its file or a sibling
+    # line silently masks drift (the dev-map L60 `(N checks)` vs L133 `runs all N checks`).
     g4_files=(
         "AI-GUIDE.md"
         "AI-GUIDE.md"
@@ -695,29 +699,29 @@ else
         ".harness/scripts/baseline.json"
     )
     g4_shapes=(
-        '[0-9]+/[0-9]+ at v[0-9]+\.[0-9]+\.[0-9]+'
-        '[0-9]+ checks at v[0-9]+\.[0-9]+\.[0-9]+'
-        '[0-9]+ checks at v[0-9]+\.[0-9]+\.[0-9]+'
-        'runs all [0-9]+ checks \(at v[0-9]+\.[0-9]+\.[0-9]+\)'
-        '\([0-9]+ checks at v[0-9]+\.[0-9]+\.[0-9]+'
+        '[0-9]+/[0-9]+'
+        '[0-9]+ checks'
+        '\([0-9]+ checks\)'
+        'runs all [0-9]+ checks'
+        '\([0-9]+ checks'
         'verify__all-[0-9]+%2F[0-9]+'
         'verify__all-[0-9]+%2F[0-9]+'
         '\([0-9]+ checks\)'
         '（[0-9]+ 项检查）'
-        '[0-9]+ checks at v[0-9]+\.[0-9]+\.[0-9]+'
+        '[0-9]+ checks'
         '"verify_all_checks": [0-9]+'
     )
     g4_expects=(
-        "$g4_count/$g4_count at v$g4_version"
-        "$g4_count checks at v$g4_version"
-        "$g4_count checks at v$g4_version"
-        "runs all $g4_count checks (at v$g4_version)"
-        "($g4_count checks at v$g4_version"
+        "$g4_count/$g4_count"
+        "$g4_count checks"
+        "($g4_count checks)"
+        "runs all $g4_count checks"
+        "($g4_count checks"
         "verify__all-$g4_count%2F$g4_count"
         "verify__all-$g4_count%2F$g4_count"
         "($g4_count checks)"
         "（$g4_count 项检查）"
-        "$g4_count checks at v$g4_version"
+        "$g4_count checks"
         "\"verify_all_checks\": $g4_count"
     )
     for i in "${!g4_files[@]}"; do

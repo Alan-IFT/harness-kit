@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.21.2] - 2026-06-06
+
+Decoupled the prose verify_all count claims from the version: `G.4` now validates them count-only (against the live check tally), so a count-unchanged release no longer has to bump a version token in 6 docs. Version consistency stays gated by `G.3` (plugin/marketplace/README badges) + the `G.4` CHANGELOG-entry check. No check added (count stays 32).
+
 ## [0.21.1] - 2026-06-05
 
 Patch release. Fixed the `verify_all` I.4 insight-index cap to count evidence (data) lines instead of total physical lines, identically in both shells — resolving a PS/bash cross-shell divergence (bash WARNed on the 9-line header while PS passed) and aligning I.4 with archive-task's existing rotation metric and the documented "≤30 evidence-backed lines" intent. Reconciled the baseline.json / manual-e2e-test `test_init` counts to a captured run. No check added (count stays 32).

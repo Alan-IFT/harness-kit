@@ -644,19 +644,23 @@ Step "G.4" "Doc count/version claims consistent with plugin.json + live check co
 
     # Each row: doc path, a regex to confirm the claim shape exists, and the exact
     # SOT-derived substring the doc must contain. FAIL lists every doc whose claim
-    # is missing or stale. Patterns stay anchored (parenthesized / version-anchored /
-    # full-width-paren) so historical bare Roadmap/CHANGELOG rows are never matched.
+    # is missing or stale. Patterns stay count-anchored (parenthesized `(N checks)` /
+    # `runs all N checks` / `N/N` ratio / badge `verify__all-N%2FN` / full-width-paren
+    # `（N 项检查）` / JSON-field forms) so historical bare Roadmap/CHANGELOG rows are
+    # never matched. NOTE: two rows can target the SAME file (dev-map.md L60+L133,
+    # AI-GUIDE.md L36+L69) — because the test is a whole-file `.Contains`, each row's
+    # `expect` MUST be unique within its file or a sibling line silently masks drift.
     $claims = @(
-        @{ file = "AI-GUIDE.md";                  shape = '\d+/\d+ at v\d+\.\d+\.\d+';                       expect = "$count/$count at v$version" }
-        @{ file = "AI-GUIDE.md";                  shape = '\d+ checks at v\d+\.\d+\.\d+';                    expect = "$count checks at v$version" }
-        @{ file = "docs/dev-map.md";              shape = '\d+ checks at v\d+\.\d+\.\d+';                    expect = "$count checks at v$version" }
-        @{ file = "docs/dev-map.md";              shape = 'runs all \d+ checks \(at v\d+\.\d+\.\d+\)';       expect = "runs all $count checks (at v$version)" }
-        @{ file = ".harness/rules/40-locations.md"; shape = '\(\d+ checks at v\d+\.\d+\.\d+';                 expect = "($count checks at v$version" }
+        @{ file = "AI-GUIDE.md";                  shape = '\d+/\d+';                                         expect = "$count/$count" }
+        @{ file = "AI-GUIDE.md";                  shape = '\d+ checks';                                     expect = "$count checks" }
+        @{ file = "docs/dev-map.md";              shape = '\(\d+ checks\)';                                  expect = "($count checks)" }
+        @{ file = "docs/dev-map.md";              shape = 'runs all \d+ checks';                            expect = "runs all $count checks" }
+        @{ file = ".harness/rules/40-locations.md"; shape = '\(\d+ checks';                                 expect = "($count checks" }
         @{ file = "README.md";                    shape = 'verify__all-\d+%2F\d+';                           expect = "verify__all-$count%2F$count" }
         @{ file = "README.zh-CN.md";              shape = 'verify__all-\d+%2F\d+';                           expect = "verify__all-$count%2F$count" }
         @{ file = "README.md";                    shape = '\(\d+ checks\)';                                  expect = "($count checks)" }
         @{ file = "README.zh-CN.md";              shape = '（\d+ 项检查）';                                  expect = "（$count 项检查）" }
-        @{ file = "docs/manual-e2e-test.md";      shape = '\d+ checks at v\d+\.\d+\.\d+';                    expect = "$count checks at v$version" }
+        @{ file = "docs/manual-e2e-test.md";      shape = '\d+ checks';                                     expect = "$count checks" }
         @{ file = ".harness/scripts/baseline.json"; shape = '"verify_all_checks": \d+';                       expect = ('"verify_all_checks": ' + $count) }
     )
     $bad = @()
