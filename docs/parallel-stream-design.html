@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>parallel-stream 设计 v2 (v0.23.0) · 并行调度 · 已过对抗评审</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2430; --line:#30363d;
+    --txt:#e6edf3; --dim:#9aa7b4; --accent:#58a6ff; --green:#3fb950;
+    --amber:#d29922; --red:#f85149; --purple:#bc8cff; --mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;line-height:1.65;font-size:15px}
+  .wrap{max-width:1140px;margin:0 auto;padding:40px 28px 80px}
+  h1{font-size:30px;margin:0 0 6px;letter-spacing:-.4px}
+  h2{font-size:21px;margin:46px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  h2 .n{color:var(--dim);font-family:var(--mono);font-size:16px;margin-right:8px}
+  h3{font-size:16px;margin:22px 0 8px;color:var(--accent)}
+  .sub{color:var(--dim);font-size:15px;margin:0 0 8px}
+  .badges{margin:14px 0 0}
+  .badge{display:inline-block;font-family:var(--mono);font-size:12px;padding:3px 9px;border-radius:20px;border:1px solid var(--line);margin:0 6px 6px 0;color:var(--dim)}
+  .badge.draft{color:var(--amber);border-color:#3d2e12;background:#1a1410}
+  .badge.v{color:var(--green);border-color:#1d3024;background:#101a12}
+  .badge.r{color:var(--purple);border-color:#3a2a52;background:#181226}
+  p{margin:10px 0}
+  code{font-family:var(--mono);font-size:.88em;background:var(--panel2);padding:1px 6px;border-radius:5px;color:var(--purple)}
+  .verdict{background:linear-gradient(180deg,#15233b,#10192b);border:1px solid #1f3a5c;border-left:4px solid var(--accent);border-radius:10px;padding:18px 22px;margin:20px 0}
+  .verdict b{color:var(--accent)}
+  .grid{display:grid;gap:16px}
+  .g2{grid-template-columns:repeat(2,1fr)} .g3{grid-template-columns:repeat(3,1fr)}
+  @media(max-width:860px){.g2,.g3{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+  .card h3{margin-top:0}
+  .card.rec{border-color:#1d3024;background:#0f1a14}
+  .card.def{border-color:#3d2e12;background:#1a1410}
+  .tag{font-family:var(--mono);font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14px}
+  th,td{text-align:left;padding:9px 12px;border:1px solid var(--line);vertical-align:top}
+  th{background:var(--panel2);font-weight:600}
+  td.k{color:var(--accent);font-family:var(--mono);white-space:nowrap}
+  .ok{color:var(--green)} .no{color:var(--red)} .warn{color:var(--amber)}
+  .flow{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:20px;margin:18px 0;overflow-x:auto}
+  pre{font-family:var(--mono);font-size:12.5px;line-height:1.5;margin:0;color:var(--txt);white-space:pre}
+  .note{background:#1a1410;border:1px solid #3d2e12;border-left:3px solid var(--amber);border-radius:8px;padding:14px 18px;margin:18px 0}
+  .note b{color:var(--amber)}
+  .danger{background:#2a1011;border:1px solid #5c1f1f;border-left:3px solid var(--red);border-radius:8px;padding:14px 18px;margin:18px 0}
+  .danger b{color:var(--red)}
+  .ch{background:#0f1a14;border:1px solid #1d3024;border-left:3px solid var(--green);border-radius:8px;padding:14px 18px;margin:18px 0}
+  .ch b{color:var(--green)}
+  ul{margin:8px 0;padding-left:22px} li{margin:5px 0}
+  .toc{columns:2;font-size:14px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 22px;margin:18px 0}
+  .toc a{color:var(--accent);text-decoration:none} .toc a:hover{text-decoration:underline}
+  .pill{font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:12px}
+  .pill.b{background:#10233d;color:var(--accent)} .pill.g{background:#101a12;color:var(--green)} .pill.r{background:#2a1011;color:var(--red)} .pill.a{background:#1a1410;color:var(--amber)}
+  .q{font-family:var(--mono);font-size:12px;color:var(--amber);background:#1a1410;border:1px solid #3d2e12;border-radius:6px;padding:1px 7px;display:inline-block}
+  .foot{margin-top:50px;padding-top:18px;border-top:1px solid var(--line);color:var(--dim);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>parallel-stream</h1>
+  <p class="sub">并行调度设计 v2 —— 把 harness-stream 里互相独立的任务自动调度、同时开发,缩短总时长</p>
+  <div class="badges">
+    <span class="badge draft">决策记录 · 暂缓实现(A、B 均不建)</span>
+    <span class="badge r">v2 · 已过 3 路对抗评审(git/env · 并发 · 现实性)</span>
+    <span class="badge">底座:v0.22.0 串行 stream(已交付 2e134ea)</span>
+  </div>
+
+  <div class="verdict">
+    <b>最终决策(2026-06-06,依据「好 UX · 软件工程标准 · 长期易维护」原则):暂不实现并行(A、B 均不建)。</b>
+    <ul style="margin:8px 0 0">
+      <li><b>日常用串行 v0.22.0 + 已免费的「任务内 partition 并行」。</b> 这已满足「丢需求→AI 调度→跑完」的原始需求,且零 footgun。最好的 UX 是简单可靠的路径,最易维护的是最小的代码面。</li>
+      <li><b>并行对很多项目是「净亏」</b> —— 集成/有状态测试必须串行(Amdahl),叠加 token×N 和合并冲突重试,常常省不到时间却多花几倍 token。先算账(§2)。</li>
+      <li><b>Model B(同树 partition)= 按需路径。</b> 比 A 安全(无分支无合并,因此没有合并活锁那个循环),但仍需 Scope 纪律且受 Amdahl 封顶。仅当攒到一批真解耦、§2 账算得过来的任务才建。</li>
+      <li><b>Model A(worktree 真并行)= 搁置(风险 &gt; 收益)。</b> env 供给 / Windows junction 非管理员失败 / 每任务分支提交破坏现流程 / 合并活锁需整套调度+集成协调层。你的机器是 Windows 11 Home,本就过不了 junction 那关。</li>
+      <li>本文保留为<b>决策记录</b>。重启触发条件见 §11。</li>
+    </ul>
+  </div>
+
+  <div class="toc">
+    <a href="#g0">0 · 定位与评审状态</a><br>
+    <a href="#g1">1 · 目标 / 非目标</a><br>
+    <a href="#g2">2 · 先算账:何时是净亏</a><br>
+    <a href="#g3">3 · 五条硬约束</a><br>
+    <a href="#g4">4 · 两条路线(都不免费)</a><br>
+    <a href="#g5">5 · Model B 设计(MVP)</a><br>
+    <a href="#g6">6 · 环境策略(你的核心问题)</a><br>
+    <a href="#g7">7 · 测试拆分 + 硬前提</a><br>
+    <a href="#g8">8 · 独立性 + Scope 强制</a><br>
+    <a href="#g9">9 · Model A 设计 + 并发正确性(为何推后)</a><br>
+    <a href="#g10">10 · 可观测性 + 成本</a><br>
+    <a href="#g11">11 · 范围 · 决策树 · 下一步</a>
+  </div>
+
+  <h2 id="g0"><span class="n">0</span>定位与评审状态</h2>
+  <ul>
+    <li>这是<b>设计草案</b>,不是实现。建议正式走 <code>/harness-plan</code> 转成 01_需求 / 02_设计 / 03_Gate,过审后再写码。</li>
+    <li>v2 已吸收一轮 3 路对抗评审的 28 条 findings(2 个 blocker、12 个 major)。最大改动:把推荐从 Model A 翻成 <b>Model B 优先</b>,补上盈亏分析、Scope 强制、并发正确性修正。</li>
+    <li>底座 = 已交付的 v0.22.0 串行 stream:活池、拓扑调度、pm-orchestrator 派发、best-effort、三条硬急停。并行只改"挑任务 + 隔离 + 集成"。</li>
+  </ul>
+
+  <h2 id="g1"><span class="n">1</span>目标 / 非目标</h2>
+  <div class="grid g2">
+    <div class="card">
+      <div class="tag" style="color:var(--green)">目标</div>
+      <ul>
+        <li>从 ready 前沿自动识别"可同时做"的任务,并发开发,缩短墙钟。</li>
+        <li>不牺牲质量门(集成回主干仍过完整 verify_all)。</li>
+        <li>不牺牲安全(任务间不互相覆盖代码)。</li>
+        <li>失败仍 best-effort。</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="tag" style="color:var(--red)">非目标(本期不做)</div>
+      <ul>
+        <li>并行有耦合的任务;并行跑有状态集成/e2e 测试(一律串行)。</li>
+        <li>替项目解决测试基础设施(隔离 DB / 容器编排)。</li>
+        <li>自动探测 hermetic 测试(只接受显式声明)。</li>
+        <li>跨机器分布式。单机。</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2 id="g2"><span class="n">2</span>先算账:并行什么时候是净亏</h2>
+  <p>这是评审标记的 <span class="pill r">blocker</span> —— 必须诚实量化,否则会误导你开了并行反而更慢更贵。</p>
+  <div class="flow"><pre>
+墙钟模型(N 个独立任务):
+  串行总时长  =  N × (开发 + 全量验证)
+  并行总时长  ≈  max(各任务开发 + hermetic 验证)  +  N × 串行集成段(merge + 全量 verify_all + 有状态测试)
+                 └── 能并行的部分 ──┘            └──────── 永远串行(Amdahl 下限)────────┘
+
+worked example(3 个任务,典型带 DB 的后端):
+  每任务:开发 40min,hermetic 单测 2min,全量验证(含集成/DB)10min
+  串行:        3 × (40+10)        = 150 min
+  并行(N=3,0 冲突): 42 + 3×10    ≈  72 min     → 省 ~52%,但 token ≈ 3×
+  并行(1 次冲突重试 +15min):      ≈  87 min     → 省下降
+  若 hermetic 只占验证 10%、集成 90%:串行段主导 → 几乎不省,白烧 3× token
+  </pre></div>
+  <div class="note"><b>判据(强烈建议先自测):</b>
+    <ul style="margin:6px 0 0">
+      <li><b>hermetic 测试占总验证时间 &lt; ~20%</b> → 串行段主导,并行不值 → 用 Model B 受限并行 或 干脆串行。</li>
+      <li><b>任务间 interdependent 文件多 / Scope 难划清</b> → 冲突重试抹掉收益 → 串行。</li>
+      <li><b>按 token 计费 / 预算紧</b> → 并行 N× token 成本,除非确证净正收益,否则串行。</li>
+      <li><b>真正解耦(前端页 + 独立后端接口 + 独立脚本)+ 单测多 + token 不敏感</b> → 并行才划算。</li>
+    </ul>
+  </div>
+
+  <h2 id="g3"><span class="n">3</span>五条硬约束</h2>
+  <table>
+    <tr><th>#</th><th>约束</th><th>后果</th></tr>
+    <tr><td class="k">C1</td><td>verify_all 是全局串行门</td><td>回归归因要求一次只一个变更进基线 → 集成必须串行。Amdahl 上限在此。</td></tr>
+    <tr><td class="k">C2</td><td>worktree 不带 gitignored 文件</td><td>新 worktree 只有 tracked 代码,没有 <code>.env</code>/<code>datas/</code>/<code>node_modules</code>/DB → 跑不起来(仅 Model A 受此约束)。</td></tr>
+    <tr><td class="k">C3</td><td>有状态测试资源不可并发共享</td><td>DB/端口/数据目录/服务,N 个并发会互污 → 有状态测试<b>必须串行</b>(A、B 共同死结)。</td></tr>
+    <tr><td class="k">C4</td><td>"独立"难证明</td><td><code>Depends on</code> 必要不充分:无依赖边的两任务可能改同一文件 → 需 Scope 强制 + 冲突处理。</td></tr>
+    <tr><td class="k">C5</td><td>共享元数据写入</td><td>insight-index / tasks.md / 池 Status / baseline.json 必须<b>编排器串行独占</b>;并行 worker 调 archive-task 会丢更新(评审实测的 lost-update 竞争)。</td></tr>
+  </table>
+
+  <h2 id="g4"><span class="n">4</span>两条路线(都不是免费午餐)</h2>
+  <div class="grid g2">
+    <div class="card rec">
+      <div class="tag" style="color:var(--green)">Model B · 推荐做 v0.23.0 MVP</div>
+      <h3>partition 同树并行</h3>
+      <p><b>同一个工作树</b>,按架构师声明的<b>非重叠 partition</b> 并发编辑不同文件(复用现有 <code>dev-*</code> partition 机制),然后<b>一次</b> verify_all 跑合并后的树。</p>
+      <p class="ok">✓ 无 env 供给问题(共用一套 .env/DB)·无 Windows junction 问题 ·无每任务分支/提交改造 ·复用现有代码</p>
+      <p class="warn">⚠ 无 git 隔离 → Scope 划错会<b>静默</b>互相覆盖(没有冲突这道安全网)→ 必须强制 Scope(§8)·有状态测试仍串行</p>
+    </div>
+    <div class="card def">
+      <div class="tag" style="color:var(--amber)">Model A · 推后到 v0.24+(go/no-go)</div>
+      <h3>worktree 真并行</h3>
+      <p>每任务独立 git worktree + 分支,同时开发,串行合并集成。</p>
+      <p class="ok">✓ 任意任务级并行 ·git 隔离会把隐藏耦合暴露成 merge 冲突(有安全网)</p>
+      <p class="no">✗ env 供给(§6)·Windows junction 需管理员 ·每任务分支提交是对 harness 流程的<b>破坏性改动</b> ·pm-orchestrator worktree 子模式尚不存在(§9)</p>
+    </div>
+  </div>
+  <p class="warn"><b>关键反直觉:</b> A「env 难但耦合安全」(冲突能被 git 抓到);B「env 易但耦合不安全」(靠 Scope 纪律,划错就静默损坏)。两者都<b>绕不开</b> C3:有状态测试一律串行。</p>
+
+  <h2 id="g5"><span class="n">5</span>Model B 设计(MVP)</h2>
+  <div class="flow"><pre>
+while 池里还有可推进的 pending:
+    ingest()                                   # 复用串行 stream:重读池 + intervention(ADD/STOP/…)
+    ready = 拓扑前沿
+    group = 贪心挑「Scope 两两不重叠」的子集(上限 N)    # Scope 必填且校验,见 §8
+    if group 为空但 ready 非空: group = [ready[0]]        # 全重叠 → 退化串行
+    并发派发 group 各任务的 Dev(同一工作树,各改各的 partition 文件)   # 复用 pm partition 并行
+    barrier:等 group 全部完成编辑
+    【串行集成】对该 group 跑一次 全量 verify_all(含有状态/e2e)
+        PASS → 该 group 各任务 done;(编排器串行)archive + 写 insight/tasks.md
+        FAIL → 二分/逐个定位坏任务:标 failed + 依赖者 blocked,其余保留;best-effort 继续
+退出 → STREAM_REPORT.md(§10)
+  </pre></div>
+  <ul>
+    <li><b>并发的只是「编辑不同文件」</b>;构建/测试/verify_all 在 barrier 后<b>串行跑一次</b>(C3)。</li>
+    <li>失败定位:一个 group 的合并验证 FAIL 时,因为在同一棵树,需要逐个或二分回滚定位坏任务(B 的代价之一)。</li>
+    <li>元数据写入(archive/insight/tasks)只在串行段由编排器做(C5)。</li>
+  </ul>
+
+  <h2 id="g6"><span class="n">6</span>环境策略 —— 你的核心问题(主要约束 Model A)</h2>
+  <p>新建 worktree 里 <code>git worktree add</code> 只 checkout <b>tracked</b> 文件;gitignored 的全不在。<b>Model B 同树没有这个问题</b>;以下是 Model A 必须解决、也是把它推后的原因之一。</p>
+  <table>
+    <tr><th>类别</th><th>例子</th><th>Model A 内怎么办</th><th>失败模式 / 注意</th></tr>
+    <tr>
+      <td class="ok">只读可共享</td>
+      <td><code>node_modules</code>/<code>venv</code>/纯配置</td>
+      <td>symlink(*nix)/ junction(Win);或快速重装 <code>npm ci</code>。不拷贝。</td>
+      <td><span class="q">OQ-1</span> venv 绝对路径 / <code>pip install -e .</code> editable 跨 worktree 易碎;npm 解析 realpath 也可能出错。</td>
+    </tr>
+    <tr>
+      <td class="no">有状态(被测写)</td>
+      <td><code>datas/</code>/本地 DB/端口/Redis/上传目录</td>
+      <td><b>不进 worktree。</b> 需要它们的测试推到串行集成门在主干跑。</td>
+      <td>这是 worktree 并行的真正边界(C3)。</td>
+    </tr>
+    <tr>
+      <td class="warn">密钥 <code>.env</code></td>
+      <td>API_KEY / DB_PASSWORD</td>
+      <td><b>只</b>用 tracked 的 <code>.env.example</code> 在 worktree 合成测试档;<b>绝不</b> symlink 真 <code>.env</code>(密钥泄漏)。</td>
+      <td><span class="q">OQ-2</span> 需要真密钥的测试一律标 integration/e2e,推到串行门。新增 verify_all 检查:<code>.env</code> 的 key ⊆ <code>.env.example</code>。</td>
+    </tr>
+  </table>
+  <div class="danger"><b>Windows 现实(你的机器):</b> Win11 Home 下 junction/symlink <b>非管理员常失败</b>。Model A 必须有<b>预检脚本</b><code>verify-worktree-readiness</code>:测 symlink/junction 能否建,失败则<b>禁用 --parallel(A)并提示改用 Model B</b>。这是把 A 推后的直接原因之一。</div>
+
+  <h2 id="g7"><span class="n">7</span>测试拆分 + 硬前提</h2>
+  <p>并行下"每任务跑完整 verify_all"在隔离里做不到/不划算 → per-task 门拆两段:</p>
+  <div class="grid g2">
+    <div class="card"><div class="tag">隔离内 · 可并行</div><h3><code>hermetic-test</code></h3><p>无外部状态:纯单测、类型检查、lint、编译。给快速反馈。<span class="q">OQ-3</span> 由项目<b>显式声明</b>命令(如 <code>pytest -m "not integration"</code>),不自动猜;无声明则只编译+lint。</p></div>
+    <div class="card"><div class="tag" style="color:var(--amber)">主干集成门 · 串行</div><h3>全量 <code>verify_all</code> + 集成/e2e</h3><p>需要真 .env/DB/服务的一切,合并后一次一个任务跑。权威质量门。</p></div>
+  </div>
+  <div class="note"><b>硬前提(评审 blocker):</b> 并行模式<b>要求</b>项目声明一个 hermetic 子集且占验证时间 <b>≥ ~20%</b>;否则并行省不到、应直接串行。技能入口要做<b>前置检查</b>:无 hermetic 声明 / 占比过低 → 警告并建议串行,把开并行变成有意识的选择,而不是默认陷阱。</div>
+
+  <h2 id="g8"><span class="n">8</span>独立性 + Scope 强制(B 的安全网在此)</h2>
+  <p>两任务可并行 ⇔ 无依赖边 <b>且</b> Scope 不重叠 <b>且</b> 无共享有状态资源声明冲突。评审指出 Scope 必须<b>强制</b>,否则是 cargo-cult:</p>
+  <ul>
+    <li><b>池新增必填 <code>Scope</code> 列</b>(glob 或 <code>partition:dev-frontend</code>),写进 <code>BATCH_PLAN.md</code> 模板。Solution Architect 拆任务时填。</li>
+    <li><b>Gate Reviewer 拒绝空 Scope</b>;<b>派发时校验</b> <code>files_changed ⊆ Scope</code>,越界判 DESIGN DRIFT。</li>
+    <li><b>冲突预测</b>(评审 blocker):派发 group 前,对各任务做文件级 overlap 预测(B:Scope glob 交集;A:dry-run 三方合并)。预测冲突 &gt; ~30% → 该 group <b>降级串行</b>。</li>
+    <li><b>冲突即证据</b>:真发生重叠/冲突 → 回写 <code>insight-index</code>(「任务 A、B 在 X 文件耦合」),自动加宽 Scope,下次不再并行这对。运行多批后冲突率 &gt;15% → 自动关并行。</li>
+  </ul>
+
+  <h2 id="g9"><span class="n">9</span>Model A 设计 + 并发正确性(为何推后)</h2>
+  <p>评审在并发维度挖出 6 个 major,集中说明 A 为何"不是改个调度就能上":</p>
+  <table>
+    <tr><th>问题</th><th>修法(进入 A 的正式设计)</th></tr>
+    <tr><td><b>pm-orchestrator 无 worktree 子模式</b>(OQ-5,破坏性):现状 Developer 改主树、不按任务提交。A 要"在指定 worktree 内运行 + 提交到任务分支 + 不碰主干 + 只跑 hermetic"。</td><td>新增 <code>mode_variant = worktree-hermetic</code>:阶段 6 只跑 hermetic;不调 archive-task;提交到 <code>worktree-&lt;slug&gt;-&lt;ts&gt;</code> 分支。需单独设计文档 + 改 pm 契约与阶段门(stage-5 门改成"hermetic PASS + 全量延后到集成门")。</td></tr>
+    <tr><td><b>元数据 lost-update 竞争</b>(C5):并发 worktree 调 archive-task 写同一 <code>.git</code> 下的 insight-index/baseline,后写覆盖先写。</td><td><code>HARNESS_WORKTREE=1</code> 守卫:worktree 内 pm <b>禁止</b> archive-task,只把 <code>## Insight</code> 写进 07_DELIVERY;集成门合并后串行 harvest。</td></tr>
+    <tr><td><b>逻辑回归(非文本冲突)</b>:A 先合,B 隔离里 hermetic 过但 A 改动破坏了 B 的假设。</td><td><span class="q">OQ-6</span> 集成门全量 FAIL 后,在临时 worktree 跑 rebase+hermetic:过 → 逻辑冲突(B 回退 rebase);不过 → B 真 bug。区分以便定位。</td></tr>
+    <tr><td><b>分支生命周期</b>:命名/清理/rebase 重试未定义。</td><td>命名 <code>worktree-&lt;slug&gt;-&lt;ts&gt;</code>;合并成功删 worktree(保留分支供调试);冲突→新 <code>-r2</code> 分支基于新主干 rebase 重跑;退出时 <code>git worktree remove --force</code> 兜底清理。</td></tr>
+    <tr><td><b>STOP 语义</b>:并行批中途收到 STOP。</td><td><span class="q">OQ-7</span> 优雅停:不再派新 worktree,让在飞的跑完当前任务,未派发的标 skipped,写报告。</td></tr>
+    <tr><td><b>dev 阶段失败(非冲突)</b>:worktree 内编译/逻辑直接挂。</td><td>标 failed + 移除该 worktree,不进合并;best-effort 继续;退出统一清理残留 worktree。</td></tr>
+  </table>
+  <p class="dim">并发上限 N 建议 2–4(Workflow 引擎硬上限 <code>min(16,核数-2)</code>,实际取小)。这些都解决了,A 才谈得上 v0.24+ 落地。</p>
+
+  <h2 id="g10"><span class="n">10</span>可观测性 + 成本(评审补的两块)</h2>
+  <div class="grid g2">
+    <div class="card"><div class="tag">可观测性</div><p>N 路交错,"只看结果"会乱。<b>STREAM_LOG.md</b> 每任务一行结构化:<code>[ts][task-id][status][elapsed][verify结果][冲突?]</code>,展示<b>按 task-id 排序</b>成稳定表(不按完成顺序)。<b>STREAM_REPORT.md</b> 加"并行效率"段:实际墙钟 vs 串行模型、冲突数、各任务 token 花费、是否净正。</p></div>
+    <div class="card"><div class="tag" style="color:var(--amber)">成本</div><p>N 个全流水线并发 ≈ <b>N× token</b>。报告里逐任务记 token,让你事后判断这次并行值不值。技能入口在 token 预算紧 / 按量计费时<b>主动建议串行</b>。</p></div>
+  </div>
+
+  <h2 id="g11"><span class="n">11</span>范围 · 决策树 · 下一步</h2>
+  <h3>建议 v0.23.0 范围(只做 Model B)</h3>
+  <ul>
+    <li><code>/harness-stream --parallel N</code>(默认仍串行)+ Model B 同树 partition 并发 + barrier 后串行 verify_all。</li>
+    <li>池新增必填 <code>Scope</code> 列 + 模板更新;Gate 拒空/重叠;派发校验 <code>files_changed ⊆ Scope</code>;冲突预测降级。</li>
+    <li>项目声明 <code>hermetic-test</code> 命令(落 <code>.harness/rules/50-*.md</code>);入口前置检查 + 净亏警告。</li>
+    <li>STREAM_REPORT 并行效率段 + 逐任务 token。</li>
+    <li>新增 verify_all 检查 + 两 shell 对称 + 文档登记(同 v0.22.0 纪律)。</li>
+  </ul>
+  <h3>明确推后(Model A → v0.24+,go/no-go)</h3>
+  <ul><li>worktree 真并行;前置:量到 hermetic 占比 + 冲突率达标 + pm worktree 子模式完整设计 + Windows 预检通过。</li></ul>
+  <div class="flow"><pre>
+决策树:
+  Q1 任务真解耦(不同子系统、Scope 划得清)? ── 否 ──▶ 串行(并行只会更慢)
+        │是
+  Q2 有 hermetic 测试声明且占比 ≥20%?       ── 否 ──▶ 串行 / 先补测试拆分
+        │是
+  Q3 token 预算能接受 N×?                    ── 否 ──▶ 串行
+        │是
+  Q4 在 Windows 非管理员?                     ── 是 ──▶ Model B(同树,绕开 junction)
+        │否(*nix/管理员)
+        ▼
+  Model B 先上(MVP);若实测 hermetic 占比高、partition 受限 → 评估 Model A(v0.24+)
+  </pre></div>
+  <div class="ch"><b>最终决策:暂不实现(A、B 均不建)。</b> 串行 + 任务内 partition 并行已覆盖需求;本设计留档作为决策记录。<b>重启触发条件:</b>
+    <ul style="margin:6px 0 0">
+      <li><b>建 Model B</b> 当:攒到 ≥3 个真解耦、Scope 划得清、hermetic 测试占比 ≥20% 的任务批,且 token 不敏感 → 走 <code>/harness-plan</code> 立项(只做 B 范围)。</li>
+      <li><b>评估 Model A</b> 还需额外:切到 *nix/管理员环境 + B 实测受限 + pm worktree 子模式完整设计(§9)。</li>
+    </ul>
+  </div>
+
+  <div class="foot">
+    parallel-stream 设计 v2 · 已过 3 路对抗评审(28 findings:2 blocker / 12 major 已吸收)· 底座 v0.22.0 串行 stream 已交付(2e134ea)· 开放问题 OQ-1..OQ-7 见正文
+  </div>
+
+</div>
+</body>
+</html>

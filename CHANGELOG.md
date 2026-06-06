@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Docs — parallel-stream design decision (deferred, no code)
+
+Captured a vetted, adversarially-reviewed design for parallel task dispatch on top of the v0.22.0 stream (`docs/parallel-stream-design.html`) and the decision to **defer building it**: the serial stream plus the existing intra-task partition parallelism already cover the "queue many tasks, AI schedules, I watch results" need with the best UX and the smallest maintained surface. **Model B** (same-tree partition, no branches/merges) is the on-demand path, to be built only when a genuinely-decoupled task batch makes the Amdahl math pay off; **Model A** (worktree real-parallel) is shelved (risk > benefit — gitignored-env provisioning, Windows junctions needing admin, a per-task branch/commit change to the harness flow, and merge livelock that would require a dedicated scheduler / integration-coordinator tier). Revisit triggers are recorded in the design doc and the Roadmap. Docs-only; no skill or code change; `verify_all` stays 32 checks.
+
 ## [0.22.0] - 2026-06-06
 
 Minor release. Adds the **streaming / living-pool** entry point — a new `/harness-kit:harness-stream` skill that drains a continuously-growable task pool through the full 7-stage pipeline, re-reading the pool every iteration so tasks added mid-run are planned and executed without re-invoking. Closes the "I think of new work while a run is in flight and don't want to wait for the session to end before queuing it" friction that `/harness-batch`'s frozen-plan + fail-stop design deliberately does not serve.
