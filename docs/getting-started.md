@@ -33,7 +33,7 @@ git clone https://github.com/Alan-IFT/harness-kit ~/harness-kit
 ~/harness-kit/install.sh
 ```
 
-Either path makes nine skills available in Claude Code:
+Either path makes twelve skills available in Claude Code:
 
 Pipeline (pick by task shape):
 
@@ -41,6 +41,8 @@ Pipeline (pick by task shape):
 - `harness-plan` — design-only mode (stops at Gate Review verdict)
 - `harness-explore` — research / feasibility mode
 - `harness-goal` — open-ended Dev + QA loop bounded by a measurable criterion
+- `harness-batch` — run a fixed list of tasks through the pipeline sequentially (fail-stop)
+- `harness-stream` — drain a living task pool you keep topping up mid-run (best-effort)
 
 Setup:
 
@@ -51,7 +53,8 @@ Operations:
 
 - `harness-verify` — run total verification
 - `harness-status` — health snapshot
-- `harness-intervene` — soft Ctrl-C for an in-flight pipeline
+- `harness-intervene` — soft Ctrl-C for an in-flight pipeline (redirect / pause / add-task)
+- `harness-supervise` — observer-only health check of a task folder
 
 Verify with `/help` inside Claude Code — you should see them listed.
 

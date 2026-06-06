@@ -75,7 +75,7 @@ else
     scope="global: $HOME"
 fi
 
-skills=(harness harness-init harness-adopt harness-verify harness-status harness-plan harness-explore harness-goal harness-intervene)
+skills=(harness harness-init harness-adopt harness-verify harness-status harness-plan harness-explore harness-goal harness-batch harness-stream harness-intervene harness-supervise)
 
 echo ""
 echo "Harness Kit install"
@@ -133,12 +133,15 @@ echo "  /harness          full 7-stage pipeline (real feature / bug / refactor)"
 echo "  /harness-plan     design-only mode (RA + SA + GR, no Dev)"
 echo "  /harness-explore  research/feasibility (light RA + findings.md)"
 echo "  /harness-goal     open-ended Dev + QA loop within a budget"
+echo "  /harness-batch    run a fixed list of tasks through the pipeline (fail-stop)"
+echo "  /harness-stream   drain a living task pool you keep topping up (best-effort)"
 echo ""
 echo "  /harness-init     bootstrap an empty project with Harness skeleton"
 echo "  /harness-adopt    add Harness to an existing project"
 echo "  /harness-verify   run the project's verify_all"
 echo "  /harness-status   inspect Harness assets"
-echo "  /harness-intervene  redirect or pause an inflight pipeline (soft Ctrl-C)"
+echo "  /harness-intervene  redirect / pause / add-task to an inflight pipeline (soft Ctrl-C)"
+echo "  /harness-supervise  observer-only health check of a task folder"
 echo ""
 echo "Tip: for versioned/auditable install, prefer the plugin path inside Claude Code:"
 echo "  /plugin marketplace add Alan-IFT/harness-kit"

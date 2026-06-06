@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-06-06
+
+Minor release. Adds the **streaming / living-pool** entry point — a new `/harness-kit:harness-stream` skill that drains a continuously-growable task pool through the full 7-stage pipeline, re-reading the pool every iteration so tasks added mid-run are planned and executed without re-invoking. Closes the "I think of new work while a run is in flight and don't want to wait for the session to end before queuing it" friction that `/harness-batch`'s frozen-plan + fail-stop design deliberately does not serve.
+
+### Why
+
+`/harness-batch` parses `BATCH_PLAN.md` once at start, builds a topological order, and loops over that frozen list — and stops the whole batch on the first hard failure (by design: a known list, fail-fast). That is the wrong shape for the "I only propose requirements and watch results, and I keep discovering new ones" workflow: you cannot add a task to a running batch (the anti-pattern is explicitly stop-update-re-invoke), and one task's failure halts everything. Stream is the sibling for the open-ended, keep-it-topped-up case.
+
+### Added — `/harness-kit:harness-stream <pool-id>` skill
+
+- New `skills/harness-stream/SKILL.md`. Drains `docs/batches/<pool-id>/BATCH_PLAN.md` (same pool format as batch, so a batch can graduate into a stream) one task at a time through `pm-orchestrator` via the `Task` tool — never bypassing pm-orchestrator, never running tasks in parallel, exactly like batch.
+- **Living pool**: the loop re-reads `BATCH_PLAN.md` at the top of every iteration, so `pending` rows appended mid-run join the topological frontier on the next pass. Two input channels documented with honest timing: the **file channel** (append a row / drop an `ADD` intervention) lands on the next task boundary even in a single continuous run; the **chat channel** lands at the next iteration (queued until the current turn ends), made prompt by running under the `/loop` driver. Chat-supplied requirements are mirrored into the pool so the run stays resumable and the pool is the single source of truth.
+- **Best-effort completion** (the core contrast with batch): a `FAILED`/`BLOCKED` task is marked, its dependents are marked `blocked`, and the stream **continues** to the next ready task. The hard-safety stops are preserved identically to batch — a `verify_all` FAIL after a task (poisoned baseline), an `intervention.md` STOP, or a safety-hook block all halt the stream. Resumable: fix the cause and re-invoke `/harness-stream <pool-id>` to drain only the unfinished rows.
+- Stream artifacts `STREAM_LOG.md` / `STREAM_REPORT.md` live alongside the pool in `docs/batches/<pool-id>/`.
+
+### Added — `ADD <slug> — <goal>` intervention keyword (pool-scoped)
+
+- `.harness/rules/65-intervention.md` and the `/harness-kit:harness-intervene` skill gain an `ADD <slug> — <goal>` keyword: append/upsert a `pending` task row into the active `/harness-stream` pool, consumed by the stream loop between tasks. It is **stream-only** — a `/harness-batch` plan is frozen, so batch rejects `ADD` and points the user at `/harness-stream` (or update-the-plan-and-re-invoke); a plain single-task PM with no pool treats `ADD` as a `NOTE` and surfaces that the task was not queued. `ADD` is the only intervention keyword whose argument is a task slug rather than a stage number.
+
+### Changed — skill registration: 11 → 12 skills
+
+- `verify_all.{ps1,sh}` C.1 / G.1 / G.2 hardcoded skill arrays each gain `harness-stream`, and the three step descriptions update from "11 skills" to "12 skills" — in BOTH shells (F.1 symmetry).
+- `README.md`: version badge `0.21.2` → `0.22.0`; `11 skills` → `12 skills`, `eleven AI skills` → `twelve AI skills`, `five task shapes` → `six task shapes`; new `/harness-kit:harness-stream` bullet under "Pipeline skills"; new `0.22.0` Roadmap row.
+- `README.zh-CN.md`: symmetric Chinese edits — badge, `11 个 skills` → `12 个 skills`, `11 个 AI skill` → `12 个 AI skill`, `5 种任务形态` → `6 种任务形态`, new Chinese bullet, new `0.22.0` Roadmap row.
+- `AI-GUIDE.md`: `11 skills` → `12 skills`; new "Stream (living pool)" row in the Workflow-entry table.
+- `docs/manual-e2e-test.md`: `all 11 skills` → `all 12 skills` and `harness-stream` added to the enumerated skill list. `docs/dev-map.md`: `harness-stream` registered in the skills inventory.
+
+### Notes
+
+- The skill name `harness-stream` is included in this CHANGELOG entry so `verify_all` G.2 (CHANGELOG references all 12 skills) PASSes after the C.1 list grows to 12.
+- No new `verify_all` check; the gate count stays at **32** (both shells). Stream reuses batch's per-task `verify_all` regression gate.
+- Version stamps bumped together (`G.3`): `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, both README badges → `0.22.0`.
+
 ## [0.21.2] - 2026-06-06
 
 Decoupled the prose verify_all count claims from the version: `G.4` now validates them count-only (against the live check tally), so a count-unchanged release no longer has to bump a version token in 6 docs. Version consistency stays gated by `G.3` (plugin/marketplace/README badges) + the `G.4` CHANGELOG-entry check. No check added (count stays 32).

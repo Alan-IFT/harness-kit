@@ -72,7 +72,7 @@ if ($Project) {
     $scope = "global: $homeDir"
 }
 
-$skills = @("harness", "harness-init", "harness-adopt", "harness-verify", "harness-status", "harness-plan", "harness-explore", "harness-goal", "harness-intervene")
+$skills = @("harness", "harness-init", "harness-adopt", "harness-verify", "harness-status", "harness-plan", "harness-explore", "harness-goal", "harness-batch", "harness-stream", "harness-intervene", "harness-supervise")
 
 Write-Host ""
 Write-Host "Harness Kit install" -ForegroundColor Cyan
@@ -136,12 +136,15 @@ Write-Host "  /harness          full 7-stage pipeline (real feature / bug / refa
 Write-Host "  /harness-plan     design-only mode (RA + SA + GR, no Dev)"
 Write-Host "  /harness-explore  research/feasibility (light RA + findings.md)"
 Write-Host "  /harness-goal     open-ended Dev + QA loop within a budget"
+Write-Host "  /harness-batch    run a fixed list of tasks through the pipeline (fail-stop)"
+Write-Host "  /harness-stream   drain a living task pool you keep topping up (best-effort)"
 Write-Host ""
 Write-Host "  /harness-init     bootstrap an empty project with Harness skeleton"
 Write-Host "  /harness-adopt    add Harness to an existing project"
 Write-Host "  /harness-verify   run the project's verify_all"
 Write-Host "  /harness-status   inspect Harness assets"
-Write-Host "  /harness-intervene  redirect or pause an inflight pipeline (soft Ctrl-C)"
+Write-Host "  /harness-intervene  redirect / pause / add-task to an inflight pipeline (soft Ctrl-C)"
+Write-Host "  /harness-supervise  observer-only health check of a task folder"
 Write-Host ""
 Write-Host "Tip: for versioned/auditable install, prefer the plugin path inside Claude Code:" -ForegroundColor Cyan
 Write-Host "  /plugin marketplace add Alan-IFT/harness-kit"

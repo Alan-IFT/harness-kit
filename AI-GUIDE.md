@@ -4,7 +4,7 @@
 
 ## Project
 
-This is **harness-kit** itself — a Claude Code Plugin that distributes 11 skills + templates for AI-driven development under the Harness Engineering methodology. The repo **dogfoods** its own design: the same canonical 7-agent pipeline (plus the v0.17+ auxiliary supervisor) that we ship to users governs work here.
+This is **harness-kit** itself — a Claude Code Plugin that distributes 12 skills + templates for AI-driven development under the Harness Engineering methodology. The repo **dogfoods** its own design: the same canonical 7-agent pipeline (plus the v0.17+ auxiliary supervisor) that we ship to users governs work here.
 
 Stack: Markdown (skills, agent definitions, docs) + PowerShell + Bash (verify_all, install, sync scripts).
 
@@ -85,6 +85,7 @@ Three flows are supported, picked by the tool the user is in:
 | Explore / feasibility | "Can we do X?" / "Is library Y feasible?" — research | "能不能..." / "可行吗" / "调研一下" | `/harness-explore` |
 | Goal loop (Dev + QA) | "Keep improving until X" / "iterate to N% coverage" | "持续优化到..." / "循环改进直到..." | `/harness-goal` |
 | Batch (list of tasks) | "Run T-01...T-NN as a batch" / "batch the backlog" | "批量跑 T-01~T-09" / "把这批一起跑了" | `/harness-batch` |
+| Stream (living pool) | "keep draining a pool I keep adding to" / "fire tasks at me as I think of them, just watch results" | "边开发边不断加任务" / "想到啥需求就丢进去，只看结果" | `/harness-stream` |
 | Trivial | Typo, comment, single-line dependency bump | typo / 注释 / 改个变量名 | Direct edit + `.harness/scripts/verify_all` |
 | Mid-task redirect | "stop the pipeline" / "tell dev to skip X" / "leave a note for QA" | "停一下" / "让 dev 别动 X" / "顺便告诉 QA…" | `/harness-intervene` |
 

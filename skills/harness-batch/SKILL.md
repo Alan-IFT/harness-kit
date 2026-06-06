@@ -68,6 +68,7 @@ If the folder or the plan file is missing, point the user at `docs/batches/_temp
    - `NOTE — <text>` → attach the text to the **next** task's pm-orchestrator dispatch prompt, then delete the file. Batch continues.
    - `SKIP <task-id> — <reason>` → mark `<task-id>` as `skipped` in `BATCH_PLAN.md`, delete the intervention file, continue with the rest.
    - `REDIRECT <task-id>` → reject (REDIRECT is for stages, not tasks). Convert to a STOP keyword and ask the user.
+   - `ADD <slug> — <goal>` → reject for a batch: a batch plan is **frozen** at start (see anti-patterns), and `ADD` is a `/harness-stream` feature. Tell the user to either update `BATCH_PLAN.md` and re-invoke this batch, or switch to `/harness-stream <batch-id>` to drain the same pool as a living stream.
 
 ## Resume semantics
 

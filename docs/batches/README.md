@@ -1,6 +1,6 @@
 # docs/batches/
 
-Holding area for **batch runs** dispatched by `/harness-kit:harness-batch`. Each batch is one folder under `docs/batches/<batch-id>/` and groups a list of tasks that run back-to-back through the 7-stage pipeline.
+Holding area for **batch runs** (`/harness-kit:harness-batch`) and **stream pools** (`/harness-kit:harness-stream`). Each is one folder under `docs/batches/<id>/` holding a `BATCH_PLAN.md` task table that runs through the 7-stage pipeline — frozen + fail-stop as a batch, or living + best-effort as a stream (see "Streams" below).
 
 ## What a batch folder looks like
 
@@ -22,6 +22,15 @@ Per-task stage docs do NOT live here — they live in `docs/features/<slug>/` (a
 5. **Read `BATCH_REPORT.md`** when the batch ends (all done, or stopped on a strong signal).
 
 The batch is not auto-archived; the three batch-level files stay in place for user reference.
+
+## Streams (living pools)
+
+The same folder and `BATCH_PLAN.md` can be drained by `/harness-kit:harness-stream <id>` instead of `/harness-batch`. A **stream** treats the plan as a *living pool*: it re-reads `BATCH_PLAN.md` every iteration (so rows you append mid-run get planned without re-invoking), completes **best-effort** (a failed task is marked + its dependents blocked, the stream keeps going — only `verify_all` FAIL / `STOP` / a safety-hook block halt it), and writes its own run artifacts alongside the plan:
+
+- `STREAM_LOG.md` — append-only per-task event log (stream writes during the run).
+- `STREAM_REPORT.md` — terminal summary (stream writes on exit).
+
+So one `docs/batches/<id>/` folder can be run either way — they share the `BATCH_PLAN.md` format, so a batch can graduate into a stream. New work enters a running stream via the **file channel** (append a row / an `ADD <slug> — <goal>` intervention) or, under the `/loop` driver, the **chat channel**. See `skills/harness-stream/SKILL.md` for the loop, drivers, and the `ADD` keyword.
 
 ## Worked example
 

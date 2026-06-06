@@ -1,0 +1,125 @@
+---
+name: harness-stream
+description: Streaming / living-pool mode. Drains a continuously-growable task pool (docs/batches/<pool-id>/BATCH_PLAN.md) one task at a time through pm-orchestrator, re-reading the pool every iteration so tasks you add mid-run are planned and executed without re-invoking. Best-effort completion (a failed task is marked and skipped, the stream keeps going) with the same hard-safety stops as batch. Use when you want to fire requirements at the AI as they occur to you — in chat or by appending to the pool — and only watch results.
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, AskUserQuestion, TodoWrite, Task
+---
+
+# /harness-stream
+
+Drain a **living task pool** through the full 7-stage pipeline, one task at a time, re-reading the pool every iteration. Unlike `/harness-batch` (which freezes the plan at start and stops on the first hard failure), the stream **picks up tasks you add while it runs** and keeps going past a single task's failure. This is the **"I only propose requirements and watch results"** mode.
+
+## When to invoke
+
+- You're developing and keep discovering new work — "also add X", "while you're at it fix Y" — and you don't want to wait for the current run to finish before queuing it.
+- You want a standing drain loop: keep a pool of tasks topped up, let the AI plan order and execute, you just append and observe.
+- You've been using `/harness-batch` and want the same pool to stay *open* instead of freezing at start.
+
+The hallmark: the task list is **open-ended and grows during execution**, and you prefer "keep completing everything, tell me what broke, but don't halt the whole run over one failure".
+
+## When NOT to invoke
+
+| Symptom | Use this instead |
+|---|---|
+| A fixed, known list of tasks; stop on first failure | `/harness-batch` |
+| Exactly one task | `/harness` (full 7-stage) |
+| Iterate ONE goal until a measurable criterion | `/harness-goal` |
+| "Vet a design before code" | `/harness-plan` |
+| "Can we even do X?" / research | `/harness-explore` |
+| Pause / redirect a running stream | `/harness-intervene` (or append to the pool) |
+
+## The pool
+
+The pool reuses the batch plan format so a batch can graduate into a stream and vice-versa:
+
+- File: `docs/batches/<pool-id>/BATCH_PLAN.md`.
+- Columns: `ID | Slug | Goal | Mode | Depends on | Status` (same validation as `/harness-batch`).
+- If it doesn't exist, point the user at `docs/batches/_template/BATCH_PLAN.md`, ask them to copy it to `docs/batches/<pool-id>/BATCH_PLAN.md`, seed at least one `pending` row, then re-invoke.
+
+The pool is **append-only-friendly**: you may add rows at any time, including while the stream is running. The stream re-reads the file every iteration, so new `pending` rows are planned into the topological frontier on the next pass.
+
+## Two ways to add work mid-run (and the timing truth)
+
+A running stream consumes input from two channels. Understand the timing — it's the whole point of this mode:
+
+1. **File channel (instant).** Append a `pending` row to `BATCH_PLAN.md`, or drop an `ADD <slug> — <goal>` line in `.harness/intervention.md` (via `/harness-intervene` or by hand). The loop re-reads both at the **top of every iteration**, so a file write lands on the **next task boundary** regardless of what the AI is doing. This works even in a single continuous run.
+
+2. **Chat channel (next tick).** Type the requirement in the chat box. While the AI is mid-task its turn is busy, so your message **queues and is delivered when the current turn ends** — i.e. it is ingested at the next iteration, not mid-task. To make this prompt, run the stream under the `/loop` driver (below) so each iteration is its own short turn. The stream **mirrors any chat-supplied requirement into the pool file** before acting on it, so nothing is lost.
+
+If you want truly instant insertion without waiting for a task to finish, use the file channel. If you want to "just type and forget", use the chat channel under `/loop`.
+
+## Drivers — pick one
+
+- **Hands-off chat driver (recommended for "fire in chat").** Run `/loop /harness-stream <pool-id>` (self-paced). Each tick is its OWN turn that processes one task, so a chat message typed during a task is delivered when that tick ends and ingested on the next tick. **This is the only driver that delivers the headline "type a requirement in chat, AI folds it in, I just watch" experience**, because only a fresh turn can carry your queued chat. It also makes the "keep the pool topped up and idle until I add more" behavior real — each tick is a genuine new turn.
+- **Continuous run (no dependencies, file-channel only).** Invoke `/harness-stream <pool-id>` once; the skill loops internally in a single turn, re-reading the pool file each iteration. The **file channel works perfectly here** (each iteration re-reads `BATCH_PLAN.md` + `intervention.md`), but **chat does NOT** — a message typed mid-run is queued by Claude Code until the whole invocation ends, so it cannot be ingested between internal iterations. Use this when you'll add work by appending to the pool / sending `ADD` interventions, not by chatting. Because a single turn cannot block-wait, this driver **drains the current pool and exits** rather than idling for future additions (re-invoke to drain more).
+
+**Always state the chosen driver to the user at start, and the timing truth above.** In particular: if `/loop` is unavailable, warn explicitly that the pure chat-driven experience is not available — they must add work via the file / `ADD` channel, and chat typed mid-run won't be picked up until the run ends.
+
+## Procedure
+
+1. **Argument validation.** Confirm `docs/batches/<pool-id>/BATCH_PLAN.md` exists. If not, surface the template path and stop.
+
+2. **Pre-flight (once per stream start; cheap and idempotent so it's safe under `/loop`):**
+   - `.harness/scripts/verify_all` baseline — capture PASS/WARN/FAIL. If already FAIL, **refuse to start** (a broken baseline makes per-task regression detection impossible). Surface and exit.
+   - `.harness/insight-index.md` — read once; surface relevant lines into each task's pm-orchestrator dispatch prompt.
+   - `.harness/intervention.md` — consume any pending signal per `.harness/rules/65-intervention.md` (a `STOP` here aborts before any task).
+
+3. **Iteration loop** (one task per pass; repeat until the exit condition fires):
+   - **a. Ingest.** **File channel (always):** re-read `BATCH_PLAN.md` and check `.harness/intervention.md` (below). **Chat channel (only under the `/loop` driver):** the user message(s) delivered with *this tick's turn* may contain new requirements — for each that clearly reads as a task (not a question or aside), **normalize it into a `pending` row** in `BATCH_PLAN.md` (assign `ID`/`Slug`/`Goal`/`Mode`/`Depends on`), de-duplicating against existing slugs/goals first; if a message is ambiguous, ask via `AskUserQuestion` before creating a row rather than guessing. Under the continuous driver there is no mid-run chat to read — skip the chat part. Then act on `.harness/intervention.md`:
+     - `ADD <slug> — <goal>` → append/upsert a `pending` row, delete the intervention file, continue.
+     - `STOP` → halt the stream (strong signal). `NOTE` → attach to the next dispatch. `SKIP <id>` → mark that row `skipped`. (`REDIRECT <id>` → reject; it targets stages, not tasks.)
+   - **b. Plan.** Validate the table (required columns, unique slugs, no `Depends on` cycle). Build the topological frontier of runnable rows honoring `Depends on`. **Resume semantics (same as batch):** a row whose `docs/features/<slug>/07_DELIVERY.md` parses as `DELIVERED` (primary) OR contains a line matching `Final verify_all result: PASS` (secondary, format-tolerant fallback) is treated as done — mark `done`, skip. Every other status — `pending` / `in-progress` / `failed` / `blocked` — is **re-evaluated and runnable** (so a `failed` row from a prior run is retried once its cause is fixed; a `blocked` row becomes runnable once its blocker resolves).
+   - **c. Pick.** Take the next ready task in topological order. If none is ready (frontier empty but `pending` rows remain blocked by failures) → go to exit check.
+   - **d. Dispatch.** Mark the row `in-progress`. Append to `docs/batches/<pool-id>/STREAM_LOG.md`: `<ISO-8601 UTC> · <id> · dispatching pm-orchestrator · slug=<slug> · mode=<mode>`. **Dispatch `pm-orchestrator` via the `Task` tool** (mode `full` unless the row says otherwise), in its OWN context — the stream never sees the stage docs, only the return summary. This is identical to `/harness-batch` step 4c; never bypass pm-orchestrator.
+   - **e. Record.** Read the sub-agent's return summary (verdict `DELIVERED`/`BLOCKED`/`FAILED`, path to `07_DELIVERY.md`, files-changed, final `verify_all`). Append one line to `STREAM_LOG.md`.
+   - **f. Regression gate.** Run `.harness/scripts/verify_all`. If it returns **FAIL** (the task broke the baseline) → **hard stop** (see Stop conditions). Otherwise continue.
+   - **g. Best-effort outcome.** Update the row `Status` from the verdict (keep the verdicts distinct so the report tallies are accurate):
+     - `DELIVERED` → `done`.
+     - `FAILED` → `failed`; `BLOCKED` → `blocked`. In either case, also mark every *downstream* task whose `Depends on` chain includes this row `blocked`. **Then keep going** to the next ready task — do NOT halt the stream. (This is the core difference from batch: a task failure is best-effort, never a stream-level stop.)
+   - **h. Report.** Emit a one-line status to the user: `<id> <verdict> · queue: <pending> pending / <failed> failed / <blocked> blocked`.
+   - **i. Continue or rest.** If ready tasks remain → next pass immediately. If the frontier is drained: under the **`/loop` driver**, end the tick and let the next tick re-check the pool + any queued chat — repeat for up to **K consecutive empty ticks** (default 3) of genuinely no new work, then exit. Under the **continuous driver** there is no blocking wait inside one turn, so a drained pool means **exit now** (write the report); the user re-invokes `/harness-stream <pool-id>` to drain anything added later.
+
+4. **Exit conditions:**
+   - Pool drained AND no new requirements for K consecutive passes → normal exit.
+   - A hard stop fired (below).
+   On exit, write `docs/batches/<pool-id>/STREAM_REPORT.md`.
+
+## Stop conditions (hard — these DO halt the stream)
+
+Best-effort means a *task* failure (including a pm-orchestrator `FAILED` verdict, even from its own "3 same-stage rollbacks" rule) **never** stops the stream — it's marked `failed`, its dependents `blocked`, and the stream moves on. Only these three genuine hazards halt the stream, because continuing would corrupt the run or defy the user:
+
+- `.harness/scripts/verify_all` returns **FAIL** after a task — the change broke the baseline; every later task would inherit a poisoned baseline. Stop, surface, let the user fix.
+- `.harness/intervention.md` contains **STOP** between passes.
+- The safety hook (`.harness/scripts/guard-rm`) blocked a destructive Bash call inside a task — surfaced in the sub-agent's return summary.
+
+(With no hard stop and no ready task left, the stream exits normally per the drained-pool rule — it does not "halt", it just finishes.)
+
+## On stream completion
+
+Write `docs/batches/<pool-id>/STREAM_REPORT.md`:
+
+- Per-task row: `<id> | <slug> | <verdict> | link to docs/features/_archived/<slug>/ (or docs/features/<slug>/)`.
+- Aggregate: done / failed / blocked / skipped counts, passes run, final `verify_all` summary.
+- The failed/blocked tasks remain `pending`-resolvable: fix the cause, re-invoke `/harness-stream <pool-id>`, and the stream resumes only the unfinished rows.
+- Stop reason if a hard stop fired.
+
+Per-task stage docs are archived by each task's own pm-orchestrator. The pool artifacts (`BATCH_PLAN.md`, `STREAM_LOG.md`, `STREAM_REPORT.md`) stay in `docs/batches/<pool-id>/`.
+
+## Hard rules
+
+- **Never bypass pm-orchestrator.** The stream is a thin loop; all per-task routing happens inside pm-orchestrator. Do not directly dispatch RA/SA/Dev/etc.
+- **Never run more than one task in parallel.** Sequential only — same as batch.
+- **Re-read the pool every iteration.** The whole feature is that mid-run additions are honored; a cached plan defeats it.
+- **A task failure is best-effort, a baseline failure is a hard stop.** Never suppress a `verify_all` FAIL to keep the stream running — that's the signal that protects every later task.
+- **Mirror chat requirements into the pool before acting** so the pool is the single source of truth and the run is resumable.
+- **Never widen scope silently beyond what the user asked.** New rows must come from the user (chat / pool / `ADD`), never invented by the stream.
+
+## Anti-patterns
+
+- **Do not** use for a fixed list you want to fail-fast on — that's `/harness-batch`.
+- **Do not** auto-retry a `failed` task in the same run. Mark it, skip its dependents, continue; the user fixes the cause and re-invokes to resume.
+- **Do not** keep the stream spinning forever on an empty pool — exit after K empty passes so it doesn't burn turns idling.
+- **Do not** promise "instant" chat ingestion mid-task — be honest that chat lands at the next iteration; the file channel is the instant one.
+
+## Cost
+
+Roughly (tasks completed) × (full 7-stage cost), plus one `verify_all` per task and ~2 log lines/task. The stream adds no per-task overhead over `/harness-batch`; its value is eliminating the stop-update-re-invoke cycle every time you think of new work. Idle passes (empty pool) cost one pool re-read each — negligible — and stop after K.

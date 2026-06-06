@@ -50,9 +50,10 @@ Recognized first-line keywords (case-sensitive, must follow the `# Intervention`
 | `REDIRECT <stage>` | Override the brief for stage `<stage>`. If already past that stage, route back to it. Log redirect rationale to PM_LOG.md. |
 | `SKIP <stage>` | Skip the named stage with the given rationale. Allowed only for stages 5 (code-review) and 6 (QA); skipping 3 (gate) is forbidden. |
 | `NOTE` | Acknowledge in PM_LOG.md, attach to the dispatch prompt of the next downstream agent, continue. |
+| `ADD <slug> — <goal>` | **Stream-scoped.** Append/upsert a `pending` task row into the active `/harness-stream` pool's `BATCH_PLAN.md`, then continue. Consumed by the `/harness-stream` loop between tasks. Meaningful only while a stream is draining a pool: a plain single-task PM (or a frozen `/harness-batch`) has no pool to queue into, so it treats `ADD` as a `NOTE` (attaches it to the next dispatch) and **surfaces to the user that the task was not queued** — start `/harness-stream <pool-id>` (or append the row to `BATCH_PLAN.md` by hand) to actually queue it. |
 | (no keyword) | Treat as `NOTE` if benign, `STOP` if ambiguous and consequential. Surface to user when in doubt. |
 
-Stage numbers refer to the table in `pm-orchestrator.md` (`01` = requirement analysis, `04` = development, etc.).
+Stage numbers refer to the table in `pm-orchestrator.md` (`01` = requirement analysis, `04` = development, etc.). **Pool context** (`/harness-batch`, `/harness-stream`): two keywords are re-interpreted against the task pool instead of stages — `SKIP <task-id>` marks that pool row `skipped` (not a stage), and `ADD <slug>` (stream only) queues a new row. `REDIRECT` is rejected in pool context because it targets stages, not tasks. `ADD` is the only keyword whose argument is always a task slug.
 
 ## PM consumption protocol
 

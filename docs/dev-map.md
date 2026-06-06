@@ -40,7 +40,8 @@ harness-kit/
 │   ├── harness/SKILL.md                ← Full 7-stage pipeline
 │   ├── harness-intervene/SKILL.md      ← Soft Ctrl-C for an in-flight pipeline
 │   ├── harness-supervise/SKILL.md      ← Observer-only auxiliary skill (v0.17+); emits SUPERVISION_REPORT.md
-│   └── harness-batch/SKILL.md          ← Batch mode (v0.19+); runs T-01...T-NN via pm-orchestrator sub-agents from docs/batches/<batch-id>/BATCH_PLAN.md
+│   ├── harness-batch/SKILL.md          ← Batch mode (v0.19+); runs T-01...T-NN via pm-orchestrator sub-agents from docs/batches/<batch-id>/BATCH_PLAN.md
+│   └── harness-stream/SKILL.md         ← Stream / living-pool mode (v0.22+); re-reads BATCH_PLAN.md each iteration, best-effort, picks up mid-run additions
 │
 ├── .harness/                            ← THIS repo's tool-agnostic SOT (dogfood)
 │   ├── agents/                         ← byte-copy of templates/common/.harness/agents/
