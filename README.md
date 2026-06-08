@@ -2,7 +2,7 @@
 
 **English** · [简体中文](README.zh-CN.md)
 
-![version](https://img.shields.io/badge/version-0.23.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-32%2F32-brightgreen) ![test-init](https://img.shields.io/badge/test--init-227%2F227-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.24.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-32%2F32-brightgreen) ![test-init](https://img.shields.io/badge/test--init-255%2F255-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
 > **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (13 skills + project templates) that brings disciplined AI-driven development to fullstack and backend projects.
 >
@@ -140,9 +140,9 @@ You edit one place: `.harness/rules/`. The stubs and AI-GUIDE.md reference it; n
 
 ### Project-wide language policy
 
-A Chinese team picks `中文` at init — every AI output across the project is in Chinese: chat replies, agent hand-offs, per-task documents, status reports, error messages. Even if you write in another language, AI responds in Chinese. The policy is enforced via a top-level `Output language` section in CLAUDE.md.
+A Chinese team picks `中文` at init — output is **split by consumer**: human-facing output (chat replies, status reports, error messages, delivery summaries, README and human docs) is in **Chinese**; AI-facing work products (the 7-stage per-task documents, PM_LOG, the tasks.md / dev-map / insight-index ledgers, agent / rule / AI-GUIDE / CLAUDE edits, code comments, commit messages) are in **English** — the LLM reads English fine and it stays consistent with the English framework internals. Even if you write in another language, chat replies stay Chinese. The split is defined in the project's `.harness/rules/00-core.md` "输出语言" section.
 
-English projects work the same way: nothing leaks in another language.
+English projects have a single language — everything is English, no split.
 
 ### Developer partitioning
 
@@ -159,7 +159,7 @@ Hit Claude Code's rate limit mid-task? Switch to GitHub Copilot in VS Code and k
 ### Three layers of regression testing
 
 - `verify_all` (32 checks) — repo health
-- `test-init` (227 assertions on PowerShell; 191 on Bash without python3) — init template logic on empty dirs (3 project types × 75 PS / 63 Bash, plus 2 shell-agnostic BUG-2 placeholder-regex regression assertions)
+- `test-init` (255 assertions on PowerShell; 217 on Bash without python3) — init template logic on empty dirs (3 project types × 75 PS / 63 Bash, plus the migrate-layout block, 4 shell-agnostic zh-overlay consumer-split policy assertions, and 2 shell-agnostic BUG-2 placeholder-regex regression assertions)
 - `test-real-project` (82 assertions) — overlay onto real fixtures (todo-fullstack, todo-backend)
 
 Every commit must pass all three. `test-init` and `test-real-project` exercise the generated project's structure end-to-end with no network needed.

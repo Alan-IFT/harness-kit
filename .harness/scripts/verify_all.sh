@@ -533,6 +533,7 @@ i6_banned=(
     "harness-sync~生成~CLAUDE.md|v0.10 起 harness-sync 不再生成 CLAUDE.md|不|"
     "harness-sync~合成~CLAUDE.md|v0.10 起规则不再合成进 CLAUDE.md|不|"
     "重新生成的~CLAUDE.md|v0.10 起 CLAUDE.md 是 stub，不再被重新生成||"
+    "全程~中文|v0.24.0 起 zh 策略按消费者分流，不再全程中文（T-013）||"
 )
 # Build an ERE from a ~-delimited anchor list, escaping each token to match literally.
 i6_build_regex() {                       # $1 = ~-joined anchors  $2 = gap budget
@@ -548,6 +549,7 @@ i6_exempt_files=(
     "CHANGELOG.md"
     "architecture.html"
     "docs/walkthrough.html"
+    "docs/project-overview.html"
     ".harness/scripts/verify_all.ps1"
     ".harness/scripts/verify_all.sh"
     ".harness/scripts/test-verify-i6.ps1"

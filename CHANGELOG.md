@@ -5,7 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.24.0] - 2026-06-08
+
+### Changed — consumer-split output-language policy for `{{LANG}}=zh` projects (T-013)
+
+A `中文`-init project's output-language rule is no longer the blunt "everything in Chinese". It is now **split by consumer**: human-facing output (chat replies, error messages, status/progress reports, delivery summaries, README and human docs) stays **Chinese**; AI-facing work products (the 7-stage per-task documents, PM_LOG, the tasks.md / dev-map / insight-index ledgers, agent / rule / AI-GUIDE / CLAUDE edits, code comments, commit messages) are now **English** — the LLM reads English fine and it stays consistent with the English framework internals. Conversational replies remain Chinese. The English (`{{LANG}}=en`) path is unchanged (single language, no split). No new placeholder; already-generated projects are not migrated.
+
+- **Rewrote the zh policy text** in the i18n/zh overlay: `00-core.md.tmpl` "输出语言" section (now two explicit ZH/EN consumer lists), the `CLAUDE.md.tmpl` + `.github/copilot-instructions.md.tmpl` top "输出语言" line (one-line split summary pointing at `00-core.md`), `skills/harness-init/SKILL.md` Q5 `中文` option, `README.md` + `README.zh-CN.md` language-policy sections, and `docs/manual-e2e-test.md` Q5 expectation. Also corrected SKILL.md step-4.3's stale zh-overlay file list.
+- **I.6 retired-claim guard** gains a `全程~中文` banned-line (the retired "everything in Chinese" phrasing) in `verify_all.{ps1,sh}` + the `test-verify-i6.{ps1,sh}` copies (`I6ExpectedEntryCount` 13→14); the new split text contains no "全程" so it cannot self-trip.
+- **First test-init language assertion**: a symmetric `test_zh_overlay` / `Test-ZhOverlay` block (PS + Bash, no-python3-tolerant pure greps) on a fresh zh-overlay fixture asserts the ZH list marker and the EN list marker are present and the retired `全程` phrasing is absent.
+- **I.6 exempt list** gains `docs/project-overview.html` (a frozen v0.17.0 archived snapshot that honestly records the old "全程中文" wording) across all four lockstep sites — same exemption class as `architecture.html` / `docs/walkthrough.html`.
+- Version 0.23.0 → 0.24.0 (plugin.json, marketplace.json, both README badges). Skill count stays 13; `verify_all` stays 32 checks.
 
 ### Added — ambient chat-driven stream mode (`/harness-stream`, no new skill)
 

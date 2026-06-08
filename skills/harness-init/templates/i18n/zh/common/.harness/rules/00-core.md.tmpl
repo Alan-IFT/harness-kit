@@ -6,20 +6,29 @@
 > `AI-GUIDE.md` 按引用索引它，AI 工具按需懒加载。规则编辑不需要 sync 步骤
 >（v0.10 起规则按引用使用，不再合成进 `CLAUDE.md`）。
 
-## 输出语言（全项目）
+## 输出语言（按消费者分流）
 
-**本项目所有 AI 产出必须使用中文。** 适用于：
+本项目的 AI 产出**按主要消费者**分两种语言：面向人的用**中文**，面向下游 agent / LLM 的用**英文**（LLM 读英文同样顺畅，且与英文的框架内部保持一致、体积更小）。
+
+**用中文（消费者是人）：**
 
 - 跟用户的所有对话回复。
-- Agent 之间的交接（PM 派发、Architect 描述等）。
-- `docs/features/<task>/` 下每份阶段文档：`01_REQUIREMENT_ANALYSIS.md`、`02_SOLUTION_DESIGN.md`、`03_GATE_REVIEW.md`、`04_DEVELOPMENT.md`、`05_CODE_REVIEW.md`、`06_TEST_REPORT.md`、`07_DELIVERY.md`、以及 `PM_LOG.md`。
-- 对 `docs/tasks.md` 和 `docs/dev-map.md` 的更新。
-- 错误消息、状态报告、给用户的解释。
-- 适当的代码注释。
+- 错误消息、状态 / 进度报告、给用户的解释。
+- 给用户的交付总结（"交付了什么"的叙述性说明）。
+- 面向人的文档：`README.md` / `README.zh-CN.md` 以及 `docs/` 下供人阅读的指南。
 
-**不要混用语言。** 即使用户用其他语言发消息，也用中文回答（内部理解用户意图，外部输出中文）。这样仓库里所有产出都对所有协作者可读。
+**用英文（消费者是下游 agent / LLM）：**
 
-要修改项目语言，编辑 `.harness/rules/00-core.md` 的"输出语言"章节 —— 按引用生效，不需要 sync 步骤。
+- `docs/features/<task>/` 下每份阶段文档：`01_REQUIREMENT_ANALYSIS.md` … `07_DELIVERY.md`，以及 `PM_LOG.md`。
+- `docs/tasks.md`、`docs/dev-map.md`、`.harness/insight-index.md` 这些台账的追加内容。
+- AI 编辑的 `.harness/agents/*.md`、`.harness/rules/*.md`、`AI-GUIDE.md`、`CLAUDE.md`。
+- 代码注释、commit message。
+
+被人和 agent 同时读的产物（阶段文档、台账、注释、commit），按"更严格的消费者"打破平局 —— 即下游 agent，因此用英文；人审阅英文同样没问题。
+
+**不要在同一份产物里混用语言。** 即使用户用其他语言发消息，对话回复仍用中文（内部理解用户意图，输出按上面的分流规则）。
+
+要修改语言策略，编辑 `.harness/rules/00-core.md` 的"输出语言"章节 —— 按引用生效，不需要 sync 步骤。
 
 ## 这个项目怎么开发
 

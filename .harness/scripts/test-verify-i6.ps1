@@ -48,7 +48,7 @@ for ($i = 0; $i -lt $args.Count; $i++) {
 # logic (§3.2/§3.4 of the design). Kept in lockstep by the structural assertion.
 # ---------------------------------------------------------------------------
 $i6GapDefault = 40
-# The 13-entry banned list — the 1:1 twin of verify_all.ps1's $banned.
+# The 14-entry banned list — the 1:1 twin of verify_all.ps1's $banned.
 $i6Banned = @(
     @{ anchors = @('scaffolding-only'); reason = "harness-adopt has been fully automated since v0.3"; exclude = @(); gap = $null },
     @{ anchors = @('Composed','into','`CLAUDE.md`'); reason = "rules are not composed into CLAUDE.md since v0.10"; exclude = @('not','no longer','referenced'); gap = 20 },
@@ -62,7 +62,8 @@ $i6Banned = @(
     @{ anchors = @('.harness/','→','CLAUDE.md'); reason = "harness-sync target is .claude/, not CLAUDE.md, since v0.10"; exclude = @('.claude/'); gap = $null },
     @{ anchors = @('harness-sync','生成','CLAUDE.md'); reason = "v0.10 起 harness-sync 不再生成 CLAUDE.md"; exclude = @('不'); gap = $null },
     @{ anchors = @('harness-sync','合成','CLAUDE.md'); reason = "v0.10 起规则不再合成进 CLAUDE.md"; exclude = @('不'); gap = $null },
-    @{ anchors = @('重新生成的','CLAUDE.md'); reason = "v0.10 起 CLAUDE.md 是 stub，不再被重新生成"; exclude = @(); gap = $null }
+    @{ anchors = @('重新生成的','CLAUDE.md'); reason = "v0.10 起 CLAUDE.md 是 stub，不再被重新生成"; exclude = @(); gap = $null },
+    @{ anchors = @('全程','中文'); reason = "v0.24.0 起 zh 策略按消费者分流，不再全程中文（T-013）"; exclude = @(); gap = $null }
 )
 $i6ExemptDirs = @("docs/features/", "参考/")
 
@@ -72,6 +73,7 @@ $i6ExemptFiles = @(
     "CHANGELOG.md",
     "architecture.html",
     "docs/walkthrough.html",
+    "docs/project-overview.html",
     ".harness/scripts/verify_all.ps1",
     ".harness/scripts/verify_all.sh",
     ".harness/scripts/test-verify-i6.ps1",
@@ -79,7 +81,7 @@ $i6ExemptFiles = @(
 )
 # Single source of truth for the banned-list entry count. Bumping to 14 = edit here
 # AND in test-verify-i6.sh's i6_expected_entry_count.
-$script:I6ExpectedEntryCount = 13
+$script:I6ExpectedEntryCount = 14
 
 function Build-I6Regex($anchors, $gap) {
     ($anchors | ForEach-Object { [regex]::Escape($_) }) -join "(.{0,$gap})"

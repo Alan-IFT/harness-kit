@@ -607,6 +607,31 @@ function Test-Migrate {
     }
 }
 
+function Test-ZhOverlay {
+    Write-Host ""
+    Write-Host "=== Testing: i18n/zh overlay — consumer-split output-language policy ===" -ForegroundColor Cyan
+    $tmp = Join-Path ([System.IO.Path]::GetTempPath()) "harness-test-zh-$(Get-Random)"
+    New-Item -ItemType Directory -Path $tmp -Force | Out-Null
+    try {
+        $vars = @{ "PROJECT_NAME"="zh-test"; "PROJECT_TYPE"="fullstack"; "STACK"="Next.js + NestJS";
+                   "TODAY"=$today; "ENABLE_HOOK"="false";
+                   "SYNC_COMMAND"="pwsh -NoProfile -File .harness/scripts/harness-sync.ps1";
+                   "GUARD_COMMAND"="pwsh -NoProfile -File .harness/scripts/guard-rm.ps1" }
+        Copy-TemplateLayer -Source (Join-Path $templateRoot "common")        -Target $tmp -Vars $vars
+        Copy-TemplateLayer -Source (Join-Path $templateRoot "fullstack")      -Target $tmp -Vars $vars
+        Copy-TemplateLayer -Source (Join-Path $templateRoot "i18n/zh/common") -Target $tmp -Vars $vars
+
+        $core = Join-Path $tmp ".harness/rules/00-core.md"
+        Assert "[zh] 00-core.md overlaid" { Test-Path $core }
+        Assert "[zh] policy lists a Chinese-artifact (consumer=human) marker" { (Get-Content $core -Raw) -match '给用户的交付总结' }
+        Assert "[zh] policy lists an English-artifact (consumer=agent) marker" { (Get-Content $core -Raw) -match 'commit message' }
+        Assert "[zh] retired blunt 全程 phrasing is absent" { -not ((Get-Content $core -Raw) -match '全程') }
+    } finally {
+        if (-not $KeepTemp) { Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue }
+        else { Write-Host "Temp dir kept: $tmp" -ForegroundColor Yellow }
+    }
+}
+
 Write-Host "=== test-init: simulating /harness-init flow (v0.2) ===" -ForegroundColor Cyan
 Write-Host "Repo: $repoRoot"
 
@@ -621,6 +646,9 @@ if ($Type -in @("all", "generic")) {
 }
 if ($Type -in @("all", "both")) {
     Test-Migrate
+}
+if ($Type -in @("all", "both")) {
+    Test-ZhOverlay
 }
 
 # BUG-2 regression (v0.16.0 rollback round 2): verify the broadened D.2/D.3

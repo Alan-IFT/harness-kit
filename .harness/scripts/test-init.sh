@@ -511,6 +511,23 @@ SETTINGS
     [[ "$KEEP" == true ]] && echo "Temp dir kept: $tmp" || rm -rf "$tmp"
 }
 
+test_zh_overlay() {
+    echo ""
+    echo "=== Testing: i18n/zh overlay — consumer-split output-language policy ==="
+    local tmp; tmp=$(mktemp -d -t harness-test-zh-XXXXXX)
+    copy_layer "$template_root/common"        "$tmp" "zh-test" "fullstack" "Next.js + NestJS"
+    copy_layer "$template_root/fullstack"      "$tmp" "zh-test" "fullstack" "Next.js + NestJS"
+    copy_layer "$template_root/i18n/zh/common" "$tmp" "zh-test" "fullstack" "Next.js + NestJS"
+
+    local core="$tmp/.harness/rules/00-core.md"
+    assert "[zh] 00-core.md overlaid" "[[ -f '$core' ]]"
+    assert "[zh] policy lists a Chinese-artifact (consumer=human) marker" "grep -q '给用户的交付总结' '$core'"
+    assert "[zh] policy lists an English-artifact (consumer=agent) marker" "grep -q 'commit message' '$core'"
+    assert "[zh] retired blunt 全程 phrasing is absent" "! grep -q '全程' '$core'"
+
+    [[ "$KEEP" == true ]] && echo "Temp dir kept: $tmp" || rm -rf "$tmp"
+}
+
 echo "=== test-init: simulating /harness-init flow (v0.2) ==="
 echo "Repo: $repo_root"
 
@@ -525,6 +542,9 @@ if [[ "$TYPE" == "all" || "$TYPE" == "generic" ]]; then
 fi
 if [[ "$TYPE" == "all" || "$TYPE" == "both" ]]; then
     test_migrate
+fi
+if [[ "$TYPE" == "all" || "$TYPE" == "both" ]]; then
+    test_zh_overlay
 fi
 
 # BUG-2 regression (v0.16.0 rollback round 2): verify the broadened D.2/D.3

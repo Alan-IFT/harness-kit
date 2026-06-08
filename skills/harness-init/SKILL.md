@@ -69,7 +69,7 @@ Ask **six questions** in a single `AskUserQuestion` call:
 
 5. **Project output language** — this is a **project-wide policy**, not just doc language. Options:
    - `English (default)` — **All AI output in this project will be in English**. That includes: chat replies, agent-to-agent hand-offs, every per-task document (`01_REQUIREMENT_ANALYSIS.md` through `07_DELIVERY.md`, `PM_LOG.md`), updates to `tasks.md` / `dev-map.md`, error messages, status reports. Even if the user writes in another language, AI responds in English.
-   - `中文 (Chinese)` — **项目内 AI 全程使用中文输出**。包括：对话回复、agent 间交接、所有任务阶段文档、tasks.md / dev-map.md 更新、错误消息、状态报告。即使用户用其他语言提问，AI 也用中文回答。
+   - `中文 (Chinese)` — **按消费者分流**：面向人的产出（对话回复、错误消息、状态/进度报告、给用户的交付总结、README 及人读文档）用**中文**；面向下游 agent/LLM 的产出（01–07 阶段文档、PM_LOG、tasks.md/dev-map/insight-index 台账、agent/rule/AI-GUIDE/CLAUDE 编辑、代码注释、commit message）用**英文**。即使用户用其他语言提问，对话回复仍用中文。
    - The policy is enforced by an "Output language" section at the top of CLAUDE.md. Agents read CLAUDE.md and follow the rule.
    - Agent definitions and verify_all scripts stay in English regardless (LLM reads English fine, file count manageable). Only output is constrained.
 
@@ -104,7 +104,7 @@ Copy in this order (later layer overwrites earlier):
 3. **If Q5 ≠ English**, apply the language overlay:
    - Copy everything under `templates/i18n/<lang>/common/` → target root (overwrites the English files).
    - Copy everything under `templates/i18n/<lang>/<project-type>/` → target root.
-   - The `zh` overlay translates: `00-core.md.tmpl`, `50-fullstack.md` or `50-backend.md`, `docs/workflow.md`, `docs/dev-map.md.tmpl`, `docs/tasks.md.tmpl`, `docs/spec/README.md`, `evals/golden-tasks.md.tmpl`.
+   - The `zh` overlay translates: the bootstrap stubs (`CLAUDE.md.tmpl`, `.github/copilot-instructions.md.tmpl`, `AI-GUIDE.md.tmpl`), the rule fragments (`00-core.md.tmpl`, `05-insight-index.md.tmpl`, `60-tool-handoff.md`, `75-safety-hook.md.tmpl`, `50-fullstack.md` / `50-backend.md` / `50-generic.md.tmpl`), `.harness/insight-index.md.tmpl`, and the docs/evals (`docs/workflow.md`, `docs/dev-map.md.tmpl`, `docs/tasks.md.tmpl`, `docs/spec/README.md`, `evals/golden-tasks.md.tmpl`).
    - Files **not** in the overlay (agent prompts, skills/build|test|verify SKILL.md, scripts) stay in English. This is intentional: LLM reads English fine, file count stays manageable.
 
 Files ending in `.tmpl` need placeholder substitution (step 5). Drop the `.tmpl` suffix on write.

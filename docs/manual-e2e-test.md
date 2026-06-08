@@ -98,7 +98,7 @@ In Claude Code:
    - Stack (free text)
    - Enable verify_all Stop hook (Yes / No)
    - Developer partitioning (Partitioned / Single — skipped for Generic)
-   - Output language (English / 中文)
+   - Output language (English / 中文) — picking `中文` yields a **consumer-split** policy (human-facing output Chinese, AI-facing output English) in the generated `.harness/rules/00-core.md` "输出语言" section, not an "everything Chinese" policy.
    - AI customization of `50-<project>.md` (Yes / **No (default)**) — v0.16+. On Yes, the skill reads the stack string + top-level filenames + named manifests and drafts a tailored rule fragment with `<!-- source: ... -->` annotations; on No (default), the static `50-<type>.md` stub is used (byte-identical to v0.15.1).
 3. Claude copies templates, substitutes placeholders, runs `harness-sync`.
 4. Claude prints a summary listing source-of-truth vs generated artifacts.
