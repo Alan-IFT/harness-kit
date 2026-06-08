@@ -15,5 +15,7 @@
   "test_verify_i6_ps_assertions": 58,
   "test_verify_i6_bash_assertions": 58,
   "test_harness_upgrade_ps_assertions": 38,
-  "test_harness_upgrade_bash_assertions": 37
+  "test_harness_upgrade_bash_assertions": 37,
+  "test_language_ps_assertions": 39,
+  "test_language_bash_assertions": 39
 }

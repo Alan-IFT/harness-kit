@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.25.0] - 2026-06-08
+
+### Added — `/harness-language` skill: set / switch / refresh a project's output-language policy (T-014)
+
+A new 14th skill, `harness-language`, lets any harness project — especially an already-initialized OLD one — **set, switch (English ↔ Chinese), or refresh** its project-level output-language policy. It surgically rewrites only the three policy-bearing surfaces — the `.harness/rules/00-core.md` policy section, the `CLAUDE.md` top policy line, and the `.github/copilot-instructions.md` top policy line — to the target language's current canonical text (en = single-language English; zh = the T-013 consumer-split policy). Non-destructive, idempotent, dry-run preview, `.bak` per edited file, git-repo + clean-tree gated. This closes the same "old projects can't pull the new config" gap `/harness-upgrade` closed for scripts — here for the language policy T-013 shipped.
+
+- **New skill** `skills/harness-language/SKILL.md` — the judgment layer: plugin-template-cache discovery (the `/harness-upgrade` glob chain), current-language detect-then-confirm via `AskUserQuestion` (00-core → CLAUDE → copilot, first confident hit, pre-filled; ambiguous → ask with no default), dry-run → confirm → apply, and the absent-section conflict mediation (insert / abort).
+- **New deterministic helper pair** `templates/common/.harness/scripts/language-policy.{ps1,sh}` (mirrored to this repo's dogfood `.harness/scripts/` via `sync-self` — the mirror set goes 6 → 7 script pairs): locates the policy section by canonical heading anchor (en `## Output language (project-wide)` OR zh `## 输出语言（按消费者分流）`), slices `[heading, next "## ")`, substitutes the canonical block EXTRACTED from the resolved template (never embedded as a literal), swaps the `^(Output language:|输出语言：)` line, writes a `.bak`, NOOPs on byte-identity. `en → zh → en` is byte-identical (single text source = the templates). Cross-shell byte-parity (PS writes LF + a trailing newline to match bash awk output).
+- **New regression** `.harness/scripts/test-language.{ps1,sh}` — switch both directions, idempotent refresh, dry-run unchanged, the byte-identical `zh → en → zh` round-trip (both shells), missing-copilot tolerance, hand-mangled heading → conflict, non-git gate.
+- **One hint line** added to `/harness-upgrade`'s end-of-run summary pointing at `/harness-language` (hint only, no auto cross-command invocation).
+- **`verify_all`** `harness-language` added to the C.1 / G.1 / G.2 skill arrays + `language-policy` to F.1 (both shells); check count stays **32** (a new skill needs no new lettered check — the loops cover it).
+- Version 0.24.0 → 0.25.0 (plugin.json, marketplace.json, both README badges). Skill count 13 → 14 across README × 2, AI-GUIDE, getting-started, manual-e2e-test, 40-locations, dev-map. No new `{{...}}` placeholder; no I.6 banned/exempt-list change; six task shapes stays six (the new skill is a Setup utility). `test-init` unchanged (no template policy CONTENT change).
+
 ## [0.24.0] - 2026-06-08
 
 ### Changed — consumer-split output-language policy for `{{LANG}}=zh` projects (T-013)

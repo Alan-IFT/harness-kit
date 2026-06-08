@@ -82,6 +82,10 @@ sync_file "$template_common/.harness/scripts/migrate-scripts-layout.sh"  "$repo_
 sync_file "$template_common/.harness/scripts/upgrade-project.ps1" "$repo_root/.harness/scripts/upgrade-project.ps1" ".harness/scripts/upgrade-project.ps1"
 sync_file "$template_common/.harness/scripts/upgrade-project.sh"  "$repo_root/.harness/scripts/upgrade-project.sh"  ".harness/scripts/upgrade-project.sh"
 
+# Mapping 8: language-policy helper (T-014 /harness-language mechanical layer)
+sync_file "$template_common/.harness/scripts/language-policy.ps1" "$repo_root/.harness/scripts/language-policy.ps1" ".harness/scripts/language-policy.ps1"
+sync_file "$template_common/.harness/scripts/language-policy.sh"  "$repo_root/.harness/scripts/language-policy.sh"  ".harness/scripts/language-policy.sh"
+
 if [[ "$CHECK" == true ]]; then
     if (( ${#drift[@]} > 0 )); then
         echo "Drift detected:" >&2

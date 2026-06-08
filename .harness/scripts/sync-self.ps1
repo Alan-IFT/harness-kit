@@ -18,6 +18,8 @@
 #   .harness/scripts/migrate-scripts-layout.sh  → .harness/scripts/migrate-scripts-layout.sh
 #   .harness/scripts/upgrade-project.ps1        → .harness/scripts/upgrade-project.ps1
 #   .harness/scripts/upgrade-project.sh         → .harness/scripts/upgrade-project.sh
+#   .harness/scripts/language-policy.ps1        → .harness/scripts/language-policy.ps1
+#   .harness/scripts/language-policy.sh         → .harness/scripts/language-policy.sh
 #
 # Run before commit if you've edited any of the above. verify_all step E.1 FAILs
 # on drift.
@@ -54,6 +56,8 @@ $mappings = @(
     @{ from = ".harness/scripts/migrate-scripts-layout.sh"; to = ".harness/scripts/migrate-scripts-layout.sh"; type = "file" }
     @{ from = ".harness/scripts/upgrade-project.ps1"; to = ".harness/scripts/upgrade-project.ps1"; type = "file" }
     @{ from = ".harness/scripts/upgrade-project.sh"; to = ".harness/scripts/upgrade-project.sh"; type = "file" }
+    @{ from = ".harness/scripts/language-policy.ps1"; to = ".harness/scripts/language-policy.ps1"; type = "file" }
+    @{ from = ".harness/scripts/language-policy.sh"; to = ".harness/scripts/language-policy.sh"; type = "file" }
 )
 
 $drift = @()

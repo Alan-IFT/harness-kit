@@ -2,15 +2,15 @@
 
 **English** · [简体中文](README.zh-CN.md)
 
-![version](https://img.shields.io/badge/version-0.24.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-32%2F32-brightgreen) ![test-init](https://img.shields.io/badge/test--init-255%2F255-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.25.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-32%2F32-brightgreen) ![test-init](https://img.shields.io/badge/test--init-255%2F255-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
-> **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (13 skills + project templates) that brings disciplined AI-driven development to fullstack and backend projects.
+> **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (14 skills + project templates) that brings disciplined AI-driven development to fullstack and backend projects.
 >
 > **Goal**: humans only do "describe the requirement" and "step in when AI can't"; everything else — 7-agent pipeline, verify gates, structured documents — runs automatically.
 
 ## What's inside
 
-This is a Claude Code Plugin packaging that gives any project thirteen AI skills:
+This is a Claude Code Plugin packaging that gives any project fourteen AI skills:
 
 **Pipeline skills** (six task shapes; the AI picks the right one from your natural-language description)
 - `/harness-kit:harness` — full 7-stage pipeline (RA → SA → GR → Dev → CR → QA → Delivery). Use for real feature / bug / refactor work.
@@ -24,6 +24,7 @@ This is a Claude Code Plugin packaging that gives any project thirteen AI skills
 - `/harness-kit:harness-init` — bootstrap Harness skeleton in a new project (asks 5 questions, generates `.harness/` + `.claude/` + `AI-GUIDE.md` + stub CLAUDE.md / copilot-instructions.md in ~30s)
 - `/harness-kit:harness-adopt` — non-invasively add Harness to an existing project (detects stack, extracts conventions, prompts before applying)
 - `/harness-kit:harness-upgrade` — bring an already-initialized but **stale** project up to the current plugin layout (relocate scripts to `.harness/scripts/`, content-refresh depth-sensitive scripts for correct root derivation, re-install the pre-commit hook, rewire settings, regenerate `verify_all` while preserving your B.* checks — dry-run preview, idempotent, proven with a green `verify_all`)
+- `/harness-kit:harness-language` — set, switch (English ↔ Chinese), or refresh a project's output-language policy by surgically rewriting only the three policy surfaces (`.harness/rules/00-core.md` section + `CLAUDE.md` line + `.github/copilot-instructions.md` line) to the target language's current canonical text. Self-bootstraps the text from the plugin templates (so an old project can pull a refreshed policy), non-destructive, idempotent, dry-run preview, `.bak` per file.
 
 **Operations skills**
 - `/harness-kit:harness-verify` — run total verification (compile + test + rule scan + baseline diff)

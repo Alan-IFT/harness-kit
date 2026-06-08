@@ -162,6 +162,8 @@ if needed.
    verify_all result: PASS <n> / WARN <n> / FAIL <n>
    ```
 
+Tip: to set or refresh this project's output-language policy (English <-> Chinese), run /harness-language.
+
 ## Why content-refresh, not just relocation (the L31 fix)
 
 Relocation alone (`git mv scripts/x .harness/scripts/x`) preserves the OLD file content.

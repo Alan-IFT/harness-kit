@@ -2,15 +2,15 @@
 
 [English](README.md) · **简体中文**
 
-![version](https://img.shields.io/badge/version-0.24.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-32%2F32-brightgreen) ![test-init](https://img.shields.io/badge/test--init-255%2F255-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.25.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-32%2F32-brightgreen) ![test-init](https://img.shields.io/badge/test--init-255%2F255-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
-> **Claude Code 的 Harness Engineering 工具包** — 一个 Claude Code Plugin（13 个 skills + 项目模板），把"有纪律的 AI 驱动开发"带到全栈和后端项目里。
+> **Claude Code 的 Harness Engineering 工具包** — 一个 Claude Code Plugin（14 个 skills + 项目模板），把"有纪律的 AI 驱动开发"带到全栈和后端项目里。
 >
 > **目标**：人工只做"描述需求"和"AI 做不到时介入"；其他全部 — 7-Agent 流水线、验证闸门、结构化文档 — 自动运行。
 
 ## 包含什么
 
-这是一个 Claude Code Plugin 包，给任何项目装上 13 个 AI skill：
+这是一个 Claude Code Plugin 包，给任何项目装上 14 个 AI skill：
 
 **流水线类**（6 种任务形态，AI 根据你的自然语言自动挑对应那条）
 - `/harness-kit:harness` — 完整 7-stage 流水线（RA → SA → GR → Dev → CR → QA → 交付）。用于真正的功能 / bug / 重构。
@@ -24,6 +24,7 @@
 - `/harness-kit:harness-init` — 新项目从零生成 Harness 骨架（问 5 个问题，~30 秒生成 `.harness/` + `.claude/` + `AI-GUIDE.md` + stub CLAUDE.md / copilot-instructions.md）
 - `/harness-kit:harness-adopt` — 给现有项目无侵入接入 Harness（侦察栈、提取约定、用户确认后再 apply）
 - `/harness-kit:harness-upgrade` — 把已初始化但**过时**的项目升级到当前插件布局（把脚本迁到 `.harness/scripts/`、对深度敏感脚本做内容刷新以修正 repo-root 推导、重装 pre-commit hook、改写 settings、从类型模板重新生成 `verify_all` 同时保留你的 B.* 检查 —— 带 dry-run 预览、幂等、最后用一次绿色 `verify_all` 证明）
+- `/harness-kit:harness-language` — 设置、切换（英文 ↔ 中文）或刷新项目的输出语言策略：只精准改写三处策略载体（`.harness/rules/00-core.md` 的策略章节 + `CLAUDE.md` 顶部那行 + `.github/copilot-instructions.md` 顶部那行），换成目标语言当前的标准策略文本（英文为单一英文策略；中文为按消费者分流的策略）。文本从插件模板自举（旧项目也能拉到刷新后的策略），非破坏、幂等、带 dry-run 预览、每个文件先写 `.bak`。
 
 **运维类**
 - `/harness-kit:harness-verify` — 跑总验证（编译 + 测试 + 规则扫描 + 基线对比）

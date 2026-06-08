@@ -33,7 +33,7 @@ git clone https://github.com/Alan-IFT/harness-kit ~/harness-kit
 ~/harness-kit/install.sh
 ```
 
-Either path makes thirteen skills available in Claude Code:
+Either path makes fourteen skills available in Claude Code:
 
 Pipeline (pick by task shape):
 
@@ -49,6 +49,7 @@ Setup:
 - `harness-init` — bootstrap a new project
 - `harness-adopt` — non-invasively add Harness to an existing project
 - `harness-upgrade` — upgrade an already-initialized but stale project to the current plugin layout
+- `harness-language` — set / switch (English ↔ Chinese) / refresh a project's output-language policy
 
 Operations:
 
