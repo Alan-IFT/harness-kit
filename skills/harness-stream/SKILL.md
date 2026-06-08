@@ -1,6 +1,6 @@
 ---
 name: harness-stream
-description: Streaming / living-pool mode. Drains a continuously-growable task pool (docs/batches/<pool-id>/BATCH_PLAN.md) one task at a time through pm-orchestrator, re-reading the pool every iteration so tasks you add mid-run are planned and executed without re-invoking. Best-effort completion (a failed task is marked and skipped, the stream keeps going) with the same hard-safety stops as batch. Use when you want to fire requirements at the AI as they occur to you — in chat or by appending to the pool — and only watch results.
+description: Streaming / living-pool mode. Drains a continuously-growable task pool (docs/batches/<pool-id>/BATCH_PLAN.md, or the no-arg default pool docs/batches/default/) one task at a time through pm-orchestrator, re-reading the pool every iteration so tasks you add mid-run are planned and executed without re-invoking. Best-effort completion (a failed task is marked and skipped, the stream keeps going) with the same hard-safety stops as batch. Includes an ambient mode: enter by invoking with no pool-id, then every chat message is a heartbeat that folds requirements into the default pool and drains it — gated by .harness/ambient.flag via a UserPromptSubmit hook (session-scoped: a SessionStart hook auto-clears it each new session, no "off" keyword), no /loop needed. Use when you want to fire requirements at the AI as they occur to you — in chat or by appending to the pool — and only watch results.
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, AskUserQuestion, TodoWrite, Task
 ---
 
@@ -33,7 +33,8 @@ The pool reuses the batch plan format so a batch can graduate into a stream and 
 
 - File: `docs/batches/<pool-id>/BATCH_PLAN.md`.
 - Columns: `ID | Slug | Goal | Mode | Depends on | Status` (same validation as `/harness-batch`).
-- If it doesn't exist, point the user at `docs/batches/_template/BATCH_PLAN.md`, ask them to copy it to `docs/batches/<pool-id>/BATCH_PLAN.md`, seed at least one `pending` row, then re-invoke.
+- If invoked **with a pool-id** and that file doesn't exist, point the user at `docs/batches/_template/BATCH_PLAN.md`, ask them to copy it to `docs/batches/<pool-id>/BATCH_PLAN.md`, seed at least one `pending` row, then re-invoke. (A typo'd pool-id therefore errors loudly rather than silently creating a new pool.)
+- If invoked **with no pool-id**, the pool resolves to the **default pool** `docs/batches/default/BATCH_PLAN.md`, and — unlike the named-pool case — it is **auto-created** when absent by copying `docs/batches/_template/BATCH_PLAN.md`, replacing `<batch-id>` with `default`, and **stripping the example `T-01..T-03` rows** so the table starts empty. The no-arg default pool is the foundation of ambient mode (below).
 
 The pool is **append-only-friendly**: you may add rows at any time, including while the stream is running. The stream re-reads the file every iteration, so new `pending` rows are planned into the topological frontier on the next pass.
 
@@ -54,9 +55,35 @@ If you want truly instant insertion without waiting for a task to finish, use th
 
 **Always state the chosen driver to the user at start, and the timing truth above.** In particular: if `/loop` is unavailable, warn explicitly that the pure chat-driven experience is not available — they must add work via the file / `ADD` channel, and chat typed mid-run won't be picked up until the run ends.
 
+## Ambient mode (no-arg default pool + chat heartbeat)
+
+Ambient mode is the **minimal "start once, then just keep typing" experience**: you enter ambient mode once, then every ordinary chat message becomes a turn in which the AI folds any requirement into the **default pool** and drains it — **no `/loop`, no pool-id, no re-invocation**. It works because each user message is itself a turn, and a `UserPromptSubmit` hook turns that turn into the scheduler's heartbeat.
+
+### How it works
+
+- **The flag.** Ambient mode is gated by a single transient flag file `.harness/ambient.flag` (gitignored, like `.harness/intervention.md`). **Presence = ambient ON; absence = ambient OFF.** It is **session-scoped**: a `SessionStart` hook (`.harness/scripts/ambient-reset.{ps1,sh}`) deletes the flag at the start of every new session, so ambient never silently carries over and there is no "off" keyword to remember.
+- **The heartbeat hook.** A `UserPromptSubmit` hook (`.harness/scripts/ambient-prompt.{ps1,sh}`, wired in `.claude/settings.json`) runs on every user turn. When `.harness/ambient.flag` is present it prints an instruction block that Claude Code injects into the turn as added context — telling the agent to ingest+drain (below). When the flag is absent the hook prints **nothing** (no-op), so normal chat is unaffected. The hook never does the work itself and never blocks a turn (it always exits 0); Claude is the worker.
+- **Serial only.** One task at a time — same as the rest of this skill. No parallel dispatch.
+- **Resume is free.** The default pool file is the persistent state; a partially-drained pool resumes on the next message via the existing resume semantics (skip rows whose `07_DELIVERY.md` is DELIVERED).
+
+### Enter / exit
+
+- **Enter:** just invoke **`/harness-stream` with no pool-id** — that single action *is* "ambient on" (no keyword to remember). On enter the skill: (1) writes `.harness/ambient.flag`; (2) ensures `docs/batches/default/BATCH_PLAN.md` exists (auto-create from `_template`, empty table); (3) tells you: "Ambient mode on for this session. Type requirements; I'll fold each into the default pool and drain it."
+- **Exit:** **automatic** — ambient mode is **session-scoped**. A `SessionStart` hook (`.harness/scripts/ambient-reset.{ps1,sh}`) clears `.harness/ambient.flag` at the start of every new session, so a fresh session is never silently in ambient mode; re-invoke `/harness-stream` to resume. To stop mid-session, delete `.harness/ambient.flag` (or just tell the AI to stop). There is no "off" keyword to remember.
+
+### Each ambient turn (what the agent does when the flag is set)
+
+1. **Ingest.** If your message reads as a requirement (not a question or aside), normalize it into a `pending` row in `docs/batches/default/BATCH_PLAN.md` (assign `ID`/`Slug`/`Goal`/`Mode=full`/`Depends on`), de-duplicating against existing slugs/goals first. If a message is ambiguous, ask before creating a row — never guess. A plain question/aside creates **no** row.
+2. **Drain.** Drain ready tasks in topological order via `pm-orchestrator`, one at a time, best-effort, honoring the existing hard-safety stops, until the pool is empty — identical to the Procedure loop below.
+3. **Stop and wait** for your next message.
+
+### Ambient vs the `/loop` chat driver
+
+Ambient mode is **not** `/loop`. `/loop` makes the AI act while you're **silent** (idle/unattended progress); ambient mode acts **only on your messages** — your own typing is the heartbeat. Ambient mode is explicitly the minimal version: no idle progress, no background process. If you want progress while you're away, that is a separate (out-of-scope-here) `/loop` concern.
+
 ## Procedure
 
-1. **Argument validation.** Confirm `docs/batches/<pool-id>/BATCH_PLAN.md` exists. If not, surface the template path and stop.
+1. **Argument validation.** With a pool-id: confirm `docs/batches/<pool-id>/BATCH_PLAN.md` exists; if not, surface the template path and stop. **With no pool-id:** resolve to `docs/batches/default/BATCH_PLAN.md` and **auto-create it** (from `_template`, empty table) if absent — this is the ambient-mode default pool.
 
 2. **Pre-flight (once per stream start; cheap and idempotent so it's safe under `/loop`):**
    - `.harness/scripts/verify_all` baseline — capture PASS/WARN/FAIL. If already FAIL, **refuse to start** (a broken baseline makes per-task regression detection impossible). Surface and exit.
@@ -112,6 +139,7 @@ Per-task stage docs are archived by each task's own pm-orchestrator. The pool ar
 - **A task failure is best-effort, a baseline failure is a hard stop.** Never suppress a `verify_all` FAIL to keep the stream running — that's the signal that protects every later task.
 - **Mirror chat requirements into the pool before acting** so the pool is the single source of truth and the run is resumable.
 - **Never widen scope silently beyond what the user asked.** New rows must come from the user (chat / pool / `ADD`), never invented by the stream.
+- **Ambient mode is gated by `.harness/ambient.flag` and serial only.** Never treat chat as tasks unless the flag is present; never run ambient tasks in parallel. The `UserPromptSubmit` hook only injects an instruction — it never does the work and never blocks a turn.
 
 ## Anti-patterns
 

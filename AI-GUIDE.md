@@ -75,6 +75,8 @@ Three flows are supported, picked by the tool the user is in:
 - `.harness/scripts/test-real-project.{ps1,sh}` — regression overlaying templates on real fixtures.
 - `.harness/scripts/test-supervisor.{ps1,sh}` — regression for the supervisor agent + `/harness-supervise` skill (v0.17+).
 - `.harness/scripts/test-verify-i6.{ps1,sh}` — regression for the `verify_all` I.6 gap-tolerant retired-claim matcher (v0.18+).
+- `.harness/scripts/ambient-prompt.{ps1,sh}` — `UserPromptSubmit` heartbeat hook for `/harness-stream` ambient mode (v0.22+). No-op unless `.harness/ambient.flag` exists; when present it injects an ingest+drain instruction. Pwsh command needs `-NoProfile`. Not in `sync-self`'s mirror set — dogfood + template copies are maintained in lockstep by hand.
+- `.harness/scripts/ambient-reset.{ps1,sh}` — `SessionStart` hook for `/harness-stream` ambient mode: deletes `.harness/ambient.flag` at the start of every new session so ambient is session-scoped (no "off" keyword). Pwsh command needs `-NoProfile`. Not in `sync-self`'s mirror set — dogfood + template copies maintained in lockstep by hand.
 
 ## Workflow entry — pick the right mode
 

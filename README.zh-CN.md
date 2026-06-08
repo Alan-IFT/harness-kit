@@ -18,7 +18,7 @@
 - `/harness-kit:harness-explore` — 调研/可行性：轻量 RA + 一份带引用的 `findings.md`。**不做设计、不写代码**。用于"这事儿到底能不能做？"
 - `/harness-kit:harness-goal` — 开放式 Dev + QA 循环，由可量化的成功标准 + 预算限定。用于"持续改进直到覆盖率 > 80%"这类任务。
 - `/harness-kit:harness-batch` — 把 `T-01…T-NN`（`docs/batches/<batch-id>/BATCH_PLAN.md` 里的任务表）一条条顺序灌给 pm-orchestrator 跑，每条都派发到独立的 Task 子 agent，主上下文只累加每任务一行的摘要。仅在强信号上停止（`verify_all` FAIL、pm-orchestrator FAIL、intervention STOP、安全 hook 拦截）。适合 `/harness-plan` 拆出来的批、积压 bug 列表、checkup 后修复批、外部任务列表 —— 比手敲 N 次 `/harness` 省力。
-- `/harness-kit:harness-stream` — 像 batch，但任务池是**活的**：每轮迭代都重读 `BATCH_PLAN.md`，所以你运行中追加的任务（聊天框里发、或直接往池里追加、或发 `ADD` 干预）会被自动规划执行，**无需重新调用**。**尽力完成**语义（某任务失败就标记+跳过，整条流不停）+ 与 batch 相同的硬安全急停。适合"想到啥需求就丢进去、只看结果"的常驻开发流。
+- `/harness-kit:harness-stream` — 像 batch，但任务池是**活的**：每轮迭代都重读 `BATCH_PLAN.md`，所以你运行中追加的任务（聊天框里发、或直接往池里追加、或发 `ADD` 干预）会被自动规划执行，**无需重新调用**。**尽力完成**语义（某任务失败就标记+跳过，整条流不停）+ 与 batch 相同的硬安全急停。适合"想到啥需求就丢进去、只看结果"的常驻开发流。**环境模式（ambient）：** 直接不带 pool-id 调用即可——会自动创建默认池（`docs/batches/default/`），并由一个 `UserPromptSubmit` hook（受 `.harness/ambient.flag` 开关控制）把你每条聊天消息变成心跳：自动把需求折叠进池子并排干，无需 `/loop`、无需重新调用、无需口令。**会话级生效**：`SessionStart` hook 在每个新会话自动清除 flag，想继续就再调用一次 `/harness-stream`。
 
 **安装类**
 - `/harness-kit:harness-init` — 新项目从零生成 Harness 骨架（问 5 个问题，~30 秒生成 `.harness/` + `.claude/` + `AI-GUIDE.md` + stub CLAUDE.md / copilot-instructions.md）

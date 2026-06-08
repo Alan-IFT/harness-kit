@@ -267,8 +267,8 @@ Step "E.6" "evals/golden-tasks.md present" {
 }
 
 # F. Symmetry (PowerShell <-> Bash pairs)
-Step "F.1" "verify_all, sync-self, harness-sync, test-init, test-real-project exist in both .ps1 and .sh" {
-    foreach ($pair in @("verify_all", "sync-self", "harness-sync", "test-init", "test-real-project")) {
+Step "F.1" "verify_all, sync-self, harness-sync, test-init, test-real-project, ambient-prompt, ambient-reset exist in both .ps1 and .sh" {
+    foreach ($pair in @("verify_all", "sync-self", "harness-sync", "test-init", "test-real-project", "ambient-prompt", "ambient-reset")) {
         if (-not (Test-Path ".harness/scripts/$pair.ps1")) { throw "Missing .harness/scripts/$pair.ps1" }
         if (-not (Test-Path ".harness/scripts/$pair.sh")) { throw "Missing .harness/scripts/$pair.sh" }
     }

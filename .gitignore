@@ -46,5 +46,8 @@ verification_history.log
 # Harness — ephemeral intervention signal (consumed and deleted by PM)
 .harness/intervention.md
 
+# Harness — ambient-stream flag (transient runtime state; presence = ambient mode ON)
+.harness/ambient.flag
+
 # Claude Code runtime — session lockfile, regenerated each session
 .claude/scheduled_tasks.lock

@@ -69,6 +69,8 @@ harness-kit/
 │       ├── install-hooks.{ps1,sh}      ← One-shot git pre-commit installer
 │       ├── archive-task.{ps1,sh}       ← Insight-harvest + stage-doc archive
 │       ├── guard-rm.{ps1,sh}           ← Destructive-command PreToolUse guard (v0.15+)
+│       ├── ambient-prompt.{ps1,sh}     ← Ambient-stream UserPromptSubmit heartbeat hook (flag-gated by .harness/ambient.flag)
+│       ├── ambient-reset.{ps1,sh}      ← Ambient-stream SessionStart hook: clears .harness/ambient.flag each new session (session-scoped)
 │       ├── test-guard-rm.{ps1,sh}      ← Driver for evals/guard-rm-cases.md (on-demand)
 │       └── baseline.json               ← Test/asset baseline
 │
@@ -86,7 +88,7 @@ harness-kit/
 │   ├── dev-map.md                      ← This file
 │   ├── spec/                           ← Project SPECs
 │   ├── features/                       ← Per-task documents
-│   └── batches/                        ← Batch-mode artifacts (v0.19+): per-batch BATCH_PLAN.md / BATCH_LOG.md / BATCH_REPORT.md; _template/ for copy-paste
+│   └── batches/                        ← Batch-mode artifacts (v0.19+): per-batch BATCH_PLAN.md / BATCH_LOG.md / BATCH_REPORT.md; _template/ for copy-paste; default/ is the no-arg ambient-stream pool (auto-created)
 │
 ├── tests/
 │   └── fixtures/                       ← Minimal real-shape projects for integration tests

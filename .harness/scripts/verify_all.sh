@@ -282,7 +282,7 @@ fi
 
 # F.1 — script symmetry
 missing_sym=""
-for pair in verify_all sync-self harness-sync test-init test-real-project; do
+for pair in verify_all sync-self harness-sync test-init test-real-project ambient-prompt ambient-reset; do
     [[ -f ".harness/scripts/$pair.ps1" ]] || missing_sym="$missing_sym .harness/scripts/$pair.ps1"
     [[ -f ".harness/scripts/$pair.sh" ]] || missing_sym="$missing_sym .harness/scripts/$pair.sh"
 done
