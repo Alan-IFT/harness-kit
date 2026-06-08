@@ -23,6 +23,75 @@ Minimal "start once, then just keep typing" mode layered onto the existing `/har
 
 Captured a vetted, adversarially-reviewed design for parallel task dispatch on top of the v0.22.0 stream (`docs/parallel-stream-design.html`) and the decision to **defer building it**: the serial stream plus the existing intra-task partition parallelism already cover the "queue many tasks, AI schedules, I watch results" need with the best UX and the smallest maintained surface. **Model B** (same-tree partition, no branches/merges) is the on-demand path, to be built only when a genuinely-decoupled task batch makes the Amdahl math pay off; **Model A** (worktree real-parallel) is shelved (risk > benefit — gitignored-env provisioning, Windows junctions needing admin, a per-task branch/commit change to the harness flow, and merge livelock that would require a dedicated scheduler / integration-coordinator tier). Revisit triggers are recorded in the design doc and the Roadmap. Docs-only; no skill or code change; `verify_all` stays 32 checks.
 
+## [0.23.0] - 2026-06-08
+
+Minor release. Adds the **upgrade an old project** entry point — a new
+`/harness-kit:harness-upgrade` Setup skill that brings an already-initialized but
+**stale** harness project up to the current plugin layout, non-destructively,
+idempotently, with a dry-run preview, then proven with a green `verify_all`. This is
+the automated successor to the manual `MIGRATION.md` steps and the self-bootstrapping
+complement to `migrate-scripts-layout` (it no longer requires the migration helper to
+already be present in the old project).
+
+### Why
+
+A project initialized with an older harness-kit version is stuck on the pre-`.harness/scripts/`
+layout: harness-owned scripts under top-level `scripts/`, a pre-commit hook pointing at
+the old path, settings referencing the old path, and an old `verify_all`. Relocating the
+scripts is not enough — a relocated-but-not-refreshed depth-sensitive script keeps its
+pre-T-007 one-up repo-root derivation and silently resolves the **wrong** root (insight
+L31). `/harness-upgrade` fixes the whole class in one command.
+
+### Added — `/harness-kit:harness-upgrade` skill + `upgrade-project.{ps1,sh}` helper
+
+- New `skills/harness-upgrade/SKILL.md` — the judgment layer (cache + version discovery
+  with a `CLAUDE_PLUGIN_ROOT`-optional glob fallback chain, project-type detect-then-ASK
+  via `AskUserQuestion`, plan/confirm/apply, the verify_all-HALT confirm, final report).
+- New `upgrade-project.{ps1,sh}` deterministic helper (template `templates/common/.harness/scripts/`
+  + dogfood mirror via `sync-self`). One self-contained transform: S1 relocate the known
+  set (git-mv-preserving, SKIP-unless-`--force`), S2 **content-refresh** the depth-sensitive
+  scripts from the current template (the L31 fix — relocation alone keeps stale one-up root
+  derivation), S3 raw-text settings rewire (never re-serialized; preserves `_*` doc keys),
+  S4 stock-vs-custom pre-commit hook (re)install (non-stock hook surfaced as a conflict,
+  never overwritten), S5 regenerate `verify_all` from the type `.tmpl`. Machine-readable
+  pipe-delimited stdout (`PLAN`/`RESULT`/`GAP`/`CONFLICT`/`SUMMARY`) and a 0/1/2/3 exit-code
+  contract so the AI branches deterministically. Dry-run, idempotent (byte-identical → NOOP).
+- **B.* preservation**: the six `verify_all.*.tmpl` files gain inert `HARNESS:B-CUSTOM:BEGIN`/`END`
+  delimiter comments (literal ASCII, valid in both shells, no `{{...}}` → no D.2 change). On
+  refresh, a cleanly-delimited customized block is **spliced verbatim** into the regenerated
+  file; a customized block with no markers **halts** for explicit `--force`; always writes a
+  `.bak`. Never silently loses a user's build/test/lint checks.
+
+### Changed — skill registration: 12 → 13 skills
+
+- `verify_all.{ps1,sh}` C.1 / G.1 / G.2 hardcoded skill arrays each gain `harness-upgrade`,
+  and the three step descriptions update from "12 skills" to "13 skills" — in BOTH shells.
+  F.1 pair list gains `upgrade-project` (existence symmetry; name-only, zero count impact).
+- `sync-self.{ps1,sh}` mirror set gains the `upgrade-project` pair (E.1 enforces byte-identity).
+- `README.md` / `README.zh-CN.md`: version badge `0.22.0` → `0.23.0`; `12 skills` → `13 skills`
+  / `twelve` → `thirteen` / `12 个` → `13 个`; new `/harness-kit:harness-upgrade` bullet under
+  **Setup skills** (NOT a 7th task shape — "six task shapes" stays six); new `0.23.0` Roadmap row.
+- `AI-GUIDE.md`: `12 skills` → `13 skills`; sync-self prose `4 script pairs` → `6 script pairs`
+  (now also lists migrate-scripts-layout + upgrade-project); new "Upgrade an old project" row
+  in the Workflow-entry table.
+- `docs/getting-started.md`: `twelve` → `thirteen` + new Setup bullet. `docs/manual-e2e-test.md`:
+  `twelve`/`12 skills` → `thirteen`/`13 skills` + `harness-upgrade` added to the enumerations.
+  `docs/dev-map.md`: skills inventory + helper + test registered; `4 mirrored script pairs` prose
+  corrected to 6. `.harness/rules/40-locations.md`: `All 12 skills` → `All 13 skills`.
+
+### Notes
+
+- The skill name `harness-upgrade` appears in this CHANGELOG entry so `verify_all` G.2
+  (CHANGELOG references all 13 skills) PASSes after the C.1 list grows to 13.
+- **No new `verify_all` lettered check** — adding a skill is version-worthy (skill count
+  12 → 13) but the check count stays **32** (a new skill needs no new `Step`; the helper pair
+  is covered by E.1 byte-identity + F.1 existence). So the `(32 checks)` / `32/32` claims do
+  not move. New regression `test-harness-upgrade.{ps1,sh}` exercises the helper against
+  synthetic old-fixtures (relocation, root-derivation, settings rewire, hook conflict, B.*
+  splice/halt, dry-run, idempotence, non-CC project, no-harness halt).
+- Version stamps bumped together (`G.3`): `.claude-plugin/plugin.json`,
+  `.claude-plugin/marketplace.json`, both README badges → `0.23.0`.
+
 ## [0.22.0] - 2026-06-06
 
 Minor release. Adds the **streaming / living-pool** entry point — a new `/harness-kit:harness-stream` skill that drains a continuously-growable task pool through the full 7-stage pipeline, re-reading the pool every iteration so tasks added mid-run are planned and executed without re-invoking. Closes the "I think of new work while a run is in flight and don't want to wait for the session to end before queuing it" friction that `/harness-batch`'s frozen-plan + fail-stop design deliberately does not serve.

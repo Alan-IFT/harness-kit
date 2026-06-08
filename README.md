@@ -2,15 +2,15 @@
 
 **English** · [简体中文](README.zh-CN.md)
 
-![version](https://img.shields.io/badge/version-0.22.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-32%2F32-brightgreen) ![test-init](https://img.shields.io/badge/test--init-227%2F227-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.23.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-32%2F32-brightgreen) ![test-init](https://img.shields.io/badge/test--init-227%2F227-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
-> **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (12 skills + project templates) that brings disciplined AI-driven development to fullstack and backend projects.
+> **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (13 skills + project templates) that brings disciplined AI-driven development to fullstack and backend projects.
 >
 > **Goal**: humans only do "describe the requirement" and "step in when AI can't"; everything else — 7-agent pipeline, verify gates, structured documents — runs automatically.
 
 ## What's inside
 
-This is a Claude Code Plugin packaging that gives any project twelve AI skills:
+This is a Claude Code Plugin packaging that gives any project thirteen AI skills:
 
 **Pipeline skills** (six task shapes; the AI picks the right one from your natural-language description)
 - `/harness-kit:harness` — full 7-stage pipeline (RA → SA → GR → Dev → CR → QA → Delivery). Use for real feature / bug / refactor work.
@@ -23,6 +23,7 @@ This is a Claude Code Plugin packaging that gives any project twelve AI skills:
 **Setup skills**
 - `/harness-kit:harness-init` — bootstrap Harness skeleton in a new project (asks 5 questions, generates `.harness/` + `.claude/` + `AI-GUIDE.md` + stub CLAUDE.md / copilot-instructions.md in ~30s)
 - `/harness-kit:harness-adopt` — non-invasively add Harness to an existing project (detects stack, extracts conventions, prompts before applying)
+- `/harness-kit:harness-upgrade` — bring an already-initialized but **stale** project up to the current plugin layout (relocate scripts to `.harness/scripts/`, content-refresh depth-sensitive scripts for correct root derivation, re-install the pre-commit hook, rewire settings, regenerate `verify_all` while preserving your B.* checks — dry-run preview, idempotent, proven with a green `verify_all`)
 
 **Operations skills**
 - `/harness-kit:harness-verify` — run total verification (compile + test + rule scan + baseline diff)
@@ -268,6 +269,7 @@ Markdown docs:
 | 0.19.0 | done | **Batch mode**: new `/harness-kit:harness-batch <batch-id>` skill runs a list of tasks (`T-01…T-NN` in `docs/batches/<batch-id>/BATCH_PLAN.md`) sequentially through `pm-orchestrator`, dispatched via the `Task` tool so each task gets its own sub-agent context and the batch orchestrator never accumulates more than per-task summaries. Strong-signal-only stop policy (`verify_all` FAIL, pm-orchestrator FAIL, 3 same-stage rollbacks, `intervention.md` STOP, safety hook block). Resumable: re-invoking with the same batch-id skips tasks whose `07_DELIVERY.md` is `DELIVERED`. New `docs/batches/` directory with lifecycle README and `_template/BATCH_PLAN.md`. `verify_all` skill count 10 → 11 (C.1 / G.1 / G.2 in both shells). |
 | 0.20.0 | done | **Scripts relocation**: all harness-owned scripts moved from `scripts/` to `.harness/scripts/` so they no longer collide with a user project's own `scripts/` directory. New idempotent `.harness/scripts/migrate-scripts-layout.{ps1,sh}` helper migrates existing projects (timestamped `.bak`, `-DryRun`/`-Force`, surgical path rewrite). All live path references, hook wiring (template + propose-only dogfood settings), `verify_all` self-checks (both shells), and contributor docs + `MIGRATION.md` updated in lockstep. `verify_all` stays 31 checks. |
 | 0.22.0 | done | **Streaming / living-pool mode**: new `/harness-kit:harness-stream <pool-id>` skill drains a continuously-growable pool (`docs/batches/<pool-id>/BATCH_PLAN.md`) one task at a time, re-reading the pool each iteration so mid-run additions (chat / pool append / `ADD` intervention) are planned without re-invoking. **Best-effort** completion (failed task marked + skipped, stream continues) vs batch's fail-stop; same hard-safety stops (`verify_all` FAIL / `STOP` / safety hook). New `ADD <slug> — <goal>` intervention keyword (pool-scoped). `verify_all` skill count 11 → 12. |
+| 0.23.0 | done | **Upgrade an old project**: new `/harness-kit:harness-upgrade` Setup skill brings an already-initialized but stale project up to the current plugin layout — relocates scripts to `.harness/scripts/`, **content-refreshes** the depth-sensitive scripts from the current template (fixes the relocated-but-stale one-up root derivation), re-installs the pre-commit hook, rewires `.claude/settings.json` (raw-text, never re-serialized), and regenerates `verify_all` from the type template while preserving the user's B.* checks via `HARNESS:B-CUSTOM` delimiters (verbatim splice, or halt-for-confirm). One deterministic helper `upgrade-project.{ps1,sh}` (dry-run, idempotent, exit-code contract); the six `verify_all` templates gain inert B.* markers. `verify_all` skill count 12 → 13 (check count stays 32). |
 | 0.20+ | planned | Supervisor auto-dispatch by PM at user-configurable stage boundaries (once false-positive budget is proven against ≥10 real tasks). **Parallel stream dispatch — deferred** after a vetted, adversarially-reviewed design ([docs/parallel-stream-design.html](docs/parallel-stream-design.html)): serial stream + the existing intra-task partition parallelism cover the need today; **Model B** (same-tree partition, no merges) is the on-demand path once a genuinely-decoupled task batch makes the Amdahl math pay off; **Model A** (worktree real-parallel) is shelved (risk > benefit — env provisioning, Windows-junction, per-task branch/commit, merge livelock needing a scheduler/coordinator tier). |
 
 ## Design principles

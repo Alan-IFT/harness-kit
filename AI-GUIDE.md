@@ -4,7 +4,7 @@
 
 ## Project
 
-This is **harness-kit** itself — a Claude Code Plugin that distributes 12 skills + templates for AI-driven development under the Harness Engineering methodology. The repo **dogfoods** its own design: the same canonical 7-agent pipeline (plus the v0.17+ auxiliary supervisor) that we ship to users governs work here.
+This is **harness-kit** itself — a Claude Code Plugin that distributes 13 skills + templates for AI-driven development under the Harness Engineering methodology. The repo **dogfoods** its own design: the same canonical 7-agent pipeline (plus the v0.17+ auxiliary supervisor) that we ship to users governs work here.
 
 Stack: Markdown (skills, agent definitions, docs) + PowerShell + Bash (verify_all, install, sync scripts).
 
@@ -68,7 +68,7 @@ Three flows are supported, picked by the tool the user is in:
 
 - `.harness/scripts/verify_all.{ps1,sh}` — total verification (32 checks, including I.1-I.5 doc-size WARN guards + F.2 guard-rm wiring + I.6 gap-tolerant retired-claim guard + I.7 ignored-INTERVENE-report guard + D.3 AI-generated 50-*.md sanity + J.1 settings.json schema integrity). **Must PASS before declaring done.**
 - `.harness/scripts/harness-sync.{ps1,sh}` — copy `.harness/agents/` + `.harness/skills/` to `.claude/`. v0.10 narrow scope.
-- `.harness/scripts/sync-self.{ps1,sh}` — keep this repo's dogfood `.harness/agents/` + 4 script pairs (harness-sync, install-hooks, archive-task, guard-rm) byte-identical with `templates/common/`. **Does NOT sync `.harness/rules/` — those are bespoke per repo.**
+- `.harness/scripts/sync-self.{ps1,sh}` — keep this repo's dogfood `.harness/agents/` + 6 script pairs (harness-sync, install-hooks, archive-task, guard-rm, migrate-scripts-layout, upgrade-project) byte-identical with `templates/common/`. **Does NOT sync `.harness/rules/` — those are bespoke per repo.**
 - `.harness/scripts/install-hooks.{ps1,sh}` — one-shot installer for `.git/hooks/pre-commit` (runs `harness-sync --check`).
 - `.harness/scripts/archive-task.{ps1,sh}` — archive a completed task: harvest `## Insight` section from 07_DELIVERY.md to `.harness/insight-index.md`, move 7 stage docs to `docs/features/_archived/<task>/`, rotate old insights to `docs/features/_archived/insight-history.md` if >30 lines.
 - `.harness/scripts/test-init.{ps1,sh}` — regression for `/harness-init` on empty dirs.
@@ -90,6 +90,7 @@ Three flows are supported, picked by the tool the user is in:
 | Stream (living pool) | "keep draining a pool I keep adding to" / "fire tasks at me as I think of them, just watch results" | "边开发边不断加任务" / "想到啥需求就丢进去，只看结果" | `/harness-stream` |
 | Trivial | Typo, comment, single-line dependency bump | typo / 注释 / 改个变量名 | Direct edit + `.harness/scripts/verify_all` |
 | Mid-task redirect | "stop the pipeline" / "tell dev to skip X" / "leave a note for QA" | "停一下" / "让 dev 别动 X" / "顺便告诉 QA…" | `/harness-intervene` |
+| Upgrade an old project | "bring my old harness project up to date" / "the scripts are in the old `scripts/` layout" | "把旧的 harness 项目升级到最新" / "脚本还在旧的 scripts/ 目录" | `/harness-upgrade` |
 
 Declare-done gate (**all non-trivial modes**): `.harness/scripts/verify_all` PASS + (if 7-stage or goal) QA's `06_TEST_REPORT.md` has an `## Adversarial tests` section.
 

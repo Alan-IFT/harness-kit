@@ -78,6 +78,10 @@ sync_file "$template_common/.harness/scripts/guard-rm.sh"  "$repo_root/.harness/
 sync_file "$template_common/.harness/scripts/migrate-scripts-layout.ps1" "$repo_root/.harness/scripts/migrate-scripts-layout.ps1" ".harness/scripts/migrate-scripts-layout.ps1"
 sync_file "$template_common/.harness/scripts/migrate-scripts-layout.sh"  "$repo_root/.harness/scripts/migrate-scripts-layout.sh"  ".harness/scripts/migrate-scripts-layout.sh"
 
+# Mapping 7: upgrade-project helper (T-012 /harness-upgrade mechanical layer)
+sync_file "$template_common/.harness/scripts/upgrade-project.ps1" "$repo_root/.harness/scripts/upgrade-project.ps1" ".harness/scripts/upgrade-project.ps1"
+sync_file "$template_common/.harness/scripts/upgrade-project.sh"  "$repo_root/.harness/scripts/upgrade-project.sh"  ".harness/scripts/upgrade-project.sh"
+
 if [[ "$CHECK" == true ]]; then
     if (( ${#drift[@]} > 0 )); then
         echo "Drift detected:" >&2

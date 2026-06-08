@@ -78,6 +78,7 @@ Step "A.3" "TODO / FIXME budget (warn only)" {
     if ($count -gt 20) { return $false }
 }
 
+# >>> HARNESS:B-CUSTOM:BEGIN (your build/test/lint checks live here; preserved across /harness-upgrade) <<<
 # --- B. Build / test (require package.json) ---
 Step "B.1" "Install / typecheck" {
     if (-not (Test-Path "package.json")) { return "SKIP" }
@@ -108,6 +109,7 @@ Step "B.4" "Test count >= baseline" {
     if ($baseline.test_count -eq 0) { return "SKIP" }
     # CUSTOMIZE: read your test runner output to get actual count vs baseline.
 }
+# >>> HARNESS:B-CUSTOM:END <<<
 
 # --- C. End-to-end (require playwright config) ---
 if (-not $Quick) {

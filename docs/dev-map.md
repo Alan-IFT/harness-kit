@@ -32,6 +32,7 @@ harness-kit/
 │   │           ├── .harness/skills/{build,test,verify}/SKILL.md.tmpl
 │   │           └── .harness/scripts/verify_all.{ps1,sh}.tmpl
 │   ├── harness-adopt/SKILL.md          ← Existing-project adoption (automated apply since v0.3)
+│   ├── harness-upgrade/SKILL.md        ← Upgrade an already-initialized but stale project to the current layout (v0.23+); judgment layer, drives upgrade-project.{ps1,sh}
 │   ├── harness-verify/SKILL.md         ← Run verify_all
 │   ├── harness-status/SKILL.md         ← Show Harness health
 │   ├── harness-plan/SKILL.md           ← Stages 1-3 only (design-only)
@@ -62,7 +63,9 @@ harness-kit/
 │       ├── harness-sync.{ps1,sh}       ← Layer 2: .harness/agents + .harness/skills → .claude/
 │       ├── sync-self.{ps1,sh}          ← Layer 1: templates/common/ → repo SOT
 │       ├── migrate-scripts-layout.{ps1,sh} ← One-shot scripts/ → .harness/scripts/ upgrade (T-007)
+│       ├── upgrade-project.{ps1,sh}    ← /harness-upgrade mechanical layer (v0.23+): relocate + content-refresh + settings rewire + hook + verify_all regenerate
 │       ├── test-init.{ps1,sh}          ← Init+sync regression on EMPTY dir
+│       ├── test-harness-upgrade.{ps1,sh} ← /harness-upgrade regression (v0.23+): synthetic old-fixtures, root-derivation, B.* splice/halt, hook conflict, idempotence
 │       ├── test-supervisor.{ps1,sh}    ← Supervisor agent + /harness-supervise skill regression
 │       ├── test-verify-i6.{ps1,sh}     ← verify_all I.6 gap-tolerant matcher regression (v0.18+)
 │       ├── test-real-project.{ps1,sh}  ← Integration regression on REAL fixture
@@ -104,7 +107,7 @@ harness-kit/
 
 ## Two layers of consistency
 
-Layer 1 (sync-self): templates/common/ → repo SOT (.harness/agents/ + 4 script pairs)
+Layer 1 (sync-self): templates/common/ → repo SOT (.harness/agents/ + 6 script pairs)
 Layer 2 (harness-sync): repo SOT (.harness/agents/ + .harness/skills/) → .claude/
 
 Since v0.10, `CLAUDE.md` is a static stub pointing at `AI-GUIDE.md` — neither layer
@@ -131,7 +134,7 @@ Both layers are checked by `.harness/scripts/verify_all` and FAIL on drift.
 
 | Need | Existing | File |
 |---|---|---|
-| Layer 1 sync (templates → repo SOT) | `sync-self` | Run before commit if you edited `templates/common/.harness/agents/` or one of the 4 mirrored script pairs (`harness-sync`, `install-hooks`, `archive-task`, `guard-rm`) |
+| Layer 1 sync (templates → repo SOT) | `sync-self` | Run before commit if you edited `templates/common/.harness/agents/` or one of the 6 mirrored script pairs (`harness-sync`, `install-hooks`, `archive-task`, `guard-rm`, `migrate-scripts-layout`, `upgrade-project`) |
 | Layer 2 sync (repo SOT → binding) | `harness-sync` | Run before commit if you edited `.harness/agents/` or `.harness/skills/`. Rule edits do NOT require sync — they're referenced, not copied. |
 | Total verification | `verify_all` | Single source of truth for "is the repo healthy" — runs all 32 checks including both `--check` modes |
 | Init regression | `test-init` | Simulates full init + sync in temp dir (227 assertions on PS / 191 Bash without python3 at v0.16.0; +50 vs v0.15 on PS from AI-native opt-in/opt-out bidirectional cases × 3 project types, plus AC-10 byte-compare in a discrete fresh-temp-dir pass, plus 2 shell-agnostic BUG-2 placeholder-regex regression assertions from rollback round 2) |

@@ -70,6 +70,7 @@ Step "A.2" "No .env files committed" {
     if ($envFiles) { throw "Committed env files:`n$envFiles" }
 }
 
+# >>> HARNESS:B-CUSTOM:BEGIN (your build/test/lint checks live here; preserved across /harness-upgrade) <<<
 # --- B. Build / test (require manifest for detected stack) ---
 switch ($stack) {
     "node" {
@@ -138,6 +139,7 @@ switch ($stack) {
         }
     }
 }
+# >>> HARNESS:B-CUSTOM:END <<<
 
 # --- C. Database / migrations (require migrations dir) ---
 Step "C.1" "Migrations reversible (warn if irreversible patterns)" {

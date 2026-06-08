@@ -45,12 +45,14 @@ else
     [[ -z "$env_committed" ]] && step "A.2" "No .env files committed" "PASS" || step "A.2" "No .env files committed" "FAIL" "$env_committed"
 fi
 
+# >>> HARNESS:B-CUSTOM:BEGIN (your build/test/lint checks live here; preserved across /harness-upgrade) <<<
 # --- B. Build / test / lint (CUSTOMIZE FOR {{STACK}}) ---
 # TODO: Replace each SKIP with your actual command for {{STACK}}.
 # Examples at the bottom of this file.
 step "B.1" "Build" "SKIP"
 step "B.2" "Tests pass" "SKIP"
 step "B.3" "Lint" "SKIP"
+# >>> HARNESS:B-CUSTOM:END <<<
 
 # --- E. Project structure (Harness required) ---
 e1_missing=""

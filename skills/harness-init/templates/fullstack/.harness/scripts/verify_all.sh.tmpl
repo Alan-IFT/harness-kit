@@ -83,6 +83,7 @@ else
     fi
 fi
 
+# >>> HARNESS:B-CUSTOM:BEGIN (your build/test/lint checks live here; preserved across /harness-upgrade) <<<
 # --- B. Build / test (require package.json) ---
 if [[ ! -f package.json ]]; then
     step "B.1" "Install / typecheck" "SKIP"
@@ -129,6 +130,7 @@ else
         step "B.4" "Test count >= baseline" "PASS"
     fi
 fi
+# >>> HARNESS:B-CUSTOM:END <<<
 
 # --- C. E2E (require playwright config) ---
 if [[ "$QUICK" == "true" ]]; then

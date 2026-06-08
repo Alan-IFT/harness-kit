@@ -2,15 +2,15 @@
 
 [English](README.md) · **简体中文**
 
-![version](https://img.shields.io/badge/version-0.22.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-32%2F32-brightgreen) ![test-init](https://img.shields.io/badge/test--init-227%2F227-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.23.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-32%2F32-brightgreen) ![test-init](https://img.shields.io/badge/test--init-227%2F227-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
-> **Claude Code 的 Harness Engineering 工具包** — 一个 Claude Code Plugin（12 个 skills + 项目模板），把"有纪律的 AI 驱动开发"带到全栈和后端项目里。
+> **Claude Code 的 Harness Engineering 工具包** — 一个 Claude Code Plugin（13 个 skills + 项目模板），把"有纪律的 AI 驱动开发"带到全栈和后端项目里。
 >
 > **目标**：人工只做"描述需求"和"AI 做不到时介入"；其他全部 — 7-Agent 流水线、验证闸门、结构化文档 — 自动运行。
 
 ## 包含什么
 
-这是一个 Claude Code Plugin 包，给任何项目装上 12 个 AI skill：
+这是一个 Claude Code Plugin 包，给任何项目装上 13 个 AI skill：
 
 **流水线类**（6 种任务形态，AI 根据你的自然语言自动挑对应那条）
 - `/harness-kit:harness` — 完整 7-stage 流水线（RA → SA → GR → Dev → CR → QA → 交付）。用于真正的功能 / bug / 重构。
@@ -23,6 +23,7 @@
 **安装类**
 - `/harness-kit:harness-init` — 新项目从零生成 Harness 骨架（问 5 个问题，~30 秒生成 `.harness/` + `.claude/` + `AI-GUIDE.md` + stub CLAUDE.md / copilot-instructions.md）
 - `/harness-kit:harness-adopt` — 给现有项目无侵入接入 Harness（侦察栈、提取约定、用户确认后再 apply）
+- `/harness-kit:harness-upgrade` — 把已初始化但**过时**的项目升级到当前插件布局（把脚本迁到 `.harness/scripts/`、对深度敏感脚本做内容刷新以修正 repo-root 推导、重装 pre-commit hook、改写 settings、从类型模板重新生成 `verify_all` 同时保留你的 B.* 检查 —— 带 dry-run 预览、幂等、最后用一次绿色 `verify_all` 证明）
 
 **运维类**
 - `/harness-kit:harness-verify` — 跑总验证（编译 + 测试 + 规则扫描 + 基线对比）
@@ -270,6 +271,7 @@ Markdown 文档：
 | 0.19.0 | 已交付 | **批量模式**：新 skill `/harness-kit:harness-batch <batch-id>`，把 `docs/batches/<batch-id>/BATCH_PLAN.md` 里的 `T-01…T-NN` 顺序灌给 `pm-orchestrator` 执行，每个任务通过 `Task` 工具派发到独立子 agent 上下文，主上下文只累加每任务一行摘要。仅在强信号上停止（`verify_all` FAIL、pm-orchestrator FAIL、3 次同阶段 rollback、`intervention.md` STOP、安全 hook 拦截）。可重入：再次用同一 `<batch-id>` 调用会跳过已 `DELIVERED` 的任务。新增 `docs/batches/` 目录（lifecycle README + `_template/BATCH_PLAN.md`）。`verify_all` skill 数 10 → 11（C.1 / G.1 / G.2 两个 shell 都已对齐）。 |
 | 0.20.0 | 已交付 | **脚本搬迁**：所有 harness 自带脚本从 `scripts/` 移到 `.harness/scripts/`，不再与用户项目自己的 `scripts/` 目录冲突。新增幂等的 `.harness/scripts/migrate-scripts-layout.{ps1,sh}` 助手，为既有项目迁移（带时间戳 `.bak`、`-DryRun`/`-Force`、外科式路径改写）。所有 live 路径引用、hook 接线（模板 + 仅提议的 dogfood settings）、`verify_all` 自检（两个 shell）、贡献者文档 + `MIGRATION.md` 同步更新。`verify_all` 仍 31 项检查。 |
 | 0.22.0 | 已交付 | **流式 / 活池模式**：新 skill `/harness-kit:harness-stream <pool-id>`，把一个可持续追加的任务池（`docs/batches/<pool-id>/BATCH_PLAN.md`）一条条灌给 pm-orchestrator 执行，每轮迭代重读任务池，所以运行中追加的任务（聊天 / 池内追加 / `ADD` 干预）会被自动规划，无需重新调用。**尽力完成**（失败任务标记+跳过，整条流继续）对比 batch 的失败即停；硬安全急停一致（`verify_all` FAIL / `STOP` / 安全 hook）。新增 `ADD <slug> — <goal>` 干预关键字（池作用域）。`verify_all` skill 数 11 → 12。 |
+| 0.23.0 | 已交付 | **升级旧项目**：新增安装类 skill `/harness-kit:harness-upgrade`，把已初始化但过时的项目升级到当前插件布局——把脚本迁到 `.harness/scripts/`，**内容刷新**深度敏感脚本（修正迁移后仍是一级向上的 repo-root 推导），重装 pre-commit hook，改写 `.claude/settings.json`（裸文本替换，绝不重新序列化），并从类型模板重新生成 `verify_all`，同时用 `HARNESS:B-CUSTOM` 分隔符保留用户的 B.* 检查（原样拼接，或停下来要确认）。一个确定性 helper `upgrade-project.{ps1,sh}`（dry-run、幂等、退出码契约）；6 个 `verify_all` 模板加入无副作用的 B.* 标记。`verify_all` skill 数 12 → 13（检查数仍为 32）。 |
 | 0.20+ | 规划中 | PM 在用户配置的阶段边界自动派发 supervisor（在 ≥10 个真实任务证明误报预算后启用）。**流式并行派发——已暂缓**：经一轮对抗评审的设计（[docs/parallel-stream-design.html](docs/parallel-stream-design.html)）结论是，串行 stream + 现有的任务内 partition 并行已满足需求；**Model B**（同树 partition、无合并）作为按需路径，仅当攒到一批真正解耦、Amdahl 账算得过来的任务才做；**Model A**（worktree 真并行）搁置（风险 > 收益：env 供给、Windows junction、每任务分支提交、合并活锁需整套调度/协调层）。 |
 
 ## 设计原则

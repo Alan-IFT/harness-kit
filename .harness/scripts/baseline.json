@@ -13,5 +13,7 @@
   "test_supervisor_ps_assertions": 49,
   "test_supervisor_bash_no_python3_assertions": 45,
   "test_verify_i6_ps_assertions": 56,
-  "test_verify_i6_bash_assertions": 56
+  "test_verify_i6_bash_assertions": 56,
+  "test_harness_upgrade_ps_assertions": 38,
+  "test_harness_upgrade_bash_assertions": 37
 }

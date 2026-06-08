@@ -67,6 +67,7 @@ Step "A.2" "No .env files committed" {
     if ($envFiles) { throw "Committed env files:`n$envFiles" }
 }
 
+# >>> HARNESS:B-CUSTOM:BEGIN (your build/test/lint checks live here; preserved across /harness-upgrade) <<<
 # --- B. Build / test (CUSTOMIZE FOR {{STACK}}) ---
 Step "B.1" "Build" {
     # TODO: Replace with your build command, e.g.:
@@ -87,6 +88,7 @@ Step "B.3" "Lint" {
     #   & cargo clippy -- -D warnings 2>&1 | Out-Null
     return "SKIP"
 }
+# >>> HARNESS:B-CUSTOM:END <<<
 
 # --- E. Project structure (Harness required) ---
 Step "E.1" "AI-GUIDE.md, CLAUDE.md, copilot-instructions.md present" {
