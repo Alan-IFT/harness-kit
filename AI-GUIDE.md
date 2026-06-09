@@ -92,6 +92,7 @@ Three flows are supported, picked by the tool the user is in:
 | Trivial | Typo, comment, single-line dependency bump | typo / 注释 / 改个变量名 | Direct edit + `.harness/scripts/verify_all` |
 | Mid-task redirect | "stop the pipeline" / "tell dev to skip X" / "leave a note for QA" | "停一下" / "让 dev 别动 X" / "顺便告诉 QA…" | `/harness-intervene` |
 | Upgrade an old project | "bring my old harness project up to date" / "the scripts are in the old `scripts/` layout" | "把旧的 harness 项目升级到最新" / "脚本还在旧的 scripts/ 目录" | `/harness-upgrade` |
+| Set / switch / refresh project language | "make this project English" / "switch to Chinese output" / "refresh the language policy" | "切到中文输出" / "改成英文" / "刷新语言策略" | `/harness-language` |
 
 Declare-done gate (**all non-trivial modes**): `.harness/scripts/verify_all` PASS + (if 7-stage or goal) QA's `06_TEST_REPORT.md` has an `## Adversarial tests` section.
 
