@@ -111,31 +111,45 @@ i6_build_regex() {                       # $1 = ~-joined anchors  $2 = gap budge
 # i6_scan_file FILE — emits one "INDEX:line_no" line per banned entry that hits the
 # file (INDEX is 1-based into i6_banned). Empty output = no hit. Mirrors the
 # verify_all.sh per-file inner loop including the line-scoped exclude.
+#
+# In-process engine (T-017): reads the file ONCE into memory and scans lines with
+# bash-native `[[ =~ ]]` under `nocasematch`, byte-for-byte the same structure as the
+# migrated verify_all.sh loop — no `grep` subprocess per (file × banned-entry). The
+# function emits only `idx:line_no` (never a span), so the BASH_REMATCH-vs-`grep -o`
+# span cosmetic does not affect this driver's output at all.
 i6_scan_file() {
     local scan_file="$1"
     [[ -f "$scan_file" ]] || return 0
-    local idx=0 entry e_anchors e_reason e_exclude e_gap rx match line_no full_line
+    local i6_lines=()
+    mapfile -t i6_lines < "$scan_file" 2>/dev/null
+    local idx=0 entry e_anchors e_reason e_exclude e_gap rx line_no full_line xtok excluded
     for entry in "${i6_banned[@]}"; do
         idx=$((idx + 1))
         IFS='|' read -r e_anchors e_reason e_exclude e_gap <<< "$entry"
         rx=$(i6_build_regex "$e_anchors" "${e_gap:-$i6_gap_default}")
-        match=$(grep -E -n -i -m1 -- "$rx" "$scan_file" 2>/dev/null) || continue
-        line_no="${match%%:*}"
-        full_line="${match#*:}"
-        local excluded=0
+        local xtoks=()
         if [[ -n "$e_exclude" ]]; then
-            local xtoks=() old_ifs="$IFS"
+            local old_ifs="$IFS"
             IFS='~'; read -r -a xtoks <<< "$e_exclude"; IFS="$old_ifs"
-            shopt -s nocasematch
-            local xtok
-            for xtok in "${xtoks[@]}"; do
-                [[ -z "$xtok" ]] && continue
-                [[ "$full_line" == *"$xtok"* ]] && { excluded=1; break; }
-            done
-            shopt -u nocasematch
         fi
-        (( excluded )) && continue
-        printf '%s:%s\n' "$idx" "$line_no"
+        # First regex-matching line wins (grep -m1 parity): on the FIRST matching line,
+        # decide hit-or-exclude and STOP — no fall-through to a later line.
+        line_no=0
+        for full_line in "${i6_lines[@]}"; do
+            line_no=$((line_no + 1))
+            shopt -s nocasematch
+            if [[ "$full_line" =~ $rx ]]; then
+                excluded=0
+                for xtok in "${xtoks[@]}"; do
+                    [[ -z "$xtok" ]] && continue
+                    [[ "$full_line" == *"$xtok"* ]] && { excluded=1; break; }
+                done
+                shopt -u nocasematch
+                (( excluded )) || printf '%s:%s\n' "$idx" "$line_no"
+                break
+            fi
+            shopt -u nocasematch
+        done
     done
 }
 

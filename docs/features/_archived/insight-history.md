@@ -20,3 +20,7 @@
 
 - 2026-05-16 · One-sided assertions hide bidirectional drift: test-init asserted "50-<type>.md is indexed in AI-GUIDE" but not the inverse "every rule file is indexed". When v0.13/v0.14 added new rule files, the user-project verify_all E.5 would have FAILed on first init-run, but our regression suite stayed green. When asserting set-membership in templates, write the inverse check too. · evidence: AI-GUIDE template missing 65-intervention + 70-doc-size (zh) for 1-2 releases
 - 2026-05-17 · PowerShell `-contains` is case-insensitive by default, so a flag-skip list containing `-path` will match `Remove-Item -Path ...` and create a destructive-command bypass — use `-ccontains` for case-sensitive flag lists, or scope flag-skip arrays to the specific verb that needs them. · evidence: T-001 rollback #1, commit (this delivery)
+
+## Rotated 2026-06-09
+
+- 2026-05-17 · Claude Code's PreToolUse hook spawns pwsh per call; without `-NoProfile` the user's `$PROFILE` runs each time and dominates wall-clock (measured 3.7s p50 vs 10ms script body). Always pass `-NoProfile` to any pwsh hook command in `.claude/settings.json`. · evidence: T-001 QA p50 measurement, commit (this delivery)

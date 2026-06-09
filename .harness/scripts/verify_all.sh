@@ -559,6 +559,17 @@ i6_exempt_dirs=(
     "docs/features/"
     "参考/"
 )
+# Pre-build each banned entry's fields + regex ONCE, before the file loop. A regex
+# depends only on its entry, but i6_build_regex forks `sed` per anchor token, so the
+# previous per-(file × entry) rebuild (~330 × 14 ≈ 4.6k builds → ~30k forks) dominated
+# I.6 wall-clock on MSYS far more than the scan itself did. Hoisting it makes I.6 run in
+# seconds, not minutes. (The PS twin already builds each regex once per entry — this aligns.)
+i6_anchors_a=(); i6_reason_a=(); i6_exclude_a=(); i6_rx_a=()
+for entry in "${i6_banned[@]}"; do
+    IFS='|' read -r e_anchors e_reason e_exclude e_gap <<< "$entry"
+    i6_anchors_a+=("$e_anchors"); i6_reason_a+=("$e_reason"); i6_exclude_a+=("$e_exclude")
+    i6_rx_a+=("$(i6_build_regex "$e_anchors" "${e_gap:-$i6_gap_default}")")
+done
 i6_hits=""
 while IFS= read -r scan_file; do
     skip=0
@@ -567,30 +578,48 @@ while IFS= read -r scan_file; do
     for ed in "${i6_exempt_dirs[@]}"; do [[ "$scan_file" == "$ed"* ]] && { skip=1; break; }; done
     (( skip == 1 )) && continue
     [[ -f "$scan_file" ]] || continue
-    for entry in "${i6_banned[@]}"; do
-        IFS='|' read -r e_anchors e_reason e_exclude e_gap <<< "$entry"
-        rx=$(i6_build_regex "$e_anchors" "${e_gap:-$i6_gap_default}")
-        match=$(grep -E -n -i -m1 -- "$rx" "$scan_file" 2>/dev/null) || continue
-        line_no="${match%%:*}"
-        full_line="${match#*:}"
-        excluded=0
+    # Read the file ONCE into memory, then scan in-process — no `grep` subprocess per
+    # (file × banned-entry). The previous engine spawned up to two greps per pair
+    # (~330 files × 14 entries × 2 ≈ 9k processes), pathologically slow on Windows/MSYS.
+    # This mirrors the PS twin's `Get-Content -Raw` + per-line `[regex]::Match` scan.
+    i6_lines=()
+    mapfile -t i6_lines < "$scan_file" 2>/dev/null
+    for ((bi = 0; bi < ${#i6_banned[@]}; bi++)); do
+        e_anchors="${i6_anchors_a[$bi]}"; e_reason="${i6_reason_a[$bi]}"; e_exclude="${i6_exclude_a[$bi]}"
+        rx="${i6_rx_a[$bi]}"
+        # Tokenize the line-scoped exclude list once per entry (unchanged semantics).
+        xtoks=()
         if [[ -n "$e_exclude" ]]; then
-            xtoks=()
             old_ifs="$IFS"; IFS='~'; read -r -a xtoks <<< "$e_exclude"; IFS="$old_ifs"
-            # Line-scoped exclude: literal, case-insensitive substring test over the
-            # whole matched line. Uses bash `nocasematch` glob matching, not
-            # `grep -F -i` — the latter SIGABRTs on the MSYS GNU grep 3.0 shipped with
-            # Git-for-Windows, and pure bash ops mirror the PS `IndexOf` twin exactly.
-            shopt -s nocasematch
-            for xtok in "${xtoks[@]}"; do
-                [[ -z "$xtok" ]] && continue
-                [[ "$full_line" == *"$xtok"* ]] && { excluded=1; break; }
-            done
-            shopt -u nocasematch
         fi
-        (( excluded )) && continue
-        span=$(printf '%s' "$full_line" | grep -E -i -o -m1 -- "$rx")
-        i6_hits="${i6_hits}${scan_file}:${line_no} : [${e_anchors}] — ${e_reason} | matched: \"${span:0:120}\""$'\n'
+        # First regex-matching line wins (grep -m1 parity): on the FIRST line that the
+        # ERE matches, decide hit-or-exclude and STOP — do not fall through to a later
+        # line even when the first match is exclude-suppressed.
+        line_no=0
+        for full_line in "${i6_lines[@]}"; do
+            line_no=$((line_no + 1))
+            # `$rx` MUST stay unquoted so `[[ =~ ]]` treats it as the ERE (quoting it
+            # would make it a literal and silently break every match). `nocasematch`
+            # makes both the regex match AND the `== *glob*` exclude case-insensitive,
+            # replacing the old `grep -i`; it is unset on every exit path so it never
+            # leaks into later checks. Uses bash builtins only — no `grep -F -i`, which
+            # SIGABRTs on the MSYS GNU grep 3.0 shipped with Git-for-Windows.
+            shopt -s nocasematch
+            if [[ "$full_line" =~ $rx ]]; then
+                span="${BASH_REMATCH[0]}"
+                # Line-scoped exclude: reject if any exclude token appears anywhere on
+                # the whole matched line. Mirrors the PS `IndexOf` twin exactly.
+                excluded=0
+                for xtok in "${xtoks[@]}"; do
+                    [[ -z "$xtok" ]] && continue
+                    [[ "$full_line" == *"$xtok"* ]] && { excluded=1; break; }
+                done
+                shopt -u nocasematch
+                (( excluded )) || i6_hits="${i6_hits}${scan_file}:${line_no} : [${e_anchors}] — ${e_reason} | matched: \"${span:0:120}\""$'\n'
+                break
+            fi
+            shopt -u nocasematch
+        done
     done
 done < <(git ls-files 2>/dev/null)
 if [[ -n "$i6_hits" ]]; then
