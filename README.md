@@ -21,7 +21,7 @@ This is a Claude Code Plugin packaging that gives any project fourteen AI skills
 - `/harness-kit:harness-stream` — like batch, but the task pool stays **alive**: it re-reads `BATCH_PLAN.md` every iteration, so tasks you add mid-run (in chat or by appending to the pool / an `ADD` intervention) get planned and executed without re-invoking. **Best-effort** completion (a failed task is marked and skipped, the stream keeps going) with the same hard-safety stops as batch. Use when you want to fire requirements as they occur to you and only watch results. **Ambient mode:** just invoke with **no pool-id** — a default pool (`docs/batches/default/`) is auto-created and a `UserPromptSubmit` hook (gated by `.harness/ambient.flag`) makes every chat message a heartbeat that folds requirements into the pool and drains it; no `/loop`, no re-invocation, no keyword. It is session-scoped — a `SessionStart` hook auto-clears the flag each new session, so re-invoke `/harness-stream` to resume.
 
 **Setup skills**
-- `/harness-kit:harness-init` — bootstrap Harness skeleton in a new project (asks 5 questions, generates `.harness/` + `.claude/` + `AI-GUIDE.md` + stub CLAUDE.md / copilot-instructions.md in ~30s)
+- `/harness-kit:harness-init` — bootstrap Harness skeleton in a new project (asks 6 questions, generates `.harness/` + `.claude/` + `AI-GUIDE.md` + stub CLAUDE.md / copilot-instructions.md in ~30s)
 - `/harness-kit:harness-adopt` — non-invasively add Harness to an existing project (detects stack, extracts conventions, prompts before applying)
 - `/harness-kit:harness-upgrade` — bring an already-initialized but **stale** project up to the current plugin layout (relocate scripts to `.harness/scripts/`, content-refresh depth-sensitive scripts for correct root derivation, re-install the pre-commit hook, rewire settings, regenerate `verify_all` while preserving your B.* checks — dry-run preview, idempotent, proven with a green `verify_all`)
 - `/harness-kit:harness-language` — set, switch (English ↔ Chinese), or refresh a project's output-language policy by surgically rewriting only the three policy surfaces (`.harness/rules/00-core.md` section + `CLAUDE.md` line + `.github/copilot-instructions.md` line) to the target language's current canonical text. Self-bootstraps the text from the plugin templates (so an old project can pull a refreshed policy), non-destructive, idempotent, dry-run preview, `.bak` per file.
@@ -92,12 +92,13 @@ In Claude Code:
 /harness-kit:harness-init
 ```
 
-Five questions (`AskUserQuestion` popup):
+Six questions (`AskUserQuestion` popup):
 1. Project type — Fullstack / Backend / Generic (CLI, library, mobile, ML, embedded, etc.) — three first-class overlays
 2. Stack — free text (e.g. "Next.js + NestJS + Postgres", "Rust CLI tool", "PyTorch training pipeline")
 3. Enable `verify_all` Stop hook — Yes / No
 4. Developer partitioning — Partitioned (default) / Single (skipped for Generic — defaults to single, AI suggests partitions later if project grows)
 5. Project output language — English (default) / 中文
+6. AI customization of the `50-<project>.md` rule fragment — opt-in (default: No, static template only)
 
 In ~30 seconds your project has:
 - `.harness/` (tool-agnostic source of truth: agents, rules, skills)
@@ -105,7 +106,7 @@ In ~30 seconds your project has:
 - `.github/copilot-instructions.md` (Copilot bootstrap stub)
 - `CLAUDE.md` (bootstrap stub Claude Code reads — points at `AI-GUIDE.md`)
 - `docs/` (workflow, dev-map, tasks, spec)
-- `scripts/` (verify_all, harness-sync, baseline)
+- `.harness/scripts/` (verify_all, harness-sync, baseline)
 - `evals/` (golden regression tasks)
 
 Now describe a task:
@@ -160,7 +161,7 @@ Hit Claude Code's rate limit mid-task? Switch to GitHub Copilot in VS Code and k
 ### Three layers of regression testing
 
 - `verify_all` (32 checks) — repo health
-- `test-init` (255 assertions on PowerShell; 217 on Bash without python3) — init template logic on empty dirs (3 project types × 75 PS / 63 Bash, plus the migrate-layout block, 4 shell-agnostic zh-overlay consumer-split policy assertions, and 2 shell-agnostic BUG-2 placeholder-regex regression assertions)
+- `test-init` (275 assertions on PowerShell; 237 on Bash without python3) — init template logic on empty dirs across the 3 project types, plus the migrate-layout block, the zh-overlay consumer-split policy assertions, and the BUG-2 placeholder-regex regression (see `.harness/scripts/baseline.json` for the live counts)
 - `test-real-project` (82 assertions) — overlay onto real fixtures (todo-fullstack, todo-backend)
 
 Every commit must pass all three. `test-init` and `test-real-project` exercise the generated project's structure end-to-end with no network needed.
@@ -190,17 +191,11 @@ harness-kit/
 │
 ├── .harness/                     This repo's SOT (dogfood)
 │   ├── agents/                   Byte-copy of templates/common/.harness/agents/
-│   └── rules/                    Project-specific rule fragments
+│   ├── rules/                    Project-specific rule fragments
+│   └── scripts/                  verify_all, harness-sync, sync-self, test-init, … (relocated here in v0.20)
 ├── .claude/                      Claude Code binding (agents/ + skills/ synced from .harness/)
 ├── CLAUDE.md                     ~15-line stub pointing at AI-GUIDE.md (written once at init)
 ├── .github/copilot-instructions.md  ~15-line stub pointing at AI-GUIDE.md
-│
-├── scripts/
-│   ├── verify_all.{ps1,sh}       Total verification
-│   ├── harness-sync.{ps1,sh}     .harness/agents + .harness/skills → .claude/ (CLAUDE.md is a static stub since v0.10)
-│   ├── sync-self.{ps1,sh}        templates/common/ → repo SOT
-│   ├── test-init.{ps1,sh}        Init regression
-│   └── test-real-project.{ps1,sh}  Integration regression
 │
 ├── tests/fixtures/               Minimal real-shape projects for integration
 │

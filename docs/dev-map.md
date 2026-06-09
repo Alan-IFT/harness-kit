@@ -58,13 +58,15 @@ harness-kit/
 │   │   ├── 00-core.md
 │   │   ├── 05-insight-index.md
 │   │   ├── 10-self-consistency.md
+│   │   ├── 15-skill-authoring.md       ← Skill/agent authoring quality bar
 │   │   ├── 20-documentation.md
 │   │   ├── 30-engineering.md
 │   │   ├── 40-locations.md
 │   │   ├── 60-tool-handoff.md
 │   │   ├── 65-intervention.md
 │   │   ├── 70-doc-size.md
-│   │   └── 75-safety-hook.md           ← Destructive-command guard (v0.15+)
+│   │   ├── 75-safety-hook.md           ← Destructive-command guard (v0.15+)
+│   │   └── 80-settings-schema.md       ← settings.json schema integrity (v0.18+)
 │   └── scripts/                        ← All harness-owned scripts (relocated from scripts/ in T-007)
 │       ├── verify_all.{ps1,sh}         ← Total verification (32 checks)
 │       ├── harness-sync.{ps1,sh}       ← Layer 2: .harness/agents + .harness/skills → .claude/
@@ -147,7 +149,7 @@ Both layers are checked by `.harness/scripts/verify_all` and FAIL on drift.
 | Layer 1 sync (templates → repo SOT) | `sync-self` | Run before commit if you edited `templates/common/.harness/agents/` or one of the 7 mirrored script pairs (`harness-sync`, `install-hooks`, `archive-task`, `guard-rm`, `migrate-scripts-layout`, `upgrade-project`, `language-policy`) |
 | Layer 2 sync (repo SOT → binding) | `harness-sync` | Run before commit if you edited `.harness/agents/` or `.harness/skills/`. Rule edits do NOT require sync — they're referenced, not copied. |
 | Total verification | `verify_all` | Single source of truth for "is the repo healthy" — runs all 32 checks including both `--check` modes |
-| Init regression | `test-init` | Simulates full init + sync in temp dir (227 assertions on PS / 191 Bash without python3 at v0.16.0; +50 vs v0.15 on PS from AI-native opt-in/opt-out bidirectional cases × 3 project types, plus AC-10 byte-compare in a discrete fresh-temp-dir pass, plus 2 shell-agnostic BUG-2 placeholder-regex regression assertions from rollback round 2) |
+| Init regression | `test-init` | Simulates full init + sync in temp dir (275 assertions on PS / 237 Bash without python3; covers AI-native opt-in/opt-out bidirectional cases × 3 project types, the AC-10 byte-compare pass, and the BUG-2 placeholder-regex regression — see `.harness/scripts/baseline.json` for the live counts) |
 
 ## Patterns to follow
 

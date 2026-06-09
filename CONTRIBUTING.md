@@ -19,7 +19,7 @@ pwsh -File .harness/scripts/verify_all.ps1     # Windows
 bash .harness/scripts/verify_all.sh            # Unix
 ```
 
-Expected output: 18 PASS / 0 WARN / 0 FAIL.
+Expected output: all checks PASS / 0 WARN / 0 FAIL (the gate currently runs 32 checks; the total grows with releases — see the `verify_all` badge in `README.md`).
 
 ## Two-layer model (v0.2+)
 
@@ -47,20 +47,20 @@ templates/common/  ─────────────►   .harness/  ─�
 
 | Layer | Edit | Never edit (generated) |
 |---|---|---|
-| Layer 1 (distribution SOT) | `skills/harness-init/templates/common/.harness/` and `templates/common/scripts/` | — |
+| Layer 1 (distribution SOT) | `skills/harness-init/templates/common/.harness/` (scripts live under `.harness/scripts/`) | — |
 | Layer 2 (repo SOT, dogfooded) | `.harness/agents/` and `.harness/rules/` | `.claude/agents/`, `CLAUDE.md` |
 
 After editing Layer 1:
 
 ```powershell
-.\scripts\sync-self.ps1               # Layer 1 → Layer 2
-.\scripts\harness-sync.ps1            # Layer 2 → bindings
+.\.harness\scripts\sync-self.ps1      # Layer 1 → Layer 2
+.\.harness\scripts\harness-sync.ps1   # Layer 2 → bindings
 ```
 
 After editing Layer 2 only (just changing repo behavior, not the distributed template):
 
 ```powershell
-.\scripts\harness-sync.ps1
+.\.harness\scripts\harness-sync.ps1
 ```
 
 `verify_all` calls both `sync-self --check` and `harness-sync --check` internally, so
