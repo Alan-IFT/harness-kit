@@ -619,7 +619,15 @@ function Test-ZhOverlay {
                    "GUARD_COMMAND"="pwsh -NoProfile -File .harness/scripts/guard-rm.ps1" }
         Copy-TemplateLayer -Source (Join-Path $templateRoot "common")        -Target $tmp -Vars $vars
         Copy-TemplateLayer -Source (Join-Path $templateRoot "fullstack")      -Target $tmp -Vars $vars
+        # The i18n/zh overlay now carries only the 2 human-facing files (the 3 policy-carrying
+        # SPECIAL files were deleted in T-016); lay them, then COMPOSE the zh policy by running
+        # the language-policy helper against the project root, exactly as init step 4.4 does.
         Copy-TemplateLayer -Source (Join-Path $templateRoot "i18n/zh/common") -Target $tmp -Vars $vars
+        Push-Location $tmp
+        try {
+            & pwsh -NoProfile -File (Join-Path $tmp ".harness/scripts/language-policy.ps1") -TemplateRoot $repoRoot -Lang zh | Out-Null
+        } finally { Pop-Location }
+        Get-ChildItem -Path $tmp -Recurse -Filter "*.bak-*" -File | Remove-Item -Force -ErrorAction SilentlyContinue
 
         $core = Join-Path $tmp ".harness/rules/00-core.md"
         Assert "[zh] 00-core.md overlaid" { Test-Path $core }
@@ -670,6 +678,39 @@ function Test-ZhOverlay {
         Assert "[zh] docs/spec/README.md stays Chinese (项目 SPEC present)" { (Get-Content $specReadme -Raw) -match '项目 SPEC' }
         $golden = Join-Path $tmp "evals/golden-tasks.md"
         Assert "[zh] evals/golden-tasks.md stays Chinese (轻量回归任务集 present)" { (Get-Content $golden -Raw) -match '轻量回归任务集' }
+
+        # --- T-016 POSITIVE proof: the composed zh 00-core's English BODY (from the first
+        #     non-policy heading to EOF) is byte-identical to the English common/ 00-core's
+        #     body, substituted the same way. Positive analogue of the would-be guard: proves
+        #     the body is single-sourced from common/ (no duplication) AND that composition
+        #     carried it correctly. Mutation-provable: a seam over/under-cut or a common/ body
+        #     drift the compose failed to carry makes the bodies differ → this assertion RED. ---
+        Assert "[zh][T-016] composed zh 00-core BODY byte-matches English common/ (single-source, no duplication)" {
+            $bodyStart = '## How this project is developed'
+            # Read both files into LF-line arrays with CR stripped and the single trailing
+            # empty record (from a final LF) dropped — the same line model the helper uses.
+            $toLines = {
+                param($raw)
+                $out = [System.Collections.Generic.List[string]]::new()
+                foreach ($p in $raw.Split("`n")) {
+                    if ($p.EndsWith("`r")) { $out.Add($p.Substring(0, $p.Length - 1)) } else { $out.Add($p) }
+                }
+                if ($out.Count -gt 0 -and $out[$out.Count - 1] -eq "") { $out.RemoveAt($out.Count - 1) }
+                , $out.ToArray()
+            }
+            $composedRaw = [System.IO.File]::ReadAllText($core, [System.Text.UTF8Encoding]::new($false))
+            $composedLines = & $toLines $composedRaw
+            $ci = [array]::IndexOf($composedLines, $bodyStart)
+
+            $commonRaw = [System.IO.File]::ReadAllText((Join-Path $templateRoot "common/.harness/rules/00-core.md.tmpl"), [System.Text.UTF8Encoding]::new($false))
+            foreach ($k in $vars.Keys) { $commonRaw = $commonRaw -replace [regex]::Escape("{{$k}}"), $vars[$k] }
+            $commonLines = & $toLines $commonRaw
+            $ki = [array]::IndexOf($commonLines, $bodyStart)
+
+            $composedBody = ($composedLines[$ci..($composedLines.Count - 1)] -join "`n")
+            $commonBody   = ($commonLines[$ki..($commonLines.Count - 1)] -join "`n")
+            ($ci -ge 0) -and ($ki -ge 0) -and ($composedBody -ceq $commonBody)
+        }
     } finally {
         if (-not $KeepTemp) { Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue }
         else { Write-Host "Temp dir kept: $tmp" -ForegroundColor Yellow }

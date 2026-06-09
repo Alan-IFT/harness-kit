@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.27.0] - 2026-06-09
+
+### Changed — eliminate the i18n/zh English-body duplication via single-source + init composition (T-016)
+
+The T-015 R-2 accepted-duplication risk is now removed at the root rather than guarded. The three SPECIAL i18n/zh files (`00-core.md.tmpl`, `CLAUDE.md.tmpl`, `.github/copilot-instructions.md.tmpl`) carried an English framework BODY duplicated from `templates/common/` that could silently drift if a `common/` edit forgot to mirror. Instead of adding a `verify_all` guard check (which would inflate the gate), the duplication is **deleted**: the canonical Chinese policy text is single-sourced into one new snippet, `/harness-language` reads from it, and a zh init now COMPOSES — lays the English `common/` files then injects the zh policy with the existing `language-policy` helper. Observable output is byte-for-byte the tree the old overlay produced; the English (`{{LANG}}=en`) path is byte-unchanged; already-generated projects are not migrated. The `verify_all` check count **stays 32** — the explicit anti-bloat outcome.
+
+- **New single-source snippet** `skills/harness-init/templates/i18n/zh/_policy/output-language.zh.md.tmpl`: one file carrying BOTH the canonical zh policy SECTION (`## 输出语言（按消费者分流）`, feeds 00-core) and the policy LINE (`输出语言：…`, feeds CLAUDE + copilot), separated by a non-emitted sentinel heading. It lives under a leading-underscore `_policy/` dir that is OUTSIDE every init overlay layer (`common/`, `<type>/`, `i18n/zh/common/`, `i18n/zh/<type>/`), so it never ships into a generated project — it is a pure template-source asset the helper reads via `--template-root`. The section + line bytes are copied verbatim from the deleted SPECIAL files (pre-delete `cmp` proof: byte-identical).
+- **Re-pointed `/harness-language`** (`language-policy.{ps1,sh}`, template + dogfood mirror via `sync-self`): the zh branch reads its section + line from the snippet (both extractors find them with ZERO logic change); the en branch reads `common/` inline, unchanged. A re-pointed-helper run against an English fixture reproduces the old overlaid 00-core / CLAUDE / copilot byte-for-byte.
+- **`/harness-init` step 4.4 (new)** + **`/harness-adopt` "Language handling"**: for a `zh` project, after laying the English `common/`, run `language-policy --lang zh` against the project root to inject the policy, then delete the `*.bak-*` artifacts. The zh overlay description drops the 3 policy-carrying files (now only the 2 human-facing files are overlaid).
+- **Deleted** the 3 SPECIAL files; the i18n/zh overlay shrinks to `docs/spec/README.md` + `evals/golden-tasks.md.tmpl` (plus the non-overlaid `_policy/` snippet).
+- **`test-init` re-modelled** (symmetric PS + Bash): the zh fixture now COMPOSES (lay English `common`+`fullstack`, lay the 2 human-facing zh files, run the helper injection, drop `.bak-*`). All retained T-015 inverse assertions + the 4 T-013 zh assertions still pass on the composed result, and a NEW positive assertion proves the composed zh 00-core's English BODY is byte-identical to `common/`'s body (the positive analogue of the would-be guard — mutation-provable, not a standing check). `baseline.json` test-init counts reconciled from a captured Bash run: Bash (no-python3) 236 → 237.
+- Version 0.26.0 → 0.27.0 (plugin.json, marketplace.json, both README badges). Skill count stays **14**; `verify_all` stays **32** checks (no new check — the anti-bloat win); no new `{{...}}` placeholder; no I.6 banned/exempt-list change (the relocated policy text is the T-013 anchor-free form).
+
 ## [0.26.0] - 2026-06-09
 
 ### Changed — anglicize AI-facing scaffolding in the `{{LANG}}=zh` overlay (T-015)

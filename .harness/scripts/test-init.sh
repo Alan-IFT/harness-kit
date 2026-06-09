@@ -517,7 +517,12 @@ test_zh_overlay() {
     local tmp; tmp=$(mktemp -d -t harness-test-zh-XXXXXX)
     copy_layer "$template_root/common"        "$tmp" "zh-test" "fullstack" "Next.js + NestJS"
     copy_layer "$template_root/fullstack"      "$tmp" "zh-test" "fullstack" "Next.js + NestJS"
+    # The i18n/zh overlay now carries only the 2 human-facing files (the 3 policy-carrying
+    # SPECIAL files were deleted in T-016); lay them, then COMPOSE the zh policy by running
+    # the language-policy helper against the project root, exactly as init step 4.4 does.
     copy_layer "$template_root/i18n/zh/common" "$tmp" "zh-test" "fullstack" "Next.js + NestJS"
+    ( cd "$tmp" && bash "$tmp/.harness/scripts/language-policy.sh" --template-root "$repo_root" --lang zh >/dev/null 2>&1 )
+    rm -f "$tmp/.harness/rules/"*.bak* "$tmp/"CLAUDE.md.bak* "$tmp/.github/"*.bak*
 
     local core="$tmp/.harness/rules/00-core.md"
     assert "[zh] 00-core.md overlaid" "[[ -f '$core' ]]"
@@ -569,6 +574,22 @@ test_zh_overlay() {
     assert "[zh] docs/spec/README.md stays Chinese (项目 SPEC present)" "grep -q '项目 SPEC' '$spec_readme'"
     local golden="$tmp/evals/golden-tasks.md"
     assert "[zh] evals/golden-tasks.md stays Chinese (轻量回归任务集 present)" "grep -q '轻量回归任务集' '$golden'"
+
+    # --- T-016 POSITIVE proof: the composed zh 00-core's English BODY (from the first
+    #     non-policy heading to EOF) is byte-identical to the English common/ 00-core's
+    #     body, substituted the same way. This is the positive analogue of the would-be
+    #     guard: it proves the body is single-sourced from common/ (no duplication) AND
+    #     that composition carried it correctly. Mutation-provable: if the composed body
+    #     diverged (helper over/under-cut the seam, or common/ body drifted without the
+    #     compose carrying it), the bodies differ → this assertion goes RED. ---
+    local composed_body; composed_body="$(awk '/^## How this project is developed/{p=1} p' "$core")"
+    local common_core_sub; common_core_sub="$(mktemp -t zh-common-core-XXXXXX)"
+    cp "$template_root/common/.harness/rules/00-core.md.tmpl" "$common_core_sub"
+    substitute "$common_core_sub" "zh-test" "fullstack" "Next.js + NestJS"
+    local common_body; common_body="$(awk '/^## How this project is developed/{p=1} p' "$common_core_sub")"
+    assert "[zh][T-016] composed zh 00-core BODY byte-matches English common/ (single-source, no duplication)" \
+        "[[ \"\$composed_body\" == \"\$common_body\" ]]"
+    rm -f "$common_core_sub"
 
     [[ "$KEEP" == true ]] && echo "Temp dir kept: $tmp" || rm -rf "$tmp"
 }

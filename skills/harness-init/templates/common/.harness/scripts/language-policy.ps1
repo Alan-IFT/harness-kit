@@ -8,9 +8,11 @@
 #   3. .github/copilot-instructions.md — the single top policy LINE
 #
 # The canonical en/zh text is EXTRACTED at runtime from the resolved plugin template
-# (-TemplateRoot) using the SAME heading/line anchors — it is never embedded as a string
-# literal here (single source of truth = the templates; keeps this file free of any
-# policy prose, which also keeps it clear of the I.6 retired-phrase guard).
+# using the SAME heading/line anchors — it is never embedded as a string literal here
+# (single source of truth = the templates; keeps this file free of any policy prose,
+# which also keeps it clear of the I.6 retired-phrase guard). The en source is the
+# `common/` 00-core + CLAUDE templates (read inline); the zh source is the single-source
+# snippet `i18n/zh/_policy/output-language.zh.md.tmpl` (carries BOTH the section + line).
 #
 # This is the deterministic transform. The /harness-language SKILL owns all judgment
 # (cache + version discovery, current-language detect + AskUserQuestion confirm, the
@@ -67,15 +69,18 @@ if (-not $Lang) {
 $enHeading = "## Output language (project-wide)"
 $zhHeading = "## 输出语言（按消费者分流）"
 
+# en: read the section + line inline from common/ (en path byte-unchanged).
+# zh: read BOTH from the single-source snippet (section first, line after the sentinel) —
+#     the i18n/zh SPECIAL files no longer exist (T-016).
 if ($Lang -eq "en") {
-    $tmplCommon = Join-Path $TemplateRoot "skills/harness-init/templates/common"
+    $tmplCore   = Join-Path $TemplateRoot "skills/harness-init/templates/common/.harness/rules/00-core.md.tmpl"
+    $tmplClaude = Join-Path $TemplateRoot "skills/harness-init/templates/common/CLAUDE.md.tmpl"
     $targetHeading = $enHeading
 } else {
-    $tmplCommon = Join-Path $TemplateRoot "skills/harness-init/templates/i18n/zh/common"
+    $tmplCore   = Join-Path $TemplateRoot "skills/harness-init/templates/i18n/zh/_policy/output-language.zh.md.tmpl"
+    $tmplClaude = $tmplCore   # single source carries BOTH the section and the line
     $targetHeading = $zhHeading
 }
-$tmplCore   = Join-Path $tmplCommon ".harness/rules/00-core.md.tmpl"
-$tmplClaude = Join-Path $tmplCommon "CLAUDE.md.tmpl"
 
 if (-not (Test-Path $tmplCore)) {
     [Console]::Error.WriteLine("language-policy: template 00-core.md.tmpl not found at $tmplCore.")

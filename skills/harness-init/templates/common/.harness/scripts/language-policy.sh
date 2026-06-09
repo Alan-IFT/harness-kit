@@ -10,9 +10,11 @@
 #   3. .github/copilot-instructions.md — the single top policy LINE
 #
 # The canonical en/zh text is EXTRACTED at runtime from the resolved plugin template
-# (--template-root) using the SAME heading/line anchors — it is never embedded as a
-# string literal here (single source of truth = the templates; keeps this file free of
-# any policy prose, which also keeps it clear of the I.6 retired-phrase guard).
+# using the SAME heading/line anchors — it is never embedded as a string literal here
+# (single source of truth = the templates; keeps this file free of any policy prose,
+# which also keeps it clear of the I.6 retired-phrase guard). The en source is the
+# `common/` 00-core + CLAUDE templates (read inline); the zh source is the single-source
+# snippet `i18n/zh/_policy/output-language.zh.md.tmpl` (carries BOTH the section + line).
 #
 # Run from the PROJECT ROOT. cwd-derived (depth-independent).
 #
@@ -70,15 +72,18 @@ en_heading="## Output language (project-wide)"
 zh_heading="## 输出语言（按消费者分流）"
 
 # Template source files for the TARGET language.
+# en: read the section + line inline from common/ (en path byte-unchanged).
+# zh: read BOTH from the single-source snippet (the section first, the line after the
+#     sentinel) — the i18n/zh SPECIAL files no longer exist (T-016).
 if [[ "$LANG_ARG" == "en" ]]; then
-    tmpl_common="$TEMPLATE_ROOT/skills/harness-init/templates/common"
+    tmpl_core="$TEMPLATE_ROOT/skills/harness-init/templates/common/.harness/rules/00-core.md.tmpl"
+    tmpl_claude="$TEMPLATE_ROOT/skills/harness-init/templates/common/CLAUDE.md.tmpl"
     target_heading="$en_heading"
 else
-    tmpl_common="$TEMPLATE_ROOT/skills/harness-init/templates/i18n/zh/common"
+    tmpl_core="$TEMPLATE_ROOT/skills/harness-init/templates/i18n/zh/_policy/output-language.zh.md.tmpl"
+    tmpl_claude="$tmpl_core"   # single source carries BOTH the section and the line
     target_heading="$zh_heading"
 fi
-tmpl_core="$tmpl_common/.harness/rules/00-core.md.tmpl"
-tmpl_claude="$tmpl_common/CLAUDE.md.tmpl"
 
 if [[ ! -f "$tmpl_core" ]]; then
     echo "language-policy: template 00-core.md.tmpl not found at $tmpl_core." >&2

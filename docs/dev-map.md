@@ -22,17 +22,21 @@ harness-kit/
 │   │       │   ├── .harness/scripts/harness-sync.{ps1,sh}    ← Binding sync (distributed)
 │   │       │   ├── .harness/scripts/migrate-scripts-layout.{ps1,sh} ← One-shot scripts/ → .harness/scripts/ upgrade (T-007)
 │   │       │   ├── .harness/scripts/upgrade-project.{ps1,sh}    ← /harness-upgrade mechanical layer (T-012)
-│   │       │   ├── .harness/scripts/language-policy.{ps1,sh}    ← /harness-language mechanical layer (T-014): heading-anchored policy-section + line rewrite
+│   │       │   ├── .harness/scripts/language-policy.{ps1,sh}    ← /harness-language mechanical layer (T-014): heading-anchored policy-section + line rewrite; zh source = i18n/zh/_policy snippet (T-016), en source = common/ inline; also drives zh-init composition (init step 4.4)
 │   │       │   ├── .harness/scripts/ai-native-mock.json     ← Mock AI response for HARNESS_AI_NATIVE_MOCK (v0.16+; test & dry-run)
 │   │       │   └── evals/golden-tasks.md.tmpl
 │   │       ├── fullstack/              ← Fullstack-only overlays
 │   │       │   ├── .harness/rules/50-fullstack.md
 │   │       │   ├── .harness/skills/{build,test,verify}/SKILL.md.tmpl
 │   │       │   └── .harness/scripts/verify_all.{ps1,sh}.tmpl
-│   │       └── backend/                ← Backend-only overlays
-│   │           ├── .harness/rules/50-backend.md
-│   │           ├── .harness/skills/{build,test,verify}/SKILL.md.tmpl
-│   │           └── .harness/scripts/verify_all.{ps1,sh}.tmpl
+│   │       ├── backend/                ← Backend-only overlays
+│   │       │   ├── .harness/rules/50-backend.md
+│   │       │   ├── .harness/skills/{build,test,verify}/SKILL.md.tmpl
+│   │       │   └── .harness/scripts/verify_all.{ps1,sh}.tmpl
+│   │       └── i18n/zh/                 ← Chinese language overlay
+│   │           ├── common/docs/spec/README.md          ← human-facing (KEEP-ZH)
+│   │           ├── common/evals/golden-tasks.md.tmpl   ← human-facing (KEEP-ZH)
+│   │           └── _policy/output-language.zh.md.tmpl  ← single-source zh policy (T-016); NOT overlaid — read by language-policy.{ps1,sh}; zh init COMPOSES (lay English common/ + inject this policy)
 │   ├── harness-adopt/SKILL.md          ← Existing-project adoption (automated apply since v0.3)
 │   ├── harness-upgrade/SKILL.md        ← Upgrade an already-initialized but stale project to the current layout (v0.23+); judgment layer, drives upgrade-project.{ps1,sh}
 │   ├── harness-language/SKILL.md       ← Set / switch (en<->zh) / refresh a project's output-language policy (v0.25+); judgment layer, drives language-policy.{ps1,sh}

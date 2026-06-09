@@ -104,8 +104,38 @@ Copy in this order (later layer overwrites earlier):
 3. **If Q5 ≠ English**, apply the language overlay:
    - Copy everything under `templates/i18n/<lang>/common/` → target root (overwrites the English files).
    - Copy everything under `templates/i18n/<lang>/<project-type>/` → target root.
-   - The `zh` overlay carries only the files a generated zh project should read in Chinese: the **policy-carrying files** (`00-core.md.tmpl`, `CLAUDE.md.tmpl`, `.github/copilot-instructions.md.tmpl`), whose framework BODY is the English `common/` text but which retain the Chinese consumer-split output-language policy section/line; and the **human-facing files** (`docs/spec/README.md`, `evals/golden-tasks.md.tmpl`). Per the output-language policy, every AI-facing framework file (`AI-GUIDE.md`, the other rule fragments, the type `50-*.md`, `.harness/insight-index.md`, `docs/workflow.md`, `docs/dev-map.md`, `docs/tasks.md`) is NOT in the zh overlay and therefore falls through to its English `common/`/type version.
+   - The `zh` overlay carries only the **human-facing files** a generated zh project should read in Chinese: `docs/spec/README.md` and `evals/golden-tasks.md.tmpl`. The three policy-carrying surfaces (`.harness/rules/00-core.md`, `CLAUDE.md`, `.github/copilot-instructions.md`) are **no longer overlaid** — they are laid down in English by step 4.1 and then have their Chinese consumer-split output-language policy injected by step 4.4 (composition, not duplication; T-016). Per the output-language policy, every AI-facing framework file (`AI-GUIDE.md`, the other rule fragments, the type `50-*.md`, `.harness/insight-index.md`, `docs/workflow.md`, `docs/dev-map.md`, `docs/tasks.md`) is NOT in the zh overlay and therefore falls through to its English `common/`/type version.
    - Files **not** in the overlay (agent prompts, skills/build|test|verify SKILL.md, scripts, **and the AI-facing framework files just listed**) stay in English. This is intentional — it is the mechanism that anglicizes AI-facing scaffolding: LLM reads English fine, the framework internals stay consistent, and the file count stays manageable.
+
+### 4.4 Inject the output-language policy (only if Q5 = 中文)
+
+For a `zh` project, the English `common/` `.harness/rules/00-core.md`, `CLAUDE.md`, and
+`.github/copilot-instructions.md` were laid down by step 4.1 and are still English. Convert their
+policy region to the canonical Chinese policy by running the **already-distributed** helper against the
+project root (it was copied into `.harness/scripts/` by step 4.1):
+
+```powershell
+pwsh -NoProfile -File .harness/scripts/language-policy.ps1 -TemplateRoot <template-root> -Lang zh   # Windows
+# or
+bash .harness/scripts/language-policy.sh --template-root <template-root> --lang zh                  # macOS/Linux
+```
+
+`<template-root>` is the resolved plugin/skill root discovered in step 3 — the directory that **contains**
+`skills/harness-init/templates` (i.e. the same value `/harness-language` passes; NOT the `templates`
+directory itself). The helper:
+- reads the single-source snippet `skills/harness-init/templates/i18n/zh/_policy/output-language.zh.md.tmpl`
+  (the canonical zh policy section + line),
+- rewrites the `## Output language (project-wide)` section in `.harness/rules/00-core.md` to the Chinese
+  `## 输出语言（按消费者分流）` section (REWRITE-SECTION),
+- rewrites the `Output language: **English**.` line in `CLAUDE.md` + copilot to the Chinese policy line
+  (REWRITE-LINE),
+- leaves every other byte untouched.
+
+Run this **before** step 5 placeholder substitution (the policy section/line carry no `{{...}}` tokens, so
+order is not load-bearing for them, but running pre-substitution matches the helper reading clean template
+bytes). The helper writes timestamped `.bak-*` files; **delete the `*.bak-*` files it creates** after the
+run (they are an artifact of the rewrite path, not wanted in a fresh init tree). Then proceed to step 5. The
+result is byte-for-byte the tree the old i18n/zh overlay produced — composition replaces the deleted SPECIAL files.
 
 Files ending in `.tmpl` need placeholder substitution (step 5). Drop the `.tmpl` suffix on write.
 
@@ -128,7 +158,9 @@ Note: templates/common contains:
 - `.github/copilot-instructions.md.tmpl` (same stub for Copilot, with `applyTo: "**"` frontmatter)
 
 `CLAUDE.md.tmpl` and `.github/copilot-instructions.md.tmpl` are copied to their
-final paths during init and are **never regenerated** — they're static stubs.
+final paths during init; their **body is static** and never regenerated —
+they're stubs. (The one exception: for a `zh` project, step 4.4 rewrites *only*
+the top `Output language` policy line in each, leaving the body untouched.)
 The full ruleset stays in `.harness/rules/*.md`; `AI-GUIDE.md` references those
 fragments with "when to read" descriptions so AI tools can lazy-load only what
 they need (progressive disclosure, like Claude Code's own skill system).
@@ -418,6 +450,7 @@ Estimated time to first delivered feature: 30 min – 1 hour depending on scope.
 - **Do not** install npm packages or modify the user's shell config.
 - **Do not** run `verify_all` during init (no project code yet).
 - **Do not** modify files outside the target directory.
+- **Do not** re-create the deleted i18n/zh policy-carrying files; the zh policy is single-sourced and injected (step 4.4).
 
 ## Failure handling
 

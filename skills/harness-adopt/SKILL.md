@@ -277,10 +277,18 @@ wrote at init has known shape, so this works in the common case).
 - If Q5 = English (default): no further action. Copied files are already English.
 - If Q5 = Chinese (zh): after the English copy in step 4 and 6, apply the language
   overlay — copy `templates/i18n/zh/common/` and `templates/i18n/zh/<type>/` over
-  the target root, overwriting matching files. The overlay translates:
-  - `00-core.md.tmpl`, `50-fullstack.md` or `50-backend.md`
-  - `docs/workflow.md`, `docs/dev-map.md.tmpl`, `docs/tasks.md.tmpl`,
-    `docs/spec/README.md`, `evals/golden-tasks.md.tmpl`
+  the target root, overwriting matching files. The overlay carries only the
+  human-facing files:
+  - `docs/spec/README.md`, `evals/golden-tasks.md.tmpl`
+  Then **inject** the Chinese output-language policy into the three policy-carrying
+  surfaces (which stay English from the `common/` copy): run the already-distributed
+  helper against the project root —
+  `bash .harness/scripts/language-policy.sh --template-root <template-root> --lang zh`
+  (or the `.ps1` form on Windows), where `<template-root>` is the directory that
+  contains `skills/harness-init/templates`. It rewrites the `.harness/rules/00-core.md`
+  policy section + the `CLAUDE.md` / `.github/copilot-instructions.md` policy line to
+  Chinese, then delete the `*.bak-*` files it writes. (This composes the zh policy from
+  the single-source snippet — the i18n/zh policy-carrying files no longer exist; T-016.)
   Agent prompts stay in English regardless of Q5.
 
 Substitution rules (same as `/harness-init`):
