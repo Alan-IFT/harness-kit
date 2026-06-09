@@ -525,6 +525,51 @@ test_zh_overlay() {
     assert "[zh] policy lists an English-artifact (consumer=agent) marker" "grep -q 'commit message' '$core'"
     assert "[zh] retired blunt 全程 phrasing is absent" "! grep -q '全程' '$core'"
 
+    # --- T-015 inverse assertions: AI-facing scaffolding now falls through to ENGLISH common/,
+    #     human-facing files stay Chinese, the SPECIAL trio keeps EN body + zh policy.
+    #     Each pair tests PRESENT and ABSENT on DIFFERENT strings (no same-string trap).
+    #     Pure-grep, no python3 dependence (NFR-1). ---
+
+    # AI-facing files now ENGLISH (deleted from overlay → English common/ ships)
+    local ai_guide="$tmp/AI-GUIDE.md"
+    assert "[zh] AI-GUIDE.md is now ENGLISH (project index present)" "grep -q 'project index' '$ai_guide'"
+    assert "[zh] AI-GUIDE.md no longer Chinese (项目指南 absent)" "! grep -q '项目指南' '$ai_guide'"
+
+    local insight_rule="$tmp/.harness/rules/05-insight-index.md"
+    assert "[zh] 05-insight-index.md is now ENGLISH (Cross-task insight index present)" "grep -q 'Cross-task insight index' '$insight_rule'"
+    assert "[zh] 05-insight-index.md no longer Chinese (跨任务 absent)" "! grep -q '跨任务' '$insight_rule'"
+
+    local workflow="$tmp/docs/workflow.md"
+    assert "[zh] docs/workflow.md is now ENGLISH (7-Agent Pipeline present)" "grep -q 'The 7-Agent Pipeline' '$workflow'"
+    assert "[zh] docs/workflow.md no longer Chinese (工作流 absent)" "! grep -q '工作流' '$workflow'"
+
+    local devmap="$tmp/docs/dev-map.md"
+    assert "[zh] docs/dev-map.md is now ENGLISH (Dev Map present)" "grep -q 'Dev Map' '$devmap'"
+    assert "[zh] docs/dev-map.md no longer Chinese (开发导航 absent)" "! grep -q '开发导航' '$devmap'"
+
+    local tasks="$tmp/docs/tasks.md"
+    assert "[zh] docs/tasks.md is now ENGLISH (Task Board present)" "grep -q 'Task Board' '$tasks'"
+    assert "[zh] docs/tasks.md no longer Chinese (任务看板 absent)" "! grep -q '任务看板' '$tasks'"
+
+    # SPECIAL 00-core: ENGLISH framework body + Chinese policy section, exactly ONE policy section
+    assert "[zh] 00-core.md has ENGLISH body (Hard rules (red lines) present)" "grep -q '## Hard rules (red lines)' '$core'"
+    assert "[zh] 00-core.md keeps Chinese policy heading (输出语言（按消费者分流） present)" "grep -q '输出语言（按消费者分流）' '$core'"
+    assert "[zh] 00-core.md has NO second (English) policy section (Output language (project-wide) absent)" "! grep -q 'Output language (project-wide)' '$core'"
+
+    # SPECIAL CLAUDE.md / copilot: ENGLISH body + the single Chinese policy line
+    local claude="$tmp/CLAUDE.md"
+    assert "[zh] CLAUDE.md has ENGLISH body (full project ruleset present)" "grep -q 'The full project ruleset lives in' '$claude'"
+    assert "[zh] CLAUDE.md keeps the Chinese policy line (输出语言：面向人的产出 present)" "grep -q '输出语言：面向人的产出' '$claude'"
+    local copilot="$tmp/.github/copilot-instructions.md"
+    assert "[zh] copilot-instructions.md has ENGLISH body (full project ruleset present)" "grep -q 'The full project ruleset lives in' '$copilot'"
+    assert "[zh] copilot-instructions.md keeps the Chinese policy line (输出语言：面向人的产出 present)" "grep -q '输出语言：面向人的产出' '$copilot'"
+
+    # Human-facing files STAY Chinese
+    local spec_readme="$tmp/docs/spec/README.md"
+    assert "[zh] docs/spec/README.md stays Chinese (项目 SPEC present)" "grep -q '项目 SPEC' '$spec_readme'"
+    local golden="$tmp/evals/golden-tasks.md"
+    assert "[zh] evals/golden-tasks.md stays Chinese (轻量回归任务集 present)" "grep -q '轻量回归任务集' '$golden'"
+
     [[ "$KEEP" == true ]] && echo "Temp dir kept: $tmp" || rm -rf "$tmp"
 }
 

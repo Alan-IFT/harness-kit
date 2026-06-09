@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.26.0] - 2026-06-09
+
+### Changed — anglicize AI-facing scaffolding in the `{{LANG}}=zh` overlay (T-015)
+
+A `中文`-init project's STATIC shipped scaffolding now matches the consumer-split policy it declares (T-013: AI-facing → English). Previously the i18n/zh overlay shipped Chinese translations of purely AI-facing framework files (the AI index, most rule fragments, the type `50-*` rules, the workflow / dev-map / tasks seeds, the insight-index seed), contradicting the policy. Those translations are **removed from the overlay** so a zh init falls through to the English `common/`/type originals; only genuinely human-facing files and the policy declaration itself stay Chinese. This is a static template-content change — no runtime behavior, no new skill, no new check, no new placeholder. The English (`{{LANG}}=en`) path is byte-identical; already-generated zh projects are not migrated.
+
+- **Removed 11 AI-facing files** from `skills/harness-init/templates/i18n/zh/`: `AI-GUIDE.md.tmpl`, the rule fragments `05-insight-index.md.tmpl` / `60-tool-handoff.md` / `75-safety-hook.md.tmpl`, `.harness/insight-index.md.tmpl`, the docs `workflow.md` / `dev-map.md.tmpl` / `tasks.md.tmpl`, and the type rules `fullstack/50-fullstack.md` / `backend/50-backend.md` / `generic/50-generic.md.tmpl`. Each now falls through to its confirmed-present English original.
+- **Spliced the 3 policy-carrying files** in place (`00-core.md.tmpl`, `CLAUDE.md.tmpl`, `.github/copilot-instructions.md.tmpl`): the framework BODY is now the English `common/` text, while the Chinese consumer-split policy section (`## 输出语言（按消费者分流）` in 00-core) / one-line policy summary (in CLAUDE + copilot) is retained byte-for-byte from T-013. Exactly one (Chinese) policy section/line per file — the old English `## Output language (project-wide)` section is replaced, not duplicated. These three files stay on disk because `/harness-language zh` (T-014) reads them as its canonical-text source.
+- **Kept Chinese (unchanged)**: `docs/spec/README.md` (the SPEC-writing guide) and `evals/golden-tasks.md.tmpl` (the human-run regression checklist) — both human-facing.
+- **`SKILL.md` step 4.3 file-list corrected** to name only the 5 files remaining in the zh overlay (the 3 policy-carrying + 2 human-facing) and to frame the not-in-overlay rule as the deliberate anglicization mechanism.
+- **New `test-init` inverse assertions** (symmetric PS + Bash, pure-grep, no-python3-tolerant): a zh fixture now asserts each AI-facing file is the ENGLISH version (EN marker present AND the old ZH marker absent — on different strings), the SPECIAL trio has an English body marker AND the Chinese policy marker AND no second English policy section, and the two human-facing files are still Chinese. The 3 type-dir deletions are audit-only (the zh fixture layers `common→fullstack→i18n/zh/common` but never `i18n/zh/fullstack`, so a type-dir EN assertion would be vacuous; EN fall-through targets confirmed present on disk). `baseline.json` test-init counts reconciled to a captured two-shell run: PS 255 → 274, Bash (no-python3) 217 → 236; README test-init badge 255 → 274.
+- Version 0.25.0 → 0.26.0 (plugin.json, marketplace.json, both README badges). Skill count stays **14**; `verify_all` stays **32** checks; no new `{{...}}` placeholder; no I.6 banned/exempt-list change (the preserved T-013 policy text is already I.6-clean).
+
 ## [0.25.0] - 2026-06-08
 
 ### Added — `/harness-language` skill: set / switch / refresh a project's output-language policy (T-014)

@@ -1,10 +1,10 @@
-# {{PROJECT_NAME}} — 项目规则
+# {{PROJECT_NAME}} — Project Rules
 
-> 项目类型：**{{PROJECT_TYPE}}** · 技术栈：**{{STACK}}** · 初始化：{{TODAY}}
+> Project type: **{{PROJECT_TYPE}}** · Stack: **{{STACK}}** · Initialized: {{TODAY}}
 >
-> 本文件是项目规则片段 —— 一个你直接编辑的**真相源**文件。
-> `AI-GUIDE.md` 按引用索引它，AI 工具按需懒加载。规则编辑不需要 sync 步骤
->（v0.10 起规则按引用使用，不再合成进 `CLAUDE.md`）。
+> This is a project rule fragment — a **source-of-truth** file you edit directly.
+> `AI-GUIDE.md` indexes it by reference; AI tools lazy-load it on demand. No sync step
+> is needed for rule edits (since v0.10 rules are referenced, not composed into `CLAUDE.md`).
 
 ## 输出语言（按消费者分流）
 
@@ -30,56 +30,56 @@
 
 要修改语言策略，编辑 `.harness/rules/00-core.md` 的"输出语言"章节 —— 按引用生效，不需要 sync 步骤。
 
-## 这个项目怎么开发
+## How this project is developed
 
-本仓库使用 **Harness 7-Agent 流水线**。动手前先读 `docs/workflow.md`。
+This repo uses the **Harness 7-agent pipeline**. Read `docs/workflow.md` before starting work.
 
-- 新功能或 bug？→ 让 PM Orchestrator 接手。
-- 非琐碎改动（>10 行或包含任何逻辑）**绝不**跳过流水线。
-- 琐碎改动（typo、注释、单行修复）可以跳过 agents，**但仍必须通过 `verify_all`**。
+- New feature or bug? → ask the PM Orchestrator to take it.
+- Never skip the pipeline for non-trivial changes (>10 lines or any logic).
+- Trivial changes (typo, comment, single-line fix) can skip agents but **must still pass `verify_all`**.
 
-## 红线（绝不能突破）
+## Hard rules (red lines)
 
-1. **不允许静默方案漂移。** 实现必须偏离已批准方案时，在 `04_DEVELOPMENT.md` 标 `DESIGN DRIFT`。
-2. **下游不能改上游文档。** 发现上游有缺陷，通过 PM 提阻塞回退，不要自己改。
-3. **测试数只升不降。** 不允许删除测试让 `verify_all` 过。要删过时测试，需 PM 批准。
-4. **代码里不能有 secret。** 用 `.env` / 环境变量；verify_all 会扫描硬编码 key。
-5. **不允许未确认的生产破坏性操作**（drop table、force push main、删分支）。
-6. **声明完成前必须跑 verify_all。** "能编译"不等于完成。
-7. **编辑 `.harness/`，不编辑 `.claude/agents/`、`.claude/skills/` 或 `CLAUDE.md`。** `.claude/agents/` 和 `.claude/skills/` 由 `.harness/` 同步而来 —— Stop hook 每次 session 自动跑 `.harness/scripts/harness-sync`，手动 sync 很少需要；hook 没跑成功时 `verify_all` 会拦下漂移。`CLAUDE.md` 是 init 时写一次的静态 stub。`.claude/settings.json` 是活的配置，可以手改。
-8. **优先让 AI 帮你编辑 `.harness/`，而不是自己手编。** 例：
-   - "加一条规则：禁止用 `MessageBox.Show`。" → AI 选合适的 `.harness/rules/NN-*.md`（或新建一个），编辑，Stop hook 同步。
-   - "为 `apps/mobile/` 加一个 Developer 分区。" → AI 在 `.harness/agents/dev-mobile.md` 写正确的 owned-paths。
-   - "把 Architect 收紧成新模块必须有 ADR 文件。" → AI 编辑 `.harness/agents/solution-architect.md`。
-   这是 AI 驱动的路径：人提，AI 编辑，hooks 同步。**自己动手编辑也可以**，但**不是必须**。
+1. **No silent design drift.** If implementation must deviate from approved design, flag it in `04_DEVELOPMENT.md` as `DESIGN DRIFT`.
+2. **Downstream cannot edit upstream documents.** If you see a defect upstream, propose a rollback via PM.
+3. **Tests only go up.** Never delete tests to make `verify_all` pass. Obsolete tests need PM approval to remove.
+4. **No secrets in code.** Use `.env` / environment variables; verify_all scans for hardcoded keys.
+5. **No production-destructive actions** (drop table, force push to main, delete branches) without explicit user confirmation.
+6. **Run verify_all before declaring done.** "It compiles" is not done.
+7. **Edit `.harness/`, not `.claude/agents/`, `.claude/skills/`, or `CLAUDE.md`.** `.claude/agents/` and `.claude/skills/` are synced from `.harness/` — a Stop hook auto-runs `.harness/scripts/harness-sync` each session, so manual sync is rarely needed; `verify_all` catches drift if the hook didn't run. `CLAUDE.md` is a static stub written once at init. `.claude/settings.json` is live config you may hand-edit.
+8. **Prefer asking the AI to edit `.harness/` rather than editing it yourself.** Examples:
+   - "Add a rule: never use `MessageBox.Show`." → AI picks the right `.harness/rules/NN-*.md` (or creates a new one), edits it, the Stop hook syncs.
+   - "Add a Developer partition for `apps/mobile/`." → AI creates `.harness/agents/dev-mobile.md` with correct owned-paths.
+   - "Tighten the Architect to require an ADR file for new modules." → AI edits `.harness/agents/solution-architect.md` accordingly.
+   This is the AI-driven path: human asks, AI edits, hooks sync. Editing files by hand is fine when convenient, but not required.
 
-## 风格 / 约定
+## Style / convention
 
-- 代码风格由仓库内的 lint 配置（`eslint`、`ruff`、`gofmt` 等）强制。**不要绕过**。
-- Commit message：祈使语气，首行 ≤72 字符，正文解释 why。
-- 文件名：已有项目约定优先于默认 — 跟现有的对齐。
+- Code style is enforced by lint config in the repo (`eslint`, `ruff`, `gofmt`, etc.). Do not bypass.
+- Commit messages: imperative mood, ≤72 char first line, body explains the why.
+- File names: existing project convention overrides any default — match what's already there.
 
-## 各种东西在哪里
+## What lives where
 
-| 需要 | 看这里 |
+| Need | Look at |
 |---|---|
-| 项目结构 / 文件在哪 | `docs/dev-map.md` |
-| 当前在做什么 | `docs/tasks.md` |
-| 每个任务的文档 | `docs/features/<task-slug>/` |
-| 项目 SPEC / 需求 | `docs/spec/` |
-| 7-agent 流水线定义 | `docs/workflow.md` |
-| Agent 角色定义（**真相源**） | `.harness/agents/` |
-| 项目规则碎片（**真相源**） | `.harness/rules/` |
-| Build/test/verify 标准操作（**真相源**） | `.harness/skills/` |
-| Claude Code agent/skill 绑定（同步生成，别手改） | `.claude/agents/` + `.claude/skills/` |
-| Claude Code bootstrap stub + 活配置 | `CLAUDE.md` + `.claude/settings.json` |
-| 工具绑定同步（`.harness/agents/` + `.harness/skills/` → `.claude/`） | `.harness/scripts/harness-sync.{ps1,sh}` |
-| 总验证 | `.harness/scripts/verify_all.{ps1,sh}` |
-| 测试基线 | `.harness/scripts/baseline.json` |
-| 回归任务集 | `evals/golden-tasks.md` |
+| Project structure / where things go | `docs/dev-map.md` |
+| What's currently being worked on | `docs/tasks.md` |
+| Per-task documents | `docs/features/<task-slug>/` |
+| Project SPECs / requirements | `docs/spec/` |
+| The 7-agent pipeline definition | `docs/workflow.md` |
+| Agent role definitions (SOURCE OF TRUTH) | `.harness/agents/` |
+| Project rule fragments (SOURCE OF TRUTH) | `.harness/rules/` |
+| Build/test/verify procedures (SOURCE OF TRUTH) | `.harness/skills/` |
+| Claude Code agent/skill binding (synced; do not hand-edit) | `.claude/agents/` + `.claude/skills/` |
+| Claude Code bootstrap stub + live config | `CLAUDE.md` + `.claude/settings.json` |
+| Tool binding sync (`.harness/agents/` + `.harness/skills/` → `.claude/`) | `.harness/scripts/harness-sync.{ps1,sh}` |
+| Total verification | `.harness/scripts/verify_all.{ps1,sh}` |
+| Test count baseline | `.harness/scripts/baseline.json` |
+| Regression task set | `evals/golden-tasks.md` |
 
-## 拿不准时
+## When in doubt
 
-- 先读 `docs/dev-map.md` — 它告诉你哪个文件归哪个 feature。
-- 开始新工作前查 `docs/tasks.md` 找相关历史任务。
-- 规则与情况冲突时，**停下来问用户**，不要自由发挥。
+- Read `docs/dev-map.md` first — it tells you which files own which feature.
+- Check `docs/tasks.md` for related historical work before starting new work.
+- If a rule conflicts with the situation, **stop and ask the user**, don't improvise.

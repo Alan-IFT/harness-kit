@@ -104,8 +104,8 @@ Copy in this order (later layer overwrites earlier):
 3. **If Q5 ≠ English**, apply the language overlay:
    - Copy everything under `templates/i18n/<lang>/common/` → target root (overwrites the English files).
    - Copy everything under `templates/i18n/<lang>/<project-type>/` → target root.
-   - The `zh` overlay translates: the bootstrap stubs (`CLAUDE.md.tmpl`, `.github/copilot-instructions.md.tmpl`, `AI-GUIDE.md.tmpl`), the rule fragments (`00-core.md.tmpl`, `05-insight-index.md.tmpl`, `60-tool-handoff.md`, `75-safety-hook.md.tmpl`, `50-fullstack.md` / `50-backend.md` / `50-generic.md.tmpl`), `.harness/insight-index.md.tmpl`, and the docs/evals (`docs/workflow.md`, `docs/dev-map.md.tmpl`, `docs/tasks.md.tmpl`, `docs/spec/README.md`, `evals/golden-tasks.md.tmpl`).
-   - Files **not** in the overlay (agent prompts, skills/build|test|verify SKILL.md, scripts) stay in English. This is intentional: LLM reads English fine, file count stays manageable.
+   - The `zh` overlay carries only the files a generated zh project should read in Chinese: the **policy-carrying files** (`00-core.md.tmpl`, `CLAUDE.md.tmpl`, `.github/copilot-instructions.md.tmpl`), whose framework BODY is the English `common/` text but which retain the Chinese consumer-split output-language policy section/line; and the **human-facing files** (`docs/spec/README.md`, `evals/golden-tasks.md.tmpl`). Per the output-language policy, every AI-facing framework file (`AI-GUIDE.md`, the other rule fragments, the type `50-*.md`, `.harness/insight-index.md`, `docs/workflow.md`, `docs/dev-map.md`, `docs/tasks.md`) is NOT in the zh overlay and therefore falls through to its English `common/`/type version.
+   - Files **not** in the overlay (agent prompts, skills/build|test|verify SKILL.md, scripts, **and the AI-facing framework files just listed**) stay in English. This is intentional — it is the mechanism that anglicizes AI-facing scaffolding: LLM reads English fine, the framework internals stay consistent, and the file count stays manageable.
 
 Files ending in `.tmpl` need placeholder substitution (step 5). Drop the `.tmpl` suffix on write.
 

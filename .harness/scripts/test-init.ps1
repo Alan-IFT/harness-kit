@@ -626,6 +626,50 @@ function Test-ZhOverlay {
         Assert "[zh] policy lists a Chinese-artifact (consumer=human) marker" { (Get-Content $core -Raw) -match '给用户的交付总结' }
         Assert "[zh] policy lists an English-artifact (consumer=agent) marker" { (Get-Content $core -Raw) -match 'commit message' }
         Assert "[zh] retired blunt 全程 phrasing is absent" { -not ((Get-Content $core -Raw) -match '全程') }
+
+        # --- T-015 inverse assertions: AI-facing scaffolding now falls through to ENGLISH common/,
+        #     human-facing files stay Chinese, the SPECIAL trio keeps EN body + zh policy.
+        #     Each pair tests PRESENT and ABSENT on DIFFERENT strings (no same-string trap). ---
+
+        # AI-facing files now ENGLISH (deleted from overlay → English common/ ships)
+        $aiGuide = Join-Path $tmp "AI-GUIDE.md"
+        Assert "[zh] AI-GUIDE.md is now ENGLISH (project index present)" { (Get-Content $aiGuide -Raw) -match 'project index' }
+        Assert "[zh] AI-GUIDE.md no longer Chinese (项目指南 absent)" { -not ((Get-Content $aiGuide -Raw) -match '项目指南') }
+
+        $insightRule = Join-Path $tmp ".harness/rules/05-insight-index.md"
+        Assert "[zh] 05-insight-index.md is now ENGLISH (Cross-task insight index present)" { (Get-Content $insightRule -Raw) -match 'Cross-task insight index' }
+        Assert "[zh] 05-insight-index.md no longer Chinese (跨任务 absent)" { -not ((Get-Content $insightRule -Raw) -match '跨任务') }
+
+        $workflow = Join-Path $tmp "docs/workflow.md"
+        Assert "[zh] docs/workflow.md is now ENGLISH (7-Agent Pipeline present)" { (Get-Content $workflow -Raw) -match 'The 7-Agent Pipeline' }
+        Assert "[zh] docs/workflow.md no longer Chinese (工作流 absent)" { -not ((Get-Content $workflow -Raw) -match '工作流') }
+
+        $devmap = Join-Path $tmp "docs/dev-map.md"
+        Assert "[zh] docs/dev-map.md is now ENGLISH (Dev Map present)" { (Get-Content $devmap -Raw) -match 'Dev Map' }
+        Assert "[zh] docs/dev-map.md no longer Chinese (开发导航 absent)" { -not ((Get-Content $devmap -Raw) -match '开发导航') }
+
+        $tasks = Join-Path $tmp "docs/tasks.md"
+        Assert "[zh] docs/tasks.md is now ENGLISH (Task Board present)" { (Get-Content $tasks -Raw) -match 'Task Board' }
+        Assert "[zh] docs/tasks.md no longer Chinese (任务看板 absent)" { -not ((Get-Content $tasks -Raw) -match '任务看板') }
+
+        # SPECIAL 00-core: ENGLISH framework body + Chinese policy section, exactly ONE policy section
+        Assert "[zh] 00-core.md has ENGLISH body (Hard rules (red lines) present)" { (Get-Content $core -Raw) -match '## Hard rules \(red lines\)' }
+        Assert "[zh] 00-core.md keeps Chinese policy heading (输出语言（按消费者分流） present)" { (Get-Content $core -Raw) -match '输出语言（按消费者分流）' }
+        Assert "[zh] 00-core.md has NO second (English) policy section (Output language (project-wide) absent)" { -not ((Get-Content $core -Raw) -match 'Output language \(project-wide\)') }
+
+        # SPECIAL CLAUDE.md / copilot: ENGLISH body + the single Chinese policy line
+        $claude = Join-Path $tmp "CLAUDE.md"
+        Assert "[zh] CLAUDE.md has ENGLISH body (full project ruleset present)" { (Get-Content $claude -Raw) -match 'The full project ruleset lives in' }
+        Assert "[zh] CLAUDE.md keeps the Chinese policy line (输出语言：面向人的产出 present)" { (Get-Content $claude -Raw) -match '输出语言：面向人的产出' }
+        $copilot = Join-Path $tmp ".github/copilot-instructions.md"
+        Assert "[zh] copilot-instructions.md has ENGLISH body (full project ruleset present)" { (Get-Content $copilot -Raw) -match 'The full project ruleset lives in' }
+        Assert "[zh] copilot-instructions.md keeps the Chinese policy line (输出语言：面向人的产出 present)" { (Get-Content $copilot -Raw) -match '输出语言：面向人的产出' }
+
+        # Human-facing files STAY Chinese
+        $specReadme = Join-Path $tmp "docs/spec/README.md"
+        Assert "[zh] docs/spec/README.md stays Chinese (项目 SPEC present)" { (Get-Content $specReadme -Raw) -match '项目 SPEC' }
+        $golden = Join-Path $tmp "evals/golden-tasks.md"
+        Assert "[zh] evals/golden-tasks.md stays Chinese (轻量回归任务集 present)" { (Get-Content $golden -Raw) -match '轻量回归任务集' }
     } finally {
         if (-not $KeepTemp) { Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue }
         else { Write-Host "Temp dir kept: $tmp" -ForegroundColor Yellow }
