@@ -82,6 +82,7 @@ Rules for skills:
 2. **`description` is what Claude Code uses to decide when to invoke.** Be specific about *when to use* and *when not to use*. First sentence is the most important.
 3. **`allowed-tools` is the strictest necessary subset.** Don't grant Bash if Read is enough.
 4. **Test it** by running it in Claude Code at least once before committing. For init/template flows, also extend `.harness/scripts/test-init.{ps1,sh}`.
+5. **Meet the quality bar.** Beyond these mechanics, follow [`.harness/rules/15-skill-authoring.md`](.harness/rules/15-skill-authoring.md) — model-facing descriptions, a Gotchas/anti-patterns surface, progressive disclosure for large skills, helper logic in scripts, and the principles we deliberately don't adopt.
 
 After adding a skill:
 
