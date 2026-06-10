@@ -178,7 +178,7 @@ Write `.harness-adopt/PLAN.md`:
 <the profile from step 2>
 
 ## Files I will add (NEW)
-- .harness/agents/*.md (7 generic agent contracts, copied from templates/common/.harness/agents/)
+- (the 7 generic framework agents are NOT copied — they are plugin-provided as harness-kit:<name>; pass --portable to materialize them locally for non-Claude/offline use)
 - .harness/agents/dev-*.md (3 partition agents, only if Q4=Partitioned):
   - Fullstack: dev-frontend, dev-backend, dev-db
   - Backend:   dev-api, dev-services, dev-db
@@ -269,8 +269,9 @@ wrote at init has known shape, so this works in the common case).
   `templates/<type>/.harness/agents/dev-*.md.tmpl` with placeholder substitution:
   - Fullstack: `dev-frontend`, `dev-backend`, `dev-db`
   - Backend:   `dev-api`, `dev-services`, `dev-db`
-  Keep the generic `developer.md` as fallback.
-- If Q4 = Single developer: do NOT copy partition agents. Only `developer.md` is shipped.
+  The plugin `harness-kit:developer` remains available as fallback (not copied locally).
+- If Q4 = Single developer: do NOT copy partition agents. Every role comes from the
+  plugin (`harness-kit:<name>`); no local agents are added.
 
 **Language handling** (Q5 from step 3):
 

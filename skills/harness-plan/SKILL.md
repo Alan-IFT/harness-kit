@@ -27,9 +27,9 @@ The PM Orchestrator (you or a dispatched sub-agent) dispatches **only stages 1-3
 
 1. **Create the task entry** in `docs/tasks.md` with `mode: plan` and `stage: planning`.
 2. **Create the task directory** `docs/features/<task-slug>/` and `PM_LOG.md`.
-3. **Dispatch Requirement Analyst** via Task tool. Output: `01_REQUIREMENT_ANALYSIS.md`.
-4. **Dispatch Solution Architect** via Task tool. Output: `02_SOLUTION_DESIGN.md`.
-5. **Dispatch Gate Reviewer** via Task tool. Output: `03_GATE_REVIEW.md` with one of:
+3. **Dispatch `harness-kit:requirement-analyst`** via Task tool. Output: `01_REQUIREMENT_ANALYSIS.md`.
+4. **Dispatch `harness-kit:solution-architect`** via Task tool. Output: `02_SOLUTION_DESIGN.md`.
+5. **Dispatch `harness-kit:gate-reviewer`** via Task tool. Output: `03_GATE_REVIEW.md` with one of:
    - `APPROVED FOR DEVELOPMENT` — the design is sound; user can later run `/harness` to continue from Dev with the existing 01-03 docs
    - `CHANGES REQUIRED` — list of changes needed; user iterates manually or re-runs `/harness-plan`
    - `REJECTED` — design unviable; explain why

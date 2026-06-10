@@ -2,9 +2,9 @@
 
 **English** · [简体中文](README.zh-CN.md)
 
-![version](https://img.shields.io/badge/version-0.29.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-32%2F32-brightgreen) ![test-init](https://img.shields.io/badge/test--init-287%2F287-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.30.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-32%2F32-brightgreen) ![test-init](https://img.shields.io/badge/test--init-287%2F287-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
-> **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (15 skills + project templates) that brings disciplined AI-driven development to fullstack and backend projects.
+> **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (15 skills + 8 framework agents + project templates) that brings disciplined AI-driven development to fullstack and backend projects. **Claude-native by default** (the framework agents ship as plugin agents — no per-project copy); `--portable` opt-in materializes them locally for tool-agnostic / offline use.
 >
 > **Goal**: humans only do "describe the requirement" and "step in when AI can't"; everything else — 7-agent pipeline, verify gates, structured documents — runs automatically.
 
@@ -102,8 +102,9 @@ Six questions (`AskUserQuestion` popup):
 6. AI customization of the `50-<project>.md` rule fragment — opt-in (default: No, static template only)
 
 In ~30 seconds your project has:
-- `.harness/` (tool-agnostic source of truth: agents, rules, skills)
-- `.claude/` (Claude Code binding: `agents/` + `skills/` synced from `.harness/`, plus `settings.json`)
+- the 7 framework agents (+ supervisor) available as `harness-kit:<name>` from the plugin — **not copied into the project**
+- `.harness/` (project source of truth: rules, skills, and any partition `dev-*` agents)
+- `.claude/` (Claude Code binding: `agents/` partition `dev-*` + `skills/` synced from `.harness/`, plus `settings.json`)
 - `.github/copilot-instructions.md` (Copilot bootstrap stub)
 - `CLAUDE.md` (bootstrap stub Claude Code reads — points at `AI-GUIDE.md`)
 - `docs/` (workflow, dev-map, tasks, spec)
@@ -120,14 +121,14 @@ PM Orchestrator picks it up, routes through 7 stages, produces 6 stage documents
 
 ## Key features
 
-### Tool-agnostic source of truth (v0.10 — progressive disclosure)
+### Rule source of truth (v0.10 — progressive disclosure)
 
 ```
 .harness/rules/*.md     ← edit this (single source of truth, modular fragments)
        ↑
        │  referenced by
        │
-AI-GUIDE.md             ← tool-agnostic entry (~50-line index with "when to read" descriptions)
+AI-GUIDE.md             ← Claude-native-by-default entry (~50-line index with "when to read" descriptions)
        ↑
        │  pointed at by
        │
@@ -139,7 +140,7 @@ You edit one place: `.harness/rules/`. The stubs and AI-GUIDE.md reference it; n
 
 **Context budget**: persistent always-loaded ruleset drops from ~3500 tokens (v0.9.x full CLAUDE.md) to ~250 tokens (v0.10 stub). On small interactions (~92% saving), AI doesn't even read `AI-GUIDE.md`. On bigger tasks, it reads `AI-GUIDE.md` once + the 1-3 fragments whose "when to read" matches — typically ~50% saving vs v0.9.x.
 
-`harness-sync` still exists but only copies `.harness/agents/` and `.harness/skills/` to `.claude/` (Claude Code requires those paths). Rules don't sync. The git pre-commit hook (from `.harness/scripts/install-hooks`) keeps `.claude/` in lockstep with `.harness/` for users on Copilot, Cursor, or hand-edits — tool-agnostic.
+Since v0.30 the framework agents are **plugin-provided** (`harness-kit:<name>`) — not copied into your project. `harness-sync` still copies `.harness/agents/` (partition `dev-*` only) and `.harness/skills/` to `.claude/` (Claude Code requires those paths). Rules don't sync. The git pre-commit hook (from `.harness/scripts/install-hooks`) keeps `.claude/` in lockstep with `.harness/` for users on Copilot, Cursor, or hand-edits.
 
 ### Project-wide language policy
 
@@ -162,14 +163,14 @@ Hit Claude Code's rate limit mid-task? Switch to GitHub Copilot in VS Code and k
 ### Three layers of regression testing
 
 - `verify_all` (32 checks) — repo health
-- `test-init` (275 assertions on PowerShell; 237 on Bash without python3) — init template logic on empty dirs across the 3 project types, plus the migrate-layout block, the zh-overlay consumer-split policy assertions, and the BUG-2 placeholder-regex regression (see `.harness/scripts/baseline.json` for the live counts)
+- `test-init` — init template logic on empty dirs across the 3 project types, plus the migrate-layout block, the zh-overlay consumer-split policy assertions, the v0.30 generic-agents-absent assertions, and the BUG-2 placeholder-regex regression (counts moved at the v0.30 agent cutover; see `.harness/scripts/baseline.json` for the live counts)
 - `test-real-project` (82 assertions) — overlay onto real fixtures (todo-fullstack, todo-backend)
 
 Every commit must pass all three. `test-init` and `test-real-project` exercise the generated project's structure end-to-end with no network needed.
 
 ### Dogfooded
 
-This repo is itself developed under Harness Kit. The same 7-agent pipeline that ships to users governs work here, off the same `.harness/` source of truth (agents / rules / skills) that init writes into a new project. If we can't develop this repo with it, we shouldn't ship it.
+This repo is itself developed under Harness Kit. The same 7-agent pipeline that ships to users (as the `harness-kit:<name>` plugin agents) governs work here, off the same rules / skills source of truth that init writes into a new project. If we can't develop this repo with it, we shouldn't ship it.
 
 ## Repository layout
 
@@ -178,23 +179,25 @@ harness-kit/
 ├── skills/                       Claude Code Skills (the product)
 │   ├── harness-init/             Bootstrap skill + templates
 │   │   └── templates/
-│   │       ├── common/           Shared assets (7 agents, base rules, docs, evals)
-│   │       ├── fullstack/        Fullstack overlay (partition agents, overlay rules)
+│   │       ├── common/           Shared assets (base rules, docs, evals; framework agents NOT here since v0.30)
+│   │       ├── fullstack/        Fullstack overlay (partition dev-* agents, overlay rules)
 │   │       ├── backend/          Backend overlay
 │   │       └── i18n/zh/          Chinese translation overlay
 │   ├── harness-adopt/
 │   ├── harness-verify/
 │   └── harness-status/
 │
+├── agents/                       Plugin-native framework agents (v0.30+): 7 canonical + supervisor
+│                                 (auto-discovered, dispatched harness-kit:<name>; single source)
 ├── .claude-plugin/               Claude Code plugin manifests
 │   ├── plugin.json
 │   └── marketplace.json
 │
-├── .harness/                     This repo's SOT (dogfood)
-│   ├── agents/                   Byte-copy of templates/common/.harness/agents/
+├── .harness/                     This repo's project SOT (dogfood)
+│   ├── agents/                   Partition dev-* agents only (empty in this repo; framework agents → top-level agents/)
 │   ├── rules/                    Project-specific rule fragments
 │   └── scripts/                  verify_all, harness-sync, sync-self, test-init, … (relocated here in v0.20)
-├── .claude/                      Claude Code binding (agents/ + skills/ synced from .harness/)
+├── .claude/                      Claude Code binding (agents/ partition dev-* + skills/ synced from .harness/)
 ├── CLAUDE.md                     ~15-line stub pointing at AI-GUIDE.md (written once at init)
 ├── .github/copilot-instructions.md  ~15-line stub pointing at AI-GUIDE.md
 │
@@ -267,13 +270,14 @@ Markdown docs:
 | 0.20.0 | done | **Scripts relocation**: all harness-owned scripts moved from `scripts/` to `.harness/scripts/` so they no longer collide with a user project's own `scripts/` directory. New idempotent `.harness/scripts/migrate-scripts-layout.{ps1,sh}` helper migrates existing projects (timestamped `.bak`, `-DryRun`/`-Force`, surgical path rewrite). All live path references, hook wiring (template + propose-only dogfood settings), `verify_all` self-checks (both shells), and contributor docs + `MIGRATION.md` updated in lockstep. `verify_all` stays 31 checks. |
 | 0.22.0 | done | **Streaming / living-pool mode**: new `/harness-kit:harness-stream <pool-id>` skill drains a continuously-growable pool (`docs/batches/<pool-id>/BATCH_PLAN.md`) one task at a time, re-reading the pool each iteration so mid-run additions (chat / pool append / `ADD` intervention) are planned without re-invoking. **Best-effort** completion (failed task marked + skipped, stream continues) vs batch's fail-stop; same hard-safety stops (`verify_all` FAIL / `STOP` / safety hook). New `ADD <slug> — <goal>` intervention keyword (pool-scoped). `verify_all` skill count 11 → 12. |
 | 0.23.0 | done | **Upgrade an old project**: new `/harness-kit:harness-upgrade` Setup skill brings an already-initialized but stale project up to the current plugin layout — relocates scripts to `.harness/scripts/`, **content-refreshes** the depth-sensitive scripts from the current template (fixes the relocated-but-stale one-up root derivation), re-installs the pre-commit hook, rewires `.claude/settings.json` (raw-text, never re-serialized), and regenerates `verify_all` from the type template while preserving the user's B.* checks via `HARNESS:B-CUSTOM` delimiters (verbatim splice, or halt-for-confirm). One deterministic helper `upgrade-project.{ps1,sh}` (dry-run, idempotent, exit-code contract); the six `verify_all` templates gain inert B.* markers. `verify_all` skill count 12 → 13 (check count stays 32). |
+| 0.30.0 | done | **Agents cutover (redesign Leg 1 complete)**: the 7 framework agents (+ supervisor) ship **plugin-native** (top-level `agents/`, dispatched `harness-kit:<name>`) — projects no longer copy them, eliminating the agent duplication/drift class entirely. Pipeline dispatch switched to `harness-kit:<name>` across all skills; partition `dev-*` agents stay project-local. `--portable` opt-in materializes the framework agents/rules locally for non-Claude/offline use. `sync-self` drops the agent mirror; `verify_all` D.1/E.3/E.4/I.3 repointed to `agents/`. `verify_all` stays 32 checks, skills stay 15. |
 | 0.20+ | planned | Supervisor auto-dispatch by PM at user-configurable stage boundaries (once false-positive budget is proven against ≥10 real tasks). **Parallel stream dispatch — deferred** after a vetted, adversarially-reviewed design ([docs/parallel-stream-design.html](docs/parallel-stream-design.html)): serial stream + the existing intra-task partition parallelism cover the need today; **Model B** (same-tree partition, no merges) is the on-demand path once a genuinely-decoupled task batch makes the Amdahl math pay off; **Model A** (worktree real-parallel) is shelved (risk > benefit — env provisioning, Windows-junction, per-task branch/commit, merge livelock needing a scheduler/coordinator tier). |
 
 ## Design principles
 
 1. **Don't reinvent platform mechanisms** — Sandbox, Hooks, Sub-agents, MCP, Memory are Claude Code's job
 2. **Mechanism vs content** — platform gives mechanism, this repo gives content
-3. **Tool-agnostic SOT vs binding layer** — `.harness/` is truth; `.claude/agents/` + `.claude/skills/` are synced bindings; `CLAUDE.md` + `.github/copilot-instructions.md` are static bootstrap stubs
+3. **Claude-native by default** — framework agents ship as plugin agents (`harness-kit:<name>`); `.harness/` is the project's rule/skill/partition-agent truth; `.claude/agents/` (partition `dev-*`) + `.claude/skills/` are synced bindings; `CLAUDE.md` + `.github/copilot-instructions.md` are static bootstrap stubs. `--portable` opt-in for tool-agnostic / offline use.
 4. **Evolutionary delivery** — MVP → Hardening → Scale, not big-bang
 5. **Baseline only goes up** — test counts, rule coverage never regress silently
 6. **Finder doesn't fix** — Reviewer can't edit code, Gate can't edit requirements

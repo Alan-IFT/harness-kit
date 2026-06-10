@@ -137,9 +137,13 @@ test_fixture() {
     rm -f "$snap"
 
     # Harness assets
+    # v0.30 cutover: the 7 generic framework agents are PLUGIN-provided (harness-kit:<name>),
+    # NOT copied into the project — assert they are ABSENT in both the SOT and generated trees.
+    # Partition dev-* still ship locally and sync. (Mirrors the test-init flip; the operator
+    # reconciles baseline.json counts from a captured run.)
     for a in pm-orchestrator requirement-analyst solution-architect gate-reviewer developer code-reviewer qa-tester; do
-        assert ".harness/agents/$a.md" "[[ -f '$tmp/.harness/agents/$a.md' ]]"
-        assert ".claude/agents/$a.md (generated)" "[[ -f '$tmp/.claude/agents/$a.md' ]]"
+        assert ".harness/agents/$a.md ABSENT (plugin-provided)" "[[ ! -f '$tmp/.harness/agents/$a.md' ]]"
+        assert ".claude/agents/$a.md ABSENT (plugin-provided)" "[[ ! -f '$tmp/.claude/agents/$a.md' ]]"
     done
     if [[ "$project_type" == "fullstack" ]]; then
         real_partitions="dev-frontend dev-backend dev-db"

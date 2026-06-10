@@ -4,17 +4,18 @@
 |---|---|
 | Distributed skills | `skills/<name>/SKILL.md` |
 | Project templates (distribution source of truth) | `skills/harness-init/templates/` |
-| Agent role definitions (this repo's source of truth) | `.harness/agents/` |
+| Framework agent definitions (7 + supervisor) | plugin-native — top-level `agents/`, dispatched as `harness-kit:<name>` |
+| Partition agent definitions (`dev-*`, project-specific) | `.harness/agents/` (empty in this repo; templates under `skills/harness-init/templates/<type>/.harness/agents/`) |
 | Rule source files (this repo's source of truth) | `.harness/rules/` |
 | Stub CLAUDE.md (do not edit; ~15 lines, references AI-GUIDE.md) | `CLAUDE.md` |
 | Generated .claude/ (do not edit; synced from `.harness/agents/` + `.harness/skills/`) | `.claude/` |
 | The 7-agent pipeline definition | `docs/workflow.md` |
-| Supervisor agent (auxiliary, v0.17+; not part of 7-stage routing) | `.harness/agents/supervisor.md` |
+| Supervisor agent (auxiliary, v0.17+; not part of 7-stage routing) | plugin-native — `agents/supervisor.md` (`harness-kit:supervisor`) |
 | Supervisor skill (manual invocation, v0.17+) | `skills/harness-supervise/SKILL.md` |
 | Project repo navigation | `docs/dev-map.md` |
 | Total verification | `.harness/scripts/verify_all.{ps1,sh}` |
-| Binding sync (`.harness/agents/` + `.harness/skills/` → `.claude/`) | `.harness/scripts/harness-sync.{ps1,sh}` |
-| Repo-self sync (`templates/` → `.harness/`) | `.harness/scripts/sync-self.{ps1,sh}` |
+| Binding sync (`.harness/agents/` partition `dev-*` + `.harness/skills/` → `.claude/`) | `.harness/scripts/harness-sync.{ps1,sh}` |
+| Repo-self sync (`templates/` script pairs → `.harness/scripts/`; no agent mirror since v0.30) | `.harness/scripts/sync-self.{ps1,sh}` |
 | Init regression | `.harness/scripts/test-init.{ps1,sh}` |
 | Supervisor regression (v0.17+) | `.harness/scripts/test-supervisor.{ps1,sh}` |
 | Architecture overview (HTML) | `architecture.html` |

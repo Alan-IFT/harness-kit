@@ -1,6 +1,6 @@
 # AI-GUIDE — harness-kit project index
 
-> Tool-agnostic entry. Any AI tool (Claude Code, GitHub Copilot, Cursor, …) reads this **before starting a task**.
+> Claude-native by default; `--portable` for tool-agnostic/offline use. Any AI tool reads this **before starting a task**.
 
 ## Project
 
@@ -10,8 +10,9 @@ Stack: Markdown (skills, agent definitions, docs) + PowerShell + Bash (verify_al
 
 ## Source of truth (in this repo, version-controlled)
 
+- `agents/*.md` — the 7 framework agents + 1 auxiliary (supervisor), shipped **plugin-native** (auto-discovered, dispatched as `harness-kit:<name>`); this is the single source — edit here directly (no sync)
 - `.harness/rules/*.md` — rule fragments (project-specific dogfood rules)
-- `.harness/agents/*.md` — 7 canonical agents + 1 auxiliary (supervisor) (byte-identical to `templates/common/.harness/agents/`)
+- `.harness/agents/*.md` — **only** project-specific partition `dev-*` agents (empty in this repo; partition agents live under `skills/harness-init/templates/<type>/.harness/agents/dev-*.md.tmpl`)
 - `skills/harness-init/templates/` — the distribution: what users get when they install the plugin
 
 **Do not directly edit** `.claude/`, `CLAUDE.md`, `.github/copilot-instructions.md` — they are tool-specific stubs or generated bindings.
@@ -21,7 +22,7 @@ Stack: Markdown (skills, agent definitions, docs) + PowerShell + Bash (verify_al
 - **`.harness/rules/00-core.md`** (**always**): this repo's identity (tooling library + Claude Code Plugin), how development flows, trivial vs non-trivial
 - **`.harness/rules/05-insight-index.md`** (**at the start of design/implementation tasks**): how cross-task hard-won truths are captured in `.harness/insight-index.md`; read `insight-index.md` itself before deciding anything non-trivial
 - **`.harness/rules/10-self-consistency.md`** (**when touching `templates/`, `.harness/`, or .harness/scripts/sync-self**): the two consistency layers (templates ↔ this repo, `.harness` ↔ `.claude`/`CLAUDE.md`)
-- **`.harness/rules/15-skill-authoring.md`** (**when authoring or changing a skill or agent**): the quality bar for `skills/<name>/SKILL.md` + `.harness/agents/*.md` — model-facing descriptions, a Gotchas/anti-patterns surface, progressive disclosure, and what we deliberately don't do (distilled from Anthropic's "how we use skills")
+- **`.harness/rules/15-skill-authoring.md`** (**when authoring or changing a skill or agent**): the quality bar for `skills/<name>/SKILL.md` + the framework `agents/*.md` (plugin-native) + partition `.harness/agents/dev-*.md` — model-facing descriptions, a Gotchas/anti-patterns surface, progressive disclosure, and what we deliberately don't do (distilled from Anthropic's "how we use skills")
 - **`.harness/rules/20-documentation.md`** (**when touching README / CHANGELOG / docs**): doc-sync rules, what README must reference
 - **`.harness/rules/25-decision-policy.md`** (**load when you would ask the user / call `AskUserQuestion`**): the decision & escalation policy — Mode 1 (human decides, default) vs Mode 2 (preset-rubric autonomy) vs Mode 3 (user-custom rubric) + the always-escalate red lines; switch with `/harness-decision-mode`. **This repo runs Mode 2 (balanced)** — decide per `.harness/decision-rubric.md` (Preset section), escalate the red lines, log each autonomous call. (This one-line flag is the only always-read part; the full policy + rubric load on-demand at a decision point.)
 - **`.harness/rules/30-engineering.md`** (**before commits**): commit message conventions, file hygiene, no secrets, PS/Bash symmetry
@@ -42,19 +43,19 @@ If you add a new fragment to `.harness/rules/`, append a line above with its fil
 
 ## Agents (Claude Code Task tool / Copilot manual role-play)
 
-Full contracts in `.harness/agents/<name>.md`. Read on demand when assuming or dispatching to a role.
+The **7 framework agents (+ supervisor)** are provided by the harness-kit plugin as `harness-kit:<name>` (top-level `agents/*.md` is the single source — edit there directly, no sync). Only project-specific **partition `dev-*` agents** live in `.harness/agents/` (none in this repo). Read a contract on demand when assuming or dispatching to a role.
 
-- `pm-orchestrator` — takes new tasks, routes
-- `requirement-analyst` → `solution-architect` → `gate-reviewer` → `developer` → `code-reviewer` → `qa-tester`
+- `harness-kit:pm-orchestrator` — takes new tasks, routes
+- `harness-kit:requirement-analyst` → `harness-kit:solution-architect` → `harness-kit:gate-reviewer` → `harness-kit:developer` → `harness-kit:code-reviewer` → `harness-kit:qa-tester`
 
-**Claude Code sub-agent dispatch — already implemented.** PM Orchestrator uses Claude Code's `Task` tool to spawn each downstream role in its own context; see `.harness/agents/pm-orchestrator.md` line 4 + lines ~108-129 for the exact contract and the dispatch call sites. Copilot and other tools have no equivalent API, so they fall back to one-role-at-a-time manual role-play (the user names the next role).
+**Claude Code sub-agent dispatch — already implemented.** PM Orchestrator uses Claude Code's `Task` tool to spawn each downstream role in its own context; see `agents/pm-orchestrator.md` for the exact contract and the dispatch call sites (generics dispatched as `harness-kit:<name>`; partition `dev-*` are project-local). Copilot and other tools have no equivalent API, so they fall back to one-role-at-a-time manual role-play (the user names the next role).
 
 ## AI tool flow modes
 
 Three flows are supported, picked by the tool the user is in:
 
 - **Claude Code automatic sub-agent dispatch** (default for Claude Code): PM Orchestrator hands off through stages 1 → 7 via the `Task` tool; no user intervention required between stages.
-- **Copilot / Cursor manual one-role-at-a-time** (default for those tools): Copilot reads `.harness/agents/<role>.md`, plays exactly that role, stops at the stage boundary, asks the user to "switch to next agent". One stage per user turn.
+- **Copilot / Cursor manual one-role-at-a-time** (default for those tools): Copilot reads the framework agent contract from the plugin's `agents/<role>.md` (or a `--portable` local copy under `.harness/agents/`), plays exactly that role, stops at the stage boundary, asks the user to "switch to next agent". One stage per user turn.
 - **Copilot opt-in continuous mode**: the user types the activation phrase `continuous mode` (English) or `走全流程` (Chinese) in a plain user turn; Copilot then self-dispatches through stages 1 → 2 → 3, **STOPs unconditionally after Gate Review** (regardless of verdict), and waits for the user's "continue" before proceeding to stages 4-7. Continuous mode resets at every chat-session boundary. See `.harness/rules/60-tool-handoff.md` for the activation contract.
 
 ## Project documents
@@ -70,8 +71,8 @@ Three flows are supported, picked by the tool the user is in:
 ## Scripts (the moving parts)
 
 - `.harness/scripts/verify_all.{ps1,sh}` — total verification (32 checks, including I.1-I.5 doc-size WARN guards + F.2 guard-rm wiring + I.6 gap-tolerant retired-claim guard + I.7 ignored-INTERVENE-report guard + D.3 AI-generated 50-*.md sanity + J.1 settings.json schema integrity). **Must PASS before declaring done.**
-- `.harness/scripts/harness-sync.{ps1,sh}` — copy `.harness/agents/` + `.harness/skills/` to `.claude/`. v0.10 narrow scope.
-- `.harness/scripts/sync-self.{ps1,sh}` — keep this repo's dogfood `.harness/agents/` + 7 script pairs (harness-sync, install-hooks, archive-task, guard-rm, migrate-scripts-layout, upgrade-project, language-policy) byte-identical with `templates/common/`. **Does NOT sync `.harness/rules/` — those are bespoke per repo.**
+- `.harness/scripts/harness-sync.{ps1,sh}` — copy `.harness/agents/` (partition `dev-*` only since v0.30; framework agents are plugin-provided) + `.harness/skills/` to `.claude/`. v0.10 narrow scope.
+- `.harness/scripts/sync-self.{ps1,sh}` — keep this repo's 7 dogfood script pairs (harness-sync, install-hooks, archive-task, guard-rm, migrate-scripts-layout, upgrade-project, language-policy) byte-identical with `templates/common/`. **No longer mirrors agents** (framework agents are edited directly in the plugin-native top-level `agents/` since v0.30) and **does NOT sync `.harness/rules/` — those are bespoke per repo.**
 - `.harness/scripts/install-hooks.{ps1,sh}` — one-shot installer for `.git/hooks/pre-commit` (runs `harness-sync --check`).
 - `.harness/scripts/archive-task.{ps1,sh}` — archive a completed task: harvest `## Insight` section from 07_DELIVERY.md to `.harness/insight-index.md`, move 7 stage docs to `docs/features/_archived/<task>/`, rotate old insights to `docs/features/_archived/insight-history.md` if >30 lines.
 - `.harness/scripts/test-init.{ps1,sh}` — regression for `/harness-init` on empty dirs.
@@ -102,7 +103,7 @@ Declare-done gate (**all non-trivial modes**): `.harness/scripts/verify_all` PAS
 ## Editing rules
 
 - To change a rule: edit the relevant `.harness/rules/*.md` fragment. **No sync needed.** AI tools follow the reference from this file.
-- To change an agent or skill: edit `.harness/agents/<name>.md` (or `.harness/skills/<name>/SKILL.md`), then run `.harness/scripts/harness-sync` so `.claude/` picks it up. The Stop hook in `.claude/settings.json` does this automatically at session end.
+- To change a **framework** agent: edit the plugin-native `agents/<name>.md` (top-level) directly — no sync (Claude Code auto-discovers `harness-kit:<name>`). To change a **skill** or a **partition** `dev-*` agent: edit `.harness/skills/<name>/SKILL.md` or `.harness/agents/dev-<name>.md`, then run `.harness/scripts/harness-sync` so `.claude/` picks it up. The Stop hook in `.claude/settings.json` does this automatically at session end.
 - To change a template: edit `skills/harness-init/templates/common/` (or `<type>/` overlay), then run `.harness/scripts/sync-self` to update this repo's dogfood, then `harness-sync`.
 
 No regeneration of `AI-GUIDE.md`, `CLAUDE.md`, or `.github/copilot-instructions.md`. They reference `.harness/`; updates flow by reference.

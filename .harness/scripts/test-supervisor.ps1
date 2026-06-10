@@ -106,28 +106,30 @@ Write-Host "Repo: $repoRoot"
 Write-Host ""
 
 # --- AC-1: supervisor.md exists, <=300 lines, declares APs + allowed-tools subset
+# v0.30 cutover: supervisor is plugin-native — single source at top-level agents/supervisor.md.
 Write-Host "--- AC-1: agent contract ---" -ForegroundColor Cyan
-Assert "AC-1.1 .harness/agents/supervisor.md exists" {
-    Test-Path ".harness/agents/supervisor.md"
+$supPath = "agents/supervisor.md"
+Assert "AC-1.1 $supPath exists (plugin-native)" {
+    Test-Path $supPath
 }
 Assert "AC-1.2 supervisor.md <=300 lines" {
-    $n = (Get-Content ".harness/agents/supervisor.md" | Measure-Object -Line).Lines
+    $n = (Get-Content $supPath | Measure-Object -Line).Lines
     $n -le 300
 }
 Assert "AC-1.3 supervisor.md declares all five anti-pattern identifiers (AP-1, AP-1b, AP-2, AP-3, AP-4)" {
-    $c = Get-Content ".harness/agents/supervisor.md" -Raw
+    $c = Get-Content $supPath -Raw
     ($c -match 'AP-1[^b0-9]') -and ($c -match 'AP-1b') -and ($c -match 'AP-2') -and ($c -match 'AP-3') -and ($c -match 'AP-4')
 }
 Assert "AC-1.4 supervisor.md uses the three severity words INFO/WARN/ALERT" {
-    $c = Get-Content ".harness/agents/supervisor.md" -Raw
+    $c = Get-Content $supPath -Raw
     ($c -match 'INFO') -and ($c -match 'WARN') -and ($c -match 'ALERT')
 }
 Assert "AC-1.5 supervisor.md declares the three verdict words HEALTHY/WATCH/INTERVENE" {
-    $c = Get-Content ".harness/agents/supervisor.md" -Raw
+    $c = Get-Content $supPath -Raw
     ($c -match 'HEALTHY') -and ($c -match 'WATCH') -and ($c -match 'INTERVENE')
 }
 Assert "AC-1.6 supervisor.md frontmatter 'tools:' line excludes Edit/Bash/PowerShell/Task/AskUserQuestion (NFR-4)" {
-    $head = (Get-Content ".harness/agents/supervisor.md" -TotalCount 6) -join "`n"
+    $head = (Get-Content $supPath -TotalCount 6) -join "`n"
     if ($head -notmatch '(?m)^tools:\s*(.+)$') { throw "tools: line not found" }
     $toolsLine = $Matches[1]
     $forbidden = @("Edit", "Bash", "PowerShell", "Task", "AskUserQuestion")
@@ -138,16 +140,16 @@ Assert "AC-1.6 supervisor.md frontmatter 'tools:' line excludes Edit/Bash/PowerS
     $true
 }
 
-# --- AC-2: dogfood vs template byte-identical
+# --- AC-2: plugin-native single source (v0.30 cutover)
+# The supervisor is now a single plugin-native source; there is NO templates/common copy
+# to keep byte-identical (the byte-identity invariant retired with the agent cutover).
 Write-Host ""
-Write-Host "--- AC-2: dogfood/template byte-identity ---" -ForegroundColor Cyan
-Assert "AC-2.1 templates/common/.harness/agents/supervisor.md exists" {
-    Test-Path "skills/harness-init/templates/common/.harness/agents/supervisor.md"
+Write-Host "--- AC-2: plugin-native single source ---" -ForegroundColor Cyan
+Assert "AC-2.1 no templates/common supervisor copy (single plugin source)" {
+    -not (Test-Path "skills/harness-init/templates/common/.harness/agents/supervisor.md")
 }
-Assert "AC-2.2 supervisor.md is byte-identical between dogfood and template (sha256)" {
-    $h1 = (Get-FileHash ".harness/agents/supervisor.md" -Algorithm SHA256).Hash
-    $h2 = (Get-FileHash "skills/harness-init/templates/common/.harness/agents/supervisor.md" -Algorithm SHA256).Hash
-    $h1 -eq $h2
+Assert "AC-2.2 no .harness/agents supervisor copy (plugin-native at agents/)" {
+    -not (Test-Path ".harness/agents/supervisor.md")
 }
 Assert "AC-2.3 sync-self --check is clean (E.1 will agree)" {
     & (Join-Path $PSScriptRoot "sync-self.ps1") -Check | Out-Null

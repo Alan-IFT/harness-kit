@@ -24,3 +24,7 @@
 ## Rotated 2026-06-09
 
 - 2026-05-17 · Claude Code's PreToolUse hook spawns pwsh per call; without `-NoProfile` the user's `$PROFILE` runs each time and dominates wall-clock (measured 3.7s p50 vs 10ms script body). Always pass `-NoProfile` to any pwsh hook command in `.claude/settings.json`. · evidence: T-001 QA p50 measurement, commit (this delivery)
+
+## Rotated 2026-06-10
+
+- 2026-05-19 · An architectural retirement (e.g. v0.10 stopped composing CLAUDE.md from rules) can leave stale claims scattered across 8+ files (docs / templates / README / CONTRIBUTING) for many releases — code matches reality but docs lie. CHANGELOG entries describing the retirement do not protect against future contributors copy-pasting old phrasings. A literal-substring banned-phrase guard in `verify_all` (I.6 at v0.15.1, ~50 lines/shell, with a small history exemption list for CHANGELOG / _archived/ / labeled-snapshot HTMLs) closes the recurrence vector with negligible ongoing cost — add a line when retiring a claim, remove the line when the claim becomes accurate again. · evidence: v0.15.1 doc-resync, this delivery

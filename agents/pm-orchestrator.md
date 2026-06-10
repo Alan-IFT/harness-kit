@@ -100,13 +100,16 @@ Caps + the "reference don't paste" rule live in `.harness/rules/70-doc-size.md`.
 
 ## Developer routing (partitioned vs single)
 
-This project may have **partition Developer agents** (files named `.harness/agents/dev-*.md`)
-or just the generic `developer.md`. Detect at start of stage 4:
+The generic framework agents are **plugin-provided** — dispatch them as
+`harness-kit:<name>` (e.g. `harness-kit:developer`). A project may ALSO carry
+**partition Developer agents** — project-local files named `.harness/agents/dev-*.md`
+(`dev-frontend` / `dev-backend` / `dev-db` / `dev-api` / `dev-services`), dispatched
+by their bare local name. Detect at start of stage 4:
 
 ```
 List files matching .harness/agents/dev-*.md
-  - If none: single Developer mode. Dispatch the generic `developer` agent.
-  - If found: partitioned mode. Continue below.
+  - If none: single Developer mode. Dispatch the plugin `harness-kit:developer` agent.
+  - If found: partitioned mode. Continue below (dispatch the project-local dev-* agents).
 ```
 
 In partitioned mode, for each stage-4 dispatch:

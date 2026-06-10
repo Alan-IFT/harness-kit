@@ -31,12 +31,12 @@ The PM Orchestrator (you, if you're the PM, or a dispatched sub-agent) routes th
 1. **Create the task entry** in `docs/tasks.md` with `mode: full` (or omitted — `full` is the default) and `stage: requirements`.
 2. **Create the task directory** `docs/features/<task-slug>/` and `PM_LOG.md`.
 3. **Read `.harness/insight-index.md`** before dispatching any stage — if any line applies, surface it to the relevant agent in their dispatch prompt.
-4. **Dispatch Requirement Analyst** via Task tool. Output: `01_REQUIREMENT_ANALYSIS.md`. Update `stage: design`.
-5. **Dispatch Solution Architect** via Task tool. Output: `02_SOLUTION_DESIGN.md`. Update `stage: gate-review`.
-6. **Dispatch Gate Reviewer** via Task tool. Output: `03_GATE_REVIEW.md`. If `CHANGES REQUIRED` or `REJECTED`, route back. If `APPROVED FOR DEVELOPMENT`, update `stage: development`.
-7. **Dispatch Developer** (or the assigned partition agent — `dev-frontend` / `dev-backend` / `dev-db` / `dev-api` / `dev-services`) via Task tool. Output: `04_DEVELOPMENT.md`. Update `stage: code-review`.
-8. **Dispatch Code Reviewer** via Task tool. Output: `05_CODE_REVIEW.md`. If issues, route back to Developer. Update `stage: qa`.
-9. **Dispatch QA Tester** via Task tool — **with the adversarial verification contract enforced** (see `.harness/agents/qa-tester.md`). Output: `06_TEST_REPORT.md` that MUST include `## Adversarial tests` section per acceptance criterion. Update `stage: delivery`.
+4. **Dispatch `harness-kit:requirement-analyst`** via Task tool. Output: `01_REQUIREMENT_ANALYSIS.md`. Update `stage: design`.
+5. **Dispatch `harness-kit:solution-architect`** via Task tool. Output: `02_SOLUTION_DESIGN.md`. Update `stage: gate-review`.
+6. **Dispatch `harness-kit:gate-reviewer`** via Task tool. Output: `03_GATE_REVIEW.md`. If `CHANGES REQUIRED` or `REJECTED`, route back. If `APPROVED FOR DEVELOPMENT`, update `stage: development`.
+7. **Dispatch `harness-kit:developer`** (or the assigned project-local partition agent — `dev-frontend` / `dev-backend` / `dev-db` / `dev-api` / `dev-services`) via Task tool. Output: `04_DEVELOPMENT.md`. Update `stage: code-review`.
+8. **Dispatch `harness-kit:code-reviewer`** via Task tool. Output: `05_CODE_REVIEW.md`. If issues, route back to the developer. Update `stage: qa`.
+9. **Dispatch `harness-kit:qa-tester`** via Task tool — **with the adversarial verification contract enforced** (see the `harness-kit:qa-tester` agent). Output: `06_TEST_REPORT.md` that MUST include `## Adversarial tests` section per acceptance criterion. Update `stage: delivery`.
 10. **Write `07_DELIVERY.md`** (PM does this directly): summary + verify_all output + any `## Insight` section if the task surfaced non-obvious project truths.
 11. **Run `.harness/scripts/verify_all`**. Task is **not done** until it PASSes.
 12. **Run `.harness/scripts/archive-task --task <task-slug>`** to harvest insights to `.harness/insight-index.md` and move stage docs to `docs/features/_archived/`.

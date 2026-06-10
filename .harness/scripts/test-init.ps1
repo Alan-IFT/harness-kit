@@ -128,10 +128,14 @@ function Test-Type {
         }
 
         # === Source-of-truth (.harness/) assertions ===
+        # v0.30 cutover: the 7 generic framework agents are PLUGIN-provided (harness-kit:<name>),
+        # NOT copied into the project by default — assert they are ABSENT.
+        # NOTE: baseline.json test-init counts MOVE with these flips; the operator reconciles
+        # them from a captured run.
         $agents = @("pm-orchestrator","requirement-analyst","solution-architect",
                     "gate-reviewer","developer","code-reviewer","qa-tester")
         foreach ($a in $agents) {
-            Assert ".harness/agents/$a.md (SOT)" { Test-Path (Join-Path $tmp ".harness/agents/$a.md") }
+            Assert ".harness/agents/$a.md ABSENT (plugin-provided, not copied)" { -not (Test-Path (Join-Path $tmp ".harness/agents/$a.md")) }
         }
 
         # Partition agents: fullstack and backend have them in v0.5+; generic has none by default
@@ -163,8 +167,10 @@ function Test-Type {
         }
 
         # === Generated artifacts (.claude/ + CLAUDE.md) ===
+        # v0.30 cutover: generic framework agents are plugin-provided, so harness-sync does NOT
+        # generate them under .claude/agents/ — assert they are ABSENT. Partition dev-* still sync.
         foreach ($a in $agents) {
-            Assert ".claude/agents/$a.md (generated)" { Test-Path (Join-Path $tmp ".claude/agents/$a.md") }
+            Assert ".claude/agents/$a.md ABSENT (plugin-provided, not generated)" { -not (Test-Path (Join-Path $tmp ".claude/agents/$a.md")) }
         }
         foreach ($p in $partitionAgents) {
             Assert ".claude/agents/$p.md (generated partition)" { Test-Path (Join-Path $tmp ".claude/agents/$p.md") }
@@ -462,9 +468,13 @@ function Test-Type {
                 # we have not "accepted" anything in this simulated run).
                 -not (Test-Path (Join-Path $tmp ".harness/agents/dev-payments.md"))
             }
-            # Simulate accept: write the file (per SKILL.md step 5b.9 Accept branch)
+            # Simulate accept: write the file (per SKILL.md step 5b.9 Accept branch).
+            # The SKILL's Write tool creates parent dirs; mirror that — since the v0.30
+            # cutover, a generic/single-dev project has no pre-existing .harness/agents/.
             if ($partA) {
-                [System.IO.File]::WriteAllText((Join-Path $tmp ".harness/agents/dev-payments.md"), $partA.body)
+                $agentsDir = Join-Path $tmp ".harness/agents"
+                if (-not (Test-Path $agentsDir)) { New-Item -ItemType Directory -Path $agentsDir -Force | Out-Null }
+                [System.IO.File]::WriteAllText((Join-Path $agentsDir "dev-payments.md"), $partA.body)
             }
             Assert "[AI-in] (13) partition draft IS written under accept decision (dev-payments.md present)" {
                 Test-Path (Join-Path $tmp ".harness/agents/dev-payments.md")

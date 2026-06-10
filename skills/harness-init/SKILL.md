@@ -1,6 +1,6 @@
 ---
 name: harness-init
-description: Bootstrap a new project with the full Harness Engineering skeleton — tool-agnostic .harness/ source-of-truth layer plus the Claude Code binding (.claude/ + CLAUDE.md). Use this when starting a fresh fullstack or backend project that wants AI-driven development from day one.
+description: Bootstrap a new project with the full Harness Engineering skeleton — Claude-native by default (the 7 framework agents come from the harness-kit plugin as harness-kit:<name>; the project carries only rules, skills, and any partition dev-* agents in .harness/, plus the Claude Code binding in .claude/ + CLAUDE.md). Pass --portable to also materialize the framework agents/rules locally for non-Claude/offline use. Use this when starting a fresh fullstack or backend project that wants AI-driven development from day one.
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, AskUserQuestion, TodoWrite
 ---
 
@@ -10,16 +10,23 @@ Bootstrap a new project with the complete Harness skeleton, so that Claude Code 
 the 7-agent pipeline (PM → Analyst → Architect → Gate → Developer → Reviewer → QA)
 out of the box.
 
-The skeleton uses a **two-layer model**:
+The default model is **plugin-native** (v0.30+):
 
-- `.harness/` is the tool-agnostic source of truth (agents, rules, skills).
-- `.claude/agents/` and `.claude/skills/` are regenerated from `.harness/agents/` and
-  `.harness/skills/` via `.harness/scripts/harness-sync`.
+- The 7 framework agents (PM / Analyst / Architect / Gate / Developer / Reviewer / QA,
+  plus the auxiliary supervisor) are **provided by the harness-kit plugin** and dispatched
+  as `harness-kit:<name>` — they are **not copied into the project**.
+- `.harness/` is the project's source of truth for **rules** and **skills**, plus any
+  **project-specific partition `dev-*` agents** (only in partitioned projects).
+- `.claude/agents/` and `.claude/skills/` are regenerated from `.harness/agents/` (partition
+  `dev-*` only) and `.harness/skills/` via `.harness/scripts/harness-sync`. A single-developer
+  project has no `.harness/agents/` to sync — its agents all come from the plugin.
 - `CLAUDE.md` and `.github/copilot-instructions.md` are ~15-line static stubs
   written once during init; they point at `AI-GUIDE.md`, which indexes
   `.harness/rules/*.md` by reference (since v0.10 rules are not composed).
-  This keeps project knowledge separate from the IDE binding — you can edit `.harness/`
-  with any tool, then sync to whatever binding your team uses.
+
+**`--portable` (opt-in, best-effort):** pass `--portable` to *also* materialize the framework
+agents and rules into `.harness/` (the pre-cutover copy model), for non-Claude-Code tools or
+offline / no-plugin use. The default is plugin-native (Claude-native by default).
 
 ## When to invoke
 
@@ -83,8 +90,9 @@ Ask **six questions** in a single `AskUserQuestion` call:
 
 Templates live alongside this skill:
 
-- `<skill-root>/templates/common/` — shared assets (7 agents in `.harness/agents/`,
-  rule fragments in `.harness/rules/`, harness-sync scripts, docs, evals).
+- `<skill-root>/templates/common/` — shared assets (rule fragments in `.harness/rules/`,
+  harness-sync scripts, docs, evals). The framework agents are **not** here anymore — they
+  are plugin-provided (`harness-kit:<name>`). Only `--portable` materializes them locally.
 - `<skill-root>/templates/fullstack/` — fullstack-specific overlays.
 - `<skill-root>/templates/backend/` — backend-specific overlays.
 - `<skill-root>/templates/generic/` — generic project overlay (single `50-generic.md` stub).
@@ -139,16 +147,18 @@ result is byte-for-byte the tree the old i18n/zh overlay produced — compositio
 
 Files ending in `.tmpl` need placeholder substitution (step 5). Drop the `.tmpl` suffix on write.
 
-**After copy, apply the partitioning choice** (from Q4):
+**After copy, apply the partitioning choice** (from Q4). The generic `developer`
+is plugin-provided (`harness-kit:developer`) and is **not** in the project tree —
+only the project-specific partition `dev-*` agents are local:
 
-- If user picked **partitioned mode**: keep all partition agents AND keep the
-  generic `developer.md`. The generic one stays as a fallback for tasks the
-  architect can't cleanly assign to one partition.
+- If user picked **partitioned mode**: keep all partition `dev-*` agents in
+  `.harness/agents/`. The plugin `harness-kit:developer` remains available as a
+  fallback for tasks the architect can't cleanly assign to one partition.
 - If user picked **single mode**: delete the project-type-specific partition
-  agents from `.harness/agents/`:
+  agents from `.harness/agents/` (leaving no local agents — every role comes from
+  the plugin):
   - Fullstack: `dev-frontend.md`, `dev-backend.md`, `dev-db.md`
   - Backend: `dev-api.md`, `dev-services.md`, `dev-db.md`
-  - Only the generic `developer.md` remains.
 
 Note: templates/common contains:
 - `.harness/` (the source of truth content)
@@ -319,7 +329,8 @@ AI-native customization summary
 
 ### 6. Run the initial binding sync
 
-After all files are in place, run the binding sync to copy `.harness/agents/`
+After all files are in place, run the binding sync to copy any project-local
+`.harness/agents/` (partition `dev-*` only — the framework agents are plugin-provided)
 and `.harness/skills/` into the Claude-Code-required `.claude/` paths:
 
 ```powershell
@@ -329,6 +340,8 @@ bash .harness/scripts/harness-sync.sh            # Unix
 
 **v0.10 scope (much narrower than v0.9.x)**: `harness-sync` only copies
 `.harness/agents/` → `.claude/agents/` and `.harness/skills/` → `.claude/skills/`.
+After the v0.30 cutover, a single-developer project has **no** `.harness/agents/` to
+sync (all agents come from the plugin); a partitioned project syncs only its `dev-*`.
 It does **not** generate `CLAUDE.md` or `.github/copilot-instructions.md` —
 those are static stubs written once during init (step 4) and never regenerated.
 `AI-GUIDE.md` indexes `.harness/rules/` by reference; rules updates flow
@@ -399,12 +412,15 @@ Print a structured summary:
 ```
 ✅ Harness initialized in <path>
 
+Framework agents (PM / Analyst / Architect / Gate / Developer / Reviewer / QA):
+  provided by the harness-kit plugin as harness-kit:<name> — NOT copied into the project.
+
 Source of truth (edit these, never .claude/):
   .harness/
-    agents/       (7 sub-agents — synced to .claude/agents/ by harness-sync)
+    agents/       (partition dev-* agents ONLY, if partitioned — synced to .claude/agents/)
     rules/        (rule fragments — referenced by AI-GUIDE.md, NOT composed)
     skills/       (build, test, verify procedures — synced to .claude/skills/)
-  AI-GUIDE.md     (tool-agnostic entry; indexes .harness/rules/ with "when to read")
+  AI-GUIDE.md     (Claude-native by default; indexes .harness/rules/ with "when to read")
 
 Init-time artifacts (touch only to fix the AI-GUIDE.md pointer):
   CLAUDE.md                            (~15-line stub pointing at AI-GUIDE.md)

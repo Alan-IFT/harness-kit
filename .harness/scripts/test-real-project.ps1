@@ -130,11 +130,15 @@ function Test-Fixture {
         }
 
         # 5) Harness SOT + generated artifacts present
+        # v0.30 cutover: the 7 generic framework agents are PLUGIN-provided (harness-kit:<name>),
+        # NOT copied into the project — assert they are ABSENT in both the SOT and generated trees.
+        # Partition dev-* still ship locally and sync. (Mirrors the test-init flip; the operator
+        # reconciles baseline.json counts from a captured run.)
         $agents = @("pm-orchestrator","requirement-analyst","solution-architect",
                     "gate-reviewer","developer","code-reviewer","qa-tester")
         foreach ($a in $agents) {
-            Assert ".harness/agents/$a.md" { Test-Path (Join-Path $tmp ".harness/agents/$a.md") }
-            Assert ".claude/agents/$a.md (generated)" { Test-Path (Join-Path $tmp ".claude/agents/$a.md") }
+            Assert ".harness/agents/$a.md ABSENT (plugin-provided)" { -not (Test-Path (Join-Path $tmp ".harness/agents/$a.md")) }
+            Assert ".claude/agents/$a.md ABSENT (plugin-provided)" { -not (Test-Path (Join-Path $tmp ".claude/agents/$a.md")) }
         }
         $partitionAgents = if ($ProjectType -eq "fullstack") {
             @("dev-frontend","dev-backend","dev-db")

@@ -108,8 +108,12 @@ test_type() {
     fi
 
     # SOT (.harness/) assertions
+    # v0.30 cutover: the 7 generic framework agents are PLUGIN-provided (harness-kit:<name>),
+    # NOT copied into the project by default — assert they are ABSENT.
+    # NOTE: baseline.json test-init counts MOVE with these flips; the operator reconciles
+    # them from a captured run.
     for a in pm-orchestrator requirement-analyst solution-architect gate-reviewer developer code-reviewer qa-tester; do
-        assert ".harness/agents/$a.md (SOT)" "[[ -f '$tmp/.harness/agents/$a.md' ]]"
+        assert ".harness/agents/$a.md ABSENT (plugin-provided, not copied)" "[[ ! -f '$tmp/.harness/agents/$a.md' ]]"
     done
 
     # Partition agents: fullstack and backend have them in v0.5+; generic has none
@@ -135,8 +139,10 @@ test_type() {
     fi
 
     # Generated artifacts
+    # v0.30 cutover: generic framework agents are plugin-provided, so harness-sync does NOT
+    # generate them under .claude/agents/ — assert they are ABSENT. Partition dev-* still sync.
     for a in pm-orchestrator requirement-analyst solution-architect gate-reviewer developer code-reviewer qa-tester; do
-        assert ".claude/agents/$a.md (generated)" "[[ -f '$tmp/.claude/agents/$a.md' ]]"
+        assert ".claude/agents/$a.md ABSENT (plugin-provided, not generated)" "[[ ! -f '$tmp/.claude/agents/$a.md' ]]"
     done
     for p in $partition_agents; do
         assert ".claude/agents/$p.md (generated partition)" "[[ -f '$tmp/.claude/agents/$p.md' ]]"
@@ -405,7 +411,10 @@ PYEOF
         # Partition acceptance / rejection (12 + 13)
         assert "[AI-in] (12) partition draft NOT written under reject decision (no agent file before accept)" \
             "[[ ! -f '$tmp/.harness/agents/dev-payments.md' ]]"
-        # Simulate accept: extract dev-payments body from mock and write
+        # Simulate accept: extract dev-payments body from mock and write.
+        # The SKILL's Write tool creates parent dirs; mirror that — since the v0.30
+        # cutover, a generic/single-dev project has no pre-existing .harness/agents/.
+        mkdir -p "$tmp/.harness/agents"
         python3 - "$mock_fixture" "$tmp/.harness/agents/dev-payments.md" <<'PYEOF'
 import json, sys
 mock = json.load(open(sys.argv[1]))

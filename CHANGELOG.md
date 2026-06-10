@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.30.0] - 2026-06-10
+
+### Changed — Agents cutover: framework agents are plugin-provided, projects stop copying them (redesign Leg 1 complete)
+
+The cutover that v0.29.0 set up: the 7 framework agents (+ supervisor) are now the **single, plugin-native source** at the top-level `agents/`, dispatched as `harness-kit:<name>`. Projects **no longer copy** the generic framework agents into `.harness/agents/` — so the agent duplication/drift class is **eliminated**, not patched: "update the plugin == every project current" now holds for agents the same way it already did for the 15 skills. The type-parameterized partition agents (`dev-frontend`/`dev-backend`/`dev-db`/`dev-api`/`dev-services`) STAY project-local — they carry `{{STACK}}`/`{{PROJECT_NAME}}` injection a static plugin agent can't reproduce. Model: **generic framework agents = plugin (`harness-kit:<name>`); partition agents = project-local (`dev-*`).**
+
+- **Pipeline dispatch switched to `harness-kit:<name>`** across every skill that dispatches: `skills/harness/SKILL.md` (steps 4-9: RA / SA / Gate / Developer / Code Reviewer / QA), `skills/harness-plan/SKILL.md` (RA / SA / Gate), `skills/harness-goal/SKILL.md` (Developer / QA), and `skills/harness-batch/SKILL.md` + `skills/harness-stream/SKILL.md` (the literal `pm-orchestrator` dispatch instruction). Partition dispatch stays project-local `dev-*`. `agents/pm-orchestrator.md` (the single plugin source) clarifies the generic-vs-partition routing; the `dev-*` glob detection is unchanged.
+- **`/harness-init` is plugin-native by default**: the generic framework agents are no longer copied into a new project; only partition projects get their `dev-*` agents locally (and `harness-sync` syncs only those to `.claude/agents/`). A documented best-effort `--portable` flag materializes the framework agents/rules into `.harness/` for non-Claude-Code tools or offline/no-plugin use (the pre-cutover copy model).
+- **`sync-self` (both shells) drops the agent mirror** — both the `.harness/agents` → `.harness/agents` leg and the v0.29 `.harness/agents` → top-level `agents/` leg are removed. Framework agents are edited directly in the plugin-native `agents/`; there is no agent copy to mirror. The 7 script-pair mappings are untouched.
+- **`verify_all` gates repointed** (both shells, symmetric): D.1 now scans the top-level `agents/` and is relabeled "Plugin agents present"; E.3's agent-existence sub-check points at `agents/pm-orchestrator.md` + `agents/developer.md`; E.4 drops the `.claude/agents` directory existence requirement (generics come from the plugin); I.3's ≤300-line size cap now scans `agents/`. Same 7-name list, same 300-line cap.
+- **`test-init` (both shells) flipped**: the 7 generic-agent assertions (`.harness/agents/<a>.md` SOT + `.claude/agents/<a>.md` generated) now assert ABSENT by default (plugin-provided, not copied); the partition `dev-*` assertions are unchanged. The AI-native partition-accept simulation now creates `.harness/agents/` before writing (the SKILL's Write tool would). `baseline.json` test-init counts move and are reconciled from a captured run.
+- **Docs**: `AI-GUIDE.md`, `README.md`, `README.zh-CN.md`, `.harness/rules/40-locations.md`, and `docs/dev-map.md` updated — framework agents are plugin-provided (`harness-kit:<name>`); only partition `dev-*` live in `.harness/agents/`; positioning softened to "Claude-native by default; `--portable` for tool-agnostic/offline use".
+- Version 0.29.0 → 0.30.0 (plugin.json, marketplace.json, both README badges). Skill count stays **15**; `verify_all` stays **32** checks; no new placeholder; no I.6 banned/exempt-list change.
+
 ## [0.29.0] - 2026-06-10
 
 ### Added — ship the 8 pipeline agents as plugin-native agents (content-model redesign · Leg 1)

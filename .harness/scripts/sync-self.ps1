@@ -5,7 +5,6 @@
 # keeps the two in sync (Layer 1).
 #
 # Synchronizes (templates/common/ → repo root):
-#   .harness/agents/*.md                      → .harness/agents/*.md
 #   .harness/scripts/harness-sync.ps1         → .harness/scripts/harness-sync.ps1
 #   .harness/scripts/harness-sync.sh          → .harness/scripts/harness-sync.sh
 #   .harness/scripts/install-hooks.ps1        → .harness/scripts/install-hooks.ps1
@@ -42,9 +41,10 @@ if (-not (Test-Path $templateCommon)) {
 }
 
 # Mapping: source (under templates/common/) → target (under repo root)
+# (Agent mappings removed at v0.30.0: the framework agents are now plugin-native,
+#  edited directly in the top-level agents/ dir — there is no agent copy to mirror.
+#  Partition dev-* agents ship via the type overlays, not through sync-self.)
 $mappings = @(
-    @{ from = ".harness/agents"; to = ".harness/agents"; type = "dir-of-md" }
-    @{ from = ".harness/agents"; to = "agents"; type = "dir-of-md" }   # plugin-native top-level agents/ (redesign Leg 1) — keep byte-identical
     @{ from = ".harness/scripts/harness-sync.ps1"; to = ".harness/scripts/harness-sync.ps1"; type = "file" }
     @{ from = ".harness/scripts/harness-sync.sh"; to = ".harness/scripts/harness-sync.sh"; type = "file" }
     @{ from = ".harness/scripts/install-hooks.ps1"; to = ".harness/scripts/install-hooks.ps1"; type = "file" }

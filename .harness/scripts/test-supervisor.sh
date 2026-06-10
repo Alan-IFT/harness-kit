@@ -109,12 +109,14 @@ echo "Repo: $repo_root"
 echo ""
 
 # --- AC-1: agent contract
+# v0.30 cutover: supervisor is plugin-native — single source at top-level agents/supervisor.md.
 echo "--- AC-1: agent contract ---"
-[[ -f .harness/agents/supervisor.md ]] && assert "AC-1.1 .harness/agents/supervisor.md exists" 1 || assert "AC-1.1 .harness/agents/supervisor.md exists" 0
-sup_lines=$(wc -l < .harness/agents/supervisor.md)
+sup_path="agents/supervisor.md"
+[[ -f "$sup_path" ]] && assert "AC-1.1 $sup_path exists (plugin-native)" 1 || assert "AC-1.1 $sup_path exists (plugin-native)" 0
+sup_lines=$(wc -l < "$sup_path")
 (( sup_lines <= 300 )) && assert "AC-1.2 supervisor.md <=300 lines ($sup_lines)" 1 || assert "AC-1.2 supervisor.md <=300 lines ($sup_lines)" 0
 
-sup_content=$(cat .harness/agents/supervisor.md)
+sup_content=$(cat "$sup_path")
 ap_ok=1
 for ap in "AP-1" "AP-1b" "AP-2" "AP-3" "AP-4"; do
     grep -qF "$ap" <<< "$sup_content" || ap_ok=0
@@ -134,22 +136,20 @@ done
 assert "AC-1.5 supervisor.md declares HEALTHY/WATCH/INTERVENE verdict words" "$ver_ok"
 
 # Frontmatter tools: line must exclude Edit/Bash/PowerShell/Task/AskUserQuestion (NFR-4)
-tools_line=$(head -6 .harness/agents/supervisor.md | grep -E '^tools:' | head -1)
+tools_line=$(head -6 "$sup_path" | grep -E '^tools:' | head -1)
 tools_ok=1
 for f in "Edit" "Bash" "PowerShell" "Task" "AskUserQuestion"; do
     if grep -qE "\b${f}\b" <<< "$tools_line"; then tools_ok=0; fi
 done
 assert "AC-1.6 supervisor.md frontmatter excludes Edit/Bash/PowerShell/Task/AskUserQuestion" "$tools_ok"
 
-# --- AC-2: dogfood/template byte-identity
+# --- AC-2: plugin-native single source (v0.30 cutover)
+# The supervisor is now a single plugin-native source; there is NO templates/common copy
+# to keep byte-identical (the byte-identity invariant retired with the agent cutover).
 echo ""
-echo "--- AC-2: dogfood/template byte-identity ---"
-[[ -f skills/harness-init/templates/common/.harness/agents/supervisor.md ]] && assert "AC-2.1 templates/common/.harness/agents/supervisor.md exists" 1 || assert "AC-2.1 templates/common/.harness/agents/supervisor.md exists" 0
-if cmp -s .harness/agents/supervisor.md skills/harness-init/templates/common/.harness/agents/supervisor.md; then
-    assert "AC-2.2 supervisor.md byte-identical (dogfood vs template)" 1
-else
-    assert "AC-2.2 supervisor.md byte-identical (dogfood vs template)" 0
-fi
+echo "--- AC-2: plugin-native single source ---"
+[[ ! -f skills/harness-init/templates/common/.harness/agents/supervisor.md ]] && assert "AC-2.1 no templates/common supervisor copy (single plugin source)" 1 || assert "AC-2.1 no templates/common supervisor copy (single plugin source)" 0
+[[ ! -f .harness/agents/supervisor.md ]] && assert "AC-2.2 no .harness/agents supervisor copy (plugin-native at agents/)" 1 || assert "AC-2.2 no .harness/agents supervisor copy (plugin-native at agents/)" 0
 if bash "$repo_root/.harness/scripts/sync-self.sh" --check &>/dev/null; then
     assert "AC-2.3 sync-self --check is clean" 1
 else

@@ -84,10 +84,10 @@ Step "C.2" "Skill frontmatter sanity" {
 }
 
 # D. Templates
-Step "D.1" "All template agents present in templates/common/.harness/agents" {
-    $tplAgents = "skills/harness-init/templates/common/.harness/agents"
+Step "D.1" "Plugin agents present" {
+    $tplAgents = "agents"
     foreach ($a in @("pm-orchestrator","requirement-analyst","solution-architect","gate-reviewer","developer","code-reviewer","qa-tester")) {
-        if (-not (Test-Path "$tplAgents/$a.md")) { throw "Missing template agent: $a" }
+        if (-not (Test-Path "$tplAgents/$a.md")) { throw "Missing plugin agent: $a" }
     }
 }
 
@@ -204,7 +204,7 @@ Step "E.2" "Layer 2: .claude/agents and .claude/skills synced from .harness/" {
 }
 
 Step "E.3" "Project rule sources present (.harness/rules + 7 agents)" {
-    foreach ($f in @(".harness/agents/pm-orchestrator.md", ".harness/agents/developer.md")) {
+    foreach ($f in @("agents/pm-orchestrator.md", "agents/developer.md")) {
         if (-not (Test-Path $f)) { throw "Missing $f" }
     }
     $rules = Get-ChildItem -Path ".harness/rules" -Filter "*.md" -File -ErrorAction SilentlyContinue
@@ -219,7 +219,6 @@ Step "E.4" "Bootstrap files present and point to AI-GUIDE.md" {
         $c = Get-Content $stub -Raw
         if ($c -notmatch 'AI-GUIDE\.md') { throw "$stub does not reference AI-GUIDE.md — stub broken" }
     }
-    if (-not (Test-Path ".claude/agents")) { throw "Missing .claude/agents/ (run harness-sync)" }
 }
 
 Step "E.4b" "AI-GUIDE.md indexes every .harness/rules/*.md (and vice versa)" {
@@ -380,9 +379,9 @@ Step "I.2" "Rule fragments <=200 lines each" {
 }
 
 Step "I.3" "Agent definitions <=300 lines each" {
-    if (-not (Test-Path ".harness/agents")) { return }
+    if (-not (Test-Path "agents")) { return }
     $over = @()
-    Get-ChildItem -Path ".harness/agents" -Filter "*.md" -File | ForEach-Object {
+    Get-ChildItem -Path "agents" -Filter "*.md" -File | ForEach-Object {
         $n = (Get-Content $_.FullName | Measure-Object -Line).Lines
         if ($n -gt 300) { $over += "$($_.Name):${n}L" }
     }

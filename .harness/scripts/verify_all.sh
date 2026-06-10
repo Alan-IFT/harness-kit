@@ -68,13 +68,13 @@ while IFS= read -r f; do
 done < <(find skills -name SKILL.md -type f)
 [[ -z "$bad" ]] && step "C.2" "Skill frontmatter sanity" "PASS" || step "C.2" "Skill frontmatter sanity" "FAIL" "$(echo -e $bad)"
 
-# D.1 — template agents
-tpl_dir="skills/harness-init/templates/common/.harness/agents"
+# D.1 — plugin agents (top-level agents/ dir, auto-discovered as harness-kit:<name>)
+tpl_dir="agents"
 missing_a=""
 for a in pm-orchestrator requirement-analyst solution-architect gate-reviewer developer code-reviewer qa-tester; do
     [[ -f "$tpl_dir/$a.md" ]] || missing_a="$missing_a $a"
 done
-[[ -z "$missing_a" ]] && step "D.1" "Template agents complete" "PASS" || step "D.1" "Template agents complete" "FAIL" "missing:$missing_a"
+[[ -z "$missing_a" ]] && step "D.1" "Plugin agents present" "PASS" || step "D.1" "Plugin agents present" "FAIL" "missing:$missing_a"
 
 # D.2 — placeholder whitelist
 bad_ph=""
@@ -206,7 +206,7 @@ fi
 
 # E.3 — rule sources present
 missing_e3=""
-for f in .harness/agents/pm-orchestrator.md .harness/agents/developer.md; do
+for f in agents/pm-orchestrator.md agents/developer.md; do
     [[ -f "$f" ]] || missing_e3="$missing_e3 $f"
 done
 rule_count=$(find .harness/rules -name '*.md' -type f 2>/dev/null | wc -l)
@@ -223,7 +223,6 @@ for stub in CLAUDE.md .github/copilot-instructions.md; do
         stub_bad="$stub_bad $stub"
     fi
 done
-[[ -d .claude/agents ]] || gen_missing="$gen_missing .claude/agents"
 if [[ -z "$gen_missing" && -z "$stub_bad" ]]; then
     step "E.4" "Bootstrap files present and stubs reference AI-GUIDE.md" "PASS"
 else
@@ -400,13 +399,13 @@ else
     step "I.2" "Rule fragments ≤200 lines each" "PASS"
 fi
 
-# I.3 — Each .harness/agents/*.md ≤300 lines
+# I.3 — Each plugin agents/*.md ≤300 lines
 i3_over=""
-if [[ -d .harness/agents ]]; then
+if [[ -d agents ]]; then
     while IFS= read -r f; do
         n=$(wc -l < "$f")
         (( n > 300 )) && i3_over="$i3_over $f:${n}L"
-    done < <(find .harness/agents -maxdepth 1 -name '*.md' -type f)
+    done < <(find agents -maxdepth 1 -name '*.md' -type f)
 fi
 if [[ -n "$i3_over" ]]; then
     step "I.3" "Agent definitions ≤300 lines each" "WARN" "over cap:$i3_over"
