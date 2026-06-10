@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.30.1] - 2026-06-10
+
+### Changed — Honest Claude-native positioning (docs-only follow-up to the v0.30.0 agents cutover)
+
+No code, rule, skill, or agent behavior changed — the pipeline, the 15 skills, and the 8 plugin-native agents are byte-identical to v0.30.0. This patch ships two documentation corrections so every device's `/plugin update` lands them.
+
+- **Dropped the non-functional `--portable` claims everywhere.** After the agents cutover retired the template agent sources there was nothing left to materialize, so `--portable` could not actually work. Rather than carry a promise we don't keep, the flag and all its mentions are removed and the positioning is openly Claude-Code-native (`/harness-init`, `/harness-adopt`, README / AI-GUIDE).
+- **Made the tool-handoff / Copilot docs consistent with the plugin-native model.** The framework agents are plugin-provided (`harness-kit:<name>`); the stale "any tool role-plays the framework agents" narrative is gone. Generated-project framework docs (AI-GUIDE / 00-core templates) refreshed to the same model.
+- Version 0.30.0 → 0.30.1 (plugin.json, marketplace.json, both README badges). Skill count stays **15**; `verify_all` stays **32** checks; no placeholder / banned-list change.
+
 ## [0.30.0] - 2026-06-10
 
 ### Changed — Agents cutover: framework agents are plugin-provided, projects stop copying them (redesign Leg 1 complete)
