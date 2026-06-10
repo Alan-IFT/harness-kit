@@ -75,7 +75,14 @@ else
     scope="global: $HOME"
 fi
 
-skills=(harness harness-init harness-adopt harness-verify harness-status harness-plan harness-explore harness-goal harness-batch harness-stream harness-intervene harness-supervise harness-decision-mode)
+# Derive the skill list from the source tree — every top-level skills/<name>/ that
+# has a SKILL.md is a skill. No hardcoded array to drift: a newly-added skill is
+# auto-included, so the OQ-1 gap (harness-upgrade / harness-language were silently
+# dropped from the old hardcoded list for two releases) cannot recur.
+skills=()
+for skill_dir in "$skills_source"/*/; do
+    [[ -f "${skill_dir}SKILL.md" ]] && skills+=("$(basename "$skill_dir")")
+done
 
 echo ""
 echo "Harness Kit install"
@@ -142,6 +149,8 @@ echo "  /harness-verify   run the project's verify_all"
 echo "  /harness-status   inspect Harness assets"
 echo "  /harness-intervene  redirect / pause / add-task to an inflight pipeline (soft Ctrl-C)"
 echo "  /harness-supervise  observer-only health check of a task folder"
+echo "  /harness-upgrade  bring an old harness project up to the current layout"
+echo "  /harness-language set / switch / refresh the project's output-language policy"
 echo "  /harness-decision-mode  switch how much the AI decides on its own (Mode 1/2/3)"
 echo ""
 echo "Tip: for versioned/auditable install, prefer the plugin path inside Claude Code:"

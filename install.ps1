@@ -72,7 +72,13 @@ if ($Project) {
     $scope = "global: $homeDir"
 }
 
-$skills = @("harness", "harness-init", "harness-adopt", "harness-verify", "harness-status", "harness-plan", "harness-explore", "harness-goal", "harness-batch", "harness-stream", "harness-intervene", "harness-supervise", "harness-decision-mode")
+# Derive the skill list from the source tree — every top-level skills/<name>/ that
+# has a SKILL.md is a skill. No hardcoded array to drift: a newly-added skill is
+# auto-included, so the OQ-1 gap (harness-upgrade / harness-language were silently
+# dropped from the old hardcoded list for two releases) cannot recur.
+$skills = Get-ChildItem -Path $skillsSource -Directory |
+    Where-Object { Test-Path (Join-Path $_.FullName "SKILL.md") } |
+    ForEach-Object { $_.Name }
 
 Write-Host ""
 Write-Host "Harness Kit install" -ForegroundColor Cyan
@@ -145,6 +151,8 @@ Write-Host "  /harness-verify   run the project's verify_all"
 Write-Host "  /harness-status   inspect Harness assets"
 Write-Host "  /harness-intervene  redirect / pause / add-task to an inflight pipeline (soft Ctrl-C)"
 Write-Host "  /harness-supervise  observer-only health check of a task folder"
+Write-Host "  /harness-upgrade  bring an old harness project up to the current layout"
+Write-Host "  /harness-language set / switch / refresh the project's output-language policy"
 Write-Host "  /harness-decision-mode  switch how much the AI decides on its own (Mode 1/2/3)"
 Write-Host ""
 Write-Host "Tip: for versioned/auditable install, prefer the plugin path inside Claude Code:" -ForegroundColor Cyan
