@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.29.0] - 2026-06-10
+
+### Added — ship the 8 pipeline agents as plugin-native agents (content-model redesign · Leg 1)
+
+First step of a redesign that **eliminates the content-duplication/drift class** rather than patching it: today `/harness-init` COPIES the framework agents into every project's `.harness/agents/`, so when the plugin ships new/changed framework content it goes stale in existing projects and `/harness-upgrade` (v1) refuses to backfill rule/agent content. The fix is to stop copying — the plugin provides the framework once, projects reference it, and "update the plugin == every project current" (already literally true for the 15 skills). See `docs/proposals/plugin-native-redesign.html` for the full plan and tradeoffs.
+
+This release lays the **foundation** and is strictly **additive** — existing projects keep using their local `.harness/agents/` copies; dispatch is unchanged. The cutover (rewire the pipeline to dispatch the plugin agents, retire the per-project copies, rewrite this repo's E.1/E.2/E.4b gates) is the next release, gated on a one-time spike confirming `harness-kit:<agent>` Task-dispatch + cross-namespace dispatch on a reloaded Claude Code.
+
+- **New top-level `agents/`** (8 files — code-reviewer, developer, gate-reviewer, pm-orchestrator, qa-tester, requirement-analyst, solution-architect, supervisor), auto-discovered by Claude Code and dispatchable as `harness-kit:<name>`. Byte-identical to `.harness/agents/`; verified none carry plugin-disallowed frontmatter (`hooks`/`mcpServers`/`permissionMode`).
+- **`sync-self` extended** (both shells) with a 3rd agents mirror leg (`templates/common/.harness/agents` → top-level `agents/`), so `verify_all` E.1 (`sync-self --check`) catches any drift — no new check added.
+- Version 0.28.0 → 0.29.0 (plugin.json, marketplace.json, both README badges). Skill count stays **15**; `verify_all` stays **32** checks; no new placeholder; no I.6 banned/exempt change.
+
 ## [0.28.0] - 2026-06-10
 
 ### Added — `/harness-decision-mode` skill + Mode 3 (user-custom rubric) in the decision policy (T-018)

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>harness-kit · 内容漂移的设计消除方案</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel2:#1d212b; --ink:#e6e9ef; --mut:#9aa3b2;
+    --line:#2a2f3a; --acc:#5b9dff; --good:#37c08a; --warn:#f0b542; --bad:#ef6a6a; --vio:#b48cff;
+    --code:#0b0d11;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.62 -apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:980px;margin:0 auto;padding:40px 26px 90px}
+  h1{font-size:27px;margin:0 0 6px;letter-spacing:.2px}
+  h2{font-size:19px;margin:42px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  h3{font-size:15px;margin:20px 0 8px;color:var(--acc)}
+  .sub{color:var(--mut);margin:0 0 26px}
+  p{margin:10px 0}
+  code{background:var(--code);padding:1px 6px;border-radius:5px;font:13px/1.5 "SF Mono",Consolas,monospace;color:#c9d4e5}
+  .tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;vertical-align:middle}
+  .t-good{background:rgba(55,192,138,.15);color:var(--good)}
+  .t-warn{background:rgba(240,181,66,.15);color:var(--warn)}
+  .t-bad{background:rgba(239,106,106,.15);color:var(--bad)}
+  .t-vio{background:rgba(180,140,255,.15);color:var(--vio)}
+  .verdict{background:linear-gradient(180deg,#19222e,#161b24);border:1px solid #2c3b52;border-radius:14px;padding:22px 24px;margin:14px 0 4px}
+  .verdict b{color:#fff}
+  .grid{display:grid;gap:14px}
+  .g2{grid-template-columns:1fr 1fr}
+  @media(max-width:720px){.g2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+  .card.bad{border-color:#43262a}.card.good{border-color:#21402f}
+  .flow{display:flex;gap:14px;align-items:stretch;flex-wrap:wrap;margin:8px 0}
+  .flow .col{flex:1;min-width:240px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .flow .col h4{margin:0 0 10px;font-size:14px}
+  .bar{height:9px;border-radius:6px;background:var(--line);overflow:hidden;margin:7px 0 3px}
+  .bar i{display:block;height:100%}
+  ul{margin:8px 0;padding-left:20px}li{margin:5px 0}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+  th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--mut);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.4px}
+  .legrisk{font-weight:700}
+  .note{color:var(--mut);font-size:13px}
+  .pill{font-size:12px;color:var(--mut)}
+  .kbd{background:var(--code);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font:12px monospace}
+  .decision{background:var(--panel);border-left:3px solid var(--vio);border-radius:0 10px 10px 0;padding:12px 16px;margin:10px 0}
+  .reco{color:var(--good);font-weight:600}
+  .x{color:var(--bad)}.c{color:var(--good)}.w{color:var(--warn)}
+  hr{border:none;border-top:1px dashed var(--line);margin:30px 0}
+  .small{font-size:12.5px;color:var(--mut)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>harness-kit：用设计消除"老项目拿不到新内容"</h1>
+  <p class="sub">设计评审面板(12 agent,核对 Claude Code 插件官方文档 + <code>diff</code>/<code>git ls-files</code> 验证)· 2026-06-10</p>
+
+  <div class="verdict">
+    <p style="margin:0"><span class="tag t-good">结论</span> &nbsp;<b>能设计消除 —— 而且就是你赞过的 T-16 "消除重复"模式,只是规模更大。</b>
+    根因是:框架内容(agents / 通用规则 / 脚本 / AI-GUIDE)在 <code>/harness-init</code> 时被<b>拷进每个项目</b>。
+    这份拷贝既是<b>臃肿</b>、也是<b>漂移</b>源。<code>--include-content</code> 是加一套同步去追这份重复 —— 治标。
+    <b>把"拷贝"去掉,漂移类就不存在了</b>(不是桥接,是删除)。</p>
+    <p style="margin:10px 0 0" class="note">铁证:你的 <b>15 个 skill 现在已经是这样分发的</b> —— 零拷贝、零刷新、零漂移。"更新插件 == 每个项目都最新"对 skill <b>早已字面成立</b>。这个改造只是把同一套已验证的机制延伸到 agents(干净)和规则(过 spike 后)。</p>
+  </div>
+
+  <h2>1 · 重复有多大(已验证)</h2>
+  <div class="flow">
+    <div class="col">
+      <h4>框架不变内容 = 漂移/臃肿源</h4>
+      <div class="small">每个项目都被拷一份、且各项目<b>逐字节相同</b>:</div>
+      <div class="bar"><i style="width:64%;background:var(--bad)"></i></div>
+      <ul class="small" style="margin-top:6px">
+        <li><b>8 个 agent ≈ 1074 行</b> —— <code>diff</code> 验证三处(template/.harness/.claude)逐字节一致,纯三重复制</li>
+        <li><b>~8 条发版规则 ≈ 414 行</b>(含刚加的 <code>25-decision-policy</code>)</li>
+        <li><b>AI-GUIDE 路由 ≈ 97 行</b></li>
+        <li><b>9 对脚本 ≈ 3167 行</b>(脚本是被"执行"的,根本没有 tool-agnostic 理由要拷)</li>
+      </ul>
+    </div>
+    <div class="col">
+      <h4>真·项目专属 = 合理本地(不是问题)</h4>
+      <div class="bar"><i style="width:10%;background:var(--good)"></i></div>
+      <ul class="small" style="margin-top:6px">
+        <li><code>50-&lt;type&gt;.md</code> 类型 overlay + 分区 dev-* agent</li>
+        <li>decision-rubric 的 <b>Custom(Mode 3)</b> 段、<b>Active mode</b> 那一行</li>
+        <li><code>insight-index</code>、<code>tasks.md</code>、<code>docs/features/</code>、<code>baseline.json</code></li>
+        <li>00-core 的头部 token + 输出语言选择、<code>settings.json</code></li>
+      </ul>
+    </div>
+  </div>
+  <p class="note">≈ <b>90% 是不变内容,&lt;10% 才是项目专属</b>。漂移与臃肿<b>全部</b>在那 90%。(面板原稿把不变行数夸到 ~5000;我核对后改正:真正<b>发版到用户项目</b>的不变散文约 1600 行 —— 规则 10/15/20/30/40/80 是本仓库 dev-only、从不外发,<code>git ls-files templates/</code> 零命中。agents 仍是最大、最干净的一块。)</p>
+
+  <h2>2 · Before → After</h2>
+  <div class="grid g2">
+    <div class="card bad">
+      <h3 style="color:var(--bad)">现在:拷贝模型</h3>
+      <p class="small">插件模板 → <b>拷进</b>每个项目的 <code>.harness/</code>。从此两份各自演化 → 漂移。新内容(决策策略)只随 <code>init</code> 进<b>新</b>项目;老项目要 <code>/harness-upgrade</code>,但它 v1 明确"不刷新规则内容" → <span class="x">死圈</span>。</p>
+    </div>
+    <div class="card good">
+      <h3 style="color:var(--good)">之后:引用模型</h3>
+      <p class="small">框架内容只在<b>插件</b>里一份;项目只留那 ~10% 的 delta + 一个指针。<code>${CLAUDE_PLUGIN_ROOT}</code> 在 skill/agent/hook 体内行内展开,随版本自动重解析。<b>更新插件 == 每个项目都最新</b>,没有"内容刷新"这一步 —— 那一步消失了,而不是被打补丁。</p>
+    </div>
+  </div>
+
+  <h2>3 · 分三腿落地(按"需证明程度"递增,可中途停)</h2>
+  <table>
+    <tr><th>腿</th><th>做什么</th><th>风险 / 是否已验证</th><th>规模</th><th>判定</th></tr>
+    <tr>
+      <td><b>L1 · Agents</b><br><span class="pill">先做</span></td>
+      <td>给插件加顶层 <code>agents/</code> + 在 plugin.json 声明。8 个 agent 三重复制 → 收成插件里一份,namespaced <code>harness-kit:&lt;name&gt;</code>。<b>顺带让 harness-sync 的 agent 同步彻底失去存在理由。</b></td>
+      <td><span class="tag t-good">平台已支持</span> 官方文档证实:插件顶层 <code>agents/</code> 自动发现、按 <code>harness-kit:&lt;name&gt;</code> 命名。单笔最大去重、机制最少。</td>
+      <td>~1–2 天<br>可独立发版</td>
+      <td class="legrisk c">做(消除)</td>
+    </tr>
+    <tr>
+      <td><b>L2 · 规则 + AI-GUIDE</b><br><span class="pill">spike 后</span></td>
+      <td>~8 条规则 + AI-GUIDE 作为插件资源,经<b>常驻 skill</b> 或(更稳)<b>agent 体内 <code>@${CLAUDE_PLUGIN_ROOT}/…</code> 读取</b>暴露。</td>
+      <td><span class="tag t-warn">需 spike</span> 行内 <code>@</code>-读取是官方机制、但<b>本仓库零先例</b>。静默失败(规则根本没加载)比"旧但在"更糟 → 先在你的 Claude Code 上验一天。</td>
+      <td>spike ~半天<br>过则 ~1–2 天</td>
+      <td class="legrisk w">条件做</td>
+    </tr>
+    <tr>
+      <td><b>L3 · 脚本 / Hook</b><br><span class="pill">最后</span></td>
+      <td>脚本引擎 → 插件;guard-rm/ambient/sync 三个 hook → 插件自己的 <code>hooks.json</code>;verify_all 的 pre-commit 入口留一个<b>瘦本地 shim</b>。</td>
+      <td><span class="tag t-bad">有硬约束</span> 关键纠错:<code>${CLAUDE_PLUGIN_ROOT}</code> <b>不会</b>在项目 <code>settings.json</code> 和 <code>.git/hooks</code> 里展开 —— hook 必须搬进插件 hooks.json,git 钩子只能瘦 shim。</td>
+      <td>~1 天</td>
+      <td class="legrisk w">混合</td>
+    </tr>
+  </table>
+  <p class="note">所以这是<b>有序混合</b>而非纯改造:agents 干净消除;规则视 spike;<b>有一小撮本地不可避免</b>(git pre-commit 钩子永远拿不到插件变量 → 瘦 shim 长期保留)。诚实地说,纯加法补丁是<b>错的主答案</b>(它继续拷贝、再加同步去追,正是你反对的"加守卫致臃肿"),但<b>一丝</b>加法逻辑在平台够不到的腿上不可避免 —— 假装没有(像面板初稿把项目 settings 的 hook 路由进一个不展开的变量)就会发出坏东西。</p>
+
+  <h2>4 · 你要清醒接受的取舍</h2>
+  <ul>
+    <li><b>默认路径放弃 tool-agnostic(对不变层)。</b> <code>${CLAUDE_PLUGIN_ROOT}</code>/插件 agent/skill 加载都是 Claude-Code-only,Copilot/Cursor 解析不了。对你(只用 Claude Code)<b>是零成本</b> —— 拷贝模型的四个理由(Copilot 可读 / 离线 / 每项目 git review 相同字节 / 就地改不变文件)全是<b>对你而言的死重</b>。但 harness-kit 是公开插件 → 这是一次<b>明确的"Claude-native by default"取向</b>,须诚实写进 README,并保留真实、可测的 <code>/harness-init --portable</code> 逃生口给需要的人。</li>
+    <li><b>插件耦合 / 失去离线自包含</b> —— 但你的 15 个 skill 早就强加了同一依赖,不是新风险类。</li>
+    <li><b>"更新==最新"是最终一致,非原子</b> —— 当前会话保留旧缓存版本,需 <span class="kbd">/reload-plugins</span> 或新会话;旧缓存约 7 天后回收。文档要如实写。</li>
+    <li><b>一次性迁移会动到本仓库自己的门禁</b>(E.1/E.2/E.4b + Stop-hook 正是在强制"拷贝/同步"模型)—— 必须同笔原子改写,否则本仓库 verify_all 变红。</li>
+  </ul>
+
+  <h2>5 · 需要你拍板的真叉路(附我的倾向)</h2>
+  <div class="decision"><b>① 方向 GO?</b> 承诺"Claude-native by default、框架引用不拷贝、tool-agnostic 降级为 <code>--portable</code> 选项"?<br><span class="reco">我的倾向:Yes。</span> 它符合你"设计消因"原则,你又只用 Claude Code;<code>--portable</code> 对公开用户保持诚实。</div>
+  <div class="decision"><b>② 先做哪步?</b> 先做 <b>L1(agents 外置)</b> —— 安全、最大去重、可独立发版、~1–2 天;规则/脚本之后再说。<br><span class="reco">我的倾向:先 L1。</span> 它自身成立、且证明整个模型,不必等 spike。</div>
+  <div class="decision"><b>③ 分区 dev-* agent</b>:做成<b>固定插件类型变体</b>(干净零拷贝,但失去 <code>{{STACK}}/{{PROJECT_NAME}}</code> 注入)<b>还是</b>保留为唯一的每项目本地 agent(保注入、留小本地拷贝)?<span class="note">L1 实现时才需定。</span></div>
+  <div class="decision"><b>④ 规则投递面</b>:常驻 skill(更干净,但模型<b>可能不调用</b> = 可靠性退化)<b>还是</b> agent 体内 <code>@</code>-读(agent 跑时必加载,但只到 agent 上下文)?<span class="reco">我的倾向:agent 面,更可靠。</span> L2 才需定。</div>
+
+  <hr>
+  <p><b>推荐第一笔:</b> L1 —— agents 外置。删掉每项目最大的一块重复(~1074 行 × 每个项目),杀死 harness-sync 的 agent 腿,且<b>决策策略死圈顺带消解</b>(策略一旦插件常驻,就没有"缺失文件"可言,只剩本地那一行 Active mode)。这是独立可发的安全胜利。</p>
+  <p class="small">完整原始分析(含 4 个方案 + 对抗式批判)见 workflow 输出。本简报是综合 + 我对面板两处夸大的纠正(不变行数 ~1600 非 5000;规则腿需 spike)。</p>
+</div>
+</body>
+</html>

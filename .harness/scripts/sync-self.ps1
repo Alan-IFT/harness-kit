@@ -44,6 +44,7 @@ if (-not (Test-Path $templateCommon)) {
 # Mapping: source (under templates/common/) → target (under repo root)
 $mappings = @(
     @{ from = ".harness/agents"; to = ".harness/agents"; type = "dir-of-md" }
+    @{ from = ".harness/agents"; to = "agents"; type = "dir-of-md" }   # plugin-native top-level agents/ (redesign Leg 1) — keep byte-identical
     @{ from = ".harness/scripts/harness-sync.ps1"; to = ".harness/scripts/harness-sync.ps1"; type = "file" }
     @{ from = ".harness/scripts/harness-sync.sh"; to = ".harness/scripts/harness-sync.sh"; type = "file" }
     @{ from = ".harness/scripts/install-hooks.ps1"; to = ".harness/scripts/install-hooks.ps1"; type = "file" }

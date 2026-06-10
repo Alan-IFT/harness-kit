@@ -57,6 +57,8 @@ sync_dir_of_md() {
 
 # Mapping 1: agents
 sync_dir_of_md "$template_common/.harness/agents" "$repo_root/.harness/agents" ".harness/agents"
+# Mapping 1b: plugin-native top-level agents/ (redesign Leg 1) — keep byte-identical
+sync_dir_of_md "$template_common/.harness/agents" "$repo_root/agents" "agents (plugin-native)"
 
 # Mapping 2: harness-sync scripts
 sync_file "$template_common/.harness/scripts/harness-sync.ps1" "$repo_root/.harness/scripts/harness-sync.ps1" ".harness/scripts/harness-sync.ps1"
