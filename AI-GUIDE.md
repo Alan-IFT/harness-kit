@@ -23,6 +23,7 @@ Stack: Markdown (skills, agent definitions, docs) + PowerShell + Bash (verify_al
 - **`.harness/rules/10-self-consistency.md`** (**when touching `templates/`, `.harness/`, or .harness/scripts/sync-self**): the two consistency layers (templates ↔ this repo, `.harness` ↔ `.claude`/`CLAUDE.md`)
 - **`.harness/rules/15-skill-authoring.md`** (**when authoring or changing a skill or agent**): the quality bar for `skills/<name>/SKILL.md` + `.harness/agents/*.md` — model-facing descriptions, a Gotchas/anti-patterns surface, progressive disclosure, and what we deliberately don't do (distilled from Anthropic's "how we use skills")
 - **`.harness/rules/20-documentation.md`** (**when touching README / CHANGELOG / docs**): doc-sync rules, what README must reference
+- **`.harness/rules/25-decision-policy.md`** (**at task start, and whenever you would ask the user / call `AskUserQuestion`**): the decision & escalation policy — Mode 1 (human decides, default) vs Mode 2 (rubric-guided autonomy); the always-escalate red lines; this repo runs **Mode 2 (balanced)**, deciding per `.harness/decision-rubric.md` and logging each autonomous call
 - **`.harness/rules/30-engineering.md`** (**before commits**): commit message conventions, file hygiene, no secrets, PS/Bash symmetry
 - **`.harness/rules/40-locations.md`** (**when looking for "where does X live"**): file-location lookup table (read this if you'd otherwise guess a path)
 - **`.harness/rules/60-tool-handoff.md`** (**when switching Claude Code ↔ Copilot or other tools**): state lives in files, doc-sync responsibility for non-Claude tools
@@ -33,6 +34,7 @@ Stack: Markdown (skills, agent definitions, docs) + PowerShell + Bash (verify_al
 
 **Memory layer**:
 - **`.harness/insight-index.md`** — ≤30 evidence-backed lines of project-specific facts. Read at task start; append at task end (only with evidence). Never edit other people's lines.
+- **`.harness/decision-rubric.md`** — the operator-authored principles the AI decides by under Mode 2 (see `25-decision-policy.md`). Read at every escalate-or-decide point; the operator edits it to widen / narrow autonomy.
 
 Before declaring any task complete, run `.harness/scripts/verify_all` and confirm all PASS checks are green (32/32; check count grows with releases) — this is the gate, not a rule fragment.
 
