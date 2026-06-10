@@ -13,7 +13,7 @@ recoverable state of any in-flight task is:
 
 - `docs/tasks.md` — the task board: which tasks exist, what stage each is at.
 - `docs/features/<task-slug>/` — per-task documents 01–07 plus `PM_LOG.md`.
-- `.harness/agents/*.md` — role contracts each agent must obey.
+- The **framework** agent contracts — plugin-native (`harness-kit:<name>`, Claude Code); any project-specific partition `dev-*` agents live locally under `.harness/agents/*.md`.
 - `.harness/rules/*.md` (this file lives here) — project-wide rules.
 
 Anything not in these files **is not state** — it's chat noise. When you
@@ -37,12 +37,15 @@ When the user says "continue task T-XXX" or "what's in progress":
    - If using Claude Code: PM Orchestrator (yourself if you're the PM) reads
      the partition assignment from `02_SOLUTION_DESIGN.md` and dispatches the
      correct sub-agent via the Task tool. Sub-agents don't enter resume mode
-     directly — PM routes them.
-   - If using Copilot or another tool without sub-agent dispatch: read the
-     role file `.harness/agents/<role>.md` for the agent that should be next
-     (per step 2's PM_LOG entry). **Assume that role personally.** Follow its
-     contract precisely — read what it reads, write what it writes, respect
-     the partition rule if any.
+     directly — PM routes them. The framework agents are plugin-native
+     (`harness-kit:<name>`); any partition `dev-*` agent is read from the
+     project's local `.harness/agents/dev-*.md`.
+   - On a non-Claude tool (Copilot / Cursor): the framework agents are
+     plugin-provided to Claude Code and are **not** materialized in the
+     project, so manual role-play of a framework role from a local
+     `.harness/agents/<role>.md` is no longer supported — that file isn't
+     there. Resume the framework pipeline on Claude Code. (A project-specific
+     partition `dev-*` agent does live locally and can still be read.)
 5. Produce the next stage's document (or continue the current stage's
    document if you're mid-stage). Write it to `docs/features/<task-slug>/`.
 6. Append one line to `PM_LOG.md`: timestamp · agent name · "completed
@@ -70,38 +73,14 @@ switching IDE, end of session:
   in `.claude/settings.json` auto-runs `.harness/scripts/harness-sync` at session
   end, so `.harness/` edits flow to `CLAUDE.md` + `.github/copilot-instructions.md`
   without user intervention.
-- **GitHub Copilot**: No sub-agent dispatch. You (Copilot) play whichever
-  role the protocol points you to. **One role at a time.** When you finish
-  your stage, stop and ask the user to "switch to next agent" — do not
-  silently move on as a different role. Cross-stage handoffs go through the
-  user (who'll usually switch back to Claude Code for PM routing, or
-  manually tell you to assume the next role).
-
-### Copilot continuous mode (opt-in)
-
-Default Copilot flow is one role at a time. A user can opt into a bounded
-self-dispatching flow with an explicit phrase.
-
-- **Activation phrase**: the user types `continuous mode` (English) **or**
-  `走全流程` (Chinese) in a plain user turn — not in a code block, not in a
-  quoted context, not inferred. The phrase must appear verbatim in the user's
-  prose.
-- **What it enables**: while in continuous mode, Copilot self-dispatches
-  through stages 1 → 2 → 3, picking up the next role's `.harness/agents/`
-  contract at each stage boundary. Each stage's output document is still
-  written to `docs/features/<task-slug>/` before advancing.
-- **HARD STOP after Gate Review** (stage 3): Copilot stops unconditionally
-  after writing `03_GATE_REVIEW.md`, regardless of the Gate verdict
-  (APPROVED / APPROVED WITH CONDITIONS / REVISE / REJECT). It then asks the
-  user "Continue to stages 4-7?" and waits for an explicit "continue"
-  before proceeding. This stop is non-negotiable — it is the human
-  sanity-check moment that justifies the autonomy.
-- **Session boundary**: continuous mode is reset at every new chat session.
-  Copilot does NOT carry over continuous mode across sessions; it re-prompts
-  the user on the next session if they want it again.
-- **Why not default**: Copilot is a manual-control tool by design. Making
-  multi-stage self-dispatch opt-in keeps the user's intent explicit and
-  prevents silent autonomy creep.
+- **GitHub Copilot / Cursor**: No sub-agent dispatch, and since v0.30 the
+  framework agents are plugin-provided to Claude Code — they're **not**
+  materialized in the project, so playing a framework role from a local
+  `.harness/agents/<role>.md` is no longer supported (the file isn't there).
+  The multi-stage framework pipeline runs on Claude Code; resume it there.
+  A non-Claude tool can still read the rules, skills, and any project-specific
+  partition `dev-*` agent, and can pick up in-flight state from the files
+  above — but cross-stage framework routing goes back through Claude Code.
 
 ### Doc-sync responsibility when not on Claude Code
 

@@ -61,7 +61,6 @@ Three flows are supported, picked by the tool the user is in:
 
 - **Claude Code automatic sub-agent dispatch** (default for Claude Code): PM Orchestrator hands off through stages 1 → 7 via the `Task` tool; no user intervention required between stages.
 - **Non-Claude tools (Copilot / Cursor)**: the framework agents are **plugin-provided** (dispatched by Claude Code as `harness-kit:<name>`); non-Claude framework-agent support is **not currently first-class**. Project-local partition `dev-*` agents in `.harness/agents/` remain readable by any tool.
-- **Copilot opt-in continuous mode**: the user types the activation phrase `continuous mode` (English) or `走全流程` (Chinese) in a plain user turn; Copilot then self-dispatches through stages 1 → 2 → 3, **STOPs unconditionally after Gate Review** (regardless of verdict), and waits for the user's "continue" before proceeding to stages 4-7. Continuous mode resets at every chat-session boundary. See `.harness/rules/60-tool-handoff.md` for the activation contract.
 
 ## Project documents
 

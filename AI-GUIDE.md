@@ -41,22 +41,21 @@ Before declaring any task complete, run `.harness/scripts/verify_all` and confir
 
 If you add a new fragment to `.harness/rules/`, append a line above with its filename, a 1-line description, and the trigger condition.
 
-## Agents (Claude Code Task tool / Copilot manual role-play)
+## Agents (Claude Code Task tool)
 
 The **7 framework agents (+ supervisor)** are provided by the harness-kit plugin as `harness-kit:<name>` (top-level `agents/*.md` is the single source — edit there directly, no sync). Only project-specific **partition `dev-*` agents** live in `.harness/agents/` (none in this repo). Read a contract on demand when assuming or dispatching to a role.
 
 - `harness-kit:pm-orchestrator` — takes new tasks, routes
 - `harness-kit:requirement-analyst` → `harness-kit:solution-architect` → `harness-kit:gate-reviewer` → `harness-kit:developer` → `harness-kit:code-reviewer` → `harness-kit:qa-tester`
 
-**Claude Code sub-agent dispatch — already implemented.** PM Orchestrator uses Claude Code's `Task` tool to spawn each downstream role in its own context; see `agents/pm-orchestrator.md` for the exact contract and the dispatch call sites (generics dispatched as `harness-kit:<name>`; partition `dev-*` are project-local). Copilot and other tools have no equivalent API, so they fall back to one-role-at-a-time manual role-play (the user names the next role).
+**Claude Code sub-agent dispatch — already implemented.** PM Orchestrator uses Claude Code's `Task` tool to spawn each downstream role in its own context; see `agents/pm-orchestrator.md` for the exact contract and the dispatch call sites (generics dispatched as `harness-kit:<name>`; partition `dev-*` are project-local). Non-Claude tools have no equivalent dispatch API and — since the framework agents are plugin-native (`harness-kit:<name>`), not materialized locally — are not currently first-class for the framework agents.
 
 ## AI tool flow modes
 
-Three flows are supported, picked by the tool the user is in:
+The framework agents are **plugin-native** (`harness-kit:<name>`, auto-discovered by Claude Code). Since v0.30 they are **not** materialized into a project's local `.harness/agents/`, so the canonical pipeline runs on Claude Code:
 
-- **Claude Code automatic sub-agent dispatch** (default for Claude Code): PM Orchestrator hands off through stages 1 → 7 via the `Task` tool; no user intervention required between stages.
-- **Copilot / Cursor manual one-role-at-a-time** (default for those tools): Copilot reads the framework agent contract from the plugin's `agents/<role>.md`, plays exactly that role, stops at the stage boundary, asks the user to "switch to next agent". One stage per user turn.
-- **Copilot opt-in continuous mode**: the user types the activation phrase `continuous mode` (English) or `走全流程` (Chinese) in a plain user turn; Copilot then self-dispatches through stages 1 → 2 → 3, **STOPs unconditionally after Gate Review** (regardless of verdict), and waits for the user's "continue" before proceeding to stages 4-7. Continuous mode resets at every chat-session boundary. See `.harness/rules/60-tool-handoff.md` for the activation contract.
+- **Claude Code automatic sub-agent dispatch** (the supported flow): PM Orchestrator hands off through stages 1 → 7 via the `Task` tool; no user intervention required between stages.
+- **Non-Claude tools (Copilot / Cursor) — not currently first-class for the framework agents**: the framework agents are plugin-provided to Claude Code and aren't available as local files, so the old "read `.harness/agents/<role>.md` and play the role manually" flow no longer works for the framework roles. A generated project still gives these tools the rules, skills, and project-specific partition `dev-*` agents they can read; the multi-stage framework pipeline is a Claude Code feature. See `.harness/rules/60-tool-handoff.md` for what state lives in files and how to hand off.
 
 ## Project documents
 
