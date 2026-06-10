@@ -75,7 +75,7 @@ else
     scope="global: $HOME"
 fi
 
-skills=(harness harness-init harness-adopt harness-verify harness-status harness-plan harness-explore harness-goal harness-batch harness-stream harness-intervene harness-supervise)
+skills=(harness harness-init harness-adopt harness-verify harness-status harness-plan harness-explore harness-goal harness-batch harness-stream harness-intervene harness-supervise harness-decision-mode)
 
 echo ""
 echo "Harness Kit install"
@@ -142,6 +142,7 @@ echo "  /harness-verify   run the project's verify_all"
 echo "  /harness-status   inspect Harness assets"
 echo "  /harness-intervene  redirect / pause / add-task to an inflight pipeline (soft Ctrl-C)"
 echo "  /harness-supervise  observer-only health check of a task folder"
+echo "  /harness-decision-mode  switch how much the AI decides on its own (Mode 1/2/3)"
 echo ""
 echo "Tip: for versioned/auditable install, prefer the plugin path inside Claude Code:"
 echo "  /plugin marketplace add Alan-IFT/harness-kit"

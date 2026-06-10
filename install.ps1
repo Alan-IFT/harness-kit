@@ -72,7 +72,7 @@ if ($Project) {
     $scope = "global: $homeDir"
 }
 
-$skills = @("harness", "harness-init", "harness-adopt", "harness-verify", "harness-status", "harness-plan", "harness-explore", "harness-goal", "harness-batch", "harness-stream", "harness-intervene", "harness-supervise")
+$skills = @("harness", "harness-init", "harness-adopt", "harness-verify", "harness-status", "harness-plan", "harness-explore", "harness-goal", "harness-batch", "harness-stream", "harness-intervene", "harness-supervise", "harness-decision-mode")
 
 Write-Host ""
 Write-Host "Harness Kit install" -ForegroundColor Cyan
@@ -145,6 +145,7 @@ Write-Host "  /harness-verify   run the project's verify_all"
 Write-Host "  /harness-status   inspect Harness assets"
 Write-Host "  /harness-intervene  redirect / pause / add-task to an inflight pipeline (soft Ctrl-C)"
 Write-Host "  /harness-supervise  observer-only health check of a task folder"
+Write-Host "  /harness-decision-mode  switch how much the AI decides on its own (Mode 1/2/3)"
 Write-Host ""
 Write-Host "Tip: for versioned/auditable install, prefer the plugin path inside Claude Code:" -ForegroundColor Cyan
 Write-Host "  /plugin marketplace add Alan-IFT/harness-kit"

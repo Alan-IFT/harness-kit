@@ -2,15 +2,15 @@
 
 [English](README.md) · **简体中文**
 
-![version](https://img.shields.io/badge/version-0.27.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-32%2F32-brightgreen) ![test-init](https://img.shields.io/badge/test--init-275%2F275-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.28.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-32%2F32-brightgreen) ![test-init](https://img.shields.io/badge/test--init-287%2F287-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
-> **Claude Code 的 Harness Engineering 工具包** — 一个 Claude Code Plugin（14 个 skills + 项目模板），把"有纪律的 AI 驱动开发"带到全栈和后端项目里。
+> **Claude Code 的 Harness Engineering 工具包** — 一个 Claude Code Plugin（15 个 skills + 项目模板），把"有纪律的 AI 驱动开发"带到全栈和后端项目里。
 >
 > **目标**：人工只做"描述需求"和"AI 做不到时介入"；其他全部 — 7-Agent 流水线、验证闸门、结构化文档 — 自动运行。
 
 ## 包含什么
 
-这是一个 Claude Code Plugin 包，给任何项目装上 14 个 AI skill：
+这是一个 Claude Code Plugin 包，给任何项目装上 15 个 AI skill：
 
 **流水线类**（6 种任务形态，AI 根据你的自然语言自动挑对应那条）
 - `/harness-kit:harness` — 完整 7-stage 流水线（RA → SA → GR → Dev → CR → QA → 交付）。用于真正的功能 / bug / 重构。
@@ -31,6 +31,7 @@
 - `/harness-kit:harness-status` — 健康度快照（哪些资产存在、基线、最近 verify 状态、活动任务）
 - `/harness-kit:harness-intervene` — 给正在跑的流水线发"软 Ctrl-C"：写一个 `STOP` / `REDIRECT` / `SKIP` / `NOTE` 信号文件，PM 在下一次阶段切换时消费
 - `/harness-kit:harness-supervise` — 旁观者辅助 skill（v0.17+）：读取进行中或归档的任务文件夹，产出 `SUPERVISION_REPORT.md`，标注 anti-pattern（rollback 比率、阶段文档过薄、缺 intervention check、缺 archive 调用），分 `INFO`/`WARN`/`ALERT`，最后一行给出 `HEALTHY`/`WATCH`/`INTERVENE` 判决
+- `/harness-kit:harness-decision-mode` — 设置或切换项目的决策/升级**模式**：Mode 1（人工决策，默认）、Mode 2（AI 按预设 rubric 自己拿主意）、Mode 3（AI 按你自己的自定义 rubric 决策）。只外科式改写 `.harness/rules/25-decision-policy.md` 里的"Active mode"那一行；首次切到 Mode 3 时收集你的自定义决策提示。非破坏、幂等、要求干净 git 工作区
 
 init 之后，每个非琐碎任务流经 **7-Agent 流水线**：PM Orchestrator → Requirement Analyst → Solution Architect → Gate Reviewer → Developer（或分区 `dev-*`）→ Code Reviewer → QA Tester → 交付。
 

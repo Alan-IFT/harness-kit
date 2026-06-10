@@ -9,6 +9,9 @@ choice it would otherwise put to the user. A human-authored rubric
 once and **review autonomous calls after the fact** instead of approving each one up front —
 "review-after" replacing "decide-before".
 
+Switch modes with **`/harness-decision-mode`** (the interactive switcher) or by editing the
+"Active mode" line below.
+
 ## When to read this
 
 - **Whenever an agent is about to ask the user / call `AskUserQuestion` / "stop and ask"** —
@@ -19,23 +22,28 @@ once and **review autonomous calls after the fact** instead of approving each on
 
 ## Active mode
 
-**Active mode: 2 (rubric-guided autonomy, "balanced" calibration).**
+**Active mode: 2 (preset-rubric autonomy, "balanced" calibration).**
 New projects scaffolded by `/harness-init` default to **Mode 1**; this dogfood repo opts in
-to Mode 2. Flip by editing this line.
+to Mode 2. Switch with `/harness-decision-mode` (or flip this line by hand).
 
-## The two modes
+## The three modes
 
 - **Mode 1 — human decides (the safe default).** Any point the AI cannot resolve from the
   request, the code, or an unambiguous default goes to the user. This is the original harness
   behavior (RA "lists every ambiguity"; agents stop at judgment calls).
-- **Mode 2 — rubric-guided autonomy.** The AI resolves any decision the rubric
-  (`.harness/decision-rubric.md`) + the user's stated principles clearly cover — **including
-  reversible design / implementation trade-offs** — decides, records it, and proceeds. It
-  escalates only (a) the red lines below, and (b) decisions the rubric does not cover or that
-  carry a major / irreversible trade-off. **Rubric coverage is the control knob:** a richer
-  rubric delegates more; a sparse one degrades gracefully toward Mode 1.
+- **Mode 2 — preset-rubric autonomy.** The AI resolves any decision the **Preset rubric**
+  (`.harness/decision-rubric.md` → `## Preset rubric (Mode 2)`) + the user's stated principles
+  clearly cover — **including reversible design / implementation trade-offs** — decides, records
+  it, and proceeds. It escalates only (a) the red lines below, and (b) decisions the rubric does
+  not cover or that carry a major / irreversible trade-off. **Rubric coverage is the control
+  knob:** a richer rubric delegates more; a sparse one degrades gracefully toward Mode 1.
+- **Mode 3 — user-custom-rubric autonomy.** Identical mechanism to Mode 2, but the AI decides by
+  the user's OWN **Custom rubric** (`.harness/decision-rubric.md` → `## Custom rubric (Mode 3)`)
+  instead of the Preset. The three prime principles remain the floor; the red lines and the audit
+  trail below apply unchanged. Coverage of the Custom rubric is the control knob exactly as in
+  Mode 2 — an empty Custom rubric degrades toward Mode 1.
 
-## Red lines — ALWAYS escalate (both modes; the rubric cannot override these)
+## Red lines — ALWAYS escalate (all three modes; no rubric can override these)
 
 1. **Irreversible / destructive** — deleting or overwriting something not created in this
    task, history rewrite, force-push, dropping or migrating data.
@@ -52,18 +60,20 @@ to Mode 2. Flip by editing this line.
 (In THIS repo all commits/pushes are the operator's per the user's standing instruction, so
 red line #2 is already honored — agents leave a green tree and the operator pushes.)
 
-## How an agent applies it (Mode 2)
+## How an agent applies it (Mode 2 / Mode 3)
 
 At a would-be escalation point:
 1. **Red line?** → escalate. Stop.
-2. **Does the rubric + the user's principles clearly cover it?** → decide accordingly,
-   **log the decision** (point · options · choice · rubric basis), proceed.
+2. **Does the active rubric + the user's principles clearly cover it?** → decide accordingly,
+   **log the decision** (point · options · choice · rubric basis), proceed. Under Mode 2 the
+   active rubric is the **Preset** section; under Mode 3 it is the **Custom** section — the rule
+   is identical, only the section read differs.
 3. **Otherwise** (uncovered, or major / irreversible trade-off) → escalate, and name the
    rubric line that WOULD have let you decide it (so the user can extend the rubric).
 
 ## Audit trail (what makes "review-after" safe)
 
-Every autonomous Mode-2 decision is recorded so the user can spot-check rather than
+Every autonomous Mode-2 / Mode-3 decision is recorded so the user can spot-check rather than
 pre-approve:
 - **Pipeline tasks** → one line in the task's `PM_LOG.md`.
 - **Direct / ambient work** → a short "decisions made" list in the AI's response.
@@ -80,7 +90,10 @@ resolve covered ambiguities — touches agent definitions and is a separate pipe
 
 ## Changing the policy
 
-- **Flip the active mode** → edit the "Active mode" line above.
+- **Switch the active mode** → run `/harness-decision-mode` (interactive), or edit the
+  "Active mode" line above by hand.
 - **Tune what's autonomous** → edit `.harness/decision-rubric.md` (no code change — agents
-  read it at decision time). Widen to delegate more; trim to delegate less.
-- The **red lines** are deliberately NOT in the rubric — they are a fixed safety floor.
+  read it at decision time). Mode 2 reads the **Preset** section; Mode 3 reads the **Custom**
+  section. Widen to delegate more; trim to delegate less.
+- The **red lines** are deliberately NOT in the rubric — they are a fixed safety floor that
+  applies in all three modes.

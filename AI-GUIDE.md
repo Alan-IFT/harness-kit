@@ -4,7 +4,7 @@
 
 ## Project
 
-This is **harness-kit** itself — a Claude Code Plugin that distributes 14 skills + templates for AI-driven development under the Harness Engineering methodology. The repo **dogfoods** its own design: the same canonical 7-agent pipeline (plus the v0.17+ auxiliary supervisor) that we ship to users governs work here.
+This is **harness-kit** itself — a Claude Code Plugin that distributes 15 skills + templates for AI-driven development under the Harness Engineering methodology. The repo **dogfoods** its own design: the same canonical 7-agent pipeline (plus the v0.17+ auxiliary supervisor) that we ship to users governs work here.
 
 Stack: Markdown (skills, agent definitions, docs) + PowerShell + Bash (verify_all, install, sync scripts).
 
@@ -23,7 +23,7 @@ Stack: Markdown (skills, agent definitions, docs) + PowerShell + Bash (verify_al
 - **`.harness/rules/10-self-consistency.md`** (**when touching `templates/`, `.harness/`, or .harness/scripts/sync-self**): the two consistency layers (templates ↔ this repo, `.harness` ↔ `.claude`/`CLAUDE.md`)
 - **`.harness/rules/15-skill-authoring.md`** (**when authoring or changing a skill or agent**): the quality bar for `skills/<name>/SKILL.md` + `.harness/agents/*.md` — model-facing descriptions, a Gotchas/anti-patterns surface, progressive disclosure, and what we deliberately don't do (distilled from Anthropic's "how we use skills")
 - **`.harness/rules/20-documentation.md`** (**when touching README / CHANGELOG / docs**): doc-sync rules, what README must reference
-- **`.harness/rules/25-decision-policy.md`** (**load when you would ask the user / call `AskUserQuestion`**): the decision & escalation policy — Mode 1 (human decides, default) vs Mode 2 (rubric-guided autonomy) + the always-escalate red lines. **This repo runs Mode 2 (balanced)** — decide per `.harness/decision-rubric.md`, escalate the red lines, log each autonomous call. (This one-line flag is the only always-read part; the full policy + rubric load on-demand at a decision point.)
+- **`.harness/rules/25-decision-policy.md`** (**load when you would ask the user / call `AskUserQuestion`**): the decision & escalation policy — Mode 1 (human decides, default) vs Mode 2 (preset-rubric autonomy) vs Mode 3 (user-custom rubric) + the always-escalate red lines; switch with `/harness-decision-mode`. **This repo runs Mode 2 (balanced)** — decide per `.harness/decision-rubric.md` (Preset section), escalate the red lines, log each autonomous call. (This one-line flag is the only always-read part; the full policy + rubric load on-demand at a decision point.)
 - **`.harness/rules/30-engineering.md`** (**before commits**): commit message conventions, file hygiene, no secrets, PS/Bash symmetry
 - **`.harness/rules/40-locations.md`** (**when looking for "where does X live"**): file-location lookup table (read this if you'd otherwise guess a path)
 - **`.harness/rules/60-tool-handoff.md`** (**when switching Claude Code ↔ Copilot or other tools**): state lives in files, doc-sync responsibility for non-Claude tools
@@ -95,6 +95,7 @@ Three flows are supported, picked by the tool the user is in:
 | Mid-task redirect | "stop the pipeline" / "tell dev to skip X" / "leave a note for QA" | "停一下" / "让 dev 别动 X" / "顺便告诉 QA…" | `/harness-intervene` |
 | Upgrade an old project | "bring my old harness project up to date" / "the scripts are in the old `scripts/` layout" | "把旧的 harness 项目升级到最新" / "脚本还在旧的 scripts/ 目录" | `/harness-upgrade` |
 | Set / switch / refresh project language | "make this project English" / "switch to Chinese output" / "refresh the language policy" | "切到中文输出" / "改成英文" / "刷新语言策略" | `/harness-language` |
+| Switch decision/escalation mode | "let the AI decide on its own" / "make it ask me first" / "use my own decision rules" | "切换决策模式" / "让 AI 自己拿主意" / "改成人工决策" / "用我自己的决策规则" | `/harness-decision-mode` |
 
 Declare-done gate (**all non-trivial modes**): `.harness/scripts/verify_all` PASS + (if 7-stage or goal) QA's `06_TEST_REPORT.md` has an `## Adversarial tests` section.
 

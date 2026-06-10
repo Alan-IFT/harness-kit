@@ -2,15 +2,15 @@
 
 **English** · [简体中文](README.zh-CN.md)
 
-![version](https://img.shields.io/badge/version-0.27.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-32%2F32-brightgreen) ![test-init](https://img.shields.io/badge/test--init-275%2F275-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.28.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-32%2F32-brightgreen) ![test-init](https://img.shields.io/badge/test--init-287%2F287-brightgreen) ![integration](https://img.shields.io/badge/integration-82%2F82-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
-> **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (14 skills + project templates) that brings disciplined AI-driven development to fullstack and backend projects.
+> **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (15 skills + project templates) that brings disciplined AI-driven development to fullstack and backend projects.
 >
 > **Goal**: humans only do "describe the requirement" and "step in when AI can't"; everything else — 7-agent pipeline, verify gates, structured documents — runs automatically.
 
 ## What's inside
 
-This is a Claude Code Plugin packaging that gives any project fourteen AI skills:
+This is a Claude Code Plugin packaging that gives any project fifteen AI skills:
 
 **Pipeline skills** (six task shapes; the AI picks the right one from your natural-language description)
 - `/harness-kit:harness` — full 7-stage pipeline (RA → SA → GR → Dev → CR → QA → Delivery). Use for real feature / bug / refactor work.
@@ -31,6 +31,7 @@ This is a Claude Code Plugin packaging that gives any project fourteen AI skills
 - `/harness-kit:harness-status` — health snapshot (which assets present, baseline, last verify, active tasks)
 - `/harness-kit:harness-intervene` — soft Ctrl-C for an in-flight pipeline: drop a `STOP` / `REDIRECT` / `SKIP` / `NOTE` signal that the PM consumes at the next stage boundary
 - `/harness-kit:harness-supervise` — observer-only auxiliary skill (v0.17+): reads an in-flight or archived task folder and emits a `SUPERVISION_REPORT.md` flagging anti-patterns (rollback rate, stage-doc thinness, missing intervention checks, missing archive call) with `INFO`/`WARN`/`ALERT` severity and a final `HEALTHY`/`WATCH`/`INTERVENE` verdict
+- `/harness-kit:harness-decision-mode` — set or switch a project's decision/escalation **mode**: Mode 1 (human decides, the default), Mode 2 (AI decides per the preset rubric), or Mode 3 (AI decides per your custom rubric). Surgically rewrites only the "Active mode" line of `.harness/rules/25-decision-policy.md`; on a first Mode-3 switch it collects your custom decision prompts. Non-destructive, idempotent, clean-git gated
 
 After init, every non-trivial task flows through a **7-agent pipeline**: PM Orchestrator → Requirement Analyst → Solution Architect → Gate Reviewer → Developer (or partition `dev-*`) → Code Reviewer → QA Tester → Delivery.
 

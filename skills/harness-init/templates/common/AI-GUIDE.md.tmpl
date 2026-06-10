@@ -20,6 +20,7 @@ This project uses the **Harness 7-agent pipeline**: PM Orchestrator → Requirem
 
 - **`.harness/rules/00-core.md`** (**always**): 7-stage pipeline, hard rules, default output formats
 - **`.harness/rules/05-insight-index.md`** (**at the start of design/implementation tasks**): how cross-task hard-won truths are captured; check `.harness/insight-index.md` before deciding anything non-trivial
+- **`.harness/rules/25-decision-policy.md`** (**load when you would ask the user / call `AskUserQuestion`**): the decision & escalation policy — Mode 1 (human decides, **the default for new projects**) vs Mode 2 (preset-rubric autonomy) vs Mode 3 (your custom rubric) + the always-escalate red lines. Switch modes with `/harness-decision-mode`.
 - **`.harness/rules/50-{{PROJECT_TYPE}}.md`** (**when touching code**): project-type overlay, partitioning, stack conventions <!-- ai-native-init: when /harness-init Q6 = Yes, the skill's step 5b.8 Edits this line to point at `50-<project-slug>.md` instead -->
 - **`.harness/rules/60-tool-handoff.md`** (**when switching Claude Code ↔ Copilot**): state lives in files, not chat memory
 - **`.harness/rules/65-intervention.md`** (**when running, observing, or redirecting any `/harness*` task**): `.harness/intervention.md` is a single-shot signal file (STOP / REDIRECT / SKIP / NOTE) that PM consumes at every stage boundary
@@ -31,6 +32,7 @@ If you add a new fragment, append a line above with its filename, a 1-line descr
 
 **Memory layer**:
 - **`.harness/insight-index.md`** — ≤30 evidence-backed lines of project-specific facts. Read at task start; append at task end (only with evidence).
+- **`.harness/decision-rubric.md`** — the principles the AI decides by under Mode 2 (Preset) / Mode 3 (Custom); read at every escalate-or-decide point (see `.harness/rules/25-decision-policy.md`). Edit to widen / narrow autonomy.
 
 ## Skills (standard procedures, invoked per task type)
 

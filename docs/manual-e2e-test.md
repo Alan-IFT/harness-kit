@@ -1,10 +1,10 @@
 # Manual End-to-End Test Checklist
 
-Automated regression (`.harness/scripts/test-init.ps1` at 275 assertions; `.harness/scripts/test-init.sh` at 237 when python3 is unavailable (e.g. Windows Microsoft Store stub) / 275 when present; `.harness/scripts/verify_all` at 32 checks; `.harness/scripts/test-supervisor.ps1` at 49 assertions / `.harness/scripts/test-supervisor.sh` at 45 (no-python3) covering the supervisor agent contract + AC-4..AC-7 + BUG-1 fixed-case Q-1 + BUG-2 column-anchored-slug negative fixtures; `.harness/scripts/test-verify-i6.{ps1,sh}` at 58/58 covering the I.6 gap-tolerant matcher + 2×2 structural lockstep + AC-8 permanent fixture; live counts in `.harness/scripts/baseline.json`) covers everything
+Automated regression (`.harness/scripts/test-init.ps1` at 287 assertions; `.harness/scripts/test-init.sh` at 249 when python3 is unavailable (e.g. Windows Microsoft Store stub) / 287 when present; `.harness/scripts/verify_all` at 32 checks; `.harness/scripts/test-supervisor.ps1` at 49 assertions / `.harness/scripts/test-supervisor.sh` at 45 (no-python3) covering the supervisor agent contract + AC-4..AC-7 + BUG-1 fixed-case Q-1 + BUG-2 column-anchored-slug negative fixtures; `.harness/scripts/test-verify-i6.{ps1,sh}` at 58/58 covering the I.6 gap-tolerant matcher + 2×2 structural lockstep + AC-8 permanent fixture; live counts in `.harness/scripts/baseline.json`) covers everything
 that runs from a shell. But two things must be exercised in a real Claude Code
 session to confirm the experience:
 
-1. **Skill discovery** — does Claude Code actually load the fourteen skills?
+1. **Skill discovery** — does Claude Code actually load the fifteen skills?
 2. **Skill interaction** — does `/harness-init` correctly call `AskUserQuestion`,
    substitute placeholders, run `harness-sync`, and leave a usable project?
 
@@ -31,9 +31,9 @@ upgrading / before announcing a release.
 ~/harness-kit/install.sh --dry-run
 ```
 
-**Expected**: prints "Would copy" for all 14 skills (harness, harness-init,
+**Expected**: prints "Would copy" for all 15 skills (harness, harness-init,
 harness-adopt, harness-upgrade, harness-language, harness-verify, harness-status, harness-plan, harness-explore,
-harness-goal, harness-batch, harness-stream, harness-intervene, harness-supervise). Exits 0. **No file is created** under
+harness-goal, harness-batch, harness-stream, harness-intervene, harness-supervise, harness-decision-mode). Exits 0. **No file is created** under
 `~/.claude/skills/`.
 
 ### A.2 Real install
@@ -46,20 +46,20 @@ harness-goal, harness-batch, harness-stream, harness-intervene, harness-supervis
 ~/harness-kit/install.sh
 ```
 
-**Expected**: prints "Installed" for all 14 skills. After completion, list them:
+**Expected**: prints "Installed" for all 15 skills. After completion, list them:
 
 ```powershell
 Get-ChildItem ~/.claude/skills/ -Directory | Select-Object Name
-# Should show: harness, harness-adopt, harness-batch, harness-explore, harness-goal,
+# Should show: harness, harness-adopt, harness-batch, harness-decision-mode, harness-explore, harness-goal,
 # harness-init, harness-intervene, harness-language, harness-plan, harness-status, harness-stream, harness-supervise, harness-upgrade, harness-verify
 ```
 
 ### A.3 Claude Code sees them
 
 Open Claude Code in any folder. Type `/help` or look at the slash command picker.
-**Expected**: the fourteen `/harness-*` commands appear (`/harness`, `/harness-init`,
+**Expected**: the fifteen `/harness-*` commands appear (`/harness`, `/harness-init`,
 `/harness-adopt`, `/harness-upgrade`, `/harness-language`, `/harness-verify`, `/harness-status`, `/harness-plan`,
-`/harness-explore`, `/harness-goal`, `/harness-batch`, `/harness-stream`, `/harness-intervene`, `/harness-supervise`).
+`/harness-explore`, `/harness-goal`, `/harness-batch`, `/harness-stream`, `/harness-intervene`, `/harness-supervise`, `/harness-decision-mode`).
 
 If they don't appear: restart Claude Code; if still missing, check that
 `~/.claude/skills/harness-init/SKILL.md` exists and has valid frontmatter

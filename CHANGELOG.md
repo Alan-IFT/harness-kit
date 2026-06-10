@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.28.0] - 2026-06-10
+
+### Added — `/harness-decision-mode` skill + Mode 3 (user-custom rubric) in the decision policy (T-018)
+
+A new 15th skill, `harness-decision-mode`, plus a third decision mode, ship the decision/escalation policy mechanism to all harness projects. The policy (introduced dogfood-only earlier) lets you preset your judgment once and review the AI's autonomous calls after the fact instead of approving each one up front. This release adds a third calibration and an interactive switcher, and distributes the whole mechanism — with **generic, universal defaults** — into every project `/harness-init` scaffolds.
+
+- **Mode 3 — user-custom autonomy** added to `.harness/rules/25-decision-policy.md` (dogfood + the new shipped template copy): the AI decides per the user's OWN **Custom rubric** instead of the preset rubric. The red lines and the audit trail apply unchanged across all three modes; the three prime principles remain the floor.
+- **`.harness/decision-rubric.md` restructured** into two delimited sections — `## Preset rubric (Mode 2)` (the curated principles Mode 2 reads) and `## Custom rubric (Mode 3)` (user-authored; empty by default, Mode 3 reads it). The dogfood repo keeps its seeded operator preferences as the Preset and adds an empty Custom; Active mode stays 2.
+- **New skill** `skills/harness-decision-mode/SKILL.md` — an interactive Mode-1/2/3 switcher modeled on `/harness-language`: shows the current Active mode → `AskUserQuestion` to pick a mode → surgically rewrites ONLY the `Active mode` line of `25-decision-policy.md` → confirms. On a first switch to Mode 3 with an empty Custom rubric it collects the user's custom decision prompts and writes them into the Custom section. Non-destructive (`.bak` per edited file, clean-git gated), idempotent (re-picking the current mode is a no-op). No helper script — the edit is a one-line replace, so no `.{ps1,sh}` pair is added (rule 15 P6 anti-bloat).
+- **Shipped to generated projects (generic):** `skills/harness-init/templates/common/.harness/rules/25-decision-policy.md` + `decision-rubric.md`. The shipped Preset contains ONLY universal defaults (three prime principles + reversible-in-scope→just-do-it, match existing conventions, honest reporting, verify-before-done, profile-before-optimizing) — NOT this repo operator's personal preferences. The shipped **Active mode defaults to 1** (new projects start human-decides); Custom section empty. The template `AI-GUIDE.md.tmpl` indexes the new rule and surfaces `decision-rubric.md` in the memory layer.
+- **`install.ps1` + `install.sh`** add `harness-decision-mode` to the skills array (symmetric). `verify_all` C.1/G.1/G.2 skill enumeration + labels go 14 → 15.
+- Version 0.27.0 → 0.28.0 (plugin.json, marketplace.json, both README badges). Skill count **14 → 15**; `verify_all` stays **32** checks (no new check); no new `{{...}}` placeholder; no I.6 banned/exempt-list change (the new policy/rubric text introduces no retired claim).
+
 ## [0.27.0] - 2026-06-09
 
 ### Changed — eliminate the i18n/zh English-body duplication via single-source + init composition (T-016)

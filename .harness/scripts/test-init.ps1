@@ -149,6 +149,10 @@ function Test-Type {
         }
 
         Assert ".harness/rules/00-core.md (composed base)" { Test-Path (Join-Path $tmp ".harness/rules/00-core.md") }
+        Assert ".harness/rules/25-decision-policy.md (shipped, generic)" { Test-Path (Join-Path $tmp ".harness/rules/25-decision-policy.md") }
+        Assert ".harness/rules/25-decision-policy.md defaults to Mode 1" { (Get-Content (Join-Path $tmp ".harness/rules/25-decision-policy.md") -Raw) -match 'Active mode: 1' }
+        Assert ".harness/decision-rubric.md (shipped, generic)" { Test-Path (Join-Path $tmp ".harness/decision-rubric.md") }
+        Assert ".harness/decision-rubric.md has Preset + Custom sections" { $r = Get-Content (Join-Path $tmp ".harness/decision-rubric.md") -Raw; ($r -match 'Preset rubric \(Mode 2\)') -and ($r -match 'Custom rubric \(Mode 3\)') }
         Assert ".harness/rules/50-$ProjectType.md (overlay)" { Test-Path (Join-Path $tmp ".harness/rules/50-$ProjectType.md") }
 
         # .harness/skills/ is fullstack/backend-only; generic ships without them (user fills in)

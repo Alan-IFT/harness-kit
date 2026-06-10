@@ -13,6 +13,8 @@ harness-kit/
 │   │       ├── common/                 ← Shared assets all projects get
 │   │       │   ├── .harness/agents/    ← 7 agent definitions (tool-agnostic SOT)
 │   │       │   ├── .harness/rules/00-core.md.tmpl       ← base rule fragments
+│   │       │   ├── .harness/rules/25-decision-policy.md ← shipped decision policy (v0.28+; GENERIC, Active mode defaults to 1)
+│   │       │   ├── .harness/decision-rubric.md          ← shipped rubric (v0.28+; GENERIC universal-default Preset, empty Custom — NOT operator personal prefs)
 │   │       │   ├── .harness/rules/_ai-native-prompt.md  ← canonical AI-customization prompt (v0.16+; reference only, indexed by AI-GUIDE.md)
 │   │       │   ├── .claude/settings.json.tmpl          ← Claude Code binding glue
 │   │       │   ├── docs/workflow.md
@@ -40,6 +42,7 @@ harness-kit/
 │   ├── harness-adopt/SKILL.md          ← Existing-project adoption (automated apply since v0.3)
 │   ├── harness-upgrade/SKILL.md        ← Upgrade an already-initialized but stale project to the current layout (v0.23+); judgment layer, drives upgrade-project.{ps1,sh}
 │   ├── harness-language/SKILL.md       ← Set / switch (en<->zh) / refresh a project's output-language policy (v0.25+); judgment layer, drives language-policy.{ps1,sh}
+│   ├── harness-decision-mode/SKILL.md  ← Switch the decision/escalation MODE 1/2/3 (v0.28+); surgical single-line Active-mode rewrite of .harness/rules/25-decision-policy.md + Mode-3 custom-rubric capture; no helper script (direct Edit)
 │   ├── harness-verify/SKILL.md         ← Run verify_all
 │   ├── harness-status/SKILL.md         ← Show Harness health
 │   ├── harness-plan/SKILL.md           ← Stages 1-3 only (design-only)
@@ -60,6 +63,7 @@ harness-kit/
 │   │   ├── 10-self-consistency.md
 │   │   ├── 15-skill-authoring.md       ← Skill/agent authoring quality bar
 │   │   ├── 20-documentation.md
+│   │   ├── 25-decision-policy.md        ← Decision/escalation policy: Mode 1/2/3 + red lines (v0.28+; dogfood Active mode 2)
 │   │   ├── 30-engineering.md
 │   │   ├── 40-locations.md
 │   │   ├── 60-tool-handoff.md
@@ -67,6 +71,7 @@ harness-kit/
 │   │   ├── 70-doc-size.md
 │   │   ├── 75-safety-hook.md           ← Destructive-command guard (v0.15+)
 │   │   └── 80-settings-schema.md       ← settings.json schema integrity (v0.18+)
+│   ├── decision-rubric.md              ← Memory layer: principles the AI decides by (Preset=Mode 2 / Custom=Mode 3); read at every escalate-or-decide point (v0.28+)
 │   └── scripts/                        ← All harness-owned scripts (relocated from scripts/ in T-007)
 │       ├── verify_all.{ps1,sh}         ← Total verification (32 checks)
 │       ├── harness-sync.{ps1,sh}       ← Layer 2: .harness/agents + .harness/skills → .claude/
