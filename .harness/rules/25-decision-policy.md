@@ -11,8 +11,11 @@ once and **review autonomous calls after the fact** instead of approving each on
 
 ## When to read this
 
-- At the start of any task, **and whenever an agent is about to ask the user / call
-  `AskUserQuestion` / "stop and ask"** — consult this BEFORE escalating.
+- **Whenever an agent is about to ask the user / call `AskUserQuestion` / "stop and ask"** —
+  load this and `decision-rubric.md` and consult them BEFORE escalating. They do NOT need
+  loading every task: the AI-GUIDE index line already signals at task start that this repo is
+  Mode 2 and where the rubric lives, so the full text loads only when a real decision arises —
+  keeping the per-task context lean.
 
 ## Active mode
 
