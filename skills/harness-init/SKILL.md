@@ -1,6 +1,6 @@
 ---
 name: harness-init
-description: Bootstrap a new project with the full Harness Engineering skeleton — Claude-native by default (the 7 framework agents come from the harness-kit plugin as harness-kit:<name>; the project carries only rules, skills, and any partition dev-* agents in .harness/, plus the Claude Code binding in .claude/ + CLAUDE.md). Pass --portable to also materialize the framework agents/rules locally for non-Claude/offline use. Use this when starting a fresh fullstack or backend project that wants AI-driven development from day one.
+description: Bootstrap a new project with the full Harness Engineering skeleton — Claude-native by default (the 7 framework agents come from the harness-kit plugin as harness-kit:<name>; the project carries only rules, skills, and any partition dev-* agents in .harness/, plus the Claude Code binding in .claude/ + CLAUDE.md). Use this when starting a fresh fullstack or backend project that wants AI-driven development from day one.
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, AskUserQuestion, TodoWrite
 ---
 
@@ -23,10 +23,6 @@ The default model is **plugin-native** (v0.30+):
 - `CLAUDE.md` and `.github/copilot-instructions.md` are ~15-line static stubs
   written once during init; they point at `AI-GUIDE.md`, which indexes
   `.harness/rules/*.md` by reference (since v0.10 rules are not composed).
-
-**`--portable` (opt-in, best-effort):** pass `--portable` to *also* materialize the framework
-agents and rules into `.harness/` (the pre-cutover copy model), for non-Claude-Code tools or
-offline / no-plugin use. The default is plugin-native (Claude-native by default).
 
 ## When to invoke
 
@@ -92,7 +88,7 @@ Templates live alongside this skill:
 
 - `<skill-root>/templates/common/` — shared assets (rule fragments in `.harness/rules/`,
   harness-sync scripts, docs, evals). The framework agents are **not** here anymore — they
-  are plugin-provided (`harness-kit:<name>`). Only `--portable` materializes them locally.
+  are plugin-provided (`harness-kit:<name>`).
 - `<skill-root>/templates/fullstack/` — fullstack-specific overlays.
 - `<skill-root>/templates/backend/` — backend-specific overlays.
 - `<skill-root>/templates/generic/` — generic project overlay (single `50-generic.md` stub).

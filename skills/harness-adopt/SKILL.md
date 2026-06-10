@@ -178,7 +178,7 @@ Write `.harness-adopt/PLAN.md`:
 <the profile from step 2>
 
 ## Files I will add (NEW)
-- (the 7 generic framework agents are NOT copied — they are plugin-provided as harness-kit:<name>; pass --portable to materialize them locally for non-Claude/offline use)
+- (the 7 generic framework agents are NOT copied — they are plugin-provided as harness-kit:<name>)
 - .harness/agents/dev-*.md (3 partition agents, only if Q4=Partitioned):
   - Fullstack: dev-frontend, dev-backend, dev-db
   - Backend:   dev-api, dev-services, dev-db

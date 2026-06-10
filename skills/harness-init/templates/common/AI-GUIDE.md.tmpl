@@ -11,7 +11,8 @@ This project uses the **Harness 7-agent pipeline**: PM Orchestrator → Requirem
 ## Source of truth (in this repo, version-controlled)
 
 - `.harness/rules/*.md` — rule fragments
-- `.harness/agents/*.md` — 7 agent role contracts
+- the 7 framework agents (+ supervisor) are **plugin-provided** by harness-kit (dispatched as `harness-kit:<name>`)
+- `.harness/agents/*.md` — only project-specific partition `dev-*` agents (if any)
 - `.harness/skills/*/SKILL.md` — standard procedures (build / test / verify)
 
 **Do not directly edit** `.claude/`, `CLAUDE.md`, `.github/copilot-instructions.md` — they are tool-specific stubs or generated bindings.
@@ -42,26 +43,24 @@ If you add a new fragment, append a line above with its filename, a 1-line descr
 
 ## Agents
 
-Full role contracts in `.harness/agents/<name>.md`. Read on demand when assuming or dispatching to a role.
+The 7 framework agents are provided by the harness-kit plugin — dispatch as `harness-kit:<name>`; only partition `dev-*` agents live in `.harness/agents/`. Read a contract on demand when assuming or dispatching to a role.
 
-- `pm-orchestrator` — takes new tasks, routes
-- `requirement-analyst` — writes `01_REQUIREMENT_ANALYSIS.md`
-- `solution-architect` — writes `02_SOLUTION_DESIGN.md`
-- `gate-reviewer` — writes `03_GATE_REVIEW.md`
-- `developer` (or partitions: `dev-frontend` / `dev-backend` / `dev-db` / `dev-api` / `dev-services`) — writes `04_DEVELOPMENT.md`
-- `code-reviewer` — writes `05_CODE_REVIEW.md`
-- `qa-tester` — writes `06_TEST_REPORT.md`
+- `harness-kit:pm-orchestrator` — takes new tasks, routes
+- `harness-kit:requirement-analyst` — writes `01_REQUIREMENT_ANALYSIS.md`
+- `harness-kit:solution-architect` — writes `02_SOLUTION_DESIGN.md`
+- `harness-kit:gate-reviewer` — writes `03_GATE_REVIEW.md`
+- `harness-kit:developer` (or project-local partitions: `dev-frontend` / `dev-backend` / `dev-db` / `dev-api` / `dev-services`) — writes `04_DEVELOPMENT.md`
+- `harness-kit:code-reviewer` — writes `05_CODE_REVIEW.md`
+- `harness-kit:qa-tester` — writes `06_TEST_REPORT.md`
 
-Claude Code users dispatch via the Task tool. Copilot users read the agent file and play the role personally (one role at a time).
-
-**Claude Code sub-agent dispatch — already implemented.** PM Orchestrator uses Claude Code's `Task` tool to spawn each downstream role in its own context; see `.harness/agents/pm-orchestrator.md` for the exact dispatch contract. Copilot and other tools have no equivalent API, so they fall back to one-role-at-a-time manual role-play (the user names the next role).
+**Claude Code sub-agent dispatch — already implemented.** PM Orchestrator uses Claude Code's `Task` tool to spawn each downstream role in its own context (`harness-kit:<name>`); see the `harness-kit:pm-orchestrator` contract for the exact dispatch contract. Non-Claude tools (Copilot/Cursor) are not currently first-class for the framework agents (they're plugin-provided).
 
 ## AI tool flow modes
 
 Three flows are supported, picked by the tool the user is in:
 
 - **Claude Code automatic sub-agent dispatch** (default for Claude Code): PM Orchestrator hands off through stages 1 → 7 via the `Task` tool; no user intervention required between stages.
-- **Copilot / Cursor manual one-role-at-a-time** (default for those tools): Copilot reads `.harness/agents/<role>.md`, plays exactly that role, stops at the stage boundary, asks the user to "switch to next agent". One stage per user turn.
+- **Non-Claude tools (Copilot / Cursor)**: the framework agents are **plugin-provided** (dispatched by Claude Code as `harness-kit:<name>`); non-Claude framework-agent support is **not currently first-class**. Project-local partition `dev-*` agents in `.harness/agents/` remain readable by any tool.
 - **Copilot opt-in continuous mode**: the user types the activation phrase `continuous mode` (English) or `走全流程` (Chinese) in a plain user turn; Copilot then self-dispatches through stages 1 → 2 → 3, **STOPs unconditionally after Gate Review** (regardless of verdict), and waits for the user's "continue" before proceeding to stages 4-7. Continuous mode resets at every chat-session boundary. See `.harness/rules/60-tool-handoff.md` for the activation contract.
 
 ## Project documents

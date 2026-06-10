@@ -1,6 +1,6 @@
 # AI-GUIDE — harness-kit project index
 
-> Claude-native by default; `--portable` for tool-agnostic/offline use. Any AI tool reads this **before starting a task**.
+> harness-kit is a Claude Code plugin (Claude-native). Any AI tool reads this **before starting a task**.
 
 ## Project
 
@@ -55,7 +55,7 @@ The **7 framework agents (+ supervisor)** are provided by the harness-kit plugin
 Three flows are supported, picked by the tool the user is in:
 
 - **Claude Code automatic sub-agent dispatch** (default for Claude Code): PM Orchestrator hands off through stages 1 → 7 via the `Task` tool; no user intervention required between stages.
-- **Copilot / Cursor manual one-role-at-a-time** (default for those tools): Copilot reads the framework agent contract from the plugin's `agents/<role>.md` (or a `--portable` local copy under `.harness/agents/`), plays exactly that role, stops at the stage boundary, asks the user to "switch to next agent". One stage per user turn.
+- **Copilot / Cursor manual one-role-at-a-time** (default for those tools): Copilot reads the framework agent contract from the plugin's `agents/<role>.md`, plays exactly that role, stops at the stage boundary, asks the user to "switch to next agent". One stage per user turn.
 - **Copilot opt-in continuous mode**: the user types the activation phrase `continuous mode` (English) or `走全流程` (Chinese) in a plain user turn; Copilot then self-dispatches through stages 1 → 2 → 3, **STOPs unconditionally after Gate Review** (regardless of verdict), and waits for the user's "continue" before proceeding to stages 4-7. Continuous mode resets at every chat-session boundary. See `.harness/rules/60-tool-handoff.md` for the activation contract.
 
 ## Project documents

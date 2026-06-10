@@ -41,7 +41,7 @@ This repo uses the **Harness 7-agent pipeline**. Read `docs/workflow.md` before 
 8. **Prefer asking the AI to edit `.harness/` rather than editing it yourself.** Examples:
    - "Add a rule: never use `MessageBox.Show`." → AI picks the right `.harness/rules/NN-*.md` (or creates a new one), edits it, the Stop hook syncs.
    - "Add a Developer partition for `apps/mobile/`." → AI creates `.harness/agents/dev-mobile.md` with correct owned-paths.
-   - "Tighten the Architect to require an ADR file for new modules." → AI edits `.harness/agents/solution-architect.md` accordingly.
+   - "Add a rule that new modules need an ADR." → AI edits the right `.harness/rules/NN-*.md`.
    This is the AI-driven path: human asks, AI edits, hooks sync. Editing files by hand is fine when convenient, but not required.
 
 ## Style / convention
@@ -59,12 +59,13 @@ This repo uses the **Harness 7-agent pipeline**. Read `docs/workflow.md` before 
 | Per-task documents | `docs/features/<task-slug>/` |
 | Project SPECs / requirements | `docs/spec/` |
 | The 7-agent pipeline definition | `docs/workflow.md` |
-| Agent role definitions (SOURCE OF TRUTH) | `.harness/agents/` |
+| Framework agent contracts | harness-kit plugin (`harness-kit:<name>`) |
+| Partition `dev-*` agent definitions (SOT) | `.harness/agents/` |
 | Project rule fragments (SOURCE OF TRUTH) | `.harness/rules/` |
 | Build/test/verify procedures (SOURCE OF TRUTH) | `.harness/skills/` |
 | Claude Code agent/skill binding (synced; do not hand-edit) | `.claude/agents/` + `.claude/skills/` |
 | Claude Code bootstrap stub + live config | `CLAUDE.md` + `.claude/settings.json` |
-| Tool binding sync (`.harness/agents/` + `.harness/skills/` → `.claude/`) | `.harness/scripts/harness-sync.{ps1,sh}` |
+| Tool binding sync (partition `dev-*` agents + `.harness/skills/` → `.claude/`) | `.harness/scripts/harness-sync.{ps1,sh}` |
 | Total verification | `.harness/scripts/verify_all.{ps1,sh}` |
 | Test count baseline | `.harness/scripts/baseline.json` |
 | Regression task set | `evals/golden-tasks.md` |
