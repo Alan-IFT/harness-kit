@@ -385,14 +385,18 @@ grep -qE 'auxiliary.*supervisor' AI-GUIDE.md \
 # standing verify_all G.4 meta-check (derives version from plugin.json + count from
 # the live recorded-step tally). test-supervisor keeps ZERO release-tracking literals
 # so it never drifts on a version/count bump again. Only the 3 version-agnostic
-# structural asserts (auxiliary-supervisor phrasing above, harness-status row +
-# canonical-7 glob below) remain.
-grep -qE 'upervisor.*auxiliary' skills/harness-status/SKILL.md \
-    && assert "fan-out: harness-status SKILL.md has supervisor (auxiliary) row" 1 \
-    || assert "fan-out: harness-status SKILL.md has supervisor (auxiliary) row" 0
+# structural asserts (auxiliary-supervisor phrasing above, harness-status note +
+# retired glob below) remain.
+# T-020 (v0.31): harness-status no longer lists the supervisor / canonical-7 rows as
+# project ASSETS — framework agents (incl. supervisor) are plugin-provided since
+# v0.30. Assert the NEW state: the plugin-provided note names the supervisor, and
+# the retired .claude/agents canonical-7 glob row is GONE.
+grep -qE '\(7 \+ supervisor\).*plugin-provided' skills/harness-status/SKILL.md \
+    && assert "fan-out: harness-status SKILL.md notes framework agents (7 + supervisor) are plugin-provided" 1 \
+    || assert "fan-out: harness-status SKILL.md notes framework agents (7 + supervisor) are plugin-provided" 0
 grep -qF '{pm,req,sol,gate,dev,review,qa}*' skills/harness-status/SKILL.md \
-    && assert "fan-out: harness-status SKILL.md preserves canonical-7 glob" 1 \
-    || assert "fan-out: harness-status SKILL.md preserves canonical-7 glob" 0
+    && assert "fan-out: harness-status SKILL.md retired the canonical-7 asset glob (v0.30 truth)" 0 \
+    || assert "fan-out: harness-status SKILL.md retired the canonical-7 asset glob (v0.30 truth)" 1
 
 echo ""
 echo "=== Result ==="

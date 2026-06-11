@@ -21,8 +21,6 @@ Check each of these and report concisely:
 | Task board | `docs/tasks.md` | ? |
 | Dev map | `docs/dev-map.md` | ? |
 | Spec folder | `docs/spec/` | ? |
-| All 7 agents | `.claude/agents/{pm,req,sol,gate,dev,review,qa}*.md` | ? |
-| Supervisor (auxiliary) | `.claude/agents/supervisor.md` | ? |
 | Build skill | `.claude/skills/build/SKILL.md` | ? |
 | Test skill | `.claude/skills/test/SKILL.md` | ? |
 | Verify skill | `.claude/skills/verify/SKILL.md` | ? |
@@ -32,6 +30,11 @@ Check each of these and report concisely:
 | Guard-rm script (ps1) | `.harness/scripts/guard-rm.ps1` | ? |
 | Guard-rm script (sh) | `.harness/scripts/guard-rm.sh` | ? |
 | PreToolUse hook | `.claude/settings.json` (has `hooks.PreToolUse` array referencing guard-rm) | ? |
+
+Note: the framework agents (7 + supervisor) are **plugin-provided** (`harness-kit:<name>`)
+since v0.30 — they are not project files and are not checked here. Partitioned projects
+only: `.harness/agents/dev-*.md` synced to `.claude/agents/` (report if present; absence
+is healthy for a single-developer project).
 
 ### 2. Baseline state
 
@@ -76,6 +79,41 @@ programmatic dispatch (`Task` tool). Other tools always show `n/a`. The
   is absent or no Bash matcher exists.
 - `scripts missing` if the wiring is present but the script files are gone.
 
+### 3c. Hook ↔ script congruence (all events — T-020 / FR-D1, FR-D2)
+
+For **every** `hooks.{Stop,PreToolUse,UserPromptSubmit,SessionStart}[].hooks[].command`
+in `.claude/settings.json`, report one line per event:
+
+```
+Hook congruence:
+  Stop:              ok | not wired | DANGLING — "<command>" -> missing <path> | MALFORMED — unsubstituted placeholder
+  PreToolUse:        ok | not wired | DANGLING — ... | MALFORMED — ...
+  UserPromptSubmit:  ok | not wired | DANGLING — ... | MALFORMED — ...
+  SessionStart:      ok | not wired | DANGLING — ... | MALFORMED — ...
+```
+
+How to compute each state:
+
+- Extract every script path in the command matching the left-bounded pattern
+  `(^|["' =])(\.harness/)?scripts/<name>.(ps1|sh)` — the boundary means a custom
+  command in a dirname merely *ending* in `scripts/` (e.g. `build-scripts/deploy.sh`)
+  is never extracted, so user-custom hooks are not flagged.
+- `ok` — every extracted path exists. `not wired` — settings absent, no `hooks` key,
+  or no entry for the event (not a crash; report it plainly).
+- `DANGLING` — a path is extracted but the file does not exist. Print the exact
+  command string and the missing path. Fix line: `run /harness-upgrade to re-land
+  current scripts and rewire hook paths`.
+- `MALFORMED` — the command contains an unresolved `{{...}}` placeholder token.
+  Fix line: `run /harness-upgrade` (it rewrites a wired literal token to the
+  OS-picked command — an actual repair, not just a re-land).
+- **Interpreter availability (WARN, not a failure):** if the command's first token
+  (`pwsh` / `bash`) is not on PATH, add: `wired to <tok> but <tok> is unavailable on
+  this OS — swap the command variant (see the _doc_sync_hook / _ambient_hook notes in
+  settings.json)`. Never auto-rewrite a runnable, user-chosen variant.
+
+§3b (guard-rm deep check) stays as-is; this section gives the Stop/sync hook and the
+two ambient hooks the same tri-state vocabulary.
+
 ### 4. Active tasks
 
 Read `docs/tasks.md` and list any task whose stage is not `done` or `delivery`:
@@ -94,7 +132,7 @@ From `docs/tasks.md`, list the last 5 `done` tasks with date.
 
 Compute a quick score:
 
-- All 15 required assets present → +6 health points
+- All 14 required assets present → +6 health points
 - Baseline exists and is recent (< 30 days) → +2
 - Last verify PASS → +2
 - No active tasks blocked > 3 days → +1
@@ -112,6 +150,13 @@ Recommendations:
   - docs/dev-map.md is missing; run /harness-init or write one manually.
   - Last verify was 14 days ago; run /harness-verify.
   - Task T-007 has been at 'dev' for 5 days; PM should check in.
+```
+
+If §3c reported any non-ok hook state (DANGLING / MALFORMED), always include:
+
+```
+  - A wired hook is dangling/malformed; run /harness-upgrade to re-land current
+    scripts and rewire hook paths.
 ```
 
 ## Anti-patterns

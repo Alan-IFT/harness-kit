@@ -30,14 +30,18 @@
 #   BAK|<path>
 #   CONFLICT|<kind>|<detail>
 #   SUMMARY|added=<n> moved=<n> rewritten=<n> rewired=<n> conflicts=<n>
-# <verb> in: MOVE REFRESH REWIRE HOOK-INSTALL HOOK-SKIP VERIFY-REGEN VERIFY-SPLICE
-#            VERIFY-HALT SKIP NOOP
+# <verb> in: MOVE REFRESH REWIRE REWIRE-PLACEHOLDER HOOK-INSTALL HOOK-SKIP
+#            VERIFY-REGEN VERIFY-SPLICE VERIFY-HALT SKIP NOOP
 #
 # Exit codes:
 #   0  success (applied / nothing-to-do / dry-run printed)
 #   1  user/precondition error (not a harness project; missing -TemplateRoot; bad -Type)
 #   2  refresh-blocked: verify_all B.* could not be cleanly delimited AND not --force
 #   3  hook conflict surfaced (non-stock pre-commit); other steps still completed
+#   4  post-run hook<->script congruence failure (T-020): a wired hook command
+#      references (apply) or would reference (dry-run) a missing script, or carries
+#      an unresolved placeholder token. Exit 4 overrides 2/3 — the co-occurring
+#      CONFLICT records are still all on stdout.
 
 [CmdletBinding()]
 param(
@@ -100,7 +104,9 @@ Emit ("TYPE|{0}" -f $Type)
 # --- S1 relocation (verbatim known-set + git-mv-preserving + SKIP-unless-Force) ---
 # Inlined from migrate-scripts-layout.ps1 so the upgrade is a single self-contained
 # helper. The known set is filename-preserved (NOT a blanket scripts/*).
-# INVARIANT: $refreshSet (S2 below) == $known minus verify_all.{ps1,sh} and baseline.json.
+# INVARIANT: $refreshSet (S2 below) == ($known minus verify_all.{ps1,sh}, baseline.json)
+# plus the ambient hook pair (ambient-prompt/-reset never lived at top-level scripts/ —
+# they shipped post-relocation in T-011, so they are NOT in $known).
 # These two literal arrays are hand-maintained — if you edit one, update the other.
 $known = @(
     "verify_all.ps1", "verify_all.sh",
@@ -114,6 +120,7 @@ $known = @(
 $srcDir = Join-Path $root "scripts"
 $dstDir = Join-Path $root ".harness/scripts"
 $inGit  = Test-Path (Join-Path $root ".git")
+$plannedMoves = @()
 
 foreach ($name in $known) {
     $src = Join-Path $srcDir $name
@@ -124,6 +131,7 @@ foreach ($name in $known) {
         continue
     }
     Emit ("{0}|MOVE|scripts/{1} -> .harness/scripts/{1}" -f ($(if ($DryRun) { "PLAN" } else { "RESULT" })), $name)
+    $plannedMoves += $name
     $nMoved++
     if (-not $DryRun) {
         if (-not (Test-Path $dstDir)) { New-Item -ItemType Directory -Path $dstDir -Force | Out-Null }
@@ -146,19 +154,34 @@ foreach ($name in $known) {
 # already two-up). Relocation alone preserves OLD one-up root derivation — this is
 # what actually fixes the root-resolution hazard. verify_all is NOT in this set (it
 # is regenerated from the type .tmpl in S5); baseline.json is data (relocate-only).
-# INVARIANT: $refreshSet == $known (S1 above) minus verify_all.{ps1,sh} and baseline.json.
-# Hand-maintained literal arrays — keep in sync; edit one, update the other.
+# INVARIANT: $refreshSet == ($known (S1 above) minus verify_all.{ps1,sh}, baseline.json)
+# plus the ambient hook pair (ambient-prompt/-reset are hook targets — repair, FR-R1,
+# must be able to re-land them; they are not in $known because they never lived at
+# top-level scripts/). Hand-maintained literal arrays — edit one, update the other.
 $refreshSet = @(
     "harness-sync.ps1", "harness-sync.sh",
     "install-hooks.ps1", "install-hooks.sh",
     "archive-task.ps1", "archive-task.sh",
     "guard-rm.ps1", "guard-rm.sh",
-    "migrate-scripts-layout.ps1", "migrate-scripts-layout.sh"
+    "migrate-scripts-layout.ps1", "migrate-scripts-layout.sh",
+    "ambient-prompt.ps1", "ambient-prompt.sh",
+    "ambient-reset.ps1", "ambient-reset.sh"
 )
 foreach ($name in $refreshSet) {
     $tmpl = Join-Path $templateCommonScripts $name
-    if (-not (Test-Path $tmpl)) { continue }
     $dst = Join-Path $dstDir $name
+    if (-not (Test-Path $tmpl)) {
+        # T-020 (RC-4 fix): never skip this case silently. If the project still has a
+        # copy, that copy is retained (NOOP); if neither side has the file, emit an
+        # explicit GAP so a hook wired to it is diagnosable (the terminal congruence
+        # scan then fails the run with exit 4 if the file is actually wired).
+        if (Test-Path $dst) {
+            Emit ("{0}|NOOP|.harness/scripts/{1} (template lacks it; existing copy retained)" -f ($(if ($DryRun) { "PLAN" } else { "RESULT" })), $name)
+        } else {
+            Emit ("GAP|template-missing|absent|.harness/scripts/{0}" -f $name)
+        }
+        continue
+    }
     $identical = $false
     if (Test-Path $dst) {
         $identical = ((Get-FileHash $tmpl -Algorithm SHA256).Hash -eq (Get-FileHash $dst -Algorithm SHA256).Hash)
@@ -172,23 +195,91 @@ foreach ($name in $refreshSet) {
     if ($isNew) { $nAdded++ } else { $nRewritten++ }
     if (-not $DryRun) {
         if (-not (Test-Path $dstDir)) { New-Item -ItemType Directory -Path $dstDir -Force | Out-Null }
-        Copy-Item -Path $tmpl -Destination $dst -Force
+        Copy-Item -Path $tmpl -Destination $dst -Force -ErrorAction SilentlyContinue
+        # Copy verify (T-020 / RC-4): a failed copy must not pass silently — S3 could
+        # otherwise rewire toward a file that never landed.
+        $landed = (Test-Path $dst) -and
+                  ((Get-FileHash $tmpl -Algorithm SHA256).Hash -eq (Get-FileHash $dst -Algorithm SHA256).Hash)
+        if (-not $landed) {
+            Emit ("CONFLICT|refresh|.harness/scripts/{0} copy failed (template -> project copy did not land)" -f $name)
+            $nConflicts++
+        }
     }
 }
 
 # --- S3 settings rewire (verbatim raw-text replace; NEVER re-serialize — DO-3) -----
+# Test-TargetPresent <name>: is .harness/scripts/<name> on disk (apply mode: S1 moves
+# + S2 refresh already ran, disk is ground truth) or projected to land there (dry-run:
+# a planned S1 MOVE counts, and so does the template carrying a refresh-set member —
+# S2 would land it on apply)? Gates both the placeholder repair and the per-variant
+# prefix rewires below (T-020 / FR-P3).
+function Test-TargetPresent($name) {
+    if (Test-Path (Join-Path $dstDir $name)) { return $true }
+    if (-not $DryRun) { return $false }
+    if ($plannedMoves -ccontains $name) { return $true }
+    if (($refreshSet -ccontains $name) -and (Test-Path (Join-Path $templateCommonScripts $name))) { return $true }
+    return $false
+}
+
 $settings = Join-Path $root ".claude/settings.json"
+$new = $null
+# Token opener/closer assembled from pieces so this shipped helper never contains a
+# literal double-brace token (insight 2026-06-08; test-init's blanket placeholder scan).
+$phOpen = "{" + "{"
+$phClose = "}" + "}"
 if (-not (Test-Path $settings)) {
     Emit "RESULT|SKIP|.claude/settings.json absent — settings rewire skipped (non-Claude-Code project)"
 } else {
     $raw = Get-Content $settings -Raw
-    $new = $raw.Replace("scripts/harness-sync.", ".harness/scripts/harness-sync.")
-    $new = $new.Replace("scripts/guard-rm.", ".harness/scripts/guard-rm.")
+    $new = $raw
+
+    # S3.0 — literal-placeholder repair (T-020 gate C3 / B7, design §6.2.5).
+    # A wired, UNSUBSTITUTED placeholder token (RC-3 improvisation damage) can never
+    # run on any OS, so it is never a deliberate user choice (OQ-5 untriggered): it is
+    # rewritten to the OS-picked init command — gated on the target script being
+    # (projected) present, so a MALFORMED token never becomes a DANGLING path (the
+    # terminal scan flags an un-repairable token instead -> exit 4). String ops are
+    # ordinal + case-sensitive (.Contains/.Replace — R1 discipline). Replacement
+    # values contain no token opener, so a second run is a no-op (B10).
+    $phPairs = @(
+        @{ Name = "SYNC_COMMAND";           Tool = "harness-sync" },
+        @{ Name = "GUARD_COMMAND";          Tool = "guard-rm" },
+        @{ Name = "AMBIENT_PROMPT_COMMAND"; Tool = "ambient-prompt" },
+        @{ Name = "AMBIENT_RESET_COMMAND";  Tool = "ambient-reset" }
+    )
+    foreach ($ph in $phPairs) {
+        $tok = $phOpen + $ph.Name + $phClose
+        if ($IsWindows) {
+            $cmd = "pwsh -NoProfile -File .harness/scripts/$($ph.Tool).ps1"
+            $gateTarget = "$($ph.Tool).ps1"
+        } else {
+            $cmd = "bash .harness/scripts/$($ph.Tool).sh"
+            $gateTarget = "$($ph.Tool).sh"
+        }
+        if ($new.Contains($tok) -and (Test-TargetPresent $gateTarget)) {
+            $new = $new.Replace($tok, $cmd)
+            Emit ("{0}|REWIRE-PLACEHOLDER|.claude/settings.json ({1} -> {2})" -f ($(if ($DryRun) { "PLAN" } else { "RESULT" })), $ph.Name, $cmd)
+        }
+    }
+
+    # S3.1 — per-variant presence-gated prefix rewire (T-020 / RC-4 fix). In the
+    # normal flow S2 just landed every variant, so the gate is transparently true and
+    # behavior on healthy projects is byte-identical to before. The unconditional
+    # double-prefix collapse stays last (fixed point — B10).
+    # Known cosmetic nuance (gate F-4): when only ONE shell variant's target is
+    # present, doc strings mentioning both variants end half-migrated. Idempotent and
+    # harmless — the terminal scan only checks "command" lines, never doc keys.
+    foreach ($toolExt in @("harness-sync.ps1", "harness-sync.sh", "guard-rm.ps1", "guard-rm.sh")) {
+        if (Test-TargetPresent $toolExt) {
+            $new = $new.Replace("scripts/$toolExt", ".harness/scripts/$toolExt")
+        }
+    }
     # Collapse the double prefix produced when an already-migrated `.harness/scripts/...`
     # substring matched the `scripts/...` target -> true fixed point (idempotent).
     $new = $new.Replace(".harness/.harness/scripts/", ".harness/scripts/")
+
     if ($new -cne $raw) {
-        Emit ("{0}|REWIRE|.claude/settings.json (harness-sync + guard-rm hook paths)" -f ($(if ($DryRun) { "PLAN" } else { "RESULT" })))
+        Emit ("{0}|REWIRE|.claude/settings.json (hook command paths)" -f ($(if ($DryRun) { "PLAN" } else { "RESULT" })))
         $nRewired++
         if (-not $DryRun) {
             $bak = "$settings.bak-$stamp"
@@ -421,6 +512,57 @@ foreach ($shell in @("ps1", "sh")) {
         }
         [System.IO.File]::WriteAllText($proj, $finalText)
     }
+}
+
+# --- S6 terminal hook<->script congruence scan (T-020 / FR-P1, runs last) --------
+# Asserts the END STATE: every script path referenced by a `"command"` line in the
+# final settings text resolves to a file that exists (apply mode: disk is ground
+# truth — the scan runs after every writer) or is projected to exist (dry-run:
+# planned S1 MOVEs and template-carried refresh-set members count). Each miss emits
+# a CONFLICT|congruence record and the run exits 4. The scan is the LAST writer of
+# $exitCode, so 4 deliberately wins over 2/3 — an incongruent end state is the most
+# actionable failure; the co-occurring CONFLICT/VERIFY-HALT records stay on stdout.
+# The path regex is LEFT-BOUNDED (quote / space / `=` / line start) so a custom hook
+# whose dirname merely ENDS in `scripts/` (e.g. build-scripts/deploy.sh) can never
+# match (gate C1). Anything the regex cannot parse is ignored — fail-open diagnosis
+# (R4): the scan only flags PARSED tokens whose target file is missing.
+# Line-scoping to "command" lines is deliberate: permissions.allow entries and the
+# _doc_sync_hook / _ambient_hook doc strings mention BOTH shell variants and must not
+# force both to exist (only the wired variant is load-bearing). Case-sensitive regex,
+# no IgnoreCase (insight 2026-05-19 family); .Split("`n") not -split (insight 2026-06-08).
+# Known asymmetry (B9): the dry-run projection is ADDITIVE-only — a hook wired to a
+# legacy scripts/<name> that exists NOW but is planned to MOVE still passes the disk
+# test in dry-run, yet apply exits 4 after the move; apply is authoritative.
+if (Test-Path $settings) {
+    $scanText = if ($DryRun) { $new } else { Get-Content $settings -Raw }
+    $congFound = $false
+    $pathRx = [regex]::new('(^|["'' =])((\.harness/)?scripts/[A-Za-z0-9._-]+\.(ps1|sh))')
+    foreach ($scanLine in $scanText.Split("`n")) {
+        if (-not $scanLine.Contains('"command"')) { continue }
+        $trimmed = $scanLine.Trim()
+        if ($scanLine.Contains($phOpen)) {
+            Emit ("CONFLICT|congruence|{0} -> unresolved placeholder token" -f $trimmed)
+            $nConflicts++
+            $congFound = $true
+        }
+        $seenPaths = @()
+        foreach ($m in $pathRx.Matches($scanLine)) {
+            $refPath = $m.Groups[2].Value
+            if ($seenPaths -ccontains $refPath) { continue }
+            $seenPaths += $refPath
+            $present = Test-Path (Join-Path $root $refPath)
+            if (-not $present -and $DryRun -and $refPath.StartsWith(".harness/scripts/")) {
+                $refName = $refPath.Substring(".harness/scripts/".Length)
+                if (Test-TargetPresent $refName) { $present = $true }
+            }
+            if (-not $present) {
+                Emit ("CONFLICT|congruence|{0} -> missing {1}" -f $trimmed, $refPath)
+                $nConflicts++
+                $congFound = $true
+            }
+        }
+    }
+    if ($congFound) { $exitCode = 4 }
 }
 
 Emit ("SUMMARY|added={0} moved={1} rewritten={2} rewired={3} conflicts={4}" -f $nAdded, $nMoved, $nRewritten, $nRewired, $nConflicts)

@@ -38,8 +38,18 @@ assert() {
 }
 
 case "${OSTYPE:-}" in
-    msys*|cygwin*|win32) SYNC_COMMAND="pwsh -File .harness/scripts/harness-sync.ps1" ;;
-    *) SYNC_COMMAND="bash .harness/scripts/harness-sync.sh" ;;
+    msys*|cygwin*|win32)
+        SYNC_COMMAND="pwsh -File .harness/scripts/harness-sync.ps1"
+        GUARD_COMMAND="pwsh -NoProfile -File .harness/scripts/guard-rm.ps1"
+        AMBIENT_PROMPT_COMMAND="pwsh -NoProfile -File .harness/scripts/ambient-prompt.ps1"
+        AMBIENT_RESET_COMMAND="pwsh -NoProfile -File .harness/scripts/ambient-reset.ps1"
+        ;;
+    *)
+        SYNC_COMMAND="bash .harness/scripts/harness-sync.sh"
+        GUARD_COMMAND="bash .harness/scripts/guard-rm.sh"
+        AMBIENT_PROMPT_COMMAND="bash .harness/scripts/ambient-prompt.sh"
+        AMBIENT_RESET_COMMAND="bash .harness/scripts/ambient-reset.sh"
+        ;;
 esac
 
 substitute() {
@@ -52,6 +62,9 @@ substitute() {
         -e "s|{{TODAY}}|$today|g" \
         -e "s|{{ENABLE_HOOK}}|false|g" \
         -e "s|{{SYNC_COMMAND}}|$SYNC_COMMAND|g" \
+        -e "s|{{GUARD_COMMAND}}|$GUARD_COMMAND|g" \
+        -e "s|{{AMBIENT_PROMPT_COMMAND}}|$AMBIENT_PROMPT_COMMAND|g" \
+        -e "s|{{AMBIENT_RESET_COMMAND}}|$AMBIENT_RESET_COMMAND|g" \
         "$file" > "$tmp"
     mv "$tmp" "$file"
 }
@@ -191,6 +204,38 @@ test_fixture() {
     else
         assert ".gitignore preserved" "grep -q '__pycache__' '$tmp/.gitignore'"
     fi
+
+    # === T-020: run the generated type verify_all on the fixture (AC-3 / AC-4) ===
+    # First flip the tree to a healthy v0.30 SINGLE-DEV state: remove partition
+    # agents from BOTH sides (absence of .harness/agents/ is healthy; binding stays
+    # clean because both sides are removed). Then assert the agents-layout and
+    # hook-congruence rows. Runs LAST in this fixture (tree mutated, then discarded).
+    rm -rf "$tmp/.harness/agents" "$tmp/.claude/agents"
+    if [[ "$project_type" == "backend" ]]; then
+        t20_agents_row="D.3"; t20_cong_row="D.4b"
+    else
+        t20_agents_row="E.3"; t20_cong_row="E.4b"
+    fi
+    t20_va_out="$(cd "$tmp" && bash .harness/scripts/verify_all.sh --quick 2>/dev/null)"
+    t20_a_line="$(printf '%s\n' "$t20_va_out" | grep -F "[$t20_agents_row]" | head -1)"
+    t20_c_line="$(printf '%s\n' "$t20_va_out" | grep -F "[$t20_cong_row]" | head -1)"
+    assert "[T-020] healthy v0.30 single-dev fixture: $t20_agents_row agents-layout PASS (AC-3)" \
+        "[[ '$t20_a_line' == *PASS* ]]"
+    assert "[T-020] healthy v0.30 single-dev fixture: $t20_cong_row hook-congruence PASS (AC-4 healthy half)" \
+        "[[ '$t20_c_line' == *PASS* ]]"
+    # Mutation: delete the sync scripts -> the congruence row must FAIL, naming the
+    # missing path and the fix command (AC-4).
+    rm -f "$tmp/.harness/scripts/harness-sync.sh" "$tmp/.harness/scripts/harness-sync.ps1"
+    t20_va_out2="$(cd "$tmp" && bash .harness/scripts/verify_all.sh --quick 2>/dev/null)"
+    t20_c_line2="$(printf '%s\n' "$t20_va_out2" | grep -F "[$t20_cong_row]" | head -1)"
+    assert "[T-020] dangling fixture: $t20_cong_row FAILs (AC-4)" "[[ '$t20_c_line2' == *FAIL* ]]"
+    t20_detail_ok=0
+    if printf '%s' "$t20_va_out2" | grep -q 'missing script: .harness/scripts/harness-sync.' \
+       && printf '%s' "$t20_va_out2" | grep -qF 'fix: run /harness-upgrade'; then
+        t20_detail_ok=1
+    fi
+    assert "[T-020] dangling fixture: FAIL names the missing path + fix command (AC-4)" \
+        "[[ '$t20_detail_ok' == '1' ]]"
 
     if [[ "$KEEP" == true ]]; then
         echo ""

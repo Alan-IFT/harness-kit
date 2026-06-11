@@ -28,3 +28,8 @@
 ## Rotated 2026-06-10
 
 - 2026-05-19 · An architectural retirement (e.g. v0.10 stopped composing CLAUDE.md from rules) can leave stale claims scattered across 8+ files (docs / templates / README / CONTRIBUTING) for many releases — code matches reality but docs lie. CHANGELOG entries describing the retirement do not protect against future contributors copy-pasting old phrasings. A literal-substring banned-phrase guard in `verify_all` (I.6 at v0.15.1, ~50 lines/shell, with a small history exemption list for CHANGELOG / _archived/ / labeled-snapshot HTMLs) closes the recurrence vector with negligible ongoing cost — add a line when retiring a claim, remove the line when the claim becomes accurate again. · evidence: v0.15.1 doc-resync, this delivery
+
+## Rotated 2026-06-11
+
+- 2026-05-19 · PowerShell here-doc and array-of-hashtable literals: backtick is the PS escape char inside double-quoted strings, so `"foo `CLAUDE.md`"` is a parser error. Use single quotes for any string containing literal backticks: `'foo `CLAUDE.md`'`. Affects banned-phrase / drift-detection arrays where you want to match literal markdown code spans. · evidence: I.6 first run, this delivery
+- 2026-05-19 · PowerShell `-notin` (default operator) is case-INSENSITIVE; the symmetric case-sensitive variant is `-cnotin`. A D.2-style whitelist check that uses `-notin` will silently let `{{stack}}` through if `{{STACK}}` is in the whitelist. Same bug class as v0.15.0's `-contains` rollback. Always use `-cnotin` / `-ccontains` for case-sensitive placeholder / flag whitelists. · evidence: T-002 round-2 rollback, .harness/scripts/verify_all.ps1:101 (post-fix)

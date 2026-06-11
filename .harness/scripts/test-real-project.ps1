@@ -101,13 +101,17 @@ function Test-Fixture {
         }
 
         # 2) overlay harness templates
+        $isWin = ($IsWindows -or $env:OS -eq "Windows_NT")
         $vars = @{
             "PROJECT_NAME" = $FixtureName
             "PROJECT_TYPE" = $ProjectType
             "STACK"        = $Stack
             "TODAY"        = $today
             "ENABLE_HOOK"  = "false"
-            "SYNC_COMMAND" = if ($IsWindows -or $env:OS -eq "Windows_NT") { "pwsh -File .harness/scripts/harness-sync.ps1" } else { "bash .harness/scripts/harness-sync.sh" }
+            "SYNC_COMMAND" = if ($isWin) { "pwsh -File .harness/scripts/harness-sync.ps1" } else { "bash .harness/scripts/harness-sync.sh" }
+            "GUARD_COMMAND" = if ($isWin) { "pwsh -NoProfile -File .harness/scripts/guard-rm.ps1" } else { "bash .harness/scripts/guard-rm.sh" }
+            "AMBIENT_PROMPT_COMMAND" = if ($isWin) { "pwsh -NoProfile -File .harness/scripts/ambient-prompt.ps1" } else { "bash .harness/scripts/ambient-prompt.sh" }
+            "AMBIENT_RESET_COMMAND"  = if ($isWin) { "pwsh -NoProfile -File .harness/scripts/ambient-reset.ps1" } else { "bash .harness/scripts/ambient-reset.sh" }
         }
         Copy-TemplateLayer -Source (Join-Path $templateRoot "common") -Target $tmp -Vars $vars
         Copy-TemplateLayer -Source (Join-Path $templateRoot $ProjectType) -Target $tmp -Vars $vars
@@ -189,6 +193,44 @@ function Test-Fixture {
             } else {
                 $gi -match "__pycache__"
             }
+        }
+
+        # === T-020: run the generated type verify_all on the fixture (AC-3 / AC-4) ===
+        # First flip the tree to a healthy v0.30 SINGLE-DEV state: remove partition
+        # agents from BOTH sides (absence of .harness/agents/ is healthy; binding
+        # stays clean because both sides are removed). Then assert the agents-layout
+        # and hook-congruence rows. Runs LAST in this fixture (tree mutated, then
+        # discarded).
+        Remove-Item (Join-Path $tmp ".harness/agents") -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Item (Join-Path $tmp ".claude/agents") -Recurse -Force -ErrorAction SilentlyContinue
+        $t20AgentsRow = if ($ProjectType -eq "backend") { "D.3" } else { "E.3" }
+        $t20CongRow   = if ($ProjectType -eq "backend") { "D.4b" } else { "E.4b" }
+        Push-Location $tmp
+        try {
+            $t20Out = (& pwsh -NoProfile -File (Join-Path $tmp ".harness/scripts/verify_all.ps1") -Quick 2>&1) -join "`n"
+        } finally { Pop-Location }
+        $t20ALine = ($t20Out.Split("`n") | Where-Object { $_.Contains("[$t20AgentsRow]") } | Select-Object -First 1)
+        $t20CLine = ($t20Out.Split("`n") | Where-Object { $_.Contains("[$t20CongRow]") } | Select-Object -First 1)
+        Assert "[T-020] healthy v0.30 single-dev fixture: $t20AgentsRow agents-layout PASS (AC-3)" {
+            "$t20ALine".Contains("PASS")
+        }
+        Assert "[T-020] healthy v0.30 single-dev fixture: $t20CongRow hook-congruence PASS (AC-4 healthy half)" {
+            "$t20CLine".Contains("PASS")
+        }
+        # Mutation: delete the sync scripts -> the congruence row must FAIL, naming
+        # the missing path and the fix command (AC-4).
+        Remove-Item (Join-Path $tmp ".harness/scripts/harness-sync.sh") -Force -ErrorAction SilentlyContinue
+        Remove-Item (Join-Path $tmp ".harness/scripts/harness-sync.ps1") -Force -ErrorAction SilentlyContinue
+        Push-Location $tmp
+        try {
+            $t20Out2 = (& pwsh -NoProfile -File (Join-Path $tmp ".harness/scripts/verify_all.ps1") -Quick 2>&1) -join "`n"
+        } finally { Pop-Location }
+        $t20CLine2 = ($t20Out2.Split("`n") | Where-Object { $_.Contains("[$t20CongRow]") } | Select-Object -First 1)
+        Assert "[T-020] dangling fixture: $t20CongRow FAILs (AC-4)" {
+            "$t20CLine2".Contains("FAIL")
+        }
+        Assert "[T-020] dangling fixture: FAIL names the missing path + fix command (AC-4)" {
+            $t20Out2.Contains('missing script: .harness/scripts/harness-sync.') -and $t20Out2.Contains('fix: run /harness-upgrade')
         }
 
     } finally {

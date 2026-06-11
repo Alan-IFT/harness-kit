@@ -63,16 +63,60 @@ done
 
 [[ -f docs/workflow.md ]] && step "E.2" "workflow.md present" "PASS" || step "E.2" "workflow.md present" "FAIL"
 
-missing_agent=""
-for a in pm-orchestrator requirement-analyst solution-architect gate-reviewer developer code-reviewer qa-tester; do
-    [[ -f ".harness/agents/$a.md" ]] || missing_agent="$missing_agent $a"
-done
-[[ -z "$missing_agent" ]] && step "E.3" "All 7 agents in .harness/agents/" "PASS" || step "E.3" "All 7 agents in .harness/agents/" "FAIL" "Missing:$missing_agent"
+# E.3 — agents layout (v0.30+): the 7 framework agents are PLUGIN-provided
+# (harness-kit:<name>) and are NOT project files; .harness/agents/ holds only
+# partition dev-* agents. Absence of the dir is healthy (single-developer project).
+# Legacy framework copies WARN (not FAIL): /harness-upgrade v1 does not delete agent
+# files, so an upgraded-but-unmigrated project must not end red with no in-flow fix.
+e3_legacy=""
+if [[ -d .harness/agents ]]; then
+    while IFS= read -r agent_file; do
+        agent_name=$(basename "$agent_file")
+        case "$agent_name" in
+            dev-*.md) : ;;
+            *) e3_legacy="$e3_legacy $agent_name" ;;
+        esac
+    done < <(find .harness/agents -maxdepth 1 -name '*.md' -type f)
+fi
+if [[ -z "$e3_legacy" ]]; then
+    step "E.3" "Agents layout v0.30+ (.harness/agents/ = partition dev-* only)" "PASS"
+else
+    step "E.3" "Agents layout v0.30+ (.harness/agents/ = partition dev-* only)" "WARN"
+    echo "      framework agents are plugin-provided since v0.30 — remove local copies:$e3_legacy"
+fi
 
 if [[ -f .harness/scripts/harness-sync.sh ]] && bash .harness/scripts/harness-sync.sh --check &>/dev/null; then
     step "E.4" "Binding in sync (.harness/ -> .claude/)" "PASS"
 else
     step "E.4" "Binding in sync (.harness/ -> .claude/)" "FAIL" "Run .harness/scripts/harness-sync.sh"
+fi
+
+# E.4b — hook<->script congruence (T-020): every script path referenced by a
+# "command" line in .claude/settings.json must exist; an unresolved placeholder
+# token in a command is also a FAIL. The path ERE is LEFT-BOUNDED (quote/space/=/
+# line start) so a custom hook whose dirname merely ENDS in scripts/ (e.g.
+# build-scripts/deploy.sh) can never match. Doc keys / permissions are NOT scanned
+# (only the wired variant of a script pair is load-bearing).
+if [[ ! -f .claude/settings.json ]]; then
+    step "E.4b" "Hook commands resolve to existing scripts" "SKIP"
+else
+    e4b_bad=""
+    e4b_tok="{{"   # assembled at runtime: generated file carries no literal token
+    if grep '"command"' .claude/settings.json | grep -qF -- "$e4b_tok"; then
+        e4b_bad="$e4b_bad\nunresolved placeholder token in a hook command"
+    fi
+    while IFS= read -r e4b_path; do
+        [[ -z "$e4b_path" ]] && continue
+        [[ -f "$e4b_path" ]] || e4b_bad="$e4b_bad\nhook command references missing script: $e4b_path"
+    done < <(grep '"command"' .claude/settings.json \
+        | grep -oE "(^|[\"' =])(\.harness/)?scripts/[A-Za-z0-9._-]+\.(ps1|sh)" \
+        | sed -E "s|^[\"' =]||" \
+        | sort -u)
+    if [[ -z "$e4b_bad" ]]; then
+        step "E.4b" "Hook commands resolve to existing scripts" "PASS"
+    else
+        step "E.4b" "Hook commands resolve to existing scripts" "FAIL" "$(echo -e $e4b_bad) — fix: run /harness-upgrade"
+    fi
 fi
 
 # E.5 — AI-GUIDE.md indexes every .harness/rules/*.md (and vice versa)

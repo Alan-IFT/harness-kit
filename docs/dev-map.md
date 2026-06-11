@@ -22,8 +22,8 @@ harness-kit/
 │   │       │   ├── docs/tasks.md.tmpl
 │   │       │   ├── docs/spec/README.md
 │   │       │   ├── .harness/scripts/harness-sync.{ps1,sh}    ← Binding sync (distributed)
-│   │       │   ├── .harness/scripts/migrate-scripts-layout.{ps1,sh} ← One-shot scripts/ → .harness/scripts/ upgrade (T-007)
-│   │       │   ├── .harness/scripts/upgrade-project.{ps1,sh}    ← /harness-upgrade mechanical layer (T-012)
+│   │       │   ├── .harness/scripts/migrate-scripts-layout.{ps1,sh} ← One-shot scripts/ → .harness/scripts/ upgrade (T-007; presence-gated rewire + terminal hook-congruence scan, exit 4 — T-020)
+│   │       │   ├── .harness/scripts/upgrade-project.{ps1,sh}    ← /harness-upgrade mechanical layer (T-012; gated rewire + placeholder repair + terminal hook-congruence scan, exit 4 — T-020)
 │   │       │   ├── .harness/scripts/language-policy.{ps1,sh}    ← /harness-language mechanical layer (T-014): heading-anchored policy-section + line rewrite; zh source = i18n/zh/_policy snippet (T-016), en source = common/ inline; also drives zh-init composition (init step 4.4)
 │   │       │   ├── .harness/scripts/ai-native-mock.json     ← Mock AI response for HARNESS_AI_NATIVE_MOCK (v0.16+; test & dry-run)
 │   │       │   └── evals/golden-tasks.md.tmpl
@@ -81,11 +81,11 @@ harness-kit/
 │       ├── verify_all.{ps1,sh}         ← Total verification (32 checks)
 │       ├── harness-sync.{ps1,sh}       ← Layer 2: .harness/agents + .harness/skills → .claude/
 │       ├── sync-self.{ps1,sh}          ← Layer 1: templates/common/ → repo SOT
-│       ├── migrate-scripts-layout.{ps1,sh} ← One-shot scripts/ → .harness/scripts/ upgrade (T-007)
-│       ├── upgrade-project.{ps1,sh}    ← /harness-upgrade mechanical layer (v0.23+): relocate + content-refresh + settings rewire + hook + verify_all regenerate
+│       ├── migrate-scripts-layout.{ps1,sh} ← One-shot scripts/ → .harness/scripts/ upgrade (T-007; v0.31: presence-gated rewire + terminal hook-congruence scan, exit 4)
+│       ├── upgrade-project.{ps1,sh}    ← /harness-upgrade mechanical layer (v0.23+): relocate + content-refresh + gated settings rewire + placeholder repair + hook + verify_all regenerate + terminal hook-congruence scan (exit 4, v0.31)
 │       ├── language-policy.{ps1,sh}    ← /harness-language mechanical layer (v0.25+): heading-anchored policy-section + one-line policy rewrite, .bak, NOOP on byte-identity, en<->zh byte-identical round-trip
 │       ├── test-init.{ps1,sh}          ← Init+sync regression on EMPTY dir
-│       ├── test-harness-upgrade.{ps1,sh} ← /harness-upgrade regression (v0.23+): synthetic old-fixtures, root-derivation, B.* splice/halt, hook conflict, idempotence
+│       ├── test-harness-upgrade.{ps1,sh} ← /harness-upgrade regression (v0.23+): synthetic old-fixtures, root-derivation, B.* splice/halt, hook conflict, idempotence; v0.31: dangling-hook repair, placeholder repair, congruence exit-4, migrate RC-1 fixtures
 │       ├── test-language.{ps1,sh}      ← /harness-language regression (v0.25+): en<->zh switch, idempotent refresh, dry-run, byte-identical zh->en->zh round-trip, missing-copilot, hand-mangled-heading conflict
 │       ├── test-supervisor.{ps1,sh}    ← Supervisor agent + /harness-supervise skill regression
 │       ├── test-verify-i6.{ps1,sh}     ← verify_all I.6 gap-tolerant matcher regression (v0.18+)

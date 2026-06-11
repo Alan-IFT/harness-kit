@@ -426,14 +426,18 @@ Assert "fan-out: AI-GUIDE.md has '7 canonical agents + 1 auxiliary (supervisor)'
 # standing verify_all G.4 meta-check (derives version from plugin.json + count from
 # the live recorded-step tally). test-supervisor keeps ZERO release-tracking literals
 # so it never drifts on a version/count bump again. Only the 3 version-agnostic
-# structural asserts (auxiliary-supervisor phrasing above, harness-status row +
-# canonical-7 glob below) remain.
-Assert "fan-out: harness-status SKILL.md has a supervisor (auxiliary) row" {
-    (Get-Content "skills/harness-status/SKILL.md" -Raw) -match 'upervisor.*auxiliary'
+# structural asserts (auxiliary-supervisor phrasing above, harness-status note +
+# retired glob below) remain.
+# T-020 (v0.31): harness-status no longer lists the supervisor / canonical-7 rows as
+# project ASSETS — framework agents (incl. supervisor) are plugin-provided since
+# v0.30. Assert the NEW state: the plugin-provided note names the supervisor, and
+# the retired .claude/agents canonical-7 glob row is GONE.
+Assert "fan-out: harness-status SKILL.md notes framework agents (7 + supervisor) are plugin-provided" {
+    (Get-Content "skills/harness-status/SKILL.md" -Raw) -match '\(7 \+ supervisor\).*plugin-provided'
 }
-Assert "fan-out: harness-status SKILL.md preserves the canonical-7 glob (not widened)" {
+Assert "fan-out: harness-status SKILL.md retired the canonical-7 asset glob (v0.30 truth)" {
     $c = Get-Content "skills/harness-status/SKILL.md" -Raw
-    $c -match '\{pm,req,sol,gate,dev,review,qa\}\*'
+    -not ($c -match '\{pm,req,sol,gate,dev,review,qa\}\*')
 }
 
 Write-Host ""

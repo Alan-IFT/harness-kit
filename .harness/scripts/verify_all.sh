@@ -81,7 +81,7 @@ bad_ph=""
 while IFS= read -r f; do
     while IFS= read -r ph; do
         case "$ph" in
-            "{{PROJECT_NAME}}"|"{{PROJECT_TYPE}}"|"{{STACK}}"|"{{TODAY}}"|"{{ENABLE_HOOK}}"|"{{SYNC_COMMAND}}"|"{{GUARD_COMMAND}}") ;;
+            "{{PROJECT_NAME}}"|"{{PROJECT_TYPE}}"|"{{STACK}}"|"{{TODAY}}"|"{{ENABLE_HOOK}}"|"{{SYNC_COMMAND}}"|"{{GUARD_COMMAND}}"|"{{AMBIENT_PROMPT_COMMAND}}"|"{{AMBIENT_RESET_COMMAND}}") ;;
             *) bad_ph="$bad_ph\n$f: $ph" ;;
         esac
     done < <(grep -oE '\{\{[[:space:]]*[A-Za-z_][A-Za-z0-9_]*[[:space:]]*\}\}' "$f" | sort -u)

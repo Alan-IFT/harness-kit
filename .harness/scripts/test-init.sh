@@ -42,10 +42,14 @@ case "${OSTYPE:-}" in
     msys*|cygwin*|win32)
         SYNC_COMMAND="pwsh -NoProfile -File .harness/scripts/harness-sync.ps1"
         GUARD_COMMAND="pwsh -NoProfile -File .harness/scripts/guard-rm.ps1"
+        AMBIENT_PROMPT_COMMAND="pwsh -NoProfile -File .harness/scripts/ambient-prompt.ps1"
+        AMBIENT_RESET_COMMAND="pwsh -NoProfile -File .harness/scripts/ambient-reset.ps1"
         ;;
     *)
         SYNC_COMMAND="bash .harness/scripts/harness-sync.sh"
         GUARD_COMMAND="bash .harness/scripts/guard-rm.sh"
+        AMBIENT_PROMPT_COMMAND="bash .harness/scripts/ambient-prompt.sh"
+        AMBIENT_RESET_COMMAND="bash .harness/scripts/ambient-reset.sh"
         ;;
 esac
 
@@ -60,6 +64,8 @@ substitute() {
         -e "s|{{ENABLE_HOOK}}|false|g" \
         -e "s|{{SYNC_COMMAND}}|$SYNC_COMMAND|g" \
         -e "s|{{GUARD_COMMAND}}|$GUARD_COMMAND|g" \
+        -e "s|{{AMBIENT_PROMPT_COMMAND}}|$AMBIENT_PROMPT_COMMAND|g" \
+        -e "s|{{AMBIENT_RESET_COMMAND}}|$AMBIENT_RESET_COMMAND|g" \
         "$file" > "$tmp"
     mv "$tmp" "$file"
 }
@@ -268,6 +274,37 @@ assert 'guard-rm' in d['hooks']['PreToolUse'][0]['hooks'][0]['command']
         fi
     fi
 
+    # === T-020: hook<->script congruence of the generated settings (AC-5) ===
+    # Same deterministic core as harness-init SKILL step 10b: extract every script
+    # path on "command" lines with the LEFT-BOUNDED ERE (quote/space/=/line start —
+    # a dirname merely ending in scripts/ never matches) and assert each exists.
+    t20_viol=""
+    while IFS= read -r t20_path; do
+        [[ -z "$t20_path" ]] && continue
+        [[ -f "$tmp/$t20_path" ]] || t20_viol="$t20_viol $t20_path"
+    done < <(grep '"command"' "$tmp/.claude/settings.json" \
+        | grep -oE "(^|[\"' =])(\.harness/)?scripts/[A-Za-z0-9._-]+\.(ps1|sh)" \
+        | sed -E "s|^[\"' =]||" \
+        | sort -u)
+    assert "[T-020] every settings hook command path exists on disk (AC-5)" "[[ -z '$t20_viol' ]]"
+    [[ -n "$t20_viol" ]] && echo "    dangling:$t20_viol" >&2
+    assert "[T-020] ambient-prompt command is the OS-picked variant" \
+        "grep -qF '\"command\": \"$AMBIENT_PROMPT_COMMAND\"' '$tmp/.claude/settings.json'"
+    assert "[T-020] ambient-reset command is the OS-picked variant" \
+        "grep -qF '\"command\": \"$AMBIENT_RESET_COMMAND\"' '$tmp/.claude/settings.json'"
+
+    # === T-020: generated verify_all carries the v0.30-correct rows (FR-D3/FR-D4) ===
+    case "$project_type" in
+        backend) t20_cong_row="D.4b" ;;
+        *)       t20_cong_row="E.4b" ;;
+    esac
+    assert "[T-020] generated verify_all.sh has the agents-layout wording, not the retired 7-agents check" \
+        "grep -qF 'partition dev-* only' '$tmp/.harness/scripts/verify_all.sh' && ! grep -qF 'All 7 agents' '$tmp/.harness/scripts/verify_all.sh'"
+    assert "[T-020] generated verify_all.sh has the $t20_cong_row hook-congruence row" \
+        "grep -qF '\"$t20_cong_row\"' '$tmp/.harness/scripts/verify_all.sh'"
+    assert "[T-020] generated verify_all.ps1 has the agents-layout wording + $t20_cong_row row" \
+        "grep -qF 'partition dev-* only' '$tmp/.harness/scripts/verify_all.ps1' && grep -qF '\"$t20_cong_row\"' '$tmp/.harness/scripts/verify_all.ps1' && ! grep -qF 'All 7 agent definitions' '$tmp/.harness/scripts/verify_all.ps1'"
+
     # Binding consistency right after init
     if bash "$tmp/.harness/scripts/harness-sync.sh" --check &>/dev/null; then
         echo "  PASS  harness-sync --check is clean after init"; ((pass++))
@@ -443,6 +480,20 @@ PYEOF
         # Python missing — skip AI-native block (mirrors existing init_have_python gate)
         echo "  SKIP  [AI-native block — python3 required, not available]"
     fi
+
+    # === T-020 mutation probe (AC-5 mutation half): delete the wired sync script,
+    # re-run the step-10b deterministic core — it MUST now report a violation.
+    # Runs LAST in this fixture (the tree is discarded right after). ===
+    rm -f "$tmp/.harness/scripts/harness-sync.sh" "$tmp/.harness/scripts/harness-sync.ps1"
+    t20_mut=""
+    while IFS= read -r t20_path; do
+        [[ -z "$t20_path" ]] && continue
+        [[ -f "$tmp/$t20_path" ]] || t20_mut="$t20_mut $t20_path"
+    done < <(grep '"command"' "$tmp/.claude/settings.json" \
+        | grep -oE "(^|[\"' =])(\.harness/)?scripts/[A-Za-z0-9._-]+\.(ps1|sh)" \
+        | sed -E "s|^[\"' =]||" \
+        | sort -u)
+    assert "[T-020] mutation probe: deleted harness-sync.* IS reported as dangling (AC-5)" "[[ -n '$t20_mut' ]]"
 
     if [[ "$KEEP" == true ]]; then
         echo ""

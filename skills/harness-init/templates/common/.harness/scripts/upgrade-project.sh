@@ -17,7 +17,11 @@
 #   bash upgrade-project.sh --template-root <abs> --type fullstack --dry-run
 #
 # Exit codes: 0 success; 1 precondition error; 2 verify_all refresh-blocked (no --force);
-#             3 hook conflict (non-stock pre-commit).
+#             3 hook conflict (non-stock pre-commit);
+#             4 post-run hook<->script congruence failure (T-020): a wired hook command
+#               references (apply) or would reference (dry-run) a missing script, or
+#               carries an unresolved placeholder token. Exit 4 overrides 2/3 — the
+#               co-occurring CONFLICT records are still all on stdout.
 
 set -uo pipefail
 
@@ -89,7 +93,9 @@ verb_prefix() { if [[ "$DRY_RUN" == true ]]; then echo "PLAN"; else echo "RESULT
 emit "TYPE|$TYPE"
 
 # --- S1 relocation --------------------------------------------------------------
-# INVARIANT: refresh_set (S2 below) == known minus verify_all.{ps1,sh} and baseline.json.
+# INVARIANT: refresh_set (S2 below) == (known minus verify_all.{ps1,sh}, baseline.json)
+# plus the ambient hook pair (ambient-prompt/-reset never lived at top-level scripts/ —
+# they shipped post-relocation in T-011, so they are NOT in `known`).
 # These two literal arrays are hand-maintained — if you edit one, update the other.
 known=(
     verify_all.ps1 verify_all.sh
@@ -104,6 +110,7 @@ src_dir="$root/scripts"
 dst_dir="$root/.harness/scripts"
 in_git=false
 [[ -d "$root/.git" ]] && in_git=true
+planned_moves=""
 
 for name in "${known[@]}"; do
     src_file="$src_dir/$name"
@@ -114,6 +121,7 @@ for name in "${known[@]}"; do
         continue
     fi
     emit "$(verb_prefix)|MOVE|scripts/$name -> .harness/scripts/$name"
+    planned_moves="$planned_moves $name"
     n_moved=$((n_moved + 1))
     if [[ "$DRY_RUN" == false ]]; then
         mkdir -p "$dst_dir"
@@ -131,19 +139,34 @@ for name in "${known[@]}"; do
 done
 
 # --- S2 content-refresh of depth-sensitive scripts (the L31 / DO-1 fix) ---------
-# INVARIANT: refresh_set == known (S1 above) minus verify_all.{ps1,sh} and baseline.json.
-# Hand-maintained literal arrays — keep in sync; edit one, update the other.
+# INVARIANT: refresh_set == (known (S1 above) minus verify_all.{ps1,sh}, baseline.json)
+# plus the ambient hook pair (ambient-prompt/-reset are hook targets — repair, FR-R1,
+# must be able to re-land them; they are not in `known` because they never lived at
+# top-level scripts/). Hand-maintained literal arrays — edit one, update the other.
 refresh_set=(
     harness-sync.ps1 harness-sync.sh
     install-hooks.ps1 install-hooks.sh
     archive-task.ps1 archive-task.sh
     guard-rm.ps1 guard-rm.sh
     migrate-scripts-layout.ps1 migrate-scripts-layout.sh
+    ambient-prompt.ps1 ambient-prompt.sh
+    ambient-reset.ps1 ambient-reset.sh
 )
 for name in "${refresh_set[@]}"; do
     tmpl_file="$template_common_scripts/$name"
-    [[ -f "$tmpl_file" ]] || continue
     dst_file="$dst_dir/$name"
+    if [[ ! -f "$tmpl_file" ]]; then
+        # T-020 (RC-4 fix): never skip this case silently. If the project still has a
+        # copy, that copy is retained (NOOP); if neither side has the file, emit an
+        # explicit GAP so a hook wired to it is diagnosable (the terminal congruence
+        # scan then fails the run with exit 4 if the file is actually wired).
+        if [[ -f "$dst_file" ]]; then
+            emit "$(verb_prefix)|NOOP|.harness/scripts/$name (template lacks it; existing copy retained)"
+        else
+            emit "GAP|template-missing|absent|.harness/scripts/$name"
+        fi
+        continue
+    fi
     if [[ -f "$dst_file" ]] && cmp -s "$tmpl_file" "$dst_file"; then
         emit "$(verb_prefix)|NOOP|.harness/scripts/$name (already current)"
         continue
@@ -154,21 +177,90 @@ for name in "${refresh_set[@]}"; do
     if [[ "$is_new" == true ]]; then n_added=$((n_added + 1)); else n_rewritten=$((n_rewritten + 1)); fi
     if [[ "$DRY_RUN" == false ]]; then
         mkdir -p "$dst_dir"
-        cp "$tmpl_file" "$dst_file"
+        # cp verify (T-020 / RC-4): under `set -uo` (no -e) a failed cp would pass
+        # silently and S3 could rewire toward a file that never landed.
+        if ! cp "$tmpl_file" "$dst_file" 2>/dev/null || ! cmp -s "$tmpl_file" "$dst_file"; then
+            emit "CONFLICT|refresh|.harness/scripts/$name copy failed (template -> project copy did not land)"
+            n_conflicts=$((n_conflicts + 1))
+        fi
     fi
 done
 
 # --- S3 settings rewire (verbatim raw-text replace; NEVER re-serialize — DO-3) ---
+# target_present <name>: is .harness/scripts/<name> on disk (apply mode: S1 moves +
+# S2 refresh already ran, disk is ground truth) or projected to land there (dry-run:
+# a planned S1 MOVE counts, and so does the template carrying a refresh-set member —
+# S2 would land it on apply)? Gates both the placeholder repair and the per-variant
+# prefix rewires below (T-020 / FR-P3).
+target_present() {
+    local tp_name="$1" tp_m
+    [[ -f "$dst_dir/$tp_name" ]] && return 0
+    [[ "$DRY_RUN" == true ]] || return 1
+    case " $planned_moves " in *" $tp_name "*) return 0 ;; esac
+    if [[ -f "$template_common_scripts/$tp_name" ]]; then
+        for tp_m in "${refresh_set[@]}"; do
+            [[ "$tp_m" == "$tp_name" ]] && return 0
+        done
+    fi
+    return 1
+}
+
 settings="$root/.claude/settings.json"
+settings_new=""
 if [[ ! -f "$settings" ]]; then
     emit "RESULT|SKIP|.claude/settings.json absent — settings rewire skipped (non-Claude-Code project)"
 else
-    settings_new="$(sed -e 's|scripts/harness-sync\.|.harness/scripts/harness-sync.|g' \
-                        -e 's|scripts/guard-rm\.|.harness/scripts/guard-rm.|g' \
-                        -e 's|\.harness/\.harness/scripts/|.harness/scripts/|g' \
-                        "$settings")"
-    if [[ "$settings_new" != "$(cat "$settings")" ]]; then
-        emit "$(verb_prefix)|REWIRE|.claude/settings.json (harness-sync + guard-rm hook paths)"
+    settings_raw="$(cat "$settings")"
+    settings_new="$settings_raw"
+
+    # S3.0 — literal-placeholder repair (T-020 gate C3 / B7, design §6.2.5).
+    # A wired, UNSUBSTITUTED placeholder token (RC-3 improvisation damage) can never
+    # run on any OS, so it is never a deliberate user choice (OQ-5 untriggered): it is
+    # rewritten to the OS-picked init command — gated on the target script being
+    # (projected) present, so a MALFORMED token never becomes a DANGLING path (the
+    # terminal scan flags an un-repairable token instead -> exit 4). Tokens are
+    # assembled from pieces so this shipped helper never contains a literal
+    # double-brace token (insight 2026-06-08; test-init's blanket placeholder scan).
+    # Replacement values contain no token opener, so a second run is a no-op (B10).
+    ph_o="{{"; ph_c="}}"
+    is_windows=false
+    case "${OSTYPE:-}" in msys*|cygwin*|win32) is_windows=true ;; esac
+    ph_names=(SYNC_COMMAND GUARD_COMMAND AMBIENT_PROMPT_COMMAND AMBIENT_RESET_COMMAND)
+    ph_tools=(harness-sync guard-rm ambient-prompt ambient-reset)
+    for ph_i in "${!ph_names[@]}"; do
+        ph_tok="${ph_o}${ph_names[$ph_i]}${ph_c}"
+        if [[ "$is_windows" == true ]]; then
+            ph_cmd="pwsh -NoProfile -File .harness/scripts/${ph_tools[$ph_i]}.ps1"
+            ph_target="${ph_tools[$ph_i]}.ps1"
+        else
+            ph_cmd="bash .harness/scripts/${ph_tools[$ph_i]}.sh"
+            ph_target="${ph_tools[$ph_i]}.sh"
+        fi
+        if printf '%s' "$settings_new" | grep -qF -- "$ph_tok" && target_present "$ph_target"; then
+            settings_new="${settings_new//"$ph_tok"/$ph_cmd}"
+            emit "$(verb_prefix)|REWIRE-PLACEHOLDER|.claude/settings.json (${ph_names[$ph_i]} -> $ph_cmd)"
+        fi
+    done
+
+    # S3.1 — per-variant presence-gated prefix rewire (T-020 / RC-4 fix). In the
+    # normal flow S2 just landed every variant, so the gate is transparently true and
+    # behavior on healthy projects is byte-identical to before. The unconditional
+    # double-prefix collapse stays last (fixed point — B10).
+    # Known cosmetic nuance (gate F-4): when only ONE shell variant's target is
+    # present, doc strings mentioning both variants end half-migrated. Idempotent and
+    # harmless — the terminal scan only checks "command" lines, never doc keys.
+    for tool_ext in harness-sync.ps1 harness-sync.sh guard-rm.ps1 guard-rm.sh; do
+        if target_present "$tool_ext"; then
+            tool_base="${tool_ext%.*}"
+            tool_suffix="${tool_ext##*.}"
+            settings_new="$(printf '%s\n' "$settings_new" \
+                | sed -e "s|scripts/$tool_base\.$tool_suffix|.harness/scripts/$tool_base.$tool_suffix|g")"
+        fi
+    done
+    settings_new="$(printf '%s\n' "$settings_new" | sed -e 's|\.harness/\.harness/scripts/|.harness/scripts/|g')"
+
+    if [[ "$settings_new" != "$settings_raw" ]]; then
+        emit "$(verb_prefix)|REWIRE|.claude/settings.json (hook command paths)"
         n_rewired=$((n_rewired + 1))
         if [[ "$DRY_RUN" == false ]]; then
             bak="$settings.bak-$stamp"
@@ -398,6 +490,64 @@ for shell in ps1 sh; do
         printf '%s\n' "$final_text" > "$proj_file"
     fi
 done
+
+# --- S6 terminal hook<->script congruence scan (T-020 / FR-P1, runs last) --------
+# Asserts the END STATE: every script path referenced by a `"command"` line in the
+# final settings text resolves to a file that exists (apply mode: disk is ground
+# truth — the scan runs after every writer) or is projected to exist (dry-run:
+# planned S1 MOVEs and template-carried refresh-set members count). Each miss emits
+# a CONFLICT|congruence record and the run exits 4. The scan is the LAST writer of
+# exit_code, so 4 deliberately wins over 2/3 — an incongruent end state is the most
+# actionable failure; the co-occurring CONFLICT/VERIFY-HALT records stay on stdout.
+# The path ERE is LEFT-BOUNDED (quote / space / `=` / line start) so a custom hook
+# whose dirname merely ENDS in `scripts/` (e.g. build-scripts/deploy.sh) can never
+# match (gate C1). Anything the ERE cannot parse is ignored — fail-open diagnosis
+# (R4): the scan only flags PARSED tokens whose target file is missing.
+# Line-scoping to "command" lines is deliberate: permissions.allow entries and the
+# _doc_sync_hook / _ambient_hook doc strings mention BOTH shell variants and must not
+# force both to exist (only the wired variant is load-bearing).
+# Known asymmetry (B9): the dry-run projection is ADDITIVE-only — a hook wired to a
+# legacy scripts/<name> that exists NOW but is planned to MOVE still passes the disk
+# test in dry-run, yet apply exits 4 after the move; apply is authoritative.
+if [[ -f "$settings" ]]; then
+    if [[ "$DRY_RUN" == true ]]; then
+        scan_text="$settings_new"
+    else
+        scan_text="$(cat "$settings")"
+    fi
+    cong_found=false
+    while IFS= read -r cmd_line; do
+        case "$cmd_line" in *'"command"'*) : ;; *) continue ;; esac
+        trimmed="$(printf '%s' "$cmd_line" | sed -e 's|^[[:space:]]*||' -e 's|[[:space:]]*$||')"
+        if [[ "$cmd_line" == *"$ph_o"* ]]; then
+            emit "CONFLICT|congruence|$trimmed -> unresolved placeholder token"
+            n_conflicts=$((n_conflicts + 1))
+            cong_found=true
+        fi
+        while IFS= read -r ref_path; do
+            [[ -z "$ref_path" ]] && continue
+            present=false
+            [[ -f "$root/$ref_path" ]] && present=true
+            if [[ "$present" == false && "$DRY_RUN" == true ]]; then
+                case "$ref_path" in
+                    .harness/scripts/*)
+                        ref_name="${ref_path#.harness/scripts/}"
+                        target_present "$ref_name" && present=true
+                        ;;
+                esac
+            fi
+            if [[ "$present" == false ]]; then
+                emit "CONFLICT|congruence|$trimmed -> missing $ref_path"
+                n_conflicts=$((n_conflicts + 1))
+                cong_found=true
+            fi
+        done < <(printf '%s\n' "$cmd_line" \
+            | grep -oE "(^|[\"' =])(\.harness/)?scripts/[A-Za-z0-9._-]+\.(ps1|sh)" \
+            | sed -E "s|^[\"' =]||" \
+            | sort -u)
+    done <<< "$scan_text"
+    [[ "$cong_found" == true ]] && exit_code=4
+fi
 
 emit "SUMMARY|added=$n_added moved=$n_moved rewritten=$n_rewritten rewired=$n_rewired conflicts=$n_conflicts"
 exit "$exit_code"

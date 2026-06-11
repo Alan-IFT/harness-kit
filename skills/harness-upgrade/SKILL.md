@@ -26,6 +26,11 @@ a green `verify_all`.
 
 - The project **already has** harness assets (`.claude/settings.json`, `.harness/`, or
   a top-level `scripts/harness-sync.*`) but is on an **old layout** (pre-`.harness/scripts/`).
+- **Repair path for a dangling hook (T-020):** `/harness-status` reports a hook as
+  `DANGLING` / `MALFORMED`, or the user sees a per-turn
+  `Stop hook error: … No such file or directory` — this skill re-lands the current
+  scripts (S2), rewires hook paths, and repairs wired literal `{{...}}` placeholder
+  tokens to the OS-picked command.
 - For a project with **no** harness at all → use `/harness-adopt` instead.
 - For a brand-new empty project → use `/harness-init`.
 
@@ -118,14 +123,20 @@ if needed.
    |---|---|
    | `PLAN\|<verb>\|<detail>` | planned action (dry-run) |
    | `RESULT\|<verb>\|<detail>` | applied action |
-   | `GAP\|<id>\|<present\|absent>\|<detail>` | gap diagnosis |
+   | `GAP\|<id>\|<present\|absent>\|<detail>` | gap diagnosis. Kind `template-missing` (T-020): a refresh-set script is absent from BOTH the template and the project — if a hook is wired to it, the terminal congruence scan will fail the run (exit 4). |
    | `TYPE\|<type>` | resolved type |
    | `BAK\|<path>` | backup written |
-   | `CONFLICT\|<kind>\|<detail>` | surfaced conflict (hook / verify_all) |
+   | `CONFLICT\|<kind>\|<detail>` | surfaced conflict. Kinds: `hook` (exit 3), `verify_all` (exit 2), `refresh` (a template→project copy did not land), `congruence` (exit 4 — a wired hook command references a missing script or carries an unresolved placeholder token; `<detail>` names the command and the missing path/token) |
    | `SUMMARY\|added=.. moved=.. rewritten=.. rewired=.. conflicts=..` | totals |
 
-   `<verb>` ∈ `MOVE REFRESH REWIRE HOOK-INSTALL HOOK-SKIP VERIFY-REGEN VERIFY-SPLICE
-   VERIFY-HALT SKIP NOOP`.
+   `<verb>` ∈ `MOVE REFRESH REWIRE REWIRE-PLACEHOLDER HOOK-INSTALL HOOK-SKIP
+   VERIFY-REGEN VERIFY-SPLICE VERIFY-HALT SKIP NOOP`.
+
+   `REWIRE-PLACEHOLDER` (T-020 / B7 repair): a wired, unsubstituted placeholder
+   token in `.claude/settings.json` was rewritten to the OS-picked command —
+   `<detail>` is `.claude/settings.json (<NAME> -> <command>)`. Relay each such
+   line in the final report as a repaired item ("unsubstituted placeholder rewired
+   to the OS-picked command").
 
 3. Present the gap report + the plan to the user (every file added / moved / rewritten /
    rewired, the target version, the `.bak` locations). Ask via `AskUserQuestion`:
@@ -141,6 +152,7 @@ if needed.
 | `1` | precondition / user error | surface the helper's stderr, halt |
 | `2` | **verify_all refresh-blocked** — the old `verify_all` carried custom B.* checks but had no `HARNESS:B-CUSTOM` markers, so a safe splice was impossible | show the user the old B.* block + the `.bak` path; ask to confirm overwrite → re-invoke with `-Force`/`--force`, or abort. NEVER guess a splice. |
 | `3` | **hook conflict** — a non-stock (hand-customized) `.git/hooks/pre-commit` was found and NOT overwritten | relay the `CONFLICT|hook|...` line; the rest of the upgrade still completed. Tell the user to merge the drift check in manually. |
+| `4` | **post-run hook↔script congruence failure (T-020)** — after all steps, a wired hook command still references (apply) or would still reference (dry-run) a missing script, or carries an unresolved placeholder token the helper could not repair | relay each `CONFLICT\|congruence\|...` line verbatim; if the missing file is not a template-shipped script (a user-custom hook command), tell the user to restore that file manually. **Exit 4 overrides 2/3, but the other records are still on stdout — also process any co-occurring `VERIFY-HALT` / `CONFLICT\|verify_all` (apply the exit-2 remediation: confirm → `--force` re-run) and `CONFLICT\|hook` (apply the exit-3 remediation: manual merge instruction) records exactly as their own rows prescribe.** Exit 4 can also fire on the **dry-run leg** (a projected-state violation): present the plan to the user unchanged (step 5.3), with the congruence lines included — a dry-run exit 4 is information for the confirm decision, not a halt. |
 
 ### 7. Final gate + report
 
@@ -158,6 +170,8 @@ if needed.
    verify_all:       <SPLICE | REGEN> (B.* customizations preserved / reset; .bak written)
    Hook:             <installed | refreshed | conflict>
    Settings:         <rewired | skipped (no .claude/settings.json) | already current>
+   Repaired:         <each REWIRE-PLACEHOLDER line: unsubstituted placeholder rewired to the OS-picked command — omit the line if none>
+   Congruence:       <OK — every wired hook command resolves to an existing script | the CONFLICT|congruence lines verbatim>
    Backups:          <.bak paths>
    verify_all result: PASS <n> / WARN <n> / FAIL <n>
    ```

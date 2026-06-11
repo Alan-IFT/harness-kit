@@ -186,6 +186,8 @@ Replace these placeholders in any `.tmpl` file:
 | `{{LANG}}` | `en` (default) or `zh` from Q5 |
 | `{{SYNC_COMMAND}}` | OS-detected harness-sync invocation for the Stop hook. **Windows** → `pwsh -NoProfile -File .harness/scripts/harness-sync.ps1`. **macOS / Linux** → `bash .harness/scripts/harness-sync.sh`. Detect via `$IsWindows` (PowerShell) or `[[ "$OSTYPE" == "msys"* \|\| "$OSTYPE" == "cygwin"* \|\| "$OSTYPE" == "win32" ]]` (bash). Used only in `.claude/settings.json`. The Windows `-NoProfile` flag avoids loading the user's `$PROFILE` on every hook invocation (measured 3-4s → 10ms in QA 06_TEST_REPORT.md D-3). |
 | `{{GUARD_COMMAND}}` | OS-detected guard-rm invocation for the PreToolUse hook (destructive-command safety, v0.15+). **Windows** → `pwsh -NoProfile -File .harness/scripts/guard-rm.ps1`. **macOS / Linux** → `bash .harness/scripts/guard-rm.sh`. Mirror the same OS detection used for `{{SYNC_COMMAND}}`. Used only in `.claude/settings.json`. See `.harness/rules/75-safety-hook.md` for the contract. The Windows `-NoProfile` flag is essential here — without it, every Bash tool call eats the user's `$PROFILE` startup cost (NFR-Perf was violated in QA testing; see 06_TEST_REPORT.md D-3). |
+| `{{AMBIENT_PROMPT_COMMAND}}` | OS-detected ambient-prompt invocation for the UserPromptSubmit hook (`/harness-stream` ambient heartbeat, v0.22+; OS-picked since v0.31 — previously hard-coded to pwsh). **Windows** → `pwsh -NoProfile -File .harness/scripts/ambient-prompt.ps1`. **macOS / Linux** → `bash .harness/scripts/ambient-prompt.sh`. Mirror the same OS detection used for `{{SYNC_COMMAND}}`. Used only in `.claude/settings.json`. |
+| `{{AMBIENT_RESET_COMMAND}}` | OS-detected ambient-reset invocation for the SessionStart hook (deletes `.harness/ambient.flag` so ambient mode is session-scoped). **Windows** → `pwsh -NoProfile -File .harness/scripts/ambient-reset.ps1`. **macOS / Linux** → `bash .harness/scripts/ambient-reset.sh`. Mirror the same OS detection used for `{{SYNC_COMMAND}}`. Used only in `.claude/settings.json`. |
 
 ### 5b. AI customization (opt-in, v0.16+)
 
@@ -401,6 +403,26 @@ Create `.harness/scripts/baseline.json` with empty defaults:
 }
 ```
 
+### 10b. Hook congruence assertion (mandatory — T-020 / FR-P4)
+
+Before printing the step-11 success summary, assert that **no wired hook dangles**:
+
+1. Read the written `.claude/settings.json`.
+2. For every line containing `"command"`, extract each script path matching the
+   left-bounded pattern `(^|["' =])(\.harness/)?scripts/<name>.(ps1|sh)` — the left
+   boundary (quote / space / `=` / start) means a custom command in a dirname that
+   merely *ends* in `scripts/` (e.g. `build-scripts/deploy.sh`) is NOT extracted.
+3. For each extracted path: assert the file exists in the target tree (Glob/Read).
+4. Also assert no `"command"` line contains an unresolved `{{...}}` placeholder token.
+5. **On any violation**: report **flow failure** — name the hook event, the full
+   command string, and the missing path (or the unresolved token) — and instruct
+   re-copying the named file(s) from `<skill-root>/templates/common/.harness/scripts/`
+   (or re-running step 5 substitution for a token). **Do not print the step-11
+   success summary until this assertion passes.**
+
+This is a file-existence assertion, not a gate run — the "no verify_all during init"
+rule (Anti-patterns) is untouched.
+
 ### 11. Summary report to user
 
 Print a structured summary:
@@ -470,3 +492,4 @@ Estimated time to first delivered feature: 30 min – 1 hour depending on scope.
 - If user aborts at any AskUserQuestion → leave the target untouched, no partial state.
 - If file write fails (permission, disk full) → list which files made it and which didn't, do not retry blindly.
 - If `harness-sync` fails after copy → report the error; the user can re-run it manually after fixing whatever blocked it.
+- If the step-10b hook congruence assertion fails → that is a **flow failure**, not a note: name the hook event + command + missing path, re-copy the named script(s) from the templates, re-assert, and only then print the success summary.

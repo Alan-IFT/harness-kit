@@ -103,6 +103,16 @@ function Test-Type {
         } else {
             "bash .harness/scripts/guard-rm.sh"
         }
+        $ambientPromptCmd = if ($IsWindows -or $env:OS -eq "Windows_NT") {
+            "pwsh -NoProfile -File .harness/scripts/ambient-prompt.ps1"
+        } else {
+            "bash .harness/scripts/ambient-prompt.sh"
+        }
+        $ambientResetCmd = if ($IsWindows -or $env:OS -eq "Windows_NT") {
+            "pwsh -NoProfile -File .harness/scripts/ambient-reset.ps1"
+        } else {
+            "bash .harness/scripts/ambient-reset.sh"
+        }
         $vars = @{
             "PROJECT_NAME"  = "test-project"
             "PROJECT_TYPE"  = $ProjectType
@@ -111,6 +121,8 @@ function Test-Type {
             "ENABLE_HOOK"   = "false"
             "SYNC_COMMAND"  = $syncCmd
             "GUARD_COMMAND" = $guardCmd
+            "AMBIENT_PROMPT_COMMAND" = $ambientPromptCmd
+            "AMBIENT_RESET_COMMAND"  = $ambientResetCmd
         }
 
         # 1) copy templates (common, then overlay)
@@ -290,6 +302,48 @@ function Test-Type {
         Assert ".claude/settings.json PreToolUse command references guard-rm" {
             $s = Get-Content (Join-Path $tmp ".claude/settings.json") -Raw | ConvertFrom-Json
             $s.hooks.PreToolUse[0].hooks[0].command -match 'guard-rm\.(ps1|sh)'
+        }
+
+        # === T-020: hook<->script congruence of the generated settings (AC-5) ===
+        # Same deterministic core as harness-init SKILL step 10b: extract every script
+        # path on "command" lines with the LEFT-BOUNDED regex (quote/space/=/line
+        # start — a dirname merely ending in scripts/ never matches) and assert each
+        # exists. Case-sensitive regex; .Split("`n") per insight 2026-06-08.
+        $t20Rx = [regex]::new('(^|["'' =])((\.harness/)?scripts/[A-Za-z0-9._-]+\.(ps1|sh))')
+        function Get-DanglingHookPaths($settingsPath, $treeRoot) {
+            $viol = @()
+            $rawSettings = Get-Content $settingsPath -Raw
+            foreach ($cmdLine in $rawSettings.Split("`n")) {
+                if (-not $cmdLine.Contains('"command"')) { continue }
+                foreach ($m in $t20Rx.Matches($cmdLine)) {
+                    $rp = $m.Groups[2].Value
+                    if (-not (Test-Path (Join-Path $treeRoot $rp))) { $viol += $rp }
+                }
+            }
+            return $viol
+        }
+        Assert "[T-020] every settings hook command path exists on disk (AC-5)" {
+            (Get-DanglingHookPaths (Join-Path $tmp ".claude/settings.json") $tmp).Count -eq 0
+        }
+        Assert "[T-020] ambient-prompt command is the OS-picked variant" {
+            (Get-Content (Join-Path $tmp ".claude/settings.json") -Raw).Contains('"command": "' + $ambientPromptCmd + '"')
+        }
+        Assert "[T-020] ambient-reset command is the OS-picked variant" {
+            (Get-Content (Join-Path $tmp ".claude/settings.json") -Raw).Contains('"command": "' + $ambientResetCmd + '"')
+        }
+
+        # === T-020: generated verify_all carries the v0.30-correct rows (FR-D3/FR-D4) ===
+        $t20CongRow = if ($ProjectType -eq "backend") { "D.4b" } else { "E.4b" }
+        Assert "[T-020] generated verify_all.ps1 has the agents-layout wording, not the retired 7-agents check" {
+            $c = Get-Content (Join-Path $tmp ".harness/scripts/verify_all.ps1") -Raw
+            $c.Contains('partition dev-* only') -and (-not $c.Contains('All 7 agent definitions'))
+        }
+        Assert "[T-020] generated verify_all.ps1 has the $t20CongRow hook-congruence row" {
+            (Get-Content (Join-Path $tmp ".harness/scripts/verify_all.ps1") -Raw).Contains('"' + $t20CongRow + '"')
+        }
+        Assert "[T-020] generated verify_all.sh has the agents-layout wording + $t20CongRow row" {
+            $c = Get-Content (Join-Path $tmp ".harness/scripts/verify_all.sh") -Raw
+            $c.Contains('partition dev-* only') -and $c.Contains('"' + $t20CongRow + '"') -and (-not $c.Contains('All 7 agents'))
         }
 
         # === Layer 2 binding consistency right after init ===
@@ -494,6 +548,15 @@ function Test-Type {
             Remove-Item Env:HARNESS_AI_NATIVE_MOCK -ErrorAction SilentlyContinue
         }
 
+        # === T-020 mutation probe (AC-5 mutation half): delete the wired sync script,
+        # re-run the step-10b deterministic core — it MUST now report a violation.
+        # Runs LAST in this fixture (the tree is discarded right after). ===
+        Remove-Item (Join-Path $tmp ".harness/scripts/harness-sync.sh") -Force -ErrorAction SilentlyContinue
+        Remove-Item (Join-Path $tmp ".harness/scripts/harness-sync.ps1") -Force -ErrorAction SilentlyContinue
+        Assert "[T-020] mutation probe: deleted harness-sync.* IS reported as dangling (AC-5)" {
+            (Get-DanglingHookPaths (Join-Path $tmp ".claude/settings.json") $tmp).Count -ge 1
+        }
+
     } finally {
         if (-not $KeepTemp) {
             Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue
@@ -520,6 +583,8 @@ function Test-Migrate {
             "STACK"         = "Rust CLI tool"; "TODAY" = $today; "ENABLE_HOOK" = "false"
             "SYNC_COMMAND"  = "pwsh -NoProfile -File .harness/scripts/harness-sync.ps1"
             "GUARD_COMMAND" = "pwsh -NoProfile -File .harness/scripts/guard-rm.ps1"
+            "AMBIENT_PROMPT_COMMAND" = "pwsh -NoProfile -File .harness/scripts/ambient-prompt.ps1"
+            "AMBIENT_RESET_COMMAND"  = "pwsh -NoProfile -File .harness/scripts/ambient-reset.ps1"
         }
         Copy-TemplateLayer -Source (Join-Path $templateRoot "common") -Target $tmp -Vars $vars
         Copy-TemplateLayer -Source (Join-Path $templateRoot "generic") -Target $tmp -Vars $vars
@@ -630,7 +695,9 @@ function Test-ZhOverlay {
         $vars = @{ "PROJECT_NAME"="zh-test"; "PROJECT_TYPE"="fullstack"; "STACK"="Next.js + NestJS";
                    "TODAY"=$today; "ENABLE_HOOK"="false";
                    "SYNC_COMMAND"="pwsh -NoProfile -File .harness/scripts/harness-sync.ps1";
-                   "GUARD_COMMAND"="pwsh -NoProfile -File .harness/scripts/guard-rm.ps1" }
+                   "GUARD_COMMAND"="pwsh -NoProfile -File .harness/scripts/guard-rm.ps1";
+                   "AMBIENT_PROMPT_COMMAND"="pwsh -NoProfile -File .harness/scripts/ambient-prompt.ps1";
+                   "AMBIENT_RESET_COMMAND"="pwsh -NoProfile -File .harness/scripts/ambient-reset.ps1" }
         Copy-TemplateLayer -Source (Join-Path $templateRoot "common")        -Target $tmp -Vars $vars
         Copy-TemplateLayer -Source (Join-Path $templateRoot "fullstack")      -Target $tmp -Vars $vars
         # The i18n/zh overlay now carries only the 2 human-facing files (the 3 policy-carrying

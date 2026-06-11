@@ -92,7 +92,7 @@ Step "D.1" "Plugin agents present" {
 }
 
 Step "D.2" "Placeholders limited to documented set" {
-    $allowed = @("{{PROJECT_NAME}}", "{{PROJECT_TYPE}}", "{{STACK}}", "{{TODAY}}", "{{ENABLE_HOOK}}", "{{SYNC_COMMAND}}", "{{GUARD_COMMAND}}")
+    $allowed = @("{{PROJECT_NAME}}", "{{PROJECT_TYPE}}", "{{STACK}}", "{{TODAY}}", "{{ENABLE_HOOK}}", "{{SYNC_COMMAND}}", "{{GUARD_COMMAND}}", "{{AMBIENT_PROMPT_COMMAND}}", "{{AMBIENT_RESET_COMMAND}}")
     $tmplFiles = Get-ChildItem skills/harness-init/templates -Recurse -File | Where-Object {
         $_.Name -match '\.(tmpl|append)$'
     }
