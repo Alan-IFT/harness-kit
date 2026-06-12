@@ -172,8 +172,11 @@ explicitly marks two partitions as independent.
 - Files changed: <git diff stat>
 - Next steps for user: <optional>
 
-## Insight (optional — only if the task uncovered non-obvious project truth)
+## Insight
 
+Optional — only if the task uncovered non-obvious project truth. The heading
+must be exactly `## Insight` (bare — `archive-task`'s harvest matches
+`^## Insights?$` and silently skips a suffixed heading).
 For each truth that beat a reasonable prior, write one line — `archive-task`
 will harvest these into `.harness/insight-index.md` automatically.
 

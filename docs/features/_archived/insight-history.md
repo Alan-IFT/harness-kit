@@ -33,3 +33,7 @@
 
 - 2026-05-19 · PowerShell here-doc and array-of-hashtable literals: backtick is the PS escape char inside double-quoted strings, so `"foo `CLAUDE.md`"` is a parser error. Use single quotes for any string containing literal backticks: `'foo `CLAUDE.md`'`. Affects banned-phrase / drift-detection arrays where you want to match literal markdown code spans. · evidence: I.6 first run, this delivery
 - 2026-05-19 · PowerShell `-notin` (default operator) is case-INSENSITIVE; the symmetric case-sensitive variant is `-cnotin`. A D.2-style whitelist check that uses `-notin` will silently let `{{stack}}` through if `{{STACK}}` is in the whitelist. Same bug class as v0.15.0's `-contains` rollback. Always use `-cnotin` / `-ccontains` for case-sensitive placeholder / flag whitelists. · evidence: T-002 round-2 rollback, .harness/scripts/verify_all.ps1:101 (post-fix)
+
+## Rotated 2026-06-12
+
+- 2026-05-19 · A round-1 doc-resync sweep that updates README/AI-GUIDE/dev-map/walkthrough/architecture but misses CHANGELOG.md (the very file that DESCRIBES the sweep) is a recurring failure mode — the writer optimizes for "consumer-facing surfaces" and forgets that CHANGELOG itself states counts. Add CHANGELOG to the explicit fan-out checklist of any insight-index-line-14 sweep. · evidence: T-002 round-1 review M-1, CHANGELOG.md:43,45,47,55 (post-fix)
