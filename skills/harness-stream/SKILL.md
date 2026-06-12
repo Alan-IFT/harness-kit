@@ -1,6 +1,6 @@
 ---
 name: harness-stream
-description: Streaming / living-pool mode. Drains a continuously-growable task pool (docs/batches/<pool-id>/BATCH_PLAN.md, or the no-arg default pool docs/batches/default/) one task at a time through pm-orchestrator, re-reading the pool every iteration so tasks you add mid-run are planned and executed without re-invoking. Best-effort completion (a failed task is marked and skipped, the stream keeps going) with the same hard-safety stops as batch. Includes an ambient mode: enter by invoking with no pool-id, then every chat message is a heartbeat that folds requirements into the default pool and drains it — gated by .harness/ambient.flag via a UserPromptSubmit hook (session-scoped: a SessionStart hook auto-clears it each new session, no "off" keyword), no /loop needed. Use when you want to fire requirements at the AI as they occur to you — in chat or by appending to the pool — and only watch results.
+description: Streaming / living-pool mode. Drains a continuously-growable task pool (docs/batches/<pool-id>/BATCH_PLAN.md, or the no-arg default pool docs/batches/default/) one task at a time through pm-orchestrator, re-reading the pool every iteration so tasks you add mid-run are planned and executed without re-invoking. Best-effort completion (a failed task is marked and skipped, the stream keeps going) with the same hard-safety stops as batch. Includes an ambient mode: enter by invoking with no pool-id, then every chat message is a heartbeat that folds requirements into the default pool and drains it — gated by .harness/ambient.flag via a UserPromptSubmit hook (session-scoped: a SessionStart hook auto-clears it each new session, no "off" keyword), no /loop needed. Complex multi-part requirements are triaged at ingest and auto-decomposed into N dependency-staged rows (a simple requirement stays one row; ADD lines and hand-written rows are honored as-written). Use when you want to fire requirements at the AI as they occur to you — in chat or by appending to the pool — and only watch results.
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, AskUserQuestion, TodoWrite, Task
 ---
 
@@ -73,13 +73,34 @@ Ambient mode is the **minimal "start once, then just keep typing" experience**: 
 
 ### Each ambient turn (what the agent does when the flag is set)
 
-1. **Ingest.** If your message reads as a requirement (not a question or aside), normalize it into a `pending` row in `docs/batches/default/BATCH_PLAN.md` (assign `ID`/`Slug`/`Goal`/`Mode=full`/`Depends on`), de-duplicating against existing slugs/goals first. If a message is ambiguous, ask before creating a row — never guess. A plain question/aside creates **no** row.
+1. **Ingest.** If your message reads as a requirement (not a question or aside), normalize it into `docs/batches/default/BATCH_PLAN.md` per "Ingest triage" below — one `pending` row, or N decomposed rows when the triage test fires (`Mode` per row, default `full`), de-duplicating against existing slugs/goals first. If a message is ambiguous, ask before creating a row — never guess. A plain question/aside creates **no** row.
 2. **Drain.** Drain ready tasks in topological order via `pm-orchestrator`, one at a time, best-effort, honoring the existing hard-safety stops, until the pool is empty — identical to the Procedure loop below.
 3. **Stop and wait** for your next message.
 
 ### Ambient vs the `/loop` chat driver
 
 Ambient mode is **not** `/loop`. `/loop` makes the AI act while you're **silent** (idle/unattended progress); ambient mode acts **only on your messages** — your own typing is the heartbeat. Ambient mode is explicitly the minimal version: no idle progress, no background process. If you want progress while you're away, that is a separate (out-of-scope-here) `/loop` concern.
+
+## Ingest triage (one row or many)
+
+Applies wherever the STREAM normalizes natural language into pool rows: chat-channel ingest (Procedure 3a) and ambient turns. It NEVER applies to rows the user authored — an `ADD <slug> — <goal>` line or a hand-written pool row is honored verbatim as ONE task, at the user's chosen granularity, and an existing row is never re-triaged.
+
+**Triage test — decompose only when BOTH hold:**
+1. The message contains two or more outcomes that are each *independently verifiable deliverables* — each could pass its own QA and reach DELIVERED on its own (signals: an "and"-chain or enumeration of distinct outcomes; outcomes touching distinct subsystems or artifact classes; phased phrasing — "X, then Y" / "先…再…").
+2. No single one-sentence Goal can state the requirement without conjoining those outcomes.
+
+**NOT complex (always one row):** a single deliverable with wide fan-out (one change echoed across many files); long prose describing one outcome; a list of acceptance details for one outcome.
+
+**When the test fires, write N ≥ 2 `pending` rows (same columns, no schema change):**
+- **Slug:** derive a base slug from the requirement; every sub-row slug starts with `<base>-` (e.g. `csv-export-endpoint`, `csv-export-button`). Add one provenance line to the pool's `## Notes` section: `Decomposed <base>-* (N rows) ← "<original requirement, one line>" (YYYY-MM-DD)`.
+- **Goal:** one sentence, exactly ONE independently verifiable deliverable per row. **Union invariant:** the union of the sub-row Goals must equal the original message — no invented scope, no dropped scope. If any requested outcome cannot be placed in exactly one row, that is ambiguity: ask, don't guess.
+- **Depends on:** chain only REAL consumption (row B uses an artifact or behavior row A produces). Independent siblings stay unchained (`—`) so a failed sibling never blocks them.
+- **Mode:** per row via the normal workflow-entry mapping (default `full`; a pure research sub-step may be `explore`).
+- **Fixed point:** every produced row must FAIL test 1 on its own (exactly one deliverable), so re-running triage on any produced row returns it unchanged.
+- De-duplicate each sub-row against existing slugs/goals, as for any new row.
+- **Announce** in the ack which IDs/slugs were created from the requirement and the dependency shape; correct a wrong split via the pool, `SKIP`, or `/harness-intervene`.
+
+A requirement that fails the test gets exactly today's one-row path — no marker, no announcement. Once written, derived rows are ordinary pool rows: resume, de-dup, `SKIP`, edits, and failure semantics apply identically.
 
 ## Procedure
 
@@ -91,8 +112,8 @@ Ambient mode is **not** `/loop`. `/loop` makes the AI act while you're **silent*
    - `.harness/intervention.md` — consume any pending signal per `.harness/rules/65-intervention.md` (a `STOP` here aborts before any task).
 
 3. **Iteration loop** (one task per pass; repeat until the exit condition fires):
-   - **a. Ingest.** **File channel (always):** re-read `BATCH_PLAN.md` and check `.harness/intervention.md` (below). **Chat channel (only under the `/loop` driver):** the user message(s) delivered with *this tick's turn* may contain new requirements — for each that clearly reads as a task (not a question or aside), **normalize it into a `pending` row** in `BATCH_PLAN.md` (assign `ID`/`Slug`/`Goal`/`Mode`/`Depends on`), de-duplicating against existing slugs/goals first; if a message is ambiguous, ask via `AskUserQuestion` before creating a row rather than guessing. Under the continuous driver there is no mid-run chat to read — skip the chat part. Then act on `.harness/intervention.md`:
-     - `ADD <slug> — <goal>` → append/upsert a `pending` row, delete the intervention file, continue.
+   - **a. Ingest.** **File channel (always):** re-read `BATCH_PLAN.md` and check `.harness/intervention.md` (below). **Chat channel (only under the `/loop` driver):** the user message(s) delivered with *this tick's turn* may contain new requirements — for each that clearly reads as a task (not a question or aside), **normalize it into `pending` row(s) per "Ingest triage" above** — one row, or N decomposed rows when the triage test fires (assign `ID`/`Slug`/`Goal`/`Mode`/`Depends on` per row), de-duplicating against existing slugs/goals first; if a message is ambiguous, ask via `AskUserQuestion` before creating a row rather than guessing. Under the continuous driver there is no mid-run chat to read — skip the chat part. Then act on `.harness/intervention.md`:
+     - `ADD <slug> — <goal>` → append/upsert a `pending` row, delete the intervention file, continue (user-authored: honored verbatim as ONE row, never triaged).
      - `STOP` → halt the stream (strong signal). `NOTE` → attach to the next dispatch. `SKIP <id>` → mark that row `skipped`. (`REDIRECT <id>` → reject; it targets stages, not tasks.)
    - **b. Plan.** Validate the table (required columns, unique slugs, no `Depends on` cycle). Build the topological frontier of runnable rows honoring `Depends on`. **Resume semantics (same as batch):** a row whose `docs/features/<slug>/07_DELIVERY.md` parses as `DELIVERED` (primary) OR contains a line matching `Final verify_all result: PASS` (secondary, format-tolerant fallback) is treated as done — mark `done`, skip. Every other status — `pending` / `in-progress` / `failed` / `blocked` — is **re-evaluated and runnable** (so a `failed` row from a prior run is retried once its cause is fixed; a `blocked` row becomes runnable once its blocker resolves).
    - **c. Pick.** Take the next ready task in topological order. If none is ready (frontier empty but `pending` rows remain blocked by failures) → go to exit check.
@@ -138,7 +159,7 @@ Per-task stage docs are archived by each task's own pm-orchestrator. The pool ar
 - **Re-read the pool every iteration.** The whole feature is that mid-run additions are honored; a cached plan defeats it.
 - **A task failure is best-effort, a baseline failure is a hard stop.** Never suppress a `verify_all` FAIL to keep the stream running — that's the signal that protects every later task.
 - **Mirror chat requirements into the pool before acting** so the pool is the single source of truth and the run is resumable.
-- **Never widen scope silently beyond what the user asked.** New rows must come from the user (chat / pool / `ADD`), never invented by the stream.
+- **Never widen scope beyond what the user asked.** Every row traces to a user requirement (chat / pool / `ADD`). The stream may *derive* rows only by partitioning ONE user requirement at ingest (see Ingest triage), and the union of the derived Goals must equal the original requirement — no invented scope, no dropped scope. Work the user did not ask for is never added; rows the user authored (`ADD` lines, hand-written pool rows) are never split or rewritten.
 - **Ambient mode is gated by `.harness/ambient.flag` and serial only.** Never treat chat as tasks unless the flag is present; never run ambient tasks in parallel. The `UserPromptSubmit` hook only injects an instruction — it never does the work and never blocks a turn.
 
 ## Anti-patterns
@@ -147,7 +168,8 @@ Per-task stage docs are archived by each task's own pm-orchestrator. The pool ar
 - **Do not** auto-retry a `failed` task in the same run. Mark it, skip its dependents, continue; the user fixes the cause and re-invokes to resume.
 - **Do not** keep the stream spinning forever on an empty pool — exit after K empty passes so it doesn't burn turns idling.
 - **Do not** promise "instant" chat ingestion mid-task — be honest that chat lands at the next iteration; the file channel is the instant one.
+- **Do not** decompose a single deliverable just because it fans out across many files, nor an `ADD` line or hand-written pool row — triage applies only where the stream normalizes natural language, and only when the triage test fires.
 
 ## Cost
 
-Roughly (tasks completed) × (full 7-stage cost), plus one `verify_all` per task and ~2 log lines/task. The stream adds no per-task overhead over `/harness-batch`; its value is eliminating the stop-update-re-invoke cycle every time you think of new work. Idle passes (empty pool) cost one pool re-read each — negligible — and stop after K.
+Roughly (tasks completed) × (full 7-stage cost), plus one `verify_all` per task and ~2 log lines/task. The stream adds no per-task overhead over `/harness-batch`; its value is eliminating the stop-update-re-invoke cycle every time you think of new work. Idle passes (empty pool) cost one pool re-read each — negligible — and stop after K. A decomposed requirement costs N × (full 7-stage) — the same as if you had filed the N rows by hand; triage itself adds no overhead.

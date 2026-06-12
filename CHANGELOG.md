@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.32.0] - 2026-06-12
+
+### Added — Stream ingest triage: /harness-stream auto-decomposes complex requirements (T-021)
+
+`/harness-stream` ingest previously mapped every requirement to exactly one `pending` pool row. The stream now triages each requirement it normalizes — a complex multi-part requirement is automatically decomposed into N smaller, dependency-staged rows; a simple requirement keeps the 1:1 path unchanged. Triage applies only where the stream authors the row from natural language (chat ingest under `/loop`, ambient turns); rows the user authored (`ADD` lines, hand-written pool rows) are never triaged, and no existing pool row is ever re-triaged.
+
+- **`skills/harness-stream/SKILL.md`**: new single-sourced `## Ingest triage (one row or many)` section — a conjunctive two-part test (two or more independently verifiable deliverables AND no single one-sentence Goal can state the requirement) decides one row vs N, with explicit NOT-complex counter-examples (wide fan-out, long prose, acceptance-detail lists). When it fires the stream writes N ≥ 2 `pending` rows: shared `<base>-` slug prefix + a `## Notes` provenance line, real `Depends on` chains only, `Mode` per row, fixed-point granularity (a produced row never re-triggers the test), per-row de-dup, and an announcement of the split. Procedure 3a and the ambient turn both bind to the section by pointer ("per 'Ingest triage'") — criteria live exactly once.
+- **Hard rule amended (union invariant)**: "Never widen scope beyond what the user asked" — the stream may *derive* rows only by partitioning ONE user requirement at ingest, and the union of the derived Goals must equal the original requirement — no invented scope, no dropped scope; work the user did not ask for is never added; user-authored rows are never split or rewritten.
+- **Ambient hook instruction block** (`ambient-prompt.{ps1,sh}`, dogfood + template — 4-file hand-lockstep): step 1 of the emitted block now reads "ONE `pending` row, or N rows per skills/harness-stream/SKILL.md 'Ingest triage'" (+2 emitted lines); the criteria stay single-sourced in the SKILL, the hook carries only the pointer + one-line contract summary.
+- **Docs**: README ×2 stream bullet + new roadmap row; `docs/batches/README.md` gains one triage sentence in the Streams section.
+- Version 0.31.0 → 0.32.0 (plugin.json, marketplace.json, both README badges). Skill count stays **15**; `verify_all` stays **32** checks; no I.6 banned/exempt-list change; no pool-schema change.
+
 ## [0.31.0] - 2026-06-11
 
 ### Fixed — Hook ↔ script congruence: the dangling-hook class is eliminated, diagnosed, and repairable (T-020)

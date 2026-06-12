@@ -30,7 +30,7 @@ The same folder and `BATCH_PLAN.md` can be drained by `/harness-kit:harness-stre
 - `STREAM_LOG.md` — append-only per-task event log (stream writes during the run).
 - `STREAM_REPORT.md` — terminal summary (stream writes on exit).
 
-So one `docs/batches/<id>/` folder can be run either way — they share the `BATCH_PLAN.md` format, so a batch can graduate into a stream. New work enters a running stream via the **file channel** (append a row / an `ADD <slug> — <goal>` intervention) or, under the `/loop` driver, the **chat channel**. See `skills/harness-stream/SKILL.md` for the loop, drivers, and the `ADD` keyword.
+So one `docs/batches/<id>/` folder can be run either way — they share the `BATCH_PLAN.md` format, so a batch can graduate into a stream. New work enters a running stream via the **file channel** (append a row / an `ADD <slug> — <goal>` intervention) or, under the `/loop` driver, the **chat channel**. At ingest the stream triages each requirement it normalizes: a complex multi-part one is decomposed into several dependency-staged rows (shared slug prefix + a `## Notes` provenance line); rows you write yourself are honored as-is. See `skills/harness-stream/SKILL.md` for the loop, drivers, and the `ADD` keyword.
 
 ## Worked example
 

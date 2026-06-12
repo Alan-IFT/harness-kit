@@ -11,6 +11,7 @@
 
 | ID | Slug | Outcome | Completed | Doc folder |
 |---|---|---|---|---|
+| T-021 | stream-auto-decompose | Delivered v0.32.0 (0 rollbacks) — `/harness-stream` **ingest triage**: a complex chat/ambient requirement is auto-decomposed at ingest into N small staged pool rows (shared slug prefix + `## Notes` provenance, real `Depends on` only, union ≡ original ask; fixed-point: derived rows never re-triaged); simple requirements stay 1:1; user-authored `ADD`/hand-written rows never split (hard rule amended to the union invariant). Criteria single-sourced in SKILL.md with binding pointers from both channels (Gate D-1); 4 ambient-prompt hook carriers +2 emitted lines lockstep. QA PASS: verify_all 32/32 BOTH shells, test-init 270/308, test-real-project 90/90, isolated-root hook probes, G.3 mutation probe load-bearing, AC-5 semantic probes all forced by quotable clauses. 1 pre-existing MINOR (pwsh GBK console encoding → insight + backlog). Counts stay 15 skills / 32 checks; v0.31.0→0.32.0 | 2026-06-12 | `docs/features/_archived/stream-auto-decompose/` |
 | T-000 | initial-bootstrap | Delivered | 2026-05-15 | _(bootstrap, no docs/features/ folder)_ |
 | T-001 | ai-safety-guardrails | Delivered v0.15.0 (1 rollback) | 2026-05-17 | `docs/features/_archived/ai-safety-guardrails/` |
 | T-002 | ai-native-init | Delivered v0.16.0 (2 rollbacks: M-1/M-2/M-3 from CR; BUG-2 from QA via PM override) | 2026-05-19 | `docs/features/_archived/ai-native-init/` |

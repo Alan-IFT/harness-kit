@@ -2,7 +2,7 @@
 
 [English](README.md) · **简体中文**
 
-![version](https://img.shields.io/badge/version-0.31.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-32%2F32-brightgreen) ![test-init](https://img.shields.io/badge/test--init-308%2F308-brightgreen) ![integration](https://img.shields.io/badge/integration-90%2F90-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.32.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-32%2F32-brightgreen) ![test-init](https://img.shields.io/badge/test--init-308%2F308-brightgreen) ![integration](https://img.shields.io/badge/integration-90%2F90-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
 > **Claude Code 的 Harness Engineering 工具包** — 一个 Claude Code Plugin（15 个 skills + 8 个框架 agent + 项目模板），把"有纪律的 AI 驱动开发"带到全栈和后端项目里。**Claude 原生**（框架 agent 以 plugin agent 形式分发，不再逐项目拷贝）。
 >
@@ -18,7 +18,7 @@
 - `/harness-kit:harness-explore` — 调研/可行性：轻量 RA + 一份带引用的 `findings.md`。**不做设计、不写代码**。用于"这事儿到底能不能做？"
 - `/harness-kit:harness-goal` — 开放式 Dev + QA 循环，由可量化的成功标准 + 预算限定。用于"持续改进直到覆盖率 > 80%"这类任务。
 - `/harness-kit:harness-batch` — 把 `T-01…T-NN`（`docs/batches/<batch-id>/BATCH_PLAN.md` 里的任务表）一条条顺序灌给 pm-orchestrator 跑，每条都派发到独立的 Task 子 agent，主上下文只累加每任务一行的摘要。仅在强信号上停止（`verify_all` FAIL、pm-orchestrator FAIL、intervention STOP、安全 hook 拦截）。适合 `/harness-plan` 拆出来的批、积压 bug 列表、checkup 后修复批、外部任务列表 —— 比手敲 N 次 `/harness` 省力。
-- `/harness-kit:harness-stream` — 像 batch，但任务池是**活的**：每轮迭代都重读 `BATCH_PLAN.md`，所以你运行中追加的任务（聊天框里发、或直接往池里追加、或发 `ADD` 干预）会被自动规划执行，**无需重新调用**。**尽力完成**语义（某任务失败就标记+跳过，整条流不停）+ 与 batch 相同的硬安全急停。适合"想到啥需求就丢进去、只看结果"的常驻开发流。**环境模式（ambient）：** 直接不带 pool-id 调用即可——会自动创建默认池（`docs/batches/default/`），并由一个 `UserPromptSubmit` hook（受 `.harness/ambient.flag` 开关控制）把你每条聊天消息变成心跳：自动把需求折叠进池子并排干，无需 `/loop`、无需重新调用、无需口令。**会话级生效**：`SessionStart` hook 在每个新会话自动清除 flag，想继续就再调用一次 `/harness-stream`。
+- `/harness-kit:harness-stream` — 像 batch，但任务池是**活的**：每轮迭代都重读 `BATCH_PLAN.md`，所以你运行中追加的任务（聊天框里发、或直接往池里追加、或发 `ADD` 干预）会被自动规划执行，**无需重新调用**。**尽力完成**语义（某任务失败就标记+跳过，整条流不停）+ 与 batch 相同的硬安全急停。适合"想到啥需求就丢进去、只看结果"的常驻开发流。复杂的多部分需求会在入池时自动分诊拆解成若干条带依赖编排的子任务行（简单需求仍是一行；你自己写的行 —— `ADD` / 手写 —— 原样执行）。**环境模式（ambient）：** 直接不带 pool-id 调用即可——会自动创建默认池（`docs/batches/default/`），并由一个 `UserPromptSubmit` hook（受 `.harness/ambient.flag` 开关控制）把你每条聊天消息变成心跳：自动把需求折叠进池子并排干，无需 `/loop`、无需重新调用、无需口令。**会话级生效**：`SessionStart` hook 在每个新会话自动清除 flag，想继续就再调用一次 `/harness-stream`。
 
 **安装类**
 - `/harness-kit:harness-init` — 新项目从零生成 Harness 骨架（问 6 个问题，~30 秒生成 `.harness/` + `.claude/` + `AI-GUIDE.md` + stub CLAUDE.md / copilot-instructions.md）
@@ -274,6 +274,7 @@ Markdown 文档：
 | 0.23.0 | 已交付 | **升级旧项目**：新增安装类 skill `/harness-kit:harness-upgrade`，把已初始化但过时的项目升级到当前插件布局——把脚本迁到 `.harness/scripts/`，**内容刷新**深度敏感脚本（修正迁移后仍是一级向上的 repo-root 推导），重装 pre-commit hook，改写 `.claude/settings.json`（裸文本替换，绝不重新序列化），并从类型模板重新生成 `verify_all`，同时用 `HARNESS:B-CUSTOM` 分隔符保留用户的 B.* 检查（原样拼接，或停下来要确认）。一个确定性 helper `upgrade-project.{ps1,sh}`（dry-run、幂等、退出码契约）；6 个 `verify_all` 模板加入无副作用的 B.* 标记。`verify_all` skill 数 12 → 13（检查数仍为 32）。 |
 | 0.30.0 | 已交付 | **Agent 切换（重设计 Leg 1 完成）**：7 个框架 agent（+ supervisor）改为 **plugin 原生**（顶层 `agents/`，以 `harness-kit:<name>` 派发）—— 项目不再拷贝它们，彻底消除 agent 的重复/漂移这一类问题。所有 skill 的流水线派发切到 `harness-kit:<name>`；分区 `dev-*` agent 仍保留在项目本地。`sync-self` 去掉 agent 镜像；`verify_all` D.1/E.3/E.4/I.3 重新指向 `agents/`。`verify_all` 仍 32 项检查，skill 仍 15 个。 |
 | 0.31.0 | 已交付 | **Hook↔脚本一致性（消灭悬空 hook 这一类问题）**：所有流程的 settings 改写改为「目标脚本在场才改写」，且每个流程结束前都要通过 hook↔脚本一致性断言 —— 接线的 hook 命令再也不会悄悄指向不存在的脚本。`migrate-scripts-layout` + `upgrade-project` 新增终态扫描与退出码 `4`；`upgrade-project` 还会把接线的字面 `{{...}}` 占位符修复为按 OS 选定的命令，并补齐 ambient hook 脚本对。`/harness-status` 按事件报告 hook 一致性；类型 `verify_all` 模板新增 `E.4b`/`D.4b` 悬空 hook FAIL 行和 v0.30 正确的 agents 布局行。ambient hook 命令在 init 时按 OS 选定（`{{AMBIENT_PROMPT_COMMAND}}`/`{{AMBIENT_RESET_COMMAND}}`）。`verify_all` 仍 32 项检查，skill 仍 15 个。 |
+| 0.32.0 | 已交付 | **流式入池分诊 / 自动拆解**：/harness-stream（/loop 下聊天 + ambient）对每条由它归一化的需求做入池分诊 —— 复杂的多部分需求拆成 N 条带依赖编排的池行（共享 slug 前缀 + Notes 溯源行、只挂真实依赖、Mode 逐行指定），简单需求仍是 1 行；硬规则修订为并集等价不变量（只能通过切分同一条用户需求派生行；不发明、不丢失范围；用户亲写的行绝不拆分）。ambient hook 指令块 4 文件锁步更新。无 schema 变更；`verify_all` 仍 32 项检查，skill 仍 15 个。 |
 | 0.20+ | 规划中 | PM 在用户配置的阶段边界自动派发 supervisor（在 ≥10 个真实任务证明误报预算后启用）。**流式并行派发——已暂缓**：经一轮对抗评审的设计（[docs/parallel-stream-design.html](docs/parallel-stream-design.html)）结论是，串行 stream + 现有的任务内 partition 并行已满足需求；**Model B**（同树 partition、无合并）作为按需路径，仅当攒到一批真正解耦、Amdahl 账算得过来的任务才做；**Model A**（worktree 真并行）搁置（风险 > 收益：env 供给、Windows junction、每任务分支提交、合并活锁需整套调度/协调层）。 |
 
 ## 设计原则

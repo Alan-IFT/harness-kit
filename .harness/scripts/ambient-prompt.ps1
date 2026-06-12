@@ -50,9 +50,11 @@ skills/harness-stream/SKILL.md "Ambient mode" using the default pool
 docs/batches/default/BATCH_PLAN.md (create it from docs/batches/_template/BATCH_PLAN.md
 with an EMPTY task table if it is absent):
   1. If THIS user message reads as a requirement (not a question/aside), normalize it
-     into a `pending` row in the default pool (assign ID/Slug/Goal/Mode=full/Depends on),
-     de-duplicating against existing slugs/goals first. If it is ambiguous, ask before
-     creating a row — do not guess. A plain question/aside creates NO row.
+     into the default pool: ONE `pending` row, or — when it bundles several independently
+     verifiable deliverables — N rows per skills/harness-stream/SKILL.md "Ingest triage"
+     (shared slug prefix, real `Depends on` only, union ≡ the message; Mode per row,
+     default full). De-duplicate against existing slugs/goals first. If it is ambiguous,
+     ask before creating a row — do not guess. A plain question/aside creates NO row.
   2. Then drain ready tasks in topological order through pm-orchestrator, one at a time
      (serial — never parallel), best-effort, honoring the existing hard-safety stops
      (verify_all FAIL, intervention STOP, guard-rm block), until the pool is empty.
