@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>harness-stream · 流式/活池开发模式 (v0.22.0)</title>
+<title>harness-stream · 流式/活池开发模式 (v0.33.0)</title>
 <style>
   :root{
     --bg:#0d1117; --panel:#161b22; --panel2:#1c2430; --line:#30363d;
@@ -54,7 +54,7 @@
   <h1>harness-stream</h1>
   <p class="sub">流式 / 活池开发模式 —— “我只提需求、看结果，AI 自己规划顺序并尽力跑完所有任务”</p>
   <div class="badges">
-    <span class="badge v">v0.22.0</span>
+    <span class="badge v">v0.33.0</span>
     <span class="badge">skill: /harness-kit:harness-stream</span>
     <span class="badge">复用 batch 的 BATCH_PLAN.md 池格式</span>
     <span class="badge">verify_all 32/32（未加新检查）</span>
@@ -64,6 +64,8 @@
     <b>一句话：</b>它是 <code>/harness-batch</code> 的兄弟模式 —— 同样把任务一条条灌给 7 阶段流水线,
     但任务池是 <b>活的</b>:每轮迭代都重读 <code>BATCH_PLAN.md</code>,所以你<b>运行中</b>追加的任务会被自动规划执行,
     <b>无需重新调用</b>;而且采用<b>尽力完成</b>语义 —— 某个任务失败只标记+跳过,整条流不停。
+    自 v0.32 起,<b>复杂需求入池时自动拆解</b>成多条带依赖的子任务(简单需求仍是一条;你手写的行原样执行);
+    自 v0.33 起,<b>需要人协助的任务被延后而非停流</b> —— 设为 <code>needs-human</code> 状态、记下诉求、只挡它自己的下游,其余照常跑完,所有待办在结束时一次性汇总。
   </div>
 
   <h2>1 · 你的诉求 → 为什么需要一个新模式</h2>
@@ -112,23 +114,27 @@
                                         │   (ID | Slug | Goal | Mode | Depends on | Status)
         ┌────────────  每轮一个迭代(在 /loop 下 = 一个 turn) ───────────┐
         ▼                                                               │
-  ① 吸收新需求   重读 BATCH_PLAN.md + 查 intervention(ADD/STOP/NOTE/SKIP);仅 /loop 下额外吸收本轮聊天消息
+  ① 吸收新需求   重读 BATCH_PLAN.md + 查 intervention(ADD/STOP/NOTE/SKIP);仅 /loop 下额外吸收本轮聊天消息;复杂需求按“入池分诊”自动拆成 N 条;歧义不阻塞,记为 needs-human 待澄清
   ② 重新规划     校验表 → 按 Depends on 重算拓扑前沿(已 DELIVERED 的跳过 = 免费续跑)
   ③ 取下一个     topological frontier 里挑一个 ready 任务
   ④ 派发         Task → pm-orchestrator(mode=full,独立子上下文)   ← 绝不绕过 PM
   ⑤ 回归门       verify_all:FAIL = 硬急停;PASS = 继续
-  ⑥ 尽力完成     DELIVERED→done;FAILED→标记 failed + 依赖链标 blocked,然后<b>继续</b>
-  ⑦ 汇报         一行状态:&lt;id&gt; &lt;verdict&gt; · 队列 N pending / F failed / B blocked
+  ⑥ 尽力完成     DELIVERED→done;FAILED→标记 failed + 依赖链标 blocked;需要人协助→标 needs-human + 记诉求 + 只挡其下游;然后<b>继续</b>
+  ⑦ 汇报         一行状态:&lt;id&gt; &lt;verdict&gt; · 队列 N pending / F failed / B blocked / H needs-human
         └──────────────────────── 下一轮 ───────────────────────────────┘
-  退出:池子清空 且 连续 K 轮(默认3)无新需求 → 写 STREAM_REPORT.md
+  退出:池子清空 且 连续 K 轮(默认3)无新需求 → 写 STREAM_REPORT.md(开头先列 ## Needs your input 待办)
 </pre>
   </div>
 
-  <h3>尽力完成 vs 硬急停 —— 关键区别</h3>
-  <div class="grid g2">
+  <h3>三类结局 —— 失败跳过 · 需人延后 · 硬急停</h3>
+  <div class="grid g3">
     <div class="card">
       <div class="tag" style="color:var(--green)">best-effort(任务级失败)</div>
       <p><span class="pill r">某任务 FAILED</span> → 标记 + 跳过其依赖 → <b>整条流继续</b>跑别的任务。这是和 batch 最大的不同,服务“尽量把所有任务跑完”。</p>
+    </div>
+    <div class="card">
+      <div class="tag" style="color:var(--accent)">needs-human(延后,不停流)· v0.33</div>
+      <p><span class="pill b">需要人协助</span> → 设 <code>needs-human</code> 状态 + 记下确切诉求 + <b>只挡它自己的下游</b> → <b>整条流继续</b>。涵盖:需澄清、当前决策模式保留给人的判断、请求执行安全敏感动作(只记录,<b>绝不擅自执行</b>)。所有待办在结束时汇总到 <code>STREAM_REPORT.md</code> 开头的 <code>## Needs your input</code>,你忙完一次性处理。</p>
     </div>
     <div class="card">
       <div class="tag" style="color:var(--red)">hard stop(仍然停)</div>
@@ -138,6 +144,7 @@
       • 安全 hook 拦截了破坏性命令</p>
     </div>
   </div>
+  <p style="color:var(--dim)">分界:<b>请求</b>执行安全敏感动作 = needs-human 延后(不执行、不停流);安全 hook <b>实际拦下</b>一条破坏性命令 = 硬急停。</p>
 
   <h2>4 · 三种顺序模式怎么选</h2>
   <table>
@@ -145,6 +152,7 @@
     <tr><td>任务数量</td><td>1 个</td><td>固定的已知清单</td><td><b>开放、运行中持续增长</b></td></tr>
     <tr><td>运行中加任务</td><td class="no">不适用</td><td class="no">✗(需停批重调)</td><td class="ok">✓ 每轮重读池</td></tr>
     <tr><td>失败处理</td><td>回滚/上报</td><td class="warn">失败即停整批</td><td class="ok">标记+跳过,继续</td></tr>
+    <tr><td>需要人协助</td><td>当场询问</td><td class="warn">当场询问 / 停</td><td class="ok">延后(needs-human),继续;结束汇总</td></tr>
     <tr><td>硬安全急停</td><td>✓</td><td>✓</td><td>✓(同 batch)</td></tr>
     <tr><td>每任务引擎</td><td colspan="3" style="text-align:center;color:var(--dim)">都是 pm-orchestrator(7 阶段,独立子上下文)—— stream/batch 只是上面的薄循环</td></tr>
     <tr><td>典型触发</td><td>“加个功能 X”</td><td>“把 T-01~T-09 批量跑了”</td><td>“边开发边丢需求,只看结果”</td></tr>
@@ -171,23 +179,21 @@
   </ul>
 
   <div class="note">
-    <b>使用前提(重要):</b> 这是 harness-kit <b>v0.22.0</b> 新增的 skill。你当前会话里激活的插件是缓存的 <b>0.19.0</b>,
-    所以要真正能敲 <code>/harness-stream</code>,需要把已安装的 harness-kit 插件<b>更新到 ≥0.22.0</b>(本次改动已 bump 版本号 + 改完所有一致性登记,提交后从本仓库更新插件即可)。
+    <b>使用前提:</b> <code>/harness-stream</code> 自 harness-kit <b>v0.22.0</b> 起提供;入池分诊(v0.32)与需人延后(v0.33)是后续增强。
+    若你装的插件版本偏旧,在 Claude Code 里跑 <code>/plugin</code> 把 harness-kit <b>更新到 ≥0.33.0</b>,即可用上本页描述的全部行为。
   </div>
 
-  <h2>6 · 这次改了什么(落到 harness-kit 自身)</h2>
+  <h2>6 · 能力演进</h2>
   <table>
-    <tr><th>类别</th><th>文件</th><th>改动</th></tr>
-    <tr><td>新 skill</td><td class="k">skills/harness-stream/SKILL.md</td><td>核心:活池 + 双驱动 + 双通道 + best-effort + 硬急停</td></tr>
-    <tr><td>新关键字</td><td class="k">65-intervention.md · harness-intervene</td><td><code>ADD &lt;slug&gt; — &lt;goal&gt;</code>(池作用域)</td></tr>
-    <tr><td>门一致性</td><td class="k">verify_all.{ps1,sh}</td><td>C.1/G.1/G.2 三处 skill 列表 +harness-stream,“11→12 skills”(两 shell 对称)</td></tr>
-    <tr><td>版本</td><td class="k">plugin.json · marketplace.json · 两个 README badge</td><td>0.21.2 → 0.22.0(G.3 一致)</td></tr>
-    <tr><td>文档登记</td><td class="k">README(en/zh) · CHANGELOG · AI-GUIDE · manual-e2e · dev-map</td><td>技能 bullet / 计数 / Roadmap / Workflow 表 / 清单</td></tr>
+    <tr><th>版本</th><th>能力</th><th>要点</th></tr>
+    <tr><td class="k">v0.22.0</td><td>引入 /harness-stream</td><td>活池 + 双驱动(连续 run / <code>/loop</code>)+ 双通道(文件 / 聊天)+ best-effort + 硬急停;复用 batch 的 <code>BATCH_PLAN.md</code> 池格式</td></tr>
+    <tr><td class="k">v0.32.0</td><td>入池分诊 / 自动拆解</td><td>stream 归一化的复杂需求自动拆成 N 条带依赖子任务(共享 slug 前缀 + <code>## Notes</code> 溯源;并集 ≡ 原需求);简单需求仍一条;<code>ADD</code> / 手写行不拆</td></tr>
+    <tr><td class="k">v0.33.0</td><td>需人延后(needs-human)</td><td>需要人协助的任务延后而非停流:记诉求 + 只挡其下游 + 继续;<code>STREAM_REPORT.md</code> 开头汇总 <code>## Needs your input</code>;移除中途阻塞式询问</td></tr>
   </table>
-  <p style="color:var(--dim)">不新增 <code>verify_all</code> 检查项(数仍 32);stream 复用 batch 的“每任务一次 verify_all 回归门”。不改任何 <code>.harness/agents/</code>,因此不触发 sync 一致性层。</p>
+  <p style="color:var(--dim)">全程不新增 <code>verify_all</code> 检查项(数仍 <b>32</b>),也不改任何 <code>.harness/agents/</code>;stream 始终复用 batch 的“每任务一次 verify_all 回归门”。</p>
 
   <div class="foot">
-    harness-kit v0.22.0 · 文档由 stream 模式设计同批产出 · 池格式与 <code>/harness-batch</code> 互通(一个 batch 可“升级”成 stream)
+    harness-kit v0.33.0 · 池格式与 <code>/harness-batch</code> 互通(一个 batch 可“升级”成 stream)
   </div>
 
 </div>
