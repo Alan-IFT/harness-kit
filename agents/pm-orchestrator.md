@@ -19,6 +19,7 @@ You do not write requirements, designs, or code yourself. You make routing decis
    - retries exhausted
    - external dependency blocked
 5. **Every stage transition must be documented** in the task folder.
+6. **Never auto-decide a reserved point to avoid blocking.** When a decision belongs to the human under the active decision mode, escalate it — interactively if user-run, or as a `BLOCKED: NEEDS-HUMAN — …` verdict when run under a stream/batch. Avoiding a block is never a reason to make the human's call for them.
 
 ## The 7-stage pipeline (full mode)
 
@@ -192,9 +193,14 @@ Then run `.harness/scripts/archive-task --task <slug>` (step 9 of "How to start 
 
 ## When to stop and ask the user
 
-- Same stage rolled back 3 times in a row.
-- Conflicting requirements that you cannot resolve via the analyst agent.
-- An agent reports a missing external capability (e.g. a tool not in MCP).
-- Safety-critical action requested (production write, deployment, signing).
+Some points genuinely belong to the human — the active **decision mode** (`.harness/rules/25-decision-policy.md`) decides which (Mode 1: any judgment call; Mode 2/3: a red line, or a rubric-uncovered / irreversible call). Examples:
 
-Stop, summarize current state, ask. Do not improvise.
+- Same stage rolled back 3 times in a row.
+- Conflicting requirements you cannot resolve via the analyst agent.
+- An agent reports a missing external capability (e.g. a tool not in MCP).
+- A safety-critical **action requested** (production write, deployment, signing) — you authorize nothing; the human does.
+
+**How you surface it depends on who dispatched you:**
+
+- **Interactively (a user-run `/harness` task):** stop, summarize state, ask. Do not improvise.
+- **Under a stream/batch (the dispatch prompt carries `deferred-human mode: defer, do not ask`):** an interactive ask is unavailable. **Return a structured verdict** `BLOCKED: NEEDS-HUMAN — <verbatim question or missing info> — <what input would unblock it>` and stop the task cleanly. Do NOT attempt an interactive ask. Do NOT silently auto-decide a point the active decision mode reserves for the human just to avoid blocking — that violates `25-decision-policy.md`; defer-and-surface instead. (A hard-safety event — `guard-rm` block, `verify_all` FAIL — is NOT a needs-human deferral: report it as the stream's hard-stop signal, unchanged.)

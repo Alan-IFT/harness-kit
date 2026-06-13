@@ -51,7 +51,8 @@ with an EMPTY task table if it is absent):
      verifiable deliverables — N rows per skills/harness-stream/SKILL.md "Ingest triage"
      (shared slug prefix, real `Depends on` only, union ≡ the message; Mode per row,
      default full). De-duplicate against existing slugs/goals first. If it is ambiguous,
-     ask before creating a row — do not guess. A plain question/aside creates NO row.
+     do not guess and do not block: record a needs-human clarification note to
+     STREAM_REPORT.md "Needs your input" and keep draining. A plain question/aside creates NO row.
   2. Then drain ready tasks in topological order through pm-orchestrator, one at a time
      (serial — never parallel), best-effort, honoring the existing hard-safety stops
      (verify_all FAIL, intervention STOP, guard-rm block), until the pool is empty.

@@ -14,7 +14,7 @@
         "repo": "Alan-IFT/harness-kit"
       },
       "description": "7-agent pipeline shipped as plugin-native agents (harness-kit:<name>), Claude-native + partition Developers + verify_all gates. See README.",
-      "version": "0.32.0",
+      "version": "0.33.0",
       "author": {
         "name": "Harness Kit Contributors",
         "url": "https://github.com/Alan-IFT/harness-kit"

@@ -1,7 +1,7 @@
 ---
 name: harness-stream
-description: Streaming / living-pool mode. Drains a continuously-growable task pool (docs/batches/<pool-id>/BATCH_PLAN.md, or the no-arg default pool docs/batches/default/) one task at a time through pm-orchestrator, re-reading the pool every iteration so tasks you add mid-run are planned and executed without re-invoking. Best-effort completion (a failed task is marked and skipped, the stream keeps going) with the same hard-safety stops as batch. Includes an ambient mode: enter by invoking with no pool-id, then every chat message is a heartbeat that folds requirements into the default pool and drains it — gated by .harness/ambient.flag via a UserPromptSubmit hook (session-scoped: a SessionStart hook auto-clears it each new session, no "off" keyword), no /loop needed. Complex multi-part requirements are triaged at ingest and auto-decomposed into N dependency-staged rows (a simple requirement stays one row; ADD lines and hand-written rows are honored as-written). Use when you want to fire requirements at the AI as they occur to you — in chat or by appending to the pool — and only watch results.
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, AskUserQuestion, TodoWrite, Task
+description: Streaming / living-pool mode. Drains a continuously-growable task pool (docs/batches/<pool-id>/BATCH_PLAN.md, or the no-arg default pool docs/batches/default/) one task at a time through pm-orchestrator, re-reading the pool every iteration so tasks you add mid-run are planned and executed without re-invoking. Best-effort completion (a failed task is marked and skipped, the stream keeps going) with the same hard-safety stops as batch. Includes an ambient mode: enter by invoking with no pool-id, then every chat message is a heartbeat that folds requirements into the default pool and drains it — gated by .harness/ambient.flag via a UserPromptSubmit hook (session-scoped: a SessionStart hook auto-clears it each new session, no "off" keyword), no /loop needed. Complex multi-part requirements are triaged at ingest and auto-decomposed into N dependency-staged rows (a simple requirement stays one row; ADD lines and hand-written rows are honored as-written). A task that needs human input (clarification, a human-reserved decision, or authorization for a safety-critical action) is **deferred** — set aside, its dependents blocked, the stream keeps draining — and surfaced together at stream end; it does not halt the stream. Use when you want to fire requirements at the AI as they occur to you — in chat or by appending to the pool — and only watch results.
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, TodoWrite, Task
 ---
 
 # /harness-stream
@@ -73,7 +73,7 @@ Ambient mode is the **minimal "start once, then just keep typing" experience**: 
 
 ### Each ambient turn (what the agent does when the flag is set)
 
-1. **Ingest.** If your message reads as a requirement (not a question or aside), normalize it into `docs/batches/default/BATCH_PLAN.md` per "Ingest triage" below — one `pending` row, or N decomposed rows when the triage test fires (`Mode` per row, default `full`), de-duplicating against existing slugs/goals first. If a message is ambiguous, ask before creating a row — never guess. A plain question/aside creates **no** row.
+1. **Ingest.** If your message reads as a requirement (not a question or aside), normalize it into `docs/batches/default/BATCH_PLAN.md` per "Ingest triage" below — one `pending` row, or N decomposed rows when the triage test fires (`Mode` per row, default `full`), de-duplicating against existing slugs/goals first. If a message is ambiguous (you cannot file it as exactly one well-formed task), do NOT guess and do NOT block: record a needs-human clarification entry ("clarify before I can file this as a task: <the ambiguous message verbatim>") to the deferred-human queue and keep draining. A plain question/aside creates **no** row.
 2. **Drain.** Drain ready tasks in topological order via `pm-orchestrator`, one at a time, best-effort, honoring the existing hard-safety stops, until the pool is empty — identical to the Procedure loop below.
 3. **Stop and wait** for your next message.
 
@@ -112,18 +112,19 @@ A requirement that fails the test gets exactly today's one-row path — no marke
    - `.harness/intervention.md` — consume any pending signal per `.harness/rules/65-intervention.md` (a `STOP` here aborts before any task).
 
 3. **Iteration loop** (one task per pass; repeat until the exit condition fires):
-   - **a. Ingest.** **File channel (always):** re-read `BATCH_PLAN.md` and check `.harness/intervention.md` (below). **Chat channel (only under the `/loop` driver):** the user message(s) delivered with *this tick's turn* may contain new requirements — for each that clearly reads as a task (not a question or aside), **normalize it into `pending` row(s) per "Ingest triage" above** — one row, or N decomposed rows when the triage test fires (assign `ID`/`Slug`/`Goal`/`Mode`/`Depends on` per row), de-duplicating against existing slugs/goals first; if a message is ambiguous, ask via `AskUserQuestion` before creating a row rather than guessing. Under the continuous driver there is no mid-run chat to read — skip the chat part. Then act on `.harness/intervention.md`:
+   - **a. Ingest.** **File channel (always):** re-read `BATCH_PLAN.md` and check `.harness/intervention.md` (below). **Chat channel (only under the `/loop` driver):** the user message(s) delivered with *this tick's turn* may contain new requirements — for each that clearly reads as a task (not a question or aside), **normalize it into `pending` row(s) per "Ingest triage" above** — one row, or N decomposed rows when the triage test fires (assign `ID`/`Slug`/`Goal`/`Mode`/`Depends on` per row), de-duplicating against existing slugs/goals first; if a message is ambiguous, do NOT guess and do NOT issue a blocking prompt: record a needs-human clarification entry (`stage=ingest`, verbatim message, "clarify before I can file this as a task") to the deferred-human queue and continue draining. Under the continuous driver there is no mid-run chat to read — skip the chat part. Then act on `.harness/intervention.md`:
      - `ADD <slug> — <goal>` → append/upsert a `pending` row, delete the intervention file, continue (user-authored: honored verbatim as ONE row, never triaged).
      - `STOP` → halt the stream (strong signal). `NOTE` → attach to the next dispatch. `SKIP <id>` → mark that row `skipped`. (`REDIRECT <id>` → reject; it targets stages, not tasks.)
-   - **b. Plan.** Validate the table (required columns, unique slugs, no `Depends on` cycle). Build the topological frontier of runnable rows honoring `Depends on`. **Resume semantics (same as batch):** a row whose `docs/features/<slug>/07_DELIVERY.md` parses as `DELIVERED` (primary) OR contains a line matching `Final verify_all result: PASS` (secondary, format-tolerant fallback) is treated as done — mark `done`, skip. Every other status — `pending` / `in-progress` / `failed` / `blocked` — is **re-evaluated and runnable** (so a `failed` row from a prior run is retried once its cause is fixed; a `blocked` row becomes runnable once its blocker resolves).
+   - **b. Plan.** Validate the table (required columns, unique slugs, no `Depends on` cycle). Build the topological frontier of runnable rows honoring `Depends on`. **Resume semantics (same as batch):** a row whose `docs/features/<slug>/07_DELIVERY.md` parses as `DELIVERED` (primary) OR contains a line matching `Final verify_all result: PASS` (secondary, format-tolerant fallback) is treated as done — mark `done`, skip. Every other status — `pending` / `in-progress` / `failed` / `blocked` / `needs-human` — is **re-evaluated and runnable** (so a `failed` row from a prior run is retried once its cause is fixed; a `blocked` row becomes runnable once its blocker resolves; a `needs-human` row re-runs once you supply the input recorded in the report's "Needs your input" section).
    - **c. Pick.** Take the next ready task in topological order. If none is ready (frontier empty but `pending` rows remain blocked by failures) → go to exit check.
-   - **d. Dispatch.** Mark the row `in-progress`. Append to `docs/batches/<pool-id>/STREAM_LOG.md`: `<ISO-8601 UTC> · <id> · dispatching pm-orchestrator · slug=<slug> · mode=<mode>`. **Dispatch `harness-kit:pm-orchestrator` via the `Task` tool** (mode `full` unless the row says otherwise), in its OWN context — the stream never sees the stage docs, only the return summary. This is identical to `/harness-batch` step 4c; never bypass pm-orchestrator.
-   - **e. Record.** Read the sub-agent's return summary (verdict `DELIVERED`/`BLOCKED`/`FAILED`, path to `07_DELIVERY.md`, files-changed, final `verify_all`). Append one line to `STREAM_LOG.md`.
+   - **d. Dispatch.** Mark the row `in-progress`. Append to `docs/batches/<pool-id>/STREAM_LOG.md`: `<ISO-8601 UTC> · <id> · dispatching pm-orchestrator · slug=<slug> · mode=<mode>`. **Dispatch `harness-kit:pm-orchestrator` via the `Task` tool** (mode `full` unless the row says otherwise), in its OWN context, **and include in the dispatch prompt the line `deferred-human mode: defer, do not ask` so the sub-agent knows interactive asks are unavailable and returns a `BLOCKED: NEEDS-HUMAN — …` verdict instead** (see `agents/pm-orchestrator.md`). The stream never sees the stage docs, only the return summary. This is identical to `/harness-batch` step 4c; never bypass pm-orchestrator.
+   - **e. Record.** Read the sub-agent's return summary (verdict `DELIVERED` / `BLOCKED` / `BLOCKED: NEEDS-HUMAN — …` / `FAILED`, path to `07_DELIVERY.md`, files-changed, final `verify_all`). Append one line to `STREAM_LOG.md`.
    - **f. Regression gate.** Run `.harness/scripts/verify_all`. If it returns **FAIL** (the task broke the baseline) → **hard stop** (see Stop conditions). Otherwise continue.
-   - **g. Best-effort outcome.** Update the row `Status` from the verdict (keep the verdicts distinct so the report tallies are accurate):
+   - **g. Best-effort outcome.** Update the row `Status` from the verdict (keep the verdicts distinct so the report tallies stay honest):
      - `DELIVERED` → `done`.
-     - `FAILED` → `failed`; `BLOCKED` → `blocked`. In either case, also mark every *downstream* task whose `Depends on` chain includes this row `blocked`. **Then keep going** to the next ready task — do NOT halt the stream. (This is the core difference from batch: a task failure is best-effort, never a stream-level stop.)
-   - **h. Report.** Emit a one-line status to the user: `<id> <verdict> · queue: <pending> pending / <failed> failed / <blocked> blocked`.
+     - `BLOCKED: NEEDS-HUMAN — <verbatim ask> — <what unblocks it>` (the pm-orchestrator's self-identifying needs-human verdict — see `agents/pm-orchestrator.md` "When to stop and ask the user") → set this row `needs-human`; append a `NEEDS-HUMAN` line to `STREAM_LOG.md` and record the queue entry (id, slug, raising stage, verbatim ask, unblock) for the report's "Needs your input" section; mark **only** this row's own `Depends on` descendants `blocked`; **then keep going** to the next ready task. NEVER perform the action the task requested (e.g. a deploy/production-write authorization request defers — it is not executed) and NEVER halt the stream.
+     - `FAILED` → `failed`; any other `BLOCKED` (a dependency-driven or generic block, NOT prefixed `NEEDS-HUMAN`) → `blocked`. In either case also mark every *downstream* task whose `Depends on` chain includes this row `blocked`, **then keep going**. (A task failure is best-effort, never a stream-level stop.)
+   - **h. Report.** Emit a one-line status to the user: `<id> <verdict> · queue: <pending> pending / <failed> failed / <blocked> blocked / <needs-human> needs-human`.
    - **i. Continue or rest.** If ready tasks remain → next pass immediately. If the frontier is drained: under the **`/loop` driver**, end the tick and let the next tick re-check the pool + any queued chat — repeat for up to **K consecutive empty ticks** (default 3) of genuinely no new work, then exit. Under the **continuous driver** there is no blocking wait inside one turn, so a drained pool means **exit now** (write the report); the user re-invokes `/harness-stream <pool-id>` to drain anything added later.
 
 4. **Exit conditions:**
@@ -139,16 +140,38 @@ Best-effort means a *task* failure (including a pm-orchestrator `FAILED` verdict
 - `.harness/intervention.md` contains **STOP** between passes.
 - The safety hook (`.harness/scripts/guard-rm`) blocked a destructive Bash call inside a task — surfaced in the sub-agent's return summary.
 
+A class-(c) needs-human deferral is NOT a hard stop — only these three hazards halt. The bright line: a *request for* a safety-critical action **defers** (the action is not performed); a `guard-rm` *block of a destructive command already attempted* **halts**.
+
 (With no hard stop and no ready task left, the stream exits normally per the drained-pool rule — it does not "halt", it just finishes.)
 
 ## On stream completion
 
-Write `docs/batches/<pool-id>/STREAM_REPORT.md`:
+Write `docs/batches/<pool-id>/STREAM_REPORT.md`, **leading with a `## Needs your input` section** (FIRST, before the per-task table) enumerating every deferred item — each `needs-human` row AND each ingest-ambiguity clarification — using the deferred-human queue entry format (id, slug, raising stage, verbatim ask, unblock). **If there are no deferred items, the section reads `None.`** Then:
 
 - Per-task row: `<id> | <slug> | <verdict> | link to docs/features/_archived/<slug>/ (or docs/features/<slug>/)`.
-- Aggregate: done / failed / blocked / skipped counts, passes run, final `verify_all` summary.
-- The failed/blocked tasks remain `pending`-resolvable: fix the cause, re-invoke `/harness-stream <pool-id>`, and the stream resumes only the unfinished rows.
+- Aggregate: done / failed / blocked / **needs-human** / skipped counts, passes run, final `verify_all` summary.
+- The failed / blocked / needs-human rows remain resume-resolvable: supply the input (pool edit / `ADD` / `/harness-intervene` / chat), re-invoke `/harness-stream <pool-id>`, and the stream re-runs only the unfinished rows via the existing resume semantics (a row whose `07_DELIVERY.md` is not DELIVERED is re-evaluated and runnable — see Resume semantics, step b).
 - Stop reason if a hard stop fired.
+
+On exit, the message to the user **leads** with the needs-input digest — the count of deferred items and each ask verbatim — BEFORE the done/failed/blocked tally. A run that completed with deferrals is not "all done": surface "N item(s) need your input" first. If the queue is empty, lead with the normal tally.
+
+### Deferred-human queue
+
+A class-(c) deferral is dual-written: a running `STREAM_LOG.md` line when the arm fires (so a mid-run kill loses nothing — the report is re-derivable from the log on re-invocation), and the report's `## Needs your input` section at exit. No third file.
+
+**STREAM_LOG.md line** (appended at step g):
+
+```
+<ISO-8601 UTC> · <id> · NEEDS-HUMAN · slug=<slug> · stage=<raising stage/agent> · ask="<verbatim question or missing info>" · unblock="<what input resolves it>"
+```
+
+**STREAM_REPORT.md `## Needs your input` entry** (one block per deferred item; ingest-ambiguity entries use `id = —` and `stage = ingest`):
+
+```
+- <id> `<slug>` — raised by <stage/agent>
+  - Ask: <verbatim question or missing info>
+  - Unblocks when: <what input resolves it (pool edit / ADD / /harness-intervene / chat)>
+```
 
 Per-task stage docs are archived by each task's own pm-orchestrator. The pool artifacts (`BATCH_PLAN.md`, `STREAM_LOG.md`, `STREAM_REPORT.md`) stay in `docs/batches/<pool-id>/`.
 
@@ -158,6 +181,7 @@ Per-task stage docs are archived by each task's own pm-orchestrator. The pool ar
 - **Never run more than one task in parallel.** Sequential only — same as batch.
 - **Re-read the pool every iteration.** The whole feature is that mid-run additions are honored; a cached plan defeats it.
 - **A task failure is best-effort, a baseline failure is a hard stop.** Never suppress a `verify_all` FAIL to keep the stream running — that's the signal that protects every later task.
+- **A needs-human deferral is best-effort like a failure.** Set the row `needs-human`, block only its `Depends on` descendants, surface at end — never halt and never perform the deferred action.
 - **Mirror chat requirements into the pool before acting** so the pool is the single source of truth and the run is resumable.
 - **Never widen scope beyond what the user asked.** Every row traces to a user requirement (chat / pool / `ADD`). The stream may *derive* rows only by partitioning ONE user requirement at ingest (see Ingest triage), and the union of the derived Goals must equal the original requirement — no invented scope, no dropped scope. Work the user did not ask for is never added; rows the user authored (`ADD` lines, hand-written pool rows) are never split or rewritten.
 - **Ambient mode is gated by `.harness/ambient.flag` and serial only.** Never treat chat as tasks unless the flag is present; never run ambient tasks in parallel. The `UserPromptSubmit` hook only injects an instruction — it never does the work and never blocks a turn.

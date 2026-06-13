@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.33.0] - 2026-06-13
+
+### Added — Stream defer-human: /harness-stream sets a human-needing task aside instead of sitting stopped (T-022)
+
+When `/harness-stream` drains a pool unattended, a task that needs human assistance previously had no clean path — a mid-drain `AskUserQuestion` would block the whole stream. The stream now **defers** such a task: it records the exact ask, sets the row to a new distinct `needs-human` status, blocks **only** that row's `Depends on` descendants, and keeps draining everything else runnable. All deferred asks aggregate at stream end. The three hard-safety stops (`verify_all` FAIL, intervention STOP, `guard-rm` block) are unchanged.
+
+- **`skills/harness-stream/SKILL.md`**: per-task outcome switch (step g) gains a THIRD arm — a self-identifying `BLOCKED: NEEDS-HUMAN — <verbatim ask> — <unblock>` verdict routes to `needs-human` (distinct from `FAILED`→`failed` and a plain `BLOCKED`→`blocked`), logs a `NEEDS-HUMAN` line to `STREAM_LOG.md`, records a deferred-human queue entry, and continues. The stream NEVER performs the requested action (a deploy / production-write authorization request defers — it is not executed) and NEVER halts. Both mid-drain ambiguity prompts (ambient step 1, Procedure 3a) are replaced by "record a needs-human clarification entry and keep draining"; `AskUserQuestion` is removed from `allowed-tools` (the skill now physically cannot block-ask mid-drain). The dispatch prompt carries a new `deferred-human mode: defer, do not ask` signal. `STREAM_REPORT.md` leads with a FIRST `## Needs your input` section (id, slug, raising stage, verbatim ask, unblock; `None.` when empty) and the exit chat message leads with the digest. `needs-human` joins the resume-runnable status set and step h's tally gains a `needs-human` bucket.
+- **`agents/pm-orchestrator.md`**: "When to stop and ask the user" is reconciled with stream dispatch — under a stream/batch (dispatch prompt carries `deferred-human mode: defer, do not ask`) an interactive ask is unavailable, so the orchestrator returns the structured `BLOCKED: NEEDS-HUMAN — …` verdict instead of asking, and never silently auto-decides a point the active decision mode reserves for the human just to dodge a block (new Hard rule 6). A hard-safety event stays the stream's hard-stop signal, not a deferral. Decision policy (`25-decision-policy.md`) red lines unchanged — it decides *who* decides; this feature decides *when* (end, not mid-drain).
+- **Status enum**: `docs/batches/_template/BATCH_PLAN.md` adds the `needs-human` value (no schema column added — only a Status value; no `verify_all` check pins the enum). `docs/batches/README.md` Streams section gains a defer sentence.
+- **Ambient hook** (`ambient-prompt.{ps1,sh}`, dogfood + template — 4-file hand-lockstep): the one ambiguity sentence in the emitted block now records a needs-human clarification note and keeps draining (ASCII-only; the surrounding pre-existing text is untouched).
+- **Batch unchanged**: `/harness-batch` is not edited and gets no defer signal — its halt policy keys on a `FAILED` verdict, not `BLOCKED`, so it merely receives a richer message; its behavior is unchanged.
+- **Docs**: README ×2 stream bullet + new roadmap row.
+- Version 0.32.0 → 0.33.0 (plugin.json, marketplace.json, both README badges). Skill count stays **15**; `verify_all` stays **32** checks; no I.6 banned/exempt-list change; no new check, no new file.
+
 ## [0.32.0] - 2026-06-12
 
 ### Added — Stream ingest triage: /harness-stream auto-decomposes complex requirements (T-021)

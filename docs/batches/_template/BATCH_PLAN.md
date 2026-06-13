@@ -24,7 +24,7 @@
 - **Goal** — one sentence; becomes pm-orchestrator's task-description input.
 - **Mode** — `full` (default 7-stage) | `plan` (stages 1-3 only) | `goal` (Dev + QA loop).
 - **Depends on** — comma-separated `T-NN` IDs in the same batch, or `—` for none.
-- **Status** — `pending` (initial) | `in-progress` | `done` | `failed` | `blocked` | `skipped`. The skill writes; the user reads.
+- **Status** — `pending` (initial) | `in-progress` | `done` | `failed` | `blocked` | `needs-human` (deferred — `/harness-stream` set it aside pending the human input recorded in `STREAM_REPORT.md` "Needs your input"; re-runs on resume once you answer) | `skipped`. The skill writes; the user reads.
 
 ## How to invoke
 
