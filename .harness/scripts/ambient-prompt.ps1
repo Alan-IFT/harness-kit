@@ -63,5 +63,14 @@ with an EMPTY task table if it is absent):
 To leave ambient mode, start a new session (ambient is session-scoped — a SessionStart
 hook auto-clears the flag) or delete .harness/ambient.flag. No "off" keyword needed.
 '@
-[Console]::Out.WriteLine($msg)
+# Emit as raw UTF-8 bytes so non-ASCII punctuation in the block is never re-encoded
+# through the host ANSI codepage (pwsh inherits GB2312/GBK on zh-CN Windows, which a
+# UTF-8 consumer then reads as mojibake). insight-index 2026-06-12. The try/catch keeps
+# the hook fail-open: it must always exit 0 and never wedge the user's chat.
+try {
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($msg + "`n")
+    $out = [Console]::OpenStandardOutput()
+    $out.Write($bytes, 0, $bytes.Length)
+    $out.Flush()
+} catch { }
 exit 0

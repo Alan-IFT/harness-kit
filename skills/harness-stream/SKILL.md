@@ -148,7 +148,7 @@ A class-(c) needs-human deferral is NOT a hard stop — only these three hazards
 
 Write `docs/batches/<pool-id>/STREAM_REPORT.md`, **leading with a `## Needs your input` section** (FIRST, before the per-task table) enumerating every deferred item — each `needs-human` row AND each ingest-ambiguity clarification — using the deferred-human queue entry format (id, slug, raising stage, verbatim ask, unblock). **If there are no deferred items, the section reads `None.`** Then:
 
-- Per-task row: `<id> | <slug> | <verdict> | link to docs/features/_archived/<slug>/ (or docs/features/<slug>/)`.
+- Per-task row: `<id> | <slug> | <verdict> | link to its task folder` — `docs/features/_archived/<slug>/` once the task is DELIVERED and archived, else the live `docs/features/<slug>/` (a `needs-human` / `failed` / `blocked` row is not archived yet, so it links to the live path).
 - Aggregate: done / failed / blocked / **needs-human** / skipped counts, passes run, final `verify_all` summary.
 - The failed / blocked / needs-human rows remain resume-resolvable: supply the input (pool edit / `ADD` / `/harness-intervene` / chat), re-invoke `/harness-stream <pool-id>`, and the stream re-runs only the unfinished rows via the existing resume semantics (a row whose `07_DELIVERY.md` is not DELIVERED is re-evaluated and runnable — see Resume semantics, step b).
 - Stop reason if a hard stop fired.

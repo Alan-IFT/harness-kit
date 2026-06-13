@@ -19,6 +19,11 @@ When `/harness-stream` drains a pool unattended, a task that needs human assista
 - **Docs**: README ×2 stream bullet + new roadmap row.
 - Version 0.32.0 → 0.33.0 (plugin.json, marketplace.json, both README badges). Skill count stays **15**; `verify_all` stays **32** checks; no I.6 banned/exempt-list change; no new check, no new file.
 
+### Fixed — ambient hook UTF-8 output + report-link wording (closes T-021 DEFECT-1)
+
+- **`ambient-prompt.ps1`** (dogfood + template, 4-file lockstep) now emits its instruction block as **raw UTF-8 bytes** (`[Console]::OpenStandardOutput()` + `Encoding.UTF8.GetBytes`) instead of `[Console]::Out.WriteLine`, which re-encoded non-ASCII punctuation (em-dash, `≡`) through the host ANSI codepage — pwsh inherits **GB2312/GBK** on a zh-CN Windows, so a UTF-8 consumer saw mojibake. Reproduced (em-dash emitted as `a1 aa`) and verified fixed (now `e2 80 94` / `e2 89 a1`, well-formed UTF-8, no BOM); the write is wrapped in `try/catch` so the hook stays fail-open (always exits 0). The `.sh` twin already emitted UTF-8 and is unchanged; the emitted block text is byte-identical across ps1/sh (CR-stripped) and dogfood/template. This was T-021's deferred DEFECT-1.
+- **`skills/harness-stream/SKILL.md`**: clarified the `STREAM_REPORT.md` per-task row link wording — an unfinished (`needs-human` / `failed` / `blocked`) row links to the live `docs/features/<slug>/`, an archived one to `docs/features/_archived/<slug>/` (resolves the T-022 code-review m-1 nit).
+
 ## [0.32.0] - 2026-06-12
 
 ### Added — Stream ingest triage: /harness-stream auto-decomposes complex requirements (T-021)
