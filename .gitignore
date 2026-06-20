@@ -49,5 +49,8 @@ verification_history.log
 # Harness — ambient-stream flag (transient runtime state; presence = ambient mode ON)
 .harness/ambient.flag
 
+# Harness — entropy-watch cadence state (transient runtime state; fail-open key=value record)
+.harness/entropy-watch.state
+
 # Claude Code runtime — session lockfile, regenerated each session
 .claude/scheduled_tasks.lock

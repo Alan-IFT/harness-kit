@@ -46,3 +46,19 @@
 - 2026-06-20 · T-10 regression gate (post-archive): verify_all.sh PASS 32/0/0 → no hard stop · queue: 0 pending / 0 failed / 0 blocked → **POOL DRAINED**
 - 2026-06-20 · STREAM EXIT (Tier-3 wave): normal — pool drained. T-08 DELIVERED v0.39.0, T-09 DELIVERED v0.40.0, T-10 DECLINED (no build). 0 rollbacks, 0 failed, 0 blocked. No hard stop. Batch total: 8 delivered + 1 correctly declined.
 
+## Run 2026-06-20c — operator-directed feature: anti-entropy watch (T-11)
+- 2026-06-20 · baseline verify_all.sh 32/0/0 (confirmed post-v0.40.0). Operator directed building the anti-entropy watch (machine-remind → user-authorize → machine-execute). Continuous driver.
+- 2026-06-20 · T-11 · dispatching stage-1 requirement-analyst · slug=entropy-watch · mode=full (scope honestly + reuse supervisor/goal/STREAM_REPORT + pin cadence + decompose if needed)
+- 2026-06-20 · T-11 RA decomposed into 3 vertical slices (T-11a core / T-11b harness surface / T-11c persistence); pool updated.
+- 2026-06-20 · T-11a · DELIVERED v0.41.0 (1 design rollback — Gate caught supervisor I.3 breach + false F.1 claim; SA r2 fixed; Gate r2 APPROVED): RA → SA → Gate↩ → SA(r2) → Gate(r2) → Dev (20 files) → CR APPROVED-WITH-NOTES (both axes clean) → QA PASS (cadence/fail-open/mutation green). Anti-entropy watch CORE: 17th skill /harness-deflate + supervisor entropy lens + entropy-cadence pair + stream `## Entropy watch` surface. verify_all.sh 32/0/0 (PS operator-pending). 07: docs/features/_archived/entropy-watch/07_DELIVERY.md
+- 2026-06-20 · T-11a regression gate (post-archive): verify_all.sh PASS 32/0/0 → no hard stop · queue: 2 pending (T-11b harness surface, T-11c findings persistence; both dep T-11a now satisfied) / 0 failed / 0 blocked
+- 2026-06-20 · STREAM checkpoint: T-11a (working core) delivered. Pausing at clean slice boundary to surface the working capability before building the 2 follow-up slices (resumable).
+- 2026-06-20 · STREAM resumed (user: "继续"). Draining T-11b → T-11c.
+- 2026-06-20 · T-11b · dispatching stage-1 requirement-analyst · slug=entropy-watch-harness · mode=full
+- 2026-06-20 · T-11b · DELIVERED v0.42.0 (0 rollbacks): RA → SA → Gate APPROVED(F-1/F-2) → Dev (9 files) → CR APPROVED → QA PASS. /harness single-task delivery surface wired (both harness+stream now auto-remind). verify_all.sh 32/0/0 (PS operator-pending). 07: docs/features/_archived/entropy-watch-harness/07_DELIVERY.md
+- 2026-06-20 · T-11b regression gate (post-archive): verify_all.sh PASS 32/0/0 → no hard stop · queue: 1 pending (T-11c findings persistence) / 0 failed / 0 blocked
+- 2026-06-20 · T-11c · dispatching stage-1 requirement-analyst · slug=entropy-watch-persist · mode=full (final slice)
+- 2026-06-20 · T-11c · DELIVERED v0.43.0 (0 rollbacks): RA (scoped down — store DECLINED) → SA → Gate APPROVED → Dev (9 files) → CR APPROVED → QA PASS. Decline-filter only (supervisor scan excludes rejected-decisions-matched findings; /harness-deflate decline action; OPEN/FIXED re-derived, no store). verify_all.sh 32/0/0. 07: docs/features/_archived/entropy-watch-persist/07_DELIVERY.md
+- 2026-06-20 · T-11c regression gate (post-archive): verify_all.sh PASS 32/0/0 → no hard stop · queue: 0 pending / 0 failed / 0 blocked → **POOL DRAINED**
+- 2026-06-20 · STREAM EXIT (entropy-watch feature): normal — pool drained. T-11a v0.41.0 (1 rollback) + T-11b v0.42.0 + T-11c v0.43.0, all DELIVERED. Anti-entropy watch COMPLETE (machine remind → user authorize → machine execute; both surfaces; declined findings filtered). 0 failed, 0 blocked.
+

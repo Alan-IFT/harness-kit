@@ -2,9 +2,9 @@
 
 [English](README.md) · **简体中文**
 
-![version](https://img.shields.io/badge/version-0.40.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-32%2F32-brightgreen) ![test-init](https://img.shields.io/badge/test--init-314%2F314-brightgreen) ![integration](https://img.shields.io/badge/integration-90%2F90-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.43.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-32%2F32-brightgreen) ![test-init](https://img.shields.io/badge/test--init-314%2F314-brightgreen) ![integration](https://img.shields.io/badge/integration-90%2F90-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
-> **Claude Code 的 Harness Engineering 工具包** — 一个 Claude Code Plugin（16 个 skills + 8 个框架 agent + 项目模板），把"有纪律的 AI 驱动开发"带到全栈和后端项目里。**Claude 原生**（框架 agent 以 plugin agent 形式分发，不再逐项目拷贝）。
+> **Claude Code 的 Harness Engineering 工具包** — 一个 Claude Code Plugin（17 个 skills + 8 个框架 agent + 项目模板），把"有纪律的 AI 驱动开发"带到全栈和后端项目里。**Claude 原生**（框架 agent 以 plugin agent 形式分发，不再逐项目拷贝）。
 >
 > **目标**：人工只做"描述需求"和"AI 做不到时介入"；其他全部 — 7-Agent 流水线、验证闸门、结构化文档 — 自动运行。
 
@@ -12,7 +12,7 @@ _**v0.34–0.40 升级波**：吸收了 [mattpocock/skills](https://github.com/m
 
 ## 包含什么
 
-这是一个 Claude Code Plugin 包，给任何项目装上 16 个 AI skill：
+这是一个 Claude Code Plugin 包，给任何项目装上 17 个 AI skill：
 
 **流水线类**（6 种任务形态，AI 根据你的自然语言自动挑对应那条；外加一个跑在流水线之前的需求对齐器）
 - `/harness-kit:harness-grill` — 跑在流水线**之前**做需求对齐：一场关不住的逐题拷问（每题给一个推荐答案、能从代码库自答的就自答、有 `CONTEXT.md` 就读），把对齐后的简报写到 `docs/features/<slug>/INPUT.md` 后停止。适合"还不确定自己到底想要什么"时先用——再把简报交给 `/harness` 或丢进 `/harness-stream` 池。
@@ -35,6 +35,7 @@ _**v0.34–0.40 升级波**：吸收了 [mattpocock/skills](https://github.com/m
 - `/harness-kit:harness-intervene` — 给正在跑的流水线发"软 Ctrl-C"：写一个 `STOP` / `REDIRECT` / `SKIP` / `NOTE` 信号文件，PM 在下一次阶段切换时消费
 - `/harness-kit:harness-supervise` — 旁观者辅助 skill（v0.17+）：读取进行中或归档的任务文件夹，产出 `SUPERVISION_REPORT.md`，标注 anti-pattern（rollback 比率、阶段文档过薄、缺 intervention check、缺 archive 调用），分 `INFO`/`WARN`/`ALERT`，最后一行给出 `HEALTHY`/`WATCH`/`INTERVENE` 判决
 - `/harness-kit:harness-decision-mode` — 设置或切换项目的决策/升级**模式**：Mode 1（人工决策，默认）、Mode 2（AI 按预设 rubric 自己拿主意）、Mode 3（AI 按你自己的自定义 rubric 决策）。只外科式改写 `.harness/rules/25-decision-policy.md` 里的"Active mode"那一行；首次切到 Mode 3 时收集你的自定义决策提示。非破坏、幂等、要求干净 git 工作区
+- `/harness-kit:harness-deflate` — 整体**反熵巡检**（v0.41+）：用只读的 supervisor 熵镜头扫描**整个代码库**（不是单个任务），找累积的结构腐化——浅模块、跨缝泄漏、耦合簇、可加深点——每条都标出 WHERE + 一个 `Strong`/`Worth exploring`/`Speculative` 强度徽章；在你**明确授权**后，把选中的加深交给 `/harness-goal` 重构到 `verify_all` 绿。机器提醒、你授权、机器执行——未经授权绝不重构。`/harness-stream` 也会在到点的节奏边界自动浮出同一份巡检（`## Entropy watch`，非阻塞）
 
 init 之后，每个非琐碎任务流经 **7-Agent 流水线**：PM Orchestrator → Requirement Analyst → Solution Architect → Gate Reviewer → Developer（或分区 `dev-*`）→ Code Reviewer → QA Tester → 交付。
 

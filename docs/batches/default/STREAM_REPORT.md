@@ -16,10 +16,14 @@
 | T-08 | two-axis-review | DELIVERED (0 rollbacks) | v0.39.0 | `docs/features/_archived/two-axis-review/` |
 | T-09 | rejected-decisions-memory | DELIVERED (0 rollbacks) | v0.40.0 | `docs/features/_archived/rejected-decisions-memory/` |
 | T-10 | planning-decision-map | **DECLINED (no build)** — assess-first; redundant with pool/frontier/grill/explore | (none) | `docs/features/_archived/planning-decision-map/` |
+| T-11a | entropy-watch | DELIVERED (1 design rollback) — anti-entropy watch CORE (17th skill /harness-deflate + supervisor entropy lens + cadence pair + stream surface) | v0.41.0 | `docs/features/_archived/entropy-watch/` |
+| T-11b | entropy-watch-harness | DELIVERED (0 rollbacks) — /harness single-task delivery surface (both surfaces auto-remind) | v0.42.0 | `docs/features/_archived/entropy-watch-harness/` |
+| T-11c | entropy-watch-persist | DELIVERED (0 rollbacks) — decline-filter (declined findings don't re-litigate); standalone store DECLINED as overkill | v0.43.0 | `docs/features/_archived/entropy-watch-persist/` |
 
 ## Aggregate
-- delivered: **8** · declined (assess-first, correct): **1** · failed: 0 · blocked: 0 · skipped: 0 · (T-01 was a prior run, untouched)
-- rollbacks: **0** across all 9 tasks (every Gate/CR/QA passed first time)
+- delivered: **11** · declined (assess-first, correct): **1** · failed: 0 · blocked: 0 · skipped: 0 · (T-01 was a prior run, untouched)
+- rollbacks: **1** across all 12 tasks (T-11a design rollback — Gate caught supervisor I.3 breach + a false F.1 claim; SA round 2 fixed; everything else first-pass)
+- **operator-directed feature shipped:** anti-entropy watch (T-11a/b/c) — machine reminds (cadenced, both `/harness` + `/harness-stream`) → user authorizes → machine executes; declined findings filtered. New 17th skill `/harness-deflate`. Versions 0.40.0 → 0.41.0 → 0.42.0 → 0.43.0.
 - final verify_all: **PASS 32/0/0 (Bash)** after every task + every post-archive re-run; check count held at 32 throughout (no new guard accreted — honors feedback_design_over_guards)
 - versions shipped: 0.33.0 → 0.40.0 (T-04 + T-10 added no bump — non-distributed dogfood rule / no-build decline). Skill count 15 → 16 (only the new /harness-grill).
 - insights harvested: 3 (T-03 skill-count decoy-set discipline; T-05 forward-brief vs backward-evidence boundary; T-09 institutional-memory needs a read-trigger wired to the decide-point), each rotated to keep insight-index ≤30.

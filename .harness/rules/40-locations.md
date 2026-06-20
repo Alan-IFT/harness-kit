@@ -12,6 +12,8 @@
 | The 7-agent pipeline definition | `docs/workflow.md` |
 | Supervisor agent (auxiliary, v0.17+; not part of 7-stage routing) | plugin-native — `agents/supervisor.md` (`harness-kit:supervisor`) |
 | Supervisor skill (manual invocation, v0.17+) | `skills/harness-supervise/SKILL.md` |
+| Anti-entropy sweep skill (v0.41+) + its scan reference | `skills/harness-deflate/SKILL.md` + `skills/harness-deflate/references/entropy-scan.md` |
+| Entropy-watch cadence pair (shared remind-if-due, F.1 member) | `.harness/scripts/entropy-cadence.{ps1,sh}` (state: gitignored `.harness/entropy-watch.state`) |
 | Project repo navigation | `docs/dev-map.md` |
 | Total verification | `.harness/scripts/verify_all.{ps1,sh}` |
 | Binding sync (`.harness/agents/` partition `dev-*` + `.harness/skills/` → `.claude/`) | `.harness/scripts/harness-sync.{ps1,sh}` |
@@ -28,7 +30,7 @@
 - No secrets / committed env files
 - `参考/` not tracked
 - Required scaffolding present (README, LICENSE, CHANGELOG, CONTRIBUTING, installers)
-- All 16 skills present with valid frontmatter
+- All 17 skills present with valid frontmatter
 - All 7 template agents present
 - Placeholder whitelist enforced (7 allowed)
 - `.harness/agents/` matches `templates/common/.harness/agents/` (Layer 1)

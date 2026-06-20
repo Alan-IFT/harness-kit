@@ -4,7 +4,7 @@ Automated regression (`.harness/scripts/test-init.ps1` at 287 assertions; `.harn
 that runs from a shell. But two things must be exercised in a real Claude Code
 session to confirm the experience:
 
-1. **Skill discovery** — does Claude Code actually load the sixteen skills?
+1. **Skill discovery** — does Claude Code actually load the seventeen skills?
 2. **Skill interaction** — does `/harness-init` correctly call `AskUserQuestion`,
    substitute placeholders, run `harness-sync`, and leave a usable project?
 
@@ -31,9 +31,9 @@ upgrading / before announcing a release.
 ~/harness-kit/install.sh --dry-run
 ```
 
-**Expected**: prints "Would copy" for all 16 skills (harness, harness-init,
+**Expected**: prints "Would copy" for all 17 skills (harness, harness-init,
 harness-adopt, harness-upgrade, harness-language, harness-verify, harness-status, harness-plan, harness-explore,
-harness-goal, harness-batch, harness-stream, harness-intervene, harness-supervise, harness-decision-mode, harness-grill). Exits 0. **No file is created** under
+harness-goal, harness-batch, harness-stream, harness-intervene, harness-supervise, harness-decision-mode, harness-grill, harness-deflate). Exits 0. **No file is created** under
 `~/.claude/skills/`.
 
 ### A.2 Real install
@@ -46,20 +46,20 @@ harness-goal, harness-batch, harness-stream, harness-intervene, harness-supervis
 ~/harness-kit/install.sh
 ```
 
-**Expected**: prints "Installed" for all 16 skills. After completion, list them:
+**Expected**: prints "Installed" for all 17 skills. After completion, list them:
 
 ```powershell
 Get-ChildItem ~/.claude/skills/ -Directory | Select-Object Name
-# Should show: harness, harness-adopt, harness-batch, harness-decision-mode, harness-explore, harness-goal,
+# Should show: harness, harness-adopt, harness-batch, harness-decision-mode, harness-deflate, harness-explore, harness-goal,
 # harness-grill, harness-init, harness-intervene, harness-language, harness-plan, harness-status, harness-stream, harness-supervise, harness-upgrade, harness-verify
 ```
 
 ### A.3 Claude Code sees them
 
 Open Claude Code in any folder. Type `/help` or look at the slash command picker.
-**Expected**: the sixteen `/harness-*` commands appear (`/harness`, `/harness-init`,
+**Expected**: the seventeen `/harness-*` commands appear (`/harness`, `/harness-init`,
 `/harness-adopt`, `/harness-upgrade`, `/harness-language`, `/harness-verify`, `/harness-status`, `/harness-plan`,
-`/harness-explore`, `/harness-goal`, `/harness-batch`, `/harness-stream`, `/harness-intervene`, `/harness-supervise`, `/harness-decision-mode`, `/harness-grill`).
+`/harness-explore`, `/harness-goal`, `/harness-batch`, `/harness-stream`, `/harness-intervene`, `/harness-supervise`, `/harness-decision-mode`, `/harness-grill`, `/harness-deflate`).
 
 If they don't appear: restart Claude Code; if still missing, check that
 `~/.claude/skills/harness-init/SKILL.md` exists and has valid frontmatter

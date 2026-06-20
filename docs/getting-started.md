@@ -33,7 +33,7 @@ git clone https://github.com/Alan-IFT/harness-kit ~/harness-kit
 ~/harness-kit/install.sh
 ```
 
-Either path makes sixteen skills available in Claude Code:
+Either path makes seventeen skills available in Claude Code:
 
 Pipeline (pick by task shape; plus a pre-pipeline aligner):
 
@@ -59,6 +59,7 @@ Operations:
 - `harness-intervene` — soft Ctrl-C for an in-flight pipeline (redirect / pause / add-task)
 - `harness-supervise` — observer-only health check of a task folder
 - `harness-decision-mode` — switch the decision/escalation mode (Mode 1 human-decides / Mode 2 preset-rubric / Mode 3 custom-rubric)
+- `harness-deflate` — holistic anti-entropy sweep (v0.41+): scans the whole codebase via the read-only supervisor entropy lens, presents each finding with WHERE + a strength badge, and on your explicit authorization hands the chosen deepening to `/harness-goal` (machine reminds, you authorize, machine executes)
 
 Verify with `/help` inside Claude Code — you should see them listed.
 

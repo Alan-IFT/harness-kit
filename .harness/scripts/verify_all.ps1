@@ -65,8 +65,8 @@ Step "B.2" "Install scripts present (both PowerShell + Bash)" {
 }
 
 # C. Skills structure
-Step "C.1" "All 16 skills present with SKILL.md" {
-    foreach ($s in @("harness", "harness-init", "harness-adopt", "harness-verify", "harness-status", "harness-plan", "harness-explore", "harness-goal", "harness-intervene", "harness-supervise", "harness-batch", "harness-stream", "harness-upgrade", "harness-language", "harness-decision-mode", "harness-grill")) {
+Step "C.1" "All 17 skills present with SKILL.md" {
+    foreach ($s in @("harness", "harness-init", "harness-adopt", "harness-verify", "harness-status", "harness-plan", "harness-explore", "harness-goal", "harness-intervene", "harness-supervise", "harness-batch", "harness-stream", "harness-upgrade", "harness-language", "harness-decision-mode", "harness-grill", "harness-deflate")) {
         $p = "skills/$s/SKILL.md"
         if (-not (Test-Path $p)) { throw "Missing $p" }
     }
@@ -266,8 +266,8 @@ Step "E.6" "evals/golden-tasks.md present" {
 }
 
 # F. Symmetry (PowerShell <-> Bash pairs)
-Step "F.1" "verify_all, sync-self, harness-sync, test-init, test-real-project, ambient-prompt, ambient-reset, upgrade-project, language-policy exist in both .ps1 and .sh" {
-    foreach ($pair in @("verify_all", "sync-self", "harness-sync", "test-init", "test-real-project", "ambient-prompt", "ambient-reset", "upgrade-project", "language-policy")) {
+Step "F.1" "verify_all, sync-self, harness-sync, test-init, test-real-project, ambient-prompt, ambient-reset, upgrade-project, language-policy, entropy-cadence exist in both .ps1 and .sh" {
+    foreach ($pair in @("verify_all", "sync-self", "harness-sync", "test-init", "test-real-project", "ambient-prompt", "ambient-reset", "upgrade-project", "language-policy", "entropy-cadence")) {
         if (-not (Test-Path ".harness/scripts/$pair.ps1")) { throw "Missing .harness/scripts/$pair.ps1" }
         if (-not (Test-Path ".harness/scripts/$pair.sh")) { throw "Missing .harness/scripts/$pair.sh" }
     }
@@ -296,9 +296,9 @@ Step "F.2" "Guard-rm scripts and PreToolUse wiring present" {
 }
 
 # G. Documentation hygiene
-Step "G.1" "README references all 16 skills" {
+Step "G.1" "README references all 17 skills" {
     $readme = Get-Content "README.md" -Raw
-    foreach ($s in @("harness", "harness-init", "harness-adopt", "harness-verify", "harness-status", "harness-plan", "harness-explore", "harness-goal", "harness-intervene", "harness-supervise", "harness-batch", "harness-stream", "harness-upgrade", "harness-language", "harness-decision-mode", "harness-grill")) {
+    foreach ($s in @("harness", "harness-init", "harness-adopt", "harness-verify", "harness-status", "harness-plan", "harness-explore", "harness-goal", "harness-intervene", "harness-supervise", "harness-batch", "harness-stream", "harness-upgrade", "harness-language", "harness-decision-mode", "harness-grill", "harness-deflate")) {
         if ($readme -notmatch [regex]::Escape($s)) { throw "README missing skill mention: $s" }
     }
 }
@@ -322,9 +322,9 @@ Step "H.1" "Test fixtures present (todo-fullstack + todo-backend)" {
     }
 }
 
-Step "G.2" "CHANGELOG mentions all 16 skills" {
+Step "G.2" "CHANGELOG mentions all 17 skills" {
     $cl = Get-Content "CHANGELOG.md" -Raw
-    foreach ($s in @("harness", "harness-init", "harness-adopt", "harness-verify", "harness-status", "harness-plan", "harness-explore", "harness-goal", "harness-intervene", "harness-supervise", "harness-batch", "harness-stream", "harness-upgrade", "harness-language", "harness-decision-mode", "harness-grill")) {
+    foreach ($s in @("harness", "harness-init", "harness-adopt", "harness-verify", "harness-status", "harness-plan", "harness-explore", "harness-goal", "harness-intervene", "harness-supervise", "harness-batch", "harness-stream", "harness-upgrade", "harness-language", "harness-decision-mode", "harness-grill", "harness-deflate")) {
         if ($cl -notmatch [regex]::Escape($s)) { throw "CHANGELOG missing skill mention: $s" }
     }
 }

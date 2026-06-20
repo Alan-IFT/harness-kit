@@ -55,7 +55,10 @@ harness-kit/
 │   ├── harness-supervise/SKILL.md      ← Observer-only auxiliary skill (v0.17+); emits SUPERVISION_REPORT.md
 │   ├── harness-batch/SKILL.md          ← Batch mode (v0.19+); runs T-01...T-NN via pm-orchestrator sub-agents from docs/batches/<batch-id>/BATCH_PLAN.md
 │   ├── harness-stream/SKILL.md         ← Stream / living-pool mode (v0.22+); re-reads BATCH_PLAN.md each iteration, best-effort, picks up mid-run additions
-│   └── harness-grill/SKILL.md          ← Pre-pipeline alignment interview (v0.35+); one-question-at-a-time, recommended-answer-per-question, self-answers from the codebase, emits an aligned brief to docs/features/<slug>/INPUT.md and stops (no helper script)
+│   ├── harness-grill/SKILL.md          ← Pre-pipeline alignment interview (v0.35+); one-question-at-a-time, recommended-answer-per-question, self-answers from the codebase, emits an aligned brief to docs/features/<slug>/INPUT.md and stops (no helper script)
+│   └── harness-deflate/                ← Anti-entropy sweep (v0.41+); delegator skill
+│       ├── SKILL.md                    ← Holistic scan → present findings → authorize → /harness-goal execute; allowed-tools Read/Glob/Grep/Task (no Edit/Bash)
+│       └── references/entropy-scan.md  ← SINGLE source of the EP-* scan methodology + findings artifact schema (read by supervisor.md stub + this skill's dispatch)
 │
 ├── agents/                              ← Plugin-native framework agents (v0.30+): 7 canonical
 │   │                                       + 1 auxiliary supervisor.md; auto-discovered, dispatched
@@ -97,6 +100,7 @@ harness-kit/
 │       ├── guard-rm.{ps1,sh}           ← Destructive-command PreToolUse guard (v0.15+)
 │       ├── ambient-prompt.{ps1,sh}     ← Ambient-stream UserPromptSubmit heartbeat hook (flag-gated by .harness/ambient.flag)
 │       ├── ambient-reset.{ps1,sh}      ← Ambient-stream SessionStart hook: clears .harness/ambient.flag each new session (session-scoped)
+│       ├── entropy-cadence.{ps1,sh}    ← Entropy-watch shared remind-if-due cadence (v0.41+): check/delivered/swept; threshold N=5 in one place; fail-open → NOT-DUE; reads/writes gitignored .harness/entropy-watch.state; F.1 member
 │       ├── test-guard-rm.{ps1,sh}      ← Driver for evals/guard-rm-cases.md (on-demand)
 │       └── baseline.json               ← Test/asset baseline
 │
@@ -149,6 +153,7 @@ Both layers are checked by `.harness/scripts/verify_all` and FAIL on drift.
 | Skill: harness-status | `skills/harness-status/SKILL.md` | Read-only inspection |
 | Skill: harness-language | `skills/harness-language/SKILL.md` + `language-policy.{ps1,sh}` | Set / switch / refresh output-language policy (v0.25+); judgment in SKILL, mechanical in the helper pair |
 | Skill: harness-grill | `skills/harness-grill/SKILL.md` | Pre-pipeline alignment interview (v0.35+); user-invoked, one-question-at-a-time, emits an aligned brief to `docs/features/<slug>/INPUT.md` and stops; no helper script (interview, not a file-rewrite engine) |
+| Skill: harness-deflate (entropy watch) | `skills/harness-deflate/SKILL.md` + `references/entropy-scan.md` + `.harness/scripts/entropy-cadence.{ps1,sh}` | Holistic anti-entropy sweep (v0.41+; T-11a). Delegator skill: dispatches the read-only supervisor entropy lens (EP-*), presents findings, and on explicit authorization hands the chosen deepening to `/harness-goal`. The scan methodology + artifact schema are single-sourced in `references/entropy-scan.md` (read by both the `supervisor.md` stub and this skill). `/harness-stream` surfaces the same scan on a due cadence boundary via the shared `entropy-cadence` pair (state in gitignored `.harness/entropy-watch.state`). No new `verify_all` check (count stays 32). |
 | Project templates | `skills/harness-init/templates/` | `common/` + `fullstack/` + `backend/` |
 | Domain glossary (`CONTEXT.md`) | repo-root `CONTEXT.md` (dogfood, real terms) + `skills/harness-init/templates/common/CONTEXT.md` (generic seed) | Dual-purpose like `decision-rubric.md`: generic in the template, real in the dogfood; NOT byte-synced (sync-self touches only the 7 script pairs). SOFT dependency referenced by RA/SA. Single context; multi-context via a future root `CONTEXT-MAP.md`. |
 | Rejected-decisions memory (`.harness/rejected-decisions.md`) | repo `.harness/rejected-decisions.md` (dogfood, real declines) + `skills/harness-init/templates/common/.harness/rejected-decisions.md` (generic seed) | Fourth memory kind (declined options + why). Dual-purpose like `CONTEXT.md` / `decision-rubric.md`: generic seed in the template, real in the dogfood; NOT byte-synced (sync-self touches only the 7 script pairs). Read/append habit single-sourced in `.harness/rules/25-decision-policy.md`; SOFT pointers from RA/SA. No gate. |
@@ -166,6 +171,7 @@ Both layers are checked by `.harness/scripts/verify_all` and FAIL on drift.
 | Layer 1 sync (templates → repo SOT) | `sync-self` | Run before commit if you edited one of the 7 mirrored script pairs (`harness-sync`, `install-hooks`, `archive-task`, `guard-rm`, `migrate-scripts-layout`, `upgrade-project`, `language-policy`). Framework agents are NOT mirrored since v0.30 — edit the plugin-native top-level `agents/` directly. |
 | Layer 2 sync (repo SOT → binding) | `harness-sync` | Run before commit if you edited a partition `.harness/agents/dev-*` or `.harness/skills/`. Rule edits do NOT require sync — they're referenced, not copied. Framework-agent edits go to the plugin `agents/`, no sync. |
 | Total verification | `verify_all` | Single source of truth for "is the repo healthy" — runs all 32 checks including both `--check` modes |
+| Entropy-watch cadence (shared remind-if-due) | `entropy-cadence` | `.harness/scripts/entropy-cadence.{ps1,sh}` — the ONE place the entropy-sweep due-logic + threshold (`N=5`) live; called by `/harness-stream` AND `/harness` so neither restates the threshold. `check [--first-of-session]` / `delivered` / `swept`; fail-open → NOT-DUE, always exit 0; F.1 member (PS array+label, SH array). |
 | Init regression | `test-init` | Simulates full init + sync in temp dir (counts moved at the v0.30 agent cutover — operator reconciles `.harness/scripts/baseline.json` from a captured run; covers AI-native opt-in/opt-out bidirectional cases × 3 project types, the AC-10 byte-compare pass, the v0.30 generic-agents-absent assertions, and the BUG-2 placeholder-regex regression) |
 
 ## Patterns to follow

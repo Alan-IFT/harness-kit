@@ -123,7 +123,7 @@ Each row the triage writes (and each hand-authored row) should be a tracer-bulle
    - **e. Record.** Read the sub-agent's return summary (verdict `DELIVERED` / `BLOCKED` / `BLOCKED: NEEDS-HUMAN — …` / `FAILED`, path to `07_DELIVERY.md`, files-changed, final `verify_all`). Append one line to `STREAM_LOG.md`.
    - **f. Regression gate.** Run `.harness/scripts/verify_all`. If it returns **FAIL** (the task broke the baseline) → **hard stop** (see Stop conditions). Otherwise continue.
    - **g. Best-effort outcome.** Update the row `Status` from the verdict (keep the verdicts distinct so the report tallies stay honest):
-     - `DELIVERED` → `done`.
+     - `DELIVERED` → `done`. **Then bump the entropy cadence:** call `.harness/scripts/entropy-cadence delivered` (increments the delivered-since-sweep counter; fail-open, never blocks). Only a `DELIVERED` task counts toward the sweep cadence.
      - `BLOCKED: NEEDS-HUMAN — <verbatim ask> — <what unblocks it>` (the pm-orchestrator's self-identifying needs-human verdict — see `agents/pm-orchestrator.md` "When to stop and ask the user") → set this row `needs-human`; append a `NEEDS-HUMAN` line to `STREAM_LOG.md` and record the queue entry (id, slug, raising stage, verbatim ask, unblock) for the report's "Needs your input" section; mark **only** this row's own `Depends on` descendants `blocked`; **then keep going** to the next ready task. NEVER perform the action the task requested (e.g. a deploy/production-write authorization request defers — it is not executed) and NEVER halt the stream.
      - `FAILED` → `failed`; any other `BLOCKED` (a dependency-driven or generic block, NOT prefixed `NEEDS-HUMAN`) → `blocked`. In either case also mark every *downstream* task whose `Depends on` chain includes this row `blocked`, **then keep going**. (A task failure is best-effort, never a stream-level stop.)
    - **h. Report.** Emit a one-line status to the user: `<id> <verdict> · queue: <pending> pending / <failed> failed / <blocked> blocked / <needs-human> needs-human`.
@@ -155,7 +155,24 @@ Write `docs/batches/<pool-id>/STREAM_REPORT.md`, **leading with a `## Needs your
 - The failed / blocked / needs-human rows remain resume-resolvable: supply the input (pool edit / `ADD` / `/harness-intervene` / chat), re-invoke `/harness-stream <pool-id>`, and the stream re-runs only the unfinished rows via the existing resume semantics (a row whose `07_DELIVERY.md` is not DELIVERED is re-evaluated and runnable — see Resume semantics, step b).
 - Stop reason if a hard stop fired.
 
-On exit, the message to the user **leads** with the needs-input digest — the count of deferred items and each ask verbatim — BEFORE the done/failed/blocked tally. A run that completed with deferrals is not "all done": surface "N item(s) need your input" first. If the queue is empty, lead with the normal tally.
+Then, **after** composing the `## Needs your input` section (it stays FIRST — T-022 invariant), run the **entropy watch** (below) so a due holistic sweep surfaces on the same boundary.
+
+On exit, the message to the user **leads** with the needs-input digest — the count of deferred items and each ask verbatim — BEFORE the done/failed/blocked tally. A run that completed with deferrals is not "all done": surface "N item(s) need your input" first. If the queue is empty, lead with the normal tally. **If a due entropy sweep ran (below), append its one-line digest AFTER the needs-input digest and BEFORE the tally** — the two are distinct, fixed-order sections.
+
+### Entropy watch (cadenced, non-blocking)
+
+A holistic anti-entropy sweep is surfaced here on a **due** cadence boundary only — never every drain. It is **non-blocking**: it never changes the drain's exit verdict, and any cadence I/O problem fails open to not-due. The cadence due-logic + threshold live in ONE place, the shared `.harness/scripts/entropy-cadence` pair (see also `/harness-deflate`, which runs the same scan manually).
+
+1. **Check cadence.** Call `.harness/scripts/entropy-cadence check --first-of-session` (pass `--first-of-session` because this is the stream's drain boundary — the flag makes a long-idle pool with ≥1 delivery due even before the counter reaches the threshold). Read the one-line stdout: `DUE` or `NOT-DUE`.
+   - **`NOT-DUE`** (or any error / missing output — fail-open) → write `STREAM_REPORT.md` as usual; **no scan, no `## Entropy watch` section, no entropy digest**. Done.
+   - **`DUE`** → continue.
+2. **Run the scan once.** Dispatch `harness-kit:supervisor` via the `Task` tool **in entropy mode** — the dispatch prompt must name: "entropy lens / EP-* / follow `skills/harness-deflate/references/entropy-scan.md` exactly / write `docs/features/_supervision/entropy-<ISO-date>.md`". The supervisor is observer-only (no Edit/Bash/Task); it writes exactly one artifact. Run the scan **once** per `DUE` verdict (no double-surfacing even if both due-triggers fired).
+3. **Read the verdict line.** From the artifact's last non-blank line `Entropy-verdict: FINDINGS-PRESENT | CLEAN`.
+4. **Append the section.** Append a `## Entropy watch` section to `STREAM_REPORT.md` **after** `## Needs your input` (distinct section, fixed order): the findings table (or `None.` when `CLEAN`), a link to the entropy artifact, and a note that deepening a finding is opt-in via `/harness-deflate` (authorize → `/harness-goal`). The stream itself **never** runs a refactor.
+5. **Reset the cadence.** Call `.harness/scripts/entropy-cadence swept` (resets the counter to 0 and stamps last-sweep, so the same boundary does not re-trigger). Fail-open.
+6. **Lead the exit digest.** Add the entropy one-line digest to the exit message per the ordering rule above (after needs-input, before the tally).
+
+A baseline-FAIL hard stop, a `STOP`, or a guard-rm block still take precedence and are unchanged — the entropy watch runs only on a normal drained-pool exit and never converts an informational sweep into a stop.
 
 ### Deferred-human queue
 

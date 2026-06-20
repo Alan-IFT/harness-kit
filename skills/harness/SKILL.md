@@ -37,7 +37,7 @@ The PM Orchestrator (you, if you're the PM, or a dispatched sub-agent) routes th
 7. **Dispatch `harness-kit:developer`** (or the assigned project-local partition agent — `dev-frontend` / `dev-backend` / `dev-db` / `dev-api` / `dev-services`) via Task tool. Output: `04_DEVELOPMENT.md`. Update `stage: code-review`.
 8. **Dispatch `harness-kit:code-reviewer`** via Task tool. Output: `05_CODE_REVIEW.md`. If issues, route back to the developer. Update `stage: qa`.
 9. **Dispatch `harness-kit:qa-tester`** via Task tool — **with the adversarial verification contract enforced** (see the `harness-kit:qa-tester` agent). Output: `06_TEST_REPORT.md` that MUST include `## Adversarial tests` section per acceptance criterion. Update `stage: delivery`.
-10. **Write `07_DELIVERY.md`** (PM does this directly): summary + verify_all output + any `## Insight` section if the task surfaced non-obvious project truths.
+10. **Write `07_DELIVERY.md`** (PM does this directly): summary + verify_all output + any `## Insight` section if the task surfaced non-obvious project truths. At this delivery boundary the PM also runs the cadenced, non-blocking entropy watch (full mode only) — see `agents/pm-orchestrator.md` → "Entropy watch at delivery". *(referencing line only — the call-sequence and section-format live there, not here)*
 11. **Run `.harness/scripts/verify_all`**. Task is **not done** until it PASSes.
 12. **Run `.harness/scripts/archive-task --task <task-slug>`** to harvest insights to `.harness/insight-index.md` and move stage docs to `docs/features/_archived/`.
 13. **Update tasks.md** `stage: done` and report to user.

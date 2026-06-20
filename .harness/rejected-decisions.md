@@ -88,3 +88,12 @@
   (grill's description already states that flow) and it risks introducing a competing term set.
 - **Origin:** mattpocock-adoption batch (T-10, the final / assess-first item; assessment at
   `docs/features/planning-decision-map/01_REQUIREMENT_ANALYSIS.md`).
+
+## entropy-findings-store
+- **Decision:** declined.
+- **Why:** a standalone open/fixed findings store re-encodes a re-derived fact; the entropy scan
+  re-derives OPEN/FIXED each run (fixed == no-longer-surfaced, open == re-derived from the live
+  tree), so a separate log would add a file plus a read/write cycle plus a drift surface to
+  duplicate a property the design already has by construction. Declines are the only state that needs
+  memory, and they reuse this T-09 file. Lightweight / design-over-guards line.
+- **Origin:** T-11c entropy-watch-persist scope-down (RA + architect).

@@ -5,6 +5,95 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.43.0] - 2026-06-20
+
+### Added — entropy-watch-persist (T-11c): declined findings stop re-litigating
+
+The anti-entropy watch now respects a finding the user has already declined: a declined
+finding is recorded once in `.harness/rejected-decisions.md` and is excluded from every
+future entropy sweep, while still-open findings keep surfacing and fixed ones keep dropping.
+
+- **Decline filter in the scan.** Before writing the findings artifact, the supervisor entropy
+  lens reads `.harness/rejected-decisions.md` and drops any finding whose normalized
+  `Where (file/module)` handle EXACTLY matches a `declined`/`deferred` record's concept handle
+  (trim, `\`→`/`, strip leading `./` + trailing `/`, no case-fold — exact equality, not
+  substring/prefix). A dropped finding never appears in Findings/Detail and does not count toward
+  the `Entropy-verdict` line (all dropped → `CLEAN`). **Fail-open:** a missing/unreadable file is
+  a no-op (all findings surface). The rule is single-sourced in
+  `skills/harness-deflate/references/entropy-scan.md`; `agents/supervisor.md` and
+  `skills/harness-deflate/SKILL.md` point at it, never restate it.
+- **`/harness-deflate` decline action.** Step 4 becomes a three-way pick — deflate / decline /
+  none. `decline EP-NNN` is memory-write only (no refactor, no `/harness-goal` dispatch): it
+  appends a T-09-format record (`## <stable-key>` + `Decision: declined` + why + `Origin: entropy
+  sweep <ISO-date> · EP-<class>`) to `.harness/rejected-decisions.md`, de-duping by concept handle.
+- **No standalone findings store.** OPEN/FIXED are re-derived by the scan every sweep, so no new
+  store file is built (the declined-store concept is itself recorded as a rejected decision).
+
+No count flip — skills 17, agents 8, verify_all 32 unchanged; no new check, no new file, no new
+skill/agent. Distributed behavioral edit only.
+
+## [0.42.0] - 2026-06-20
+
+### Added — entropy-watch-harness (T-11b): the `/harness` single-task delivery surface
+
+The cadenced anti-entropy watch now also fires from `/harness` (single-task), not only
+`/harness-stream` — completing "auto-periodic inspection in both harness and harness-stream".
+
+- **`/harness` delivery surface.** At the stage-7 delivery boundary, the PM Orchestrator
+  increments the shared cadence (`entropy-cadence delivered`), checks the **plain** counter
+  (`entropy-cadence check`, no `--first-of-session`), and on `DUE` runs the supervisor entropy
+  lens once + appends a `## Entropy watch` section to `07_DELIVERY.md` + resets (`swept`).
+  Non-blocking and fail-open — never changes the delivery verdict, never gates or halts.
+  **Full mode only**; `goal` mode (which also exits at stage 7) is explicitly excluded this slice.
+- **Pure wiring / DRY.** Reuses the T-11a core unchanged — the `entropy-cadence.{ps1,sh}` pair,
+  the supervisor entropy lens, and `references/entropy-scan.md`. The call-sequence + section
+  format live in ONE home (`agents/pm-orchestrator.md` stage 7); `skills/harness/SKILL.md`
+  step 10 carries a single referencing line. No new script, skill, or state file.
+- **Unified counter.** `/harness` and `/harness-stream` share the same
+  `.harness/entropy-watch.state` — a delivery via either advances the counter; a sweep via
+  either resets it.
+- **Supervisor enumeration.** `supervisor.md` now names the `/harness` delivery boundary as a
+  third entropy-mode dispatcher (alongside `/harness-deflate` and a due `/harness-stream` drain).
+- **No count flip.** Skills 17, agents 8, `verify_all` 32 checks all unchanged (no new gate).
+  Version 0.41.0 → 0.42.0 (plugin.json, marketplace.json, both README badges).
+
+## [0.41.0] - 2026-06-20
+
+### Added — entropy-watch (T-11a): a holistic, cadenced, observer-only anti-entropy sweep + the 17th skill
+
+harness-kit gains an **entropy watch** — a periodic, whole-codebase structural-rot sweep that
+surfaces *where* entropy is accumulating at a natural boundary, without a new heavy engine, a
+new gate, or any blocking behavior. The loop is **machine reminds → you authorize → machine
+executes**; it never refactors without an explicit authorization.
+
+- **Supervisor entropy lens (EP-*).** The read-only `supervisor` agent gains a sixth detector
+  family — **EP-1 shallow module · EP-2 cross-seam leakage · EP-3 coupling cluster · EP-4
+  deepening candidate** (the T-07 deep-module vocabulary) — that classifies whole-codebase
+  structure, runs the deletion test, attaches a `Strong`/`Worth exploring`/`Speculative`
+  strength badge, and writes exactly one artifact ending in a machine-readable
+  `Entropy-verdict: FINDINGS-PRESENT | CLEAN` line. The methodology + artifact schema are
+  single-sourced in the new `skills/harness-deflate/references/entropy-scan.md`; `supervisor.md`
+  carries a concise stub + pointer. Hard-rule #1 gains a scoped "entropy mode only" exception
+  that widens READ scope (it may now read production source to classify structure) while keeping
+  the observer boundary — still `tools: Read, Write, Glob, Grep`, still one write, no dispatch.
+- **New 17th skill `/harness-kit:harness-deflate`** — the manual entry point + authorize→execute
+  front end: dispatches the supervisor entropy lens, presents the findings, and on your explicit
+  pick hands the chosen deepening to `/harness-goal` to land it to `verify_all` green.
+  `allowed-tools: Read, Glob, Grep, Task` (no `Edit`/`Bash` — it cannot itself refactor).
+- **Shared remind-if-due cadence.** New `.harness/scripts/entropy-cadence.{ps1,sh}` pair holds the
+  ONE due-logic + threshold literal (`N = 5`), read/written via the gitignored fail-open
+  `.harness/entropy-watch.state` (key=value, fail-open → NOT-DUE on any error, always exit 0). It
+  joins the F.1 script-pair allowlist (PS array + label, SH array — F.1 is a hardcoded allowlist
+  that does not auto-extend).
+- **`/harness-stream` surface.** At a due drain boundary the stream runs the scan once and appends
+  a `## Entropy watch` section to `STREAM_REPORT.md` (after `## Needs your input`, distinct fixed
+  order) + leads the exit message with the entropy digest. Non-blocking — the drain still exits
+  normally; not-due drains cost one cadence-file read. A `DELIVERED` task bumps the cadence counter.
+- **Fan-out.** Skill count 16 → 17 (C.1/G.1/G.2 in both shells); version 0.40.0 → 0.41.0
+  (plugin.json, marketplace.json, both README badges); `entropy-cadence.{ps1,sh}` added to the F.1
+  hardcoded allowlist (PS array + label, SH array). `verify_all` stays **32 checks** (a new skill
+  and a new script pair extend existing checks' arrays — neither is a new check row); agents stay 8.
+
 ## [0.40.0] - 2026-06-20
 
 > **Adoption wave (v0.34.0 → 0.40.0).** Releases 0.34.0–0.40.0 land together as one coherent effort

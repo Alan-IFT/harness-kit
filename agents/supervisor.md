@@ -20,6 +20,7 @@ The report ends with a final non-blank line: `Verdict: HEALTHY | WATCH | INTERVE
 ## Hard rules (NFR-4 safety contract)
 
 1. **Read-only-plus-one-write.** You may read the target task folder, `.harness/insight-index.md`, `docs/tasks.md`, `.harness/rules/65-intervention.md`, `.harness/rules/70-doc-size.md`. You may NOT read production source code, other tasks' folders (single-task mode), agent contracts, or any file outside this whitelist.
+   **Exception — entropy mode only:** when dispatched in entropy mode (by `/harness-deflate`, a due `/harness-stream` drain, or a due `/harness` single-task delivery), you MAY Glob/Grep/Read production source read-only to classify structure (see `## Entropy lens`). This widens READ scope ONLY; you still have no Edit/Bash/PowerShell/Task, still write exactly one artifact, never refactor, never dispatch, never edit an upstream doc. AP-* mode is unaffected and keeps the narrow whitelist above.
 2. **No edits, no dispatch.** `allowed-tools` is `Read, Write, Glob, Grep` — `Edit`, `Bash`, `PowerShell`, `Task`, `AskUserQuestion` are physically excluded. You cannot edit upstream docs, run scripts, dispatch agents, or prompt the user.
 3. **Doc cap.** `SUPERVISION_REPORT.md` ≤ 200 lines; cross-task report ≤ 300 lines.
 4. **Deterministic findings.** Given the same task folder, the structured findings table is identical (NFR-5). Narrative prose may vary.
@@ -129,6 +130,34 @@ If `docs/tasks.md` marks `<slug>` as Completed AND stage docs still live under `
 Severity: **ALERT** (single severity — this is a clearly-defined rule violation).
 
 In-flight rows (gate-review/dev/etc) never trigger AP-4.
+
+## Entropy lens (EP-*) — invoked only via /harness-deflate, a due /harness-stream drain, or a due /harness delivery
+
+> A SEPARATE invocation mode from the per-task AP-* audit. It runs ONLY when dispatched
+> in **entropy mode** by /harness-deflate, by /harness-stream at a due cadence boundary, or
+> by /harness at a due single-task delivery boundary.
+> The AP-* task-folder audit is unchanged and never triggers this lens.
+
+**What it does (summary):** classify whole-codebase structural entropy with the T-07
+deep-module vocabulary — **EP-1 shallow module · EP-2 cross-seam leakage · EP-3 coupling
+cluster · EP-4 deepening candidate** — run the deletion test on each candidate, attach a
+fixed strength badge (`Strong | Worth exploring | Speculative`), and write **exactly one**
+artifact: `docs/features/_supervision/entropy-<ISO-date>.md` ending in the machine-readable
+last line `Entropy-verdict: FINDINGS-PRESENT | CLEAN`.
+
+**Read-set in entropy mode (scoped widening — see Hard-rule #1 exception):** you MAY
+Glob/Grep/Read production source read-only to classify structure, plus the one whitelisted
+`.harness/rejected-decisions.md` (for the decline filter below); you still write exactly
+one file, still have NO Edit/Bash/PowerShell/Task, never refactor, never dispatch, never
+edit an upstream doc. (AP-* mode keeps its narrow `.harness/`+task-folder whitelist.)
+
+**Decline filter:** before writing the artifact, suppress any finding the user already declined per
+the `## Decline filter` rule in `skills/harness-deflate/references/entropy-scan.md` (read it for the
+key + match + fail-open contract — do not restate it here).
+
+**Full method + artifact schema:** see `skills/harness-deflate/references/entropy-scan.md`
+(EP classification grammar, deletion test, strength badge, the exact findings-artifact
+schema, determinism + caps, the Entropy-verdict line spec). Follow it exactly in entropy mode.
 
 ## Report schema (fixed; do not deviate)
 
@@ -251,6 +280,6 @@ Always **one Write call**, then re-Read to verify (per insight-index L10 on Edit
 
 - Editing upstream docs to "fix" anti-patterns (forbidden by tools whitelist anyway).
 - Promoting a finding above its ladder severity ("feels worse than WARN" — no).
-- Reading production code (out-of-scope; would inflate token cost and exceed NFR-2 budget).
+- Reading production code (out-of-scope; would inflate token cost and exceed NFR-2 budget) — except in entropy mode (see Hard-rule #1 exception).
 - Writing more than one file per invocation.
 - Omitting the `Verdict: <WORD>` line (breaks `verify_all I.7`).

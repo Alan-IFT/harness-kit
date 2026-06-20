@@ -53,10 +53,10 @@ done
 
 # C.1 — skills
 missing_skills=""
-for s in harness harness-init harness-adopt harness-verify harness-status harness-plan harness-explore harness-goal harness-intervene harness-supervise harness-batch harness-stream harness-upgrade harness-language harness-decision-mode harness-grill; do
+for s in harness harness-init harness-adopt harness-verify harness-status harness-plan harness-explore harness-goal harness-intervene harness-supervise harness-batch harness-stream harness-upgrade harness-language harness-decision-mode harness-grill harness-deflate; do
     [[ -f "skills/$s/SKILL.md" ]] || missing_skills="$missing_skills $s"
 done
-[[ -z "$missing_skills" ]] && step "C.1" "All 16 skills present" "PASS" || step "C.1" "All 16 skills present" "FAIL" "missing:$missing_skills"
+[[ -z "$missing_skills" ]] && step "C.1" "All 17 skills present" "PASS" || step "C.1" "All 17 skills present" "FAIL" "missing:$missing_skills"
 
 # C.2 — frontmatter sanity
 bad=""
@@ -281,7 +281,7 @@ fi
 
 # F.1 — script symmetry
 missing_sym=""
-for pair in verify_all sync-self harness-sync test-init test-real-project ambient-prompt ambient-reset upgrade-project language-policy; do
+for pair in verify_all sync-self harness-sync test-init test-real-project ambient-prompt ambient-reset upgrade-project language-policy entropy-cadence; do
     [[ -f ".harness/scripts/$pair.ps1" ]] || missing_sym="$missing_sym .harness/scripts/$pair.ps1"
     [[ -f ".harness/scripts/$pair.sh" ]] || missing_sym="$missing_sym .harness/scripts/$pair.sh"
 done
@@ -326,10 +326,10 @@ fi
 # G.1 — README mentions skills
 readme=$(cat README.md)
 miss_r=""
-for s in harness harness-init harness-adopt harness-verify harness-status harness-plan harness-explore harness-goal harness-intervene harness-supervise harness-batch harness-stream harness-upgrade harness-language harness-decision-mode harness-grill; do
+for s in harness harness-init harness-adopt harness-verify harness-status harness-plan harness-explore harness-goal harness-intervene harness-supervise harness-batch harness-stream harness-upgrade harness-language harness-decision-mode harness-grill harness-deflate; do
     grep -q "$s" <<< "$readme" || miss_r="$miss_r $s"
 done
-[[ -z "$miss_r" ]] && step "G.1" "README references all 16 skills" "PASS" || step "G.1" "README references all 16 skills" "FAIL" "missing:$miss_r"
+[[ -z "$miss_r" ]] && step "G.1" "README references all 17 skills" "PASS" || step "G.1" "README references all 17 skills" "FAIL" "missing:$miss_r"
 
 # H.1 — fixtures
 missing_fix=""
@@ -342,10 +342,10 @@ done
 # G.2 — CHANGELOG mentions skills
 cl=$(cat CHANGELOG.md)
 miss_c=""
-for s in harness harness-init harness-adopt harness-verify harness-status harness-plan harness-explore harness-goal harness-intervene harness-supervise harness-batch harness-stream harness-upgrade harness-language harness-decision-mode harness-grill; do
+for s in harness harness-init harness-adopt harness-verify harness-status harness-plan harness-explore harness-goal harness-intervene harness-supervise harness-batch harness-stream harness-upgrade harness-language harness-decision-mode harness-grill harness-deflate; do
     grep -q "$s" <<< "$cl" || miss_c="$miss_c $s"
 done
-[[ -z "$miss_c" ]] && step "G.2" "CHANGELOG references all 16 skills" "PASS" || step "G.2" "CHANGELOG references all 16 skills" "FAIL" "missing:$miss_c"
+[[ -z "$miss_c" ]] && step "G.2" "CHANGELOG references all 17 skills" "PASS" || step "G.2" "CHANGELOG references all 17 skills" "FAIL" "missing:$miss_c"
 
 # G.3 — Version stamps consistent across plugin.json / marketplace.json / README badges
 # Extracts the FIRST "version": "X.Y.Z" from each JSON (both manifests have a single version field today)

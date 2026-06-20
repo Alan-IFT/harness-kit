@@ -49,3 +49,11 @@
 ## Rotated 2026-06-20
 
 - 2026-05-19 · A bash `while IFS= read -r VAR` loop variable name that collides with a globally-mutated array (e.g. `report=()` declared at script top) silently clobbers the array via scalar→array coercion. Symptom: off-by-one in totals derived from the array. Defense: never reuse a global array name as a loop variable; prefer `array=()` over `declare -a array` (per existing insight) AND adopt the convention "loop variables for file paths are named `<thing>_file`, not bare `<thing>`". · evidence: T-003 dev rollback round 0, .harness/scripts/verify_all.sh:14,451 (post-fix)
+
+## Rotated 2026-06-20
+
+- 2026-05-19 · An observer agent's contract MUST exclude `Edit/Bash/PowerShell/Task` from `tools:` to be structurally read-only — not just "we promise not to". Frontmatter is the only enforceable boundary; the prose contract is advisory. Verify via word-boundary regex test in the test driver (`tools:.*\b(Edit|Bash|PowerShell|Task)\b` matches → FAIL). · evidence: T-003 supervisor.md:4 + test-supervisor.ps1:128-138
+
+## Rotated 2026-06-20
+
+- 2026-05-23 · v0.18.0 upgraded the I.6 retired-claim guard (insight L18) from literal-substring to a gap-tolerant ordered-anchor scan with per-entry line-scoped `exclude` tokens — a retired claim re-phrased with a word inserted between the banned tokens is now caught, and accurate negated prose is suppressed by the `exclude`. Exempt-dir widened to all of `docs/features/`; the `test-verify-i6.{ps1,sh}` regression pair must be added to the I.6 exempt-FILE list (it holds a verbatim copy of the banned list, same reason verify_all is exempt). · evidence: T-004, .harness/scripts/verify_all.{sh,ps1} I.6 block

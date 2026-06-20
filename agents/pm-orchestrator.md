@@ -193,6 +193,48 @@ from the codebase in <10 minutes.
 Then update `docs/tasks.md` and append a one-line entry referencing this folder.
 Then run `.harness/scripts/archive-task --task <slug>` (step 9 of "How to start a task").
 
+### Entropy watch at delivery (cadenced, non-blocking — full mode only)
+
+This fires only when the task `mode` is `full` (the `/harness` single-task delivery). For
+`goal` mode, SKIP this entire subsection — goal mode's iterative 4⇄6 loop reaches stage 7
+too, but the single-task delivery surface is `full`-only this slice (the stream covers its
+own boundary). After the delivery is composed and BEFORE `archive-task`, run the shared
+anti-entropy cadence so a due holistic sweep surfaces on the same boundary. It is
+**non-blocking and fail-open**: it never changes the delivery verdict, never gates or halts,
+and any cadence I/O problem resolves to not-due. The cadence due-logic + threshold live in
+ONE place — the shared `.harness/scripts/entropy-cadence` pair (the same unit
+`/harness-stream` and `/harness-deflate` use).
+
+1. **Increment.** Call `.harness/scripts/entropy-cadence delivered` (one increment per
+   delivered single task — only a task that actually reached DELIVERED counts).
+2. **Check cadence.** Call `.harness/scripts/entropy-cadence check` — the **plain counter
+   form, WITHOUT `--first-of-session`** (that flag is the stream's drain-boundary trigger;
+   a single-task `/harness` run has no session-drain semantics). Read the one-line stdout:
+   - **`NOT-DUE`** (or any error / missing output — fail-open) → done: **no scan, no
+     `## Entropy watch` section, no entropy digest**. The delivery proceeds unchanged.
+   - **`DUE`** → continue.
+3. **Run the scan once.** Dispatch `harness-kit:supervisor` via the `Task` tool **in entropy
+   mode** — the dispatch prompt names: "entropy lens / EP-* / follow
+   `skills/harness-deflate/references/entropy-scan.md` exactly / write
+   `docs/features/_supervision/entropy-<ISO-date>.md`". The supervisor is observer-only and
+   writes exactly one artifact. Run the scan once per `DUE` verdict.
+4. **Append the section.** Read the artifact's machine-readable last line
+   `Entropy-verdict: FINDINGS-PRESENT | CLEAN` and append a `## Entropy watch` section to
+   `07_DELIVERY.md`: the findings table (or `None.` when `CLEAN`), a link to the entropy
+   artifact, and a note that deepening a finding is opt-in via `/harness-deflate`
+   (authorize → `/harness-goal`). The `/harness` delivery itself **never** runs a refactor.
+   If the scan produced no readable artifact, **omit the section** but still proceed to
+   step 5 (non-blocking — never wedge the boundary).
+5. **Reset the cadence.** Call `.harness/scripts/entropy-cadence swept` (resets the counter
+   to 0 and stamps last-sweep, so the same delivery boundary does not re-trigger).
+
+Ordering at delivery: compose `07_DELIVERY.md` → this entropy watch → update `docs/tasks.md`
+→ `archive-task` (so the `## Entropy watch` section is archived with the delivery doc). This
+mirrors the stream's `### Entropy watch (cadenced, non-blocking)` block in
+`skills/harness-stream/SKILL.md` — same surfacing shape, differing only in the documented
+ways (plain `check`, writes `07_DELIVERY.md`, no needs-input ordering). The scan dispatch
+points at the SAME `references/entropy-scan.md` — no second scan description is created.
+
 ## When to stop and ask the user
 
 Some points genuinely belong to the human — the active **decision mode** (`.harness/rules/25-decision-policy.md`) decides which (Mode 1: any judgment call; Mode 2/3: a red line, or a rubric-uncovered / irreversible call). Examples:

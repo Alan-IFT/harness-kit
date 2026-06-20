@@ -2,9 +2,9 @@
 
 **English** · [简体中文](README.zh-CN.md)
 
-![version](https://img.shields.io/badge/version-0.40.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-32%2F32-brightgreen) ![test-init](https://img.shields.io/badge/test--init-314%2F314-brightgreen) ![integration](https://img.shields.io/badge/integration-90%2F90-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.43.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-32%2F32-brightgreen) ![test-init](https://img.shields.io/badge/test--init-314%2F314-brightgreen) ![integration](https://img.shields.io/badge/integration-90%2F90-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
-> **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (16 skills + 8 framework agents + project templates) that brings disciplined AI-driven development to fullstack and backend projects. **Claude-native** (the framework agents ship as plugin agents — no per-project copy).
+> **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (17 skills + 8 framework agents + project templates) that brings disciplined AI-driven development to fullstack and backend projects. **Claude-native** (the framework agents ship as plugin agents — no per-project copy).
 >
 > **Goal**: humans only do "describe the requirement" and "step in when AI can't"; everything else — 7-agent pipeline, verify gates, structured documents — runs automatically.
 
@@ -12,7 +12,7 @@ _**v0.34–0.40 adoption wave**: absorbed the transferable strengths of [mattpoc
 
 ## What's inside
 
-This is a Claude Code Plugin packaging that gives any project sixteen AI skills:
+This is a Claude Code Plugin packaging that gives any project seventeen AI skills:
 
 **Pipeline skills** (six task shapes the AI picks from your natural-language description, plus a pre-pipeline aligner)
 - `/harness-kit:harness-grill` — runs **before** the pipeline to align the requirement: a relentless one-question-at-a-time interview (a recommended answer per question, self-answers from the codebase where it can, reads `CONTEXT.md` if present) that emits an aligned brief to `docs/features/<slug>/INPUT.md` and stops. Use when you're not sure you've said what you actually want yet — then hand the brief to `/harness` or a `/harness-stream` pool.
@@ -35,6 +35,7 @@ This is a Claude Code Plugin packaging that gives any project sixteen AI skills:
 - `/harness-kit:harness-intervene` — soft Ctrl-C for an in-flight pipeline: drop a `STOP` / `REDIRECT` / `SKIP` / `NOTE` signal that the PM consumes at the next stage boundary
 - `/harness-kit:harness-supervise` — observer-only auxiliary skill (v0.17+): reads an in-flight or archived task folder and emits a `SUPERVISION_REPORT.md` flagging anti-patterns (rollback rate, stage-doc thinness, missing intervention checks, missing archive call) with `INFO`/`WARN`/`ALERT` severity and a final `HEALTHY`/`WATCH`/`INTERVENE` verdict
 - `/harness-kit:harness-decision-mode` — set or switch a project's decision/escalation **mode**: Mode 1 (human decides, the default), Mode 2 (AI decides per the preset rubric), or Mode 3 (AI decides per your custom rubric). Surgically rewrites only the "Active mode" line of `.harness/rules/25-decision-policy.md`; on a first Mode-3 switch it collects your custom decision prompts. Non-destructive, idempotent, clean-git gated
+- `/harness-kit:harness-deflate` — holistic **anti-entropy sweep** (v0.41+): scans the WHOLE codebase (not one task) via the read-only supervisor entropy lens for accumulated structural rot — shallow modules, cross-seam leakage, coupling clusters, deepening candidates — presents each finding with WHERE + a `Strong`/`Worth exploring`/`Speculative` strength badge, and on your **explicit authorization** hands the chosen deepening to `/harness-goal` to refactor it to `verify_all` green. Machine reminds, you authorize, machine executes — it never refactors without authorization. `/harness-stream` also surfaces the same sweep automatically on a due cadence boundary (`## Entropy watch`, non-blocking)
 
 After init, every non-trivial task flows through a **7-agent pipeline**: PM Orchestrator → Requirement Analyst → Solution Architect → Gate Reviewer → Developer (or partition `dev-*`) → Code Reviewer → QA Tester → Delivery.
 
