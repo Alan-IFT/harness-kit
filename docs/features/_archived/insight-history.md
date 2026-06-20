@@ -37,3 +37,15 @@
 ## Rotated 2026-06-12
 
 - 2026-05-19 · A round-1 doc-resync sweep that updates README/AI-GUIDE/dev-map/walkthrough/architecture but misses CHANGELOG.md (the very file that DESCRIBES the sweep) is a recurring failure mode — the writer optimizes for "consumer-facing surfaces" and forgets that CHANGELOG itself states counts. Add CHANGELOG to the explicit fan-out checklist of any insight-index-line-14 sweep. · evidence: T-002 round-1 review M-1, CHANGELOG.md:43,45,47,55 (post-fix)
+
+## Rotated 2026-06-20
+
+- 2026-05-19 · When two test cases share a temp dir, "bidirectional opt-in/opt-out" assertions silently degrade into "sequence of opt-in then opt-out" rather than two independent end states. Detection: search test code for `[opt-out]` and `[opt-in]` assertions sharing a `$tmp` / `mktemp -d` allocation. Fix: separate `mktemp -d -t harness-test-optout-XXXXXX` allocations with isolated lifecycle. · evidence: T-002 round-1 review M-3, .harness/scripts/test-init.{ps1,sh} (post-fix)
+
+## Rotated 2026-06-20
+
+- 2026-05-19 · PowerShell `-match` is case-INSENSITIVE by default; use `-cmatch` for any regex check that enforces a fixed-case contract (e.g. `Verdict: INTERVENE` as a binding schema). Same insight class as `-cnotin` (T-002) and `-ccontains` (T-001) — the pattern is "all PS string operators need their case-sensitive variant when the contract is fixed-case." Detection: any PS string operator without a leading `c` in a contract-enforcing context is suspect. · evidence: T-003 BUG-1, .harness/scripts/verify_all.ps1:439 (post-fix)
+
+## Rotated 2026-06-20
+
+- 2026-05-19 · A bash `while IFS= read -r VAR` loop variable name that collides with a globally-mutated array (e.g. `report=()` declared at script top) silently clobbers the array via scalar→array coercion. Symptom: off-by-one in totals derived from the array. Defense: never reuse a global array name as a loop variable; prefer `array=()` over `declare -a array` (per existing insight) AND adopt the convention "loop variables for file paths are named `<thing>_file`, not bare `<thing>`". · evidence: T-003 dev rollback round 0, .harness/scripts/verify_all.sh:14,451 (post-fix)

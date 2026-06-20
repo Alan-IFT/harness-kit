@@ -137,6 +137,8 @@ test_type() {
     assert ".harness/rules/25-decision-policy.md defaults to Mode 1" "grep -q 'Active mode: 1' '$tmp/.harness/rules/25-decision-policy.md'"
     assert ".harness/decision-rubric.md (shipped, generic)" "[[ -f '$tmp/.harness/decision-rubric.md' ]]"
     assert ".harness/decision-rubric.md has Preset + Custom sections" "grep -q 'Preset rubric (Mode 2)' '$tmp/.harness/decision-rubric.md' && grep -q 'Custom rubric (Mode 3)' '$tmp/.harness/decision-rubric.md'"
+    assert "CONTEXT.md seed present (generic glossary)" "[[ -f '$tmp/CONTEXT.md' ]]"
+    assert "rejected-decisions.md seed present (generic)" "[[ -f '$tmp/.harness/rejected-decisions.md' ]]"
     assert ".harness/rules/50-$project_type.md (overlay)" "[[ -f '$tmp/.harness/rules/50-$project_type.md' ]]"
     if [[ "$project_type" != "generic" ]]; then
         for s in build test verify; do

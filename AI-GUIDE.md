@@ -4,7 +4,7 @@
 
 ## Project
 
-This is **harness-kit** itself — a Claude Code Plugin that distributes 15 skills + templates for AI-driven development under the Harness Engineering methodology. The repo **dogfoods** its own design: the same canonical 7-agent pipeline (plus the v0.17+ auxiliary supervisor) that we ship to users governs work here.
+This is **harness-kit** itself — a Claude Code Plugin that distributes 16 skills + templates for AI-driven development under the Harness Engineering methodology. The repo **dogfoods** its own design: the same canonical 7-agent pipeline (plus the v0.17+ auxiliary supervisor) that we ship to users governs work here.
 
 Stack: Markdown (skills, agent definitions, docs) + PowerShell + Bash (verify_all, install, sync scripts).
 
@@ -36,6 +36,8 @@ Stack: Markdown (skills, agent definitions, docs) + PowerShell + Bash (verify_al
 **Memory layer**:
 - **`.harness/insight-index.md`** — ≤30 evidence-backed lines of project-specific facts. Read at task start; append at task end (only with evidence). Never edit other people's lines.
 - **`.harness/decision-rubric.md`** — the operator-authored principles the AI decides by under Mode 2 (see `25-decision-policy.md`). Read at every escalate-or-decide point; the operator edits it to widen / narrow autonomy.
+- **`CONTEXT.md`** (repo root) — the project's domain glossary: tight definitions + `_Avoid_` synonyms for project-specific terms. Read it when naming modules/files/symbols or writing a requirement/design so naming stays canonical; maintain it inline when you coin or sharpen a term. Absent is fine — it is a convenience, not a gate.
+- **`.harness/rejected-decisions.md`** — deliberately-declined requests/approaches + why (the fourth memory kind: declined options, distinct from truths / autonomy principles / glossary). Read it at a non-trivial decide-point before proposing a new approach/feature; append a record when something is deliberately declined. The habit is governed by `25-decision-policy.md`. Absent is fine — a convenience, not a gate.
 
 Before declaring any task complete, run `.harness/scripts/verify_all` and confirm all PASS checks are green (32/32; check count grows with releases) — this is the gate, not a rule fragment.
 
@@ -85,6 +87,7 @@ The framework agents are **plugin-native** (`harness-kit:<name>`, auto-discovere
 
 | Mode | Use when (English triggers) | Use when (中文触发) | Skill |
 |---|---|---|---|
+| Pre-pipeline alignment interview | "grill me on this" / "interview me about this plan" / "pin down what I actually want before we build" | "拷问我的需求" / "逐条对齐需求" / "动手前先把需求问清楚" | `/harness-grill` |
 | Full 7-stage pipeline | "Add X" / "Fix bug Y" / "Refactor Z to ..." — real shipping work | "加一个 ..." / "修个 bug" / "重构成 ..." | `/harness` |
 | Plan only (stages 1-3) | "Vet this design" / "evaluate the approach before coding" | "评审一下..." / "先别动手" / "设计上行不行" | `/harness-plan` |
 | Explore / feasibility | "Can we do X?" / "Is library Y feasible?" — research | "能不能..." / "可行吗" / "调研一下" | `/harness-explore` |

@@ -42,15 +42,16 @@ A file `docs/features/<task-slug>/02_SOLUTION_DESIGN.md` containing:
 2. Read `AI-GUIDE.md` and load relevant `.harness/rules/*.md` fragments by their triggers (carry constraints from `50-<project-type>.md` and any partitioning rules).
 3. Read `.harness/insight-index.md` — any line about stack quirks or non-obvious truths may constrain your design (e.g. "Vendor SDK v2.7.1 returns null for invalid keys" affects error-handling design).
 4. Read `docs/dev-map.md` for project structure and existing patterns.
-5. Grep the codebase for symbols related to the requirement (function names, similar features, related modules).
-6. Draft the design. For each module, list:
+5. If a project glossary (`CONTEXT.md`, usually at repo root) is present, read it and use its canonical names for new modules / files / symbols; if you introduce or sharpen a domain term in the design, record it there inline (bold term + 1-2 sentence definition + `_Avoid_:` synonyms). If there is no `CONTEXT.md`, just proceed — it never blocks the design. Likewise, if `.harness/rejected-decisions.md` is present, check it before introducing a new approach/module — if it was already declined, surface that decision rather than re-designing it; when you deliberately decline an approach, append a record there per `.harness/rules/25-decision-policy.md`. Absent is fine — it never blocks the design.
+6. Grep the codebase for symbols related to the requirement (function names, similar features, related modules).
+7. Draft the design. For each module, list:
    - file path (existing or proposed)
    - public API (function signatures, REST routes, DB tables)
    - reasons for the choice
-7. Run the reuse audit: is there existing code that does most of this? If yes, design extends/reuses; if no, document why.
-8. Risk analysis: list at least 3 risks; for each, write the mitigation.
-9. Migration plan: if data or API shapes change, write the migration sequence and rollback.
-10. If everything fits → `READY`. Else → `BLOCKED` with specific reason.
+8. Run the reuse audit: is there existing code that does most of this? If yes, design extends/reuses; if no, document why.
+9. Risk analysis: list at least 3 risks; for each, write the mitigation.
+10. Migration plan: if data or API shapes change, write the migration sequence and rollback.
+11. If everything fits → `READY`. Else → `BLOCKED` with specific reason.
 
 ## Mode-specific note
 
@@ -119,3 +120,25 @@ table — clarity matters more than table size. If the project uses single Devel
 - "The service should be scalable." → quantify or remove.
 - New module without a reuse audit explanation.
 - Design that contradicts the requirement document (instead, return `BLOCKED`).
+
+## Design vocabulary (optional lens)
+
+A lens you **may** reach for when designing or sharpening a module boundary — these are leading
+words to think *with*, not a checklist to tick off and not a required `02_SOLUTION_DESIGN.md` field.
+Aim for **deep modules**: a lot of behaviour behind a small interface, placed at a clean seam.
+
+- **Module** — anything with an interface and an implementation (a function, class, package, or a tier-spanning slice). Scale-agnostic; not "component"/"service".
+- **Interface** — everything a caller must know to use it correctly: the type signature *and* invariants, ordering constraints, error modes, required config, and performance characteristics. Broader than the signature alone.
+- **Depth** — leverage per unit of interface: how much behaviour a caller exercises per unit of interface they must learn. Deep = much behaviour behind a small interface (not the impl-to-interface line ratio).
+- **Seam** — the location where the interface lives: a place you can alter behaviour without editing in that place. Where the seam goes is its own decision, separate from what sits behind it.
+- **Adapter** — a concrete thing that satisfies an interface at a seam (a role/slot, not a substance).
+- **Leverage** — the caller's payoff from depth: one implementation pays back across N call sites and M tests.
+- **Locality** — the maintainer's payoff from depth: change, bugs, and verification concentrate in one place — fix once, fixed everywhere.
+
+When the lens is useful:
+
+- **The deletion test.** Imagine deleting the module. If complexity vanishes, it was a pass-through; if complexity reappears across N callers, it earned its keep.
+- **The interface is the test surface.** Callers and tests cross the same seam — if you need to test *past* the interface, the module is probably the wrong shape.
+- **One adapter means a hypothetical seam; two means a real one.** Don't introduce a seam unless something actually varies across it.
+
+_Future options (not used here): finer dependency categories (in-process / local-substitutable / remote-owned / true-external) and a design-it-twice parallel-exploration pattern — both deferred._

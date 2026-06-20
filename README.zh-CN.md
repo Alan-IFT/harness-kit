@@ -2,17 +2,20 @@
 
 [English](README.md) · **简体中文**
 
-![version](https://img.shields.io/badge/version-0.33.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-32%2F32-brightgreen) ![test-init](https://img.shields.io/badge/test--init-308%2F308-brightgreen) ![integration](https://img.shields.io/badge/integration-90%2F90-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.40.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-32%2F32-brightgreen) ![test-init](https://img.shields.io/badge/test--init-308%2F308-brightgreen) ![integration](https://img.shields.io/badge/integration-90%2F90-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
-> **Claude Code 的 Harness Engineering 工具包** — 一个 Claude Code Plugin（15 个 skills + 8 个框架 agent + 项目模板），把"有纪律的 AI 驱动开发"带到全栈和后端项目里。**Claude 原生**（框架 agent 以 plugin agent 形式分发，不再逐项目拷贝）。
+> **Claude Code 的 Harness Engineering 工具包** — 一个 Claude Code Plugin（16 个 skills + 8 个框架 agent + 项目模板），把"有纪律的 AI 驱动开发"带到全栈和后端项目里。**Claude 原生**（框架 agent 以 plugin agent 形式分发，不再逐项目拷贝）。
 >
 > **目标**：人工只做"描述需求"和"AI 做不到时介入"；其他全部 — 7-Agent 流水线、验证闸门、结构化文档 — 自动运行。
 
+_**v0.34–0.40 升级波**：吸收了 [mattpocock/skills](https://github.com/mattpocock/skills) 中可迁移的优点——领域术语表、需求拷问、耐久简报、双轴评审、拒绝记忆等。唯一新增命令是**可选的** `/harness-grill`；其余改进都内化进现有 agent/规则——用法不变、无需学新东西。_
+
 ## 包含什么
 
-这是一个 Claude Code Plugin 包，给任何项目装上 15 个 AI skill：
+这是一个 Claude Code Plugin 包，给任何项目装上 16 个 AI skill：
 
-**流水线类**（6 种任务形态，AI 根据你的自然语言自动挑对应那条）
+**流水线类**（6 种任务形态，AI 根据你的自然语言自动挑对应那条；外加一个跑在流水线之前的需求对齐器）
+- `/harness-kit:harness-grill` — 跑在流水线**之前**做需求对齐：一场关不住的逐题拷问（每题给一个推荐答案、能从代码库自答的就自答、有 `CONTEXT.md` 就读），把对齐后的简报写到 `docs/features/<slug>/INPUT.md` 后停止。适合"还不确定自己到底想要什么"时先用——再把简报交给 `/harness` 或丢进 `/harness-stream` 池。
 - `/harness-kit:harness` — 完整 7-stage 流水线（RA → SA → GR → Dev → CR → QA → 交付）。用于真正的功能 / bug / 重构。
 - `/harness-kit:harness-plan` — 只做设计：跑 RA + SA + GR，给出判决后停止，**不写代码**。用于"投入工程时间前先验证设计"。
 - `/harness-kit:harness-explore` — 调研/可行性：轻量 RA + 一份带引用的 `findings.md`。**不做设计、不写代码**。用于"这事儿到底能不能做？"

@@ -138,6 +138,7 @@ Write-Host ""
 Write-Host "Done." -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Use in Claude Code:" -ForegroundColor White
+Write-Host "  /harness-grill    pre-pipeline alignment interview (pins the requirement, emits a brief)"
 Write-Host "  /harness          full 7-stage pipeline (real feature / bug / refactor)"
 Write-Host "  /harness-plan     design-only mode (RA + SA + GR, no Dev)"
 Write-Host "  /harness-explore  research/feasibility (light RA + findings.md)"

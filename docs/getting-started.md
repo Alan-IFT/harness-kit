@@ -33,10 +33,11 @@ git clone https://github.com/Alan-IFT/harness-kit ~/harness-kit
 ~/harness-kit/install.sh
 ```
 
-Either path makes fifteen skills available in Claude Code:
+Either path makes sixteen skills available in Claude Code:
 
-Pipeline (pick by task shape):
+Pipeline (pick by task shape; plus a pre-pipeline aligner):
 
+- `harness-grill` — pre-pipeline alignment interview (one question at a time, a recommended answer per question, self-answers from the codebase) that emits an aligned brief and stops; hand the brief to `harness` or a `harness-stream` pool
 - `harness` — full 7-stage pipeline (RA → SA → GR → Dev → CR → QA → Delivery)
 - `harness-plan` — design-only mode (stops at Gate Review verdict)
 - `harness-explore` — research / feasibility mode

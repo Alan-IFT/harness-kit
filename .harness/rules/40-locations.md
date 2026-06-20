@@ -28,7 +28,7 @@
 - No secrets / committed env files
 - `参考/` not tracked
 - Required scaffolding present (README, LICENSE, CHANGELOG, CONTRIBUTING, installers)
-- All 15 skills present with valid frontmatter
+- All 16 skills present with valid frontmatter
 - All 7 template agents present
 - Placeholder whitelist enforced (7 allowed)
 - `.harness/agents/` matches `templates/common/.harness/agents/` (Layer 1)

@@ -1,0 +1,19 @@
+# PM Log — rejected-decisions-memory (T-09)
+
+> Mode: full · /harness-stream default pool · PM in main thread. Independent (no deps). Tier-3 wave.
+
+- 2026-06-20 · Task created (folder + INPUT.md). Mode=full.
+- 2026-06-20 · intervention.md check: absent.
+- 2026-06-20 · insight-index read; surfaced: memory-layer distinctness (don't overload insight-index; I.4 cap), dual-purpose template pattern, AI-GUIDE I.1 cap, prefer-no-guard (feedback_design_over_guards), I.6 self-trip caution, this batch's declines as seed.
+- 2026-06-20 · Stage 1 dispatch: harness-kit:requirement-analyst (assess file-vs-convention lighter fit).
+- 2026-06-20 · Stage 1 RESULT: READY. 11 behaviors / 5 OQ (proceedable). Recommend a single dedicated FILE `.harness/rejected-decisions.md` (lightest: 1 append-only file, NOT per-concept dir, NOT a gate) over the convention (option b already exists in 15-skill-authoring + has failed — invisible at non-skill-authoring decide-points). Follows T-02 CONTEXT.md blueprint (dogfood + generic non-byte-synced template seed, AI-GUIDE line, dev-map row, no new check). Read/append habit single-sourced in 25-decision-policy.md (loads at decide-points); RA/SA carry 1-line soft pointers. Seed with this batch's declines. Telemetry entry in 15-skill-authoring reconciled to a pointer. Version likely 0.40.0, no count flip. ADVANCE to Stage 2.
+- 2026-06-20 · Stage 2 dispatch: harness-kit:solution-architect.
+- 2026-06-20 · Stage 2 RESULT: READY. Create 2 (dogfood .harness/rejected-decisions.md w/ 9 seed records [1 deferred + 8 declined]; generic placeholder-free template seed). Edit 13: 25-decision-policy (single-source read/append bullet), RA step 7 + SA step 5 pointers (to rule 25), 15-skill-authoring telemetry→pointer (single-source), AI-GUIDE 4th memory line, dev-map row+tree, test-init.{ps1,sh} seed assertion, 4 version stamps, CHANGELOG [0.40.0], baseline reconcile. Version 0.39.0→0.40.0. No count flip, no new check, placeholder-free (D.2 stays 7), I.6-safe, not byte-synced (CONTEXT.md/decision-rubric pattern). test-init +3 bash → PM reconciles baseline. ADVANCE to Stage 3.
+- 2026-06-20 · Stage 3 dispatch: harness-kit:gate-reviewer.
+- 2026-06-20 · Stage 3 RESULT: **APPROVED FOR DEVELOPMENT** (8/8 + 6 checks PASS, 3 WARN non-blocking). F-1 RA doc stale "15 skills" (live=16; design correct + no count flip → safe; dev must NOT edit counts toward 15). F-2 reconcile test-init badge(308, PS) + baseline test_init_* from captured runs. F-3 keep rule-15 telemetry a pure pointer. Conditions C1 no-count-edits / C2 captured-baseline / C3 verify_all both shells. PM persisted 03. ADVANCE to Stage 4.
+- 2026-06-20 · Stage 4 dispatch: harness-kit:developer (carry C1-C3).
+- 2026-06-20 · Stage 4 RESULT: READY FOR REVIEW. Create 2 (dogfood .harness/rejected-decisions.md w/ 9 seed records + generic seed) + edit 14 (25-decision-policy single-source, RA/SA pointers, 15-skill-authoring telemetry→pointer, AI-GUIDE, dev-map, test-init.{ps1,sh}, 4 stamps, CHANGELOG [0.40.0], baseline bash 273→276). verify_all.sh 32/0/0 (I.6 both new files in scope), test-init.sh 276 (+3 captured). C1 zero count edits / C2 PS field 308 + badges left for PM / C3 both-shells (PS deferred) honored. No new check, no placeholder, not byte-synced.
+- 2026-06-20 · Stage 4 regression gate (PM): verify_all.sh 32/0/0 = no hard stop. PS twin (verify_all.ps1/test-init.ps1 expected 311) operator-pending.
+- 2026-06-20 · Stage 5 dispatch: harness-kit:code-reviewer (scope to T-09 files; prior-task churn co-mingled — review only T-09's surgical edits; PM persists 05).
+- 2026-06-20 · Stage 5 RESULT: **APPROVED WITH NOTES** (both axes PASS, 0 CRIT/MAJOR/MINOR, 2 NIT design-licensed). 11/11 ACs, design verbatim zero drift, C1-C3 + F-1/F-2/F-3 honored (no count edit; only bash baseline 276 captured; I.6 both new files clean). PM persisted 05. ADVANCE to Stage 6.
+- 2026-06-20 · Stage 6 dispatch: harness-kit:qa-tester.

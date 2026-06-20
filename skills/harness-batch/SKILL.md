@@ -33,6 +33,8 @@ A single argument: `<batch-id>` — the folder name under `docs/batches/`. The f
 
 If the folder or the plan file is missing, point the user at `docs/batches/_template/BATCH_PLAN.md` and ask them to copy it to `docs/batches/<batch-id>/BATCH_PLAN.md`, fill in the task table, then re-invoke.
 
+When you author the rows, make each one a tracer-bullet vertical slice that fits the smart zone — see `harness-plan` → "Task-decomposition discipline".
+
 ## Procedure
 
 1. **Argument validation.** Confirm `docs/batches/<batch-id>/BATCH_PLAN.md` exists. If not, surface the template path and stop.

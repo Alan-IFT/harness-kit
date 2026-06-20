@@ -24,6 +24,32 @@ A file `docs/features/<task-slug>/05_CODE_REVIEW.md` containing structured findi
 | 5 | **Security** | Input validation, authz/authn, secret leaks, SQL injection, unsafe deserialization |
 | 6 | **Maintainability** | Naming, structure, comments only where needed (the WHY), no dead code, no premature abstractions |
 
+## Two review axes
+
+The 6 dimensions above are read through **two explicitly-separated lenses**. Score each axis on its
+own; never merge them into one pass/fail — a change can clear one axis and fail the other, and a
+collapsed verdict would hide that.
+
+- **Standards-conformance** — does the change follow THIS repo's documented conventions: AI-GUIDE
+  rules, `.harness/rules/*`, dev-map patterns, naming, doc-size caps, cross-shell parity? (Dimension
+  6 Maintainability, plus the "no invented rules" check, live here.)
+- **Spec/design-fidelity** — does the change match `01_REQUIREMENT_ANALYSIS.md` and
+  `02_SOLUTION_DESIGN.md`? (Dimensions 2 Requirement fidelity + 3 Design fidelity, plus the
+  Requirement-coverage and Design-fidelity check tables, live here.)
+
+Dimensions 1 (Logic), 4 (Performance), and 5 (Security) attribute to whichever axis a given finding
+is most actionable on — a broken error path against a spec'd behaviour is Spec/design-fidelity; the
+same bug against an undocumented edge is Standards. Attribute, don't double-count; cross-reference if
+a finding genuinely spans both.
+
+**Masking rule (binds the verdict).** Each axis surfaces its OWN findings and its OWN worst result.
+An axis with nothing to report says so explicitly ("Standards: no findings") — silence is the masking
+failure this lens exists to prevent. The verdict cannot read `APPROVED` while either axis carries an
+unaddressed CRITICAL or MAJOR; the aggregate is the more severe of the two axes. If there is no
+`02_SOLUTION_DESIGN.md` (a requirement-only task), the Spec/design-fidelity axis reviews against `01`
+alone and the per-axis line notes "Spec/design: no design doc — requirement-only" rather than
+fabricating or blocking.
+
 ## Severity levels
 
 - **CRITICAL** — must fix before merge (broken behavior, security hole, data loss risk).
@@ -46,7 +72,9 @@ A file `docs/features/<task-slug>/05_CODE_REVIEW.md` containing structured findi
 3. Read any related tests (look for `*.test.*`, `*.spec.*`, `tests/`, `__tests__/`).
 4. For each of 6 dimensions, write findings.
 5. For each acceptance criterion in the requirement, verify the implementation exists. Missing criterion = CRITICAL.
-6. Write verdict:
+6. Group every finding under its axis (Standards-conformance / Spec/design-fidelity) and record each
+   axis's worst severity — including an explicit clean result for an axis with no findings.
+7. Write verdict:
    - `APPROVED` — no CRITICAL or MAJOR; MINOR/NIT may exist as notes.
    - `CHANGES REQUIRED` — has CRITICAL or MAJOR; lists them and routes back to developer.
 
@@ -87,6 +115,10 @@ A file `docs/features/<task-slug>/05_CODE_REVIEW.md` containing structured findi
 |---|---|---|
 | Module Foo with API X | `src/foo.ts` exports X | ✅ |
 | Cache layer using Redis | Uses in-memory Map instead | ❌ MAJOR (drift) |
+
+## Axis status
+- Standards-conformance: <clean | N findings, worst = SEVERITY>
+- Spec/design-fidelity: <clean | N findings, worst = SEVERITY>
 
 ## Verdict
 CHANGES REQUIRED (2 CRITICAL, 1 MAJOR)

@@ -54,7 +54,8 @@ harness-kit/
 │   ├── harness-intervene/SKILL.md      ← Soft Ctrl-C for an in-flight pipeline
 │   ├── harness-supervise/SKILL.md      ← Observer-only auxiliary skill (v0.17+); emits SUPERVISION_REPORT.md
 │   ├── harness-batch/SKILL.md          ← Batch mode (v0.19+); runs T-01...T-NN via pm-orchestrator sub-agents from docs/batches/<batch-id>/BATCH_PLAN.md
-│   └── harness-stream/SKILL.md         ← Stream / living-pool mode (v0.22+); re-reads BATCH_PLAN.md each iteration, best-effort, picks up mid-run additions
+│   ├── harness-stream/SKILL.md         ← Stream / living-pool mode (v0.22+); re-reads BATCH_PLAN.md each iteration, best-effort, picks up mid-run additions
+│   └── harness-grill/SKILL.md          ← Pre-pipeline alignment interview (v0.35+); one-question-at-a-time, recommended-answer-per-question, self-answers from the codebase, emits an aligned brief to docs/features/<slug>/INPUT.md and stops (no helper script)
 │
 ├── agents/                              ← Plugin-native framework agents (v0.30+): 7 canonical
 │   │                                       + 1 auxiliary supervisor.md; auto-discovered, dispatched
@@ -77,6 +78,7 @@ harness-kit/
 │   │   ├── 75-safety-hook.md           ← Destructive-command guard (v0.15+)
 │   │   └── 80-settings-schema.md       ← settings.json schema integrity (v0.18+)
 │   ├── decision-rubric.md              ← Memory layer: principles the AI decides by (Preset=Mode 2 / Custom=Mode 3); read at every escalate-or-decide point (v0.28+)
+│   ├── rejected-decisions.md           ← Memory layer (4th kind): deliberately-declined options + why; read/append at decide-points (v0.40+; dual-purpose dogfood + template seed)
 │   └── scripts/                        ← All harness-owned scripts (relocated from scripts/ in T-007)
 │       ├── verify_all.{ps1,sh}         ← Total verification (32 checks)
 │       ├── harness-sync.{ps1,sh}       ← Layer 2: .harness/agents + .harness/skills → .claude/
@@ -146,7 +148,10 @@ Both layers are checked by `.harness/scripts/verify_all` and FAIL on drift.
 | Skill: harness-verify | `skills/harness-verify/SKILL.md` | Invokes .harness/scripts/verify_all |
 | Skill: harness-status | `skills/harness-status/SKILL.md` | Read-only inspection |
 | Skill: harness-language | `skills/harness-language/SKILL.md` + `language-policy.{ps1,sh}` | Set / switch / refresh output-language policy (v0.25+); judgment in SKILL, mechanical in the helper pair |
+| Skill: harness-grill | `skills/harness-grill/SKILL.md` | Pre-pipeline alignment interview (v0.35+); user-invoked, one-question-at-a-time, emits an aligned brief to `docs/features/<slug>/INPUT.md` and stops; no helper script (interview, not a file-rewrite engine) |
 | Project templates | `skills/harness-init/templates/` | `common/` + `fullstack/` + `backend/` |
+| Domain glossary (`CONTEXT.md`) | repo-root `CONTEXT.md` (dogfood, real terms) + `skills/harness-init/templates/common/CONTEXT.md` (generic seed) | Dual-purpose like `decision-rubric.md`: generic in the template, real in the dogfood; NOT byte-synced (sync-self touches only the 7 script pairs). SOFT dependency referenced by RA/SA. Single context; multi-context via a future root `CONTEXT-MAP.md`. |
+| Rejected-decisions memory (`.harness/rejected-decisions.md`) | repo `.harness/rejected-decisions.md` (dogfood, real declines) + `skills/harness-init/templates/common/.harness/rejected-decisions.md` (generic seed) | Fourth memory kind (declined options + why). Dual-purpose like `CONTEXT.md` / `decision-rubric.md`: generic seed in the template, real in the dogfood; NOT byte-synced (sync-self touches only the 7 script pairs). Read/append habit single-sourced in `.harness/rules/25-decision-policy.md`; SOFT pointers from RA/SA. No gate. |
 | Framework agent contracts | top-level `agents/*.md` | 7 canonical + 1 auxiliary (supervisor), plugin-native (v0.30+); dispatched `harness-kit:<name>`; single source — edit directly, no sync |
 | Partition agent contracts | `templates/<type>/.harness/agents/dev-*.md.tmpl` | project-local `dev-*`, `{{STACK}}`-injected at init |
 | Distributed binding sync | `templates/common/.harness/scripts/harness-sync.{ps1,sh}` | Byte-copied to repo `.harness/scripts/` via sync-self |

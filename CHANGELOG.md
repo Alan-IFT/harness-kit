@@ -5,6 +5,148 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.40.0] - 2026-06-20
+
+> **Adoption wave (v0.34.0 → 0.40.0).** Releases 0.34.0–0.40.0 land together as one coherent effort
+> that absorbed the transferable strengths of [mattpocock/skills](https://github.com/mattpocock/skills):
+> ① a `CONTEXT.md` domain glossary, ② relentless one-question-at-a-time requirement grilling,
+> ③ a sharper skill-authoring vocabulary, ④ durable (behavioral, no file:line) briefs,
+> ⑤ tracer-bullet vertical-slice + smart-zone task decomposition, ⑥ a deep-module design vocabulary,
+> ⑦ two-axis (Standards × Spec) review, and ⑨ a rejected-decisions memory. A tenth candidate
+> (a fog-of-war decision map, ⑧) was assessed and **deliberately declined** as redundant with the
+> existing pool/frontier/grill/explore — and that decline is itself recorded in the new
+> rejected-decisions memory.
+>
+> **Practical upshot:** the workflow is unchanged. The only new user-facing command is the
+> **optional** `/harness-grill`; every other improvement is internal to the existing agents/rules,
+> so there is **no new procedure to learn** — the same `/harness*` commands just produce
+> better-aligned, more consistent, more thoroughly-reviewed results. Counts stay 16 skills /
+> 8 framework agents / 32 checks (improvements by design, not by accreting new gates).
+
+### Added — rejected-decisions-memory: a fourth memory kind recording deliberately-declined requests/approaches + why (T-09)
+
+harness-kit gains a **rejected-decisions memory layer** — a single append-only Markdown file
+recording "we deliberately decided NOT to do X, and why" so a future session re-proposing an
+already-declined request/approach finds the prior decision instead of re-litigating it. It ships
+in two intentionally-non-byte-synced copies, exactly like `CONTEXT.md` and `decision-rubric.md`:
+a real dogfood file and a generic, placeholder-free template seed that every `/harness-init`
+output receives.
+
+- **New `.harness/rejected-decisions.md`** (dogfood, repo): a tight header (what / when-read /
+  when-append + the one-record-per-concept rule + sibling-memory pointers + a soft size note with
+  no gate) plus nine seed records covering this repo's genuine mattpocock-adoption-batch declines
+  (`design-it-twice` deferred; `ask-matt-router`, `issue-tracker-dedup`, `to-prd`, `triage`,
+  `skill-usage-telemetry`, and three non-fit skill families declined).
+- **New `skills/harness-init/templates/common/.harness/rejected-decisions.md`** (generic seed):
+  the same header + one `example-declined-concept` stub + an HTML-comment instruction; placeholder-free
+  (passes the test-init `{{...}}` scan), NOT byte-synced by `sync-self`.
+- **`.harness/rules/25-decision-policy.md`**: the canonical read-at-decide / append-on-decline
+  bullet (single source) in the "When to read this" list — reaches every decide-point.
+- **`agents/requirement-analyst.md` + `agents/solution-architect.md`**: one SOFT read-if-present
+  pointer each (per `25-decision-policy.md`; never a precondition, never `BLOCKED`).
+- **`.harness/rules/15-skill-authoring.md`**: the "Deliberately not adopted" telemetry rationale
+  migrates into the new file; the heading stays with a one-line pointer (SSOT — no drifting copy).
+- **`AI-GUIDE.md`** one Memory-layer bullet (the fourth kind); **`docs/dev-map.md`** one location
+  row + tree line; one symmetric `test-init` seed-present assertion in both shells.
+- Version 0.39.0 → 0.40.0 (plugin.json, marketplace.json, both README version badges). Counts
+  unchanged: **16 skills / 8 framework agents / 32 checks**. No new `verify_all` check (this is
+  memory, not a gate); no new template placeholder (D.2 stays at 7); no I.6 banned/exempt-list
+  change; not byte-synced by `sync-self`.
+
+## [0.39.0] - 2026-06-20
+
+### Added — two-axis-review: explicit Standards / Spec-design axis separation in the code-reviewer so neither masks the other (T-08)
+
+The `code-reviewer` now reads its 6 existing review dimensions through **two explicitly-separated
+lenses** adapted from mattpocock's `review` skill — **Standards-conformance** (does the change follow
+this repo's documented conventions: AI-GUIDE rules, `.harness/rules/*`, dev-map patterns, naming,
+doc-size, cross-shell parity) and **Spec/design-fidelity** (does it match `01_REQUIREMENT_ANALYSIS.md`
+and `02_SOLUTION_DESIGN.md`) — and reports them separately so a pass on one axis cannot mask a failure
+on the other. The verdict gains a per-axis status line and a masking rule: `APPROVED` is impossible
+while either axis holds an unaddressed CRITICAL/MAJOR, and the aggregate is the more severe of the two
+axes.
+
+- **`agents/code-reviewer.md`**: one new additive `## Two review axes` section after the 6-dimension
+  table, one verdict-prep Workflow step, and one `## Axis status` line above the existing `## Verdict`
+  in the format template. The two axes ATTRIBUTE the SAME 6 dimensions (dims 2,3 + the coverage/design
+  check tables → Spec/design-fidelity; dim 6 + "no invented rules" → Standards; dims 1,4,5 → either) —
+  no 7th dimension. The severity model (CRITICAL/MAJOR/MINOR/NIT), the rollback-routing contract, and
+  the read-only `tools: Read, Glob, Grep` frontmatter are byte-unchanged. The heavier parallel
+  sub-agent mechanism and the issue-tracker dependency from the upstream skill are NOT adopted.
+- Version 0.38.0 → 0.39.0 (plugin.json, marketplace.json, both README version badges). Counts
+  unchanged: **16 skills / 8 framework agents / 32 checks**. No new `verify_all` check (the lens is
+  review guidance, not a gate); no I.6 banned/exempt-list change; no `harness-sync` / no template copy
+  (agents are plugin-native, edited directly in top-level `agents/`).
+
+## [0.38.0] - 2026-06-20
+
+### Added — sa-design-vocab: an optional deep-module design-vocabulary lens for the solution-architect (T-07)
+
+The `solution-architect` gains an OPTIONAL `## Design vocabulary (optional lens)` section adapted
+from mattpocock's `codebase-design` skill: named handles for designing **deep modules** — **module**,
+**interface** (everything a caller must know, not just the type signature), **depth** (leverage per
+unit of interface), **seam** (where the interface lives), **adapter**, **leverage**, **locality** —
+plus four sharp tests: the **deletion test**, "the interface is the test surface", and
+"one adapter means a hypothetical seam, two means a real one". It is framed as a **lens the architect
+MAY reach for** when shaping a module boundary (leading words to think with, per rule 15 P4 / the
+"leading word" handle) — NOT a mandate and NOT a new required `02_SOLUTION_DESIGN.md` field; the
+12-section output contract is unchanged.
+
+- **`agents/solution-architect.md`**: one new additive `## Design vocabulary (optional lens)` section
+  at the file end (after "What bad looks like"). The heavier design-it-twice parallel-subagent
+  pattern and the full DEEPENING dependency-category taxonomy are **not** introduced — named only, in
+  a single deferred-pointer line. The existing contract, Hard rules, Workflow, and output structure
+  are byte-unchanged.
+- Version 0.37.0 → 0.38.0 (plugin.json, marketplace.json, both README version badges). Counts
+  unchanged: **16 skills / 8 framework agents / 32 checks**. No new `verify_all` check (the lens is
+  authoring guidance, not a gate); no I.6 banned/exempt-list change; no `harness-sync` / no template
+  copy (agents are plugin-native, edited directly in top-level `agents/`).
+
+## [0.37.0] - 2026-06-20
+
+### Added — vertical-slices: a tracer-bullet + smart-zone task-decomposition discipline single-sourced in harness-plan (T-06)
+
+`/harness-plan` gains a **Task-decomposition discipline** section defining two named concepts adapted from mattpocock's `to-issues` + `ask-matt`: a task is a **tracer-bullet vertical slice** (a thin end-to-end path through every layer the change touches, independently demoable/verifiable on its own — NOT a horizontal slice of one layer) sized to the **smart zone** (approximately one model reasoning window, ~120k tokens on current state-of-the-art models — split or hand off before reasoning degrades). The discipline is **single-sourced** in `skills/harness-plan/SKILL.md`; the three places that author task/pool rows reference it **by name** (no pasted copy, no deep path link).
+
+- **`skills/harness-plan/SKILL.md`**: new `## Task-decomposition discipline` section (between `## Procedure` and `## Output`) — the two named concepts plus the operational "a good task/row is one vertical slice that is independently verifiable, names only real consumption dependencies, and fits the smart zone" rule. Additive; the Procedure steps are unchanged.
+- **`skills/harness-batch/SKILL.md`**, **`skills/harness-stream/SKILL.md`**, **`docs/batches/_template/BATCH_PLAN.md`**: one by-name pointer each (in `## Required input`, the `## Ingest triage` tail, and `## Column reference` respectively) to the harness-plan section — compose-by-name (rule 15 P8) + single source of truth (T-04). The batch/stream procedures and the BATCH_PLAN column schema are unchanged.
+- Version 0.36.0 → 0.37.0 (plugin.json, marketplace.json, both README version badges). Counts unchanged: **16 skills / 8 framework agents / 32 checks**. No new `verify_all` check (the discipline is authoring guidance, not a gate); no I.6 banned/exempt-list change; no BATCH_PLAN column-schema change; no `harness-sync` needed (top-level `skills/` edited directly; `.harness/skills/` mirror is empty).
+
+## [0.36.0] - 2026-06-20
+
+### Added — durable-brief: durability discipline folded into the requirement-analyst + pm-orchestrator briefs (T-05)
+
+The requirement-analyst and pm-orchestrator now write **durable, refactor-resilient briefs** — behavioral-not-procedural, with no forward-looking file-path/line-number anchors — adapted from mattpocock's "durability over precision" agent-brief principles. The discipline applies to the FORWARD-looking spec/brief only; backward-looking EVIDENCE citations (insight-index + stage-doc EVIDENCE) keep citing path-and-line as proof, and that boundary is single-sourced in the requirement-analyst.
+
+- **`agents/requirement-analyst.md`**: a new Hard rule 6 — requirement prose is behavioral (names interfaces/types/contracts/config shapes), not procedural, and forward-looking requirement statements (in-scope behaviors, acceptance criteria, boundary conditions) carry no file-path/line-number anchors (they go stale across refactors and wait time). The rule carries an explicit EVIDENCE-citation exemption (single source of the forward/backward boundary): backward-looking evidence keeps citing path-and-line exactly as `.harness/rules/05-insight-index.md` and stage-doc EVIDENCE require. Plus one generic good/bad exemplar pair in the existing "What good / bad looks like" lists. The existing "complete, testable acceptance criteria" requirement is reinforced, not duplicated.
+- **`agents/pm-orchestrator.md`**: one line in the dispatch contract — a dispatch prompt carries behavioral intent + acceptance criteria + scope boundary, not procedural file:line, referencing the requirement-analyst's Hard rule 6 (no restated nuance). The existing instruction to surface applicable `insight-index` lines (which carry path-and-line evidence) into dispatch prompts is preserved unchanged.
+- Version 0.35.0 → 0.36.0 (plugin.json, marketplace.json, both README version badges). Counts unchanged: **16 skills / 8 framework agents / 32 checks**. No new `verify_all` check; no I.6 banned/exempt-list change; `.harness/rules/05-insight-index.md` and `.harness/insight-index.md` untouched (protected by the exemption); no template copy edited (agents are plugin-native, edited directly in top-level `agents/`).
+
+## [0.35.0] - 2026-06-20
+
+### Added — harness-grill: a pre-pipeline, one-question-at-a-time alignment interview (T-03)
+
+Harness Kit gains a **16th plugin skill, `/harness-kit:harness-grill`** — a user-invoked, relentless one-question-at-a-time **alignment interview** that runs *before* the pipeline to pin down what the user actually wants. It walks the design tree one decision at a time, presents a **recommended answer per question**, **explores the codebase to self-answer** instead of asking when the repo already decides it, composes with `CONTEXT.md` under the SOFT read-if-present contract, and emits an **aligned brief** to `docs/features/<slug>/INPUT.md` that `/harness`, `/harness-plan`, or a `/harness-stream` pool then consumes. It targets the #1 failure mode "the agent didn't build what I wanted" by forcing ambiguity into the open before any code is written. It is **not** a pipeline stage — it produces a brief and stops; it does not run the pipeline, write design or code, or change `pm-orchestrator` routing.
+
+- **`skills/harness-grill/SKILL.md`** (new): the interview engine — one question at a time (waits for each answer; never batches), a `Recommended:` answer per question, explore-codebase-to-self-answer, `CONTEXT.md` read-if-present + lazy-maintain-inline, the aligned-brief terminal artifact (propose-and-confirm kebab slug, confirm-before-overwrite on collision, create the feature dir as needed, write residual items on an early end, adopt the recommended default on an empty answer), a "When NOT to invoke" delta vs `/harness` / `/harness-plan` / `/harness-explore`, an Anti-patterns surface, and a user-invoked-only posture. English SKILL.md with 中文 triggers in the `description:`; no helper script (it is an interview, not a file-rewrite engine).
+- **`agents/requirement-analyst.md`**: a standing rule — every Open Question in section 8 carries a labelled **`Recommended:`** answer (generalizing the deferred-human behavior to all modes). Hard rule 1's "recommend"/"suggest" strip-ban is scoped to requirement PROSE (in-scope behaviors / acceptance criteria / boundary conditions) and explicitly exempts the labelled `Recommended:` Open-Questions field, so the two no longer collide.
+- **Release fan-out**: skill count **15 → 16** across README ×2, AI-GUIDE.md (count + new Workflow-entry row), getting-started.md, manual-e2e-test.md, `.harness/rules/40-locations.md`, dev-map.md, and the verify_all C.1/G.1/G.2 skill-name arrays + labels in both shells (`harness-grill` appended; labels flipped 15→16). Install help-text listings updated in both shells for parity (the install skill list itself is directory-derived).
+- Version 0.34.0 → 0.35.0 (plugin.json, marketplace.json, both README version badges). `verify_all` stays **32** checks (no new check — the C.1/G.x edits modify existing checks); no test-init / `baseline.json` change (grill is a top-level plugin skill, not a generated-project template asset); no I.6 banned/exempt-list change.
+
+## [0.34.0] - 2026-06-19
+
+### Added — CONTEXT.md domain glossary: a shared-language memory layer (T-02)
+
+Harness Kit gains a **domain-glossary memory layer** — a `CONTEXT.md` of tight, opinionated term definitions, each with an `_Avoid_:` list of synonyms not to use — so the pipeline names files, symbols, and stage docs with one canonical term instead of drifting phrasings. It ships as the proven dual-purpose pattern (like `decision-rubric.md`): a **real dogfood file at the repo root** seeded with this repo's own vocabulary, and a **generic, placeholder-free template seed** that every `/harness-init` project receives at its own root.
+
+- **`CONTEXT.md`** (repo root, new): single-context dogfood glossary — `# Harness Kit` + a 1-2 sentence context description + a `## Language` section of real harness-kit domain terms (frontier, pool, ambient mode, partition agent, stage doc, verdict, insight, rollback, dogfood, template overlay, soft/hard dependency, gate), each a bold term + tight definition + `_Avoid_:` synonyms. Glossary only — no implementation detail. A trailing line notes multi-context via a future root `CONTEXT-MAP.md` (single context today).
+- **`skills/harness-init/templates/common/CONTEXT.md`** (new): generic, placeholder-free seed (`# {Your Project}`, single-brace) that instructs each generated project to list its own domain terms in the `_Avoid_` format, with two illustrative stubs. Not byte-synced to the dogfood file; `sync-self` mirrors only the 7 script pairs.
+- **`agents/requirement-analyst.md`** + **`agents/solution-architect.md`**: one token-light **SOFT-dependency** Workflow step each — read the project glossary if present for canonical naming and record a coined/sharpened term inline; never a precondition, never a `BLOCKED`-on-absent, no setup pointer (per the soft-vs-hard-dependency principle). Degrades gracefully when `CONTEXT.md` is absent.
+- **`AI-GUIDE.md`**: one new Memory-layer bullet indexing `CONTEXT.md` (description + when-to-read trigger), consistent with the `insight-index` / `decision-rubric` entries. AI-GUIDE stays under the 200-line cap.
+- **`docs/dev-map.md`**: a "Where features live" row for the dual `CONTEXT.md` location.
+- **`.harness/scripts/test-init.{ps1,sh}`**: a symmetric seed-present assertion after the `decision-rubric.md` assertions, so the seed is regressed (the existing recursive no-unresolved-placeholder scan already covers the seed's placeholder-free property for free).
+- Version 0.33.0 → 0.34.0 (plugin.json, marketplace.json, both README version badges). Skill count stays **15**; `verify_all` stays **32** checks; no new check; the template-placeholder whitelist stays at **7** (the seed is placeholder-free); no I.6 banned/exempt-list change. The `test-init` total and `baseline.json` `test_init_*` counts move by the new assertion and are reconciled from a captured run (not hand-tallied).
+
 ## [0.33.0] - 2026-06-13
 
 ### Added — Stream defer-human: /harness-stream sets a human-needing task aside instead of sitting stopped (T-022)

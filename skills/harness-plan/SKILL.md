@@ -38,6 +38,15 @@ The PM Orchestrator (you or a dispatched sub-agent) dispatches **only stages 1-3
 
 The plan-mode output is **resumable**: if the user decides to build it later, running `/harness` on the same task slug will detect existing 01-03 docs and skip those stages, jumping to Development. **The PM must record this mode choice in `PM_LOG.md`** so the full pipeline knows.
 
+## Task-decomposition discipline
+
+When you split a design into tasks (or pool/batch rows), each task is a **tracer-bullet vertical slice**, sized to the **smart zone**:
+
+- **Tracer-bullet vertical slice** — a task is a thin path that cuts end-to-end through *every layer the change touches* (e.g. schema → API → UI → tests) and is independently demoable/verifiable on its own. It is **NOT a horizontal slice of one layer** (not "all the schema", then "all the API"). A completed slice ships value alone; a half-finished horizontal layer ships nothing.
+- **Smart zone** — size a task so its full reasoning fits one model reasoning window (approximately one window, ~120k tokens on current state-of-the-art models — a heuristic, not a hard gate). A unit of work that would overflow that window is split into smaller vertical slices, or handed off, **before** the model degrades.
+
+**A good task / pool row** is therefore one vertical slice that (a) is independently verifiable, (b) names only real consumption dependencies (`Depends on` = "this row uses an artifact the other row produces", never "same area"), and (c) fits the smart zone.
+
 ## Output
 
 ```

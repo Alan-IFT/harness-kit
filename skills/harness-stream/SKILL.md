@@ -102,6 +102,8 @@ Applies wherever the STREAM normalizes natural language into pool rows: chat-cha
 
 A requirement that fails the test gets exactly today's one-row path — no marker, no announcement. Once written, derived rows are ordinary pool rows: resume, de-dup, `SKIP`, edits, and failure semantics apply identically.
 
+Each row the triage writes (and each hand-authored row) should be a tracer-bullet vertical slice sized to the smart zone — see `harness-plan` → "Task-decomposition discipline" for what makes a good row.
+
 ## Procedure
 
 1. **Argument validation.** With a pool-id: confirm `docs/batches/<pool-id>/BATCH_PLAN.md` exists; if not, surface the template path and stop. **With no pool-id:** resolve to `docs/batches/default/BATCH_PLAN.md` and **auto-create it** (from `_template`, empty table) if absent — this is the ambient-mode default pool.

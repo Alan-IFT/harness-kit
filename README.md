@@ -2,17 +2,20 @@
 
 **English** · [简体中文](README.zh-CN.md)
 
-![version](https://img.shields.io/badge/version-0.33.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-32%2F32-brightgreen) ![test-init](https://img.shields.io/badge/test--init-308%2F308-brightgreen) ![integration](https://img.shields.io/badge/integration-90%2F90-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.40.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-32%2F32-brightgreen) ![test-init](https://img.shields.io/badge/test--init-308%2F308-brightgreen) ![integration](https://img.shields.io/badge/integration-90%2F90-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
-> **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (15 skills + 8 framework agents + project templates) that brings disciplined AI-driven development to fullstack and backend projects. **Claude-native** (the framework agents ship as plugin agents — no per-project copy).
+> **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (16 skills + 8 framework agents + project templates) that brings disciplined AI-driven development to fullstack and backend projects. **Claude-native** (the framework agents ship as plugin agents — no per-project copy).
 >
 > **Goal**: humans only do "describe the requirement" and "step in when AI can't"; everything else — 7-agent pipeline, verify gates, structured documents — runs automatically.
 
+_**v0.34–0.40 adoption wave**: absorbed the transferable strengths of [mattpocock/skills](https://github.com/mattpocock/skills) — domain glossary, requirement grilling, durable briefs, two-axis review, rejected-decisions memory, and more. The only new command is the **optional** `/harness-grill`; every other gain is internal to the existing agents/rules — same workflow, nothing new to learn._
+
 ## What's inside
 
-This is a Claude Code Plugin packaging that gives any project fifteen AI skills:
+This is a Claude Code Plugin packaging that gives any project sixteen AI skills:
 
-**Pipeline skills** (six task shapes; the AI picks the right one from your natural-language description)
+**Pipeline skills** (six task shapes the AI picks from your natural-language description, plus a pre-pipeline aligner)
+- `/harness-kit:harness-grill` — runs **before** the pipeline to align the requirement: a relentless one-question-at-a-time interview (a recommended answer per question, self-answers from the codebase where it can, reads `CONTEXT.md` if present) that emits an aligned brief to `docs/features/<slug>/INPUT.md` and stops. Use when you're not sure you've said what you actually want yet — then hand the brief to `/harness` or a `/harness-stream` pool.
 - `/harness-kit:harness` — full 7-stage pipeline (RA → SA → GR → Dev → CR → QA → Delivery). Use for real feature / bug / refactor work.
 - `/harness-kit:harness-plan` — design-only mode: runs RA + SA + GR, stops with a verdict before any code is written. Use to vet a design.
 - `/harness-kit:harness-explore` — research / feasibility mode: light RA + a `findings.md` with citations. No design, no code. Use for "can we even do X?"

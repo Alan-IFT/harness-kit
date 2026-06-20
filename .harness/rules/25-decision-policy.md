@@ -19,6 +19,13 @@ Switch modes with **`/harness-decision-mode`** (the interactive switcher) or by 
   loading every task: the AI-GUIDE index line already signals at task start that this repo is
   Mode 2 and where the rubric lives, so the full text loads only when a real decision arises —
   keeping the per-task context lean.
+- **At a non-trivial decide-point, also consult `.harness/rejected-decisions.md`** (the
+  deliberately-declined-options memory) before proposing a new approach/feature — if the thing
+  was already declined, surface that decision instead of re-litigating it. When you (or the user)
+  **deliberately decline** a request/approach, **append** a short record there (concept handle ·
+  `declined`/`deferred` · substantive why · origin); a re-occurrence adds its origin to the
+  existing record. The file is a SOFT convenience — absent (a project that predates it) is fine,
+  never a precondition, never a `BLOCKED`.
 
 ## Active mode
 

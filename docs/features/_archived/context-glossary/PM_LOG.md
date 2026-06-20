@@ -1,0 +1,26 @@
+# PM Log — context-glossary (T-02)
+
+> Mode: full · Dispatched by /harness-stream default pool · PM shell in main thread.
+
+- 2026-06-19 · Task created. Folder + INPUT.md written. Mode=full.
+- 2026-06-19 · intervention.md check: absent (no pending signal).
+- 2026-06-19 · insight-index read; relevant lines surfaced into INPUT.md (doc-size caps, I.6 guard, template placeholder scan, template-vs-dogfood non-sync, baseline reconcile).
+- 2026-06-19 · tasks.md read; no prior task implements a domain glossary (grep "CONTEXT.md/glossary" found only a passing mention in backend 50-*.md). New entry to be added at delivery.
+- 2026-06-19 · Stage 1 dispatch: harness-kit:requirement-analyst (sub-agent, isolated context).
+- 2026-06-19 · Stage 1 RESULT: Verdict READY · 13 in-scope behaviors · 5 OQs each with a safe reversible Mode-2 default (OQ-1 no guard / OQ-2 repo-root / OQ-3 minor version bump / OQ-4 minimal lazy-maintain prose / OQ-5 one-line multi-context future note). No BLOCKED, no red line. intervention.md re-check: absent.
+- 2026-06-19 · PM routing decision: ACCEPT RA recommended defaults (all reversible, rubric-consistent), ADVANCE to Stage 2. SA must design on these defaults and may surface a counter only as a design note, not silently re-open.
+- 2026-06-19 · Stage 2 dispatch: harness-kit:solution-architect (sub-agent). Repo is NOT partitioned (no .harness/agents/dev-*.md) → single-developer mode; no Partition assignment section required.
+- 2026-06-19 · Stage 2 RESULT: design READY. Create 2 (repo-root CONTEXT.md + generic template seed `templates/common/CONTEXT.md`, plain .md, single-brace `{Your Project}` to dodge the `\{\{[A-Z_]+\}\}` scan). Edit RA+SA (1 SOFT-dep sentence each, ~75/~123 lines, under 300 cap), AI-GUIDE memory line (~110 ≤200), dev-map row, test-init symmetric seed assertion, version stamps + CHANGELOG. Version 0.34.0 (minor; new always-present /harness-init asset). NO new check (32 stays → 0 G.4 count-claim edits), NO new placeholder (D.2 stays 7). Baseline reconcile = bookkeeping (verify_all reads only verify_all_checks), reconcile test-init counts from a captured run both shells; test-real-project likely unchanged. No BLOCKED.
+- 2026-06-19 · PM routing: ADVANCE to Stage 3 (Gate). intervention.md re-check: absent.
+- 2026-06-19 · Stage 3 dispatch: harness-kit:gate-reviewer (independent full read of 01+02).
+- 2026-06-19 · Stage 3 RESULT: **APPROVED FOR DEVELOPMENT**. 8/8 audit dimensions PASS; all 5 PM-requested high-risk claims verified TRUE against live repo (placeholder scan double-brace-only; no new check, count stays 32; version 0.34.0 stamps; agent/AI-GUIDE caps OK; baseline=bookkeeping). 3 LOW advisory findings, 0 blocking: F-1 (refresh both READMEs' `test--init-` badges to captured total — dev note), F-2 (cosmetic cap attribution), F-3 (un-gated 32-claims correctly untouched). gate-reviewer read-only → PM persisted 03_GATE_REVIEW.md verbatim.
+- 2026-06-19 · PM routing: gate PASS satisfied → ADVANCE to Stage 4 (Developer). Carry F-1 to developer as an implementation note. intervention.md re-check: absent.
+- 2026-06-19 · Stage 4 dispatch: harness-kit:developer (sub-agent writes files; runtime likely strips Bash/PS from sub-agents → PM runs verify_all + test suites + baseline reconcile after).
+- 2026-06-19 · Stage 4 RESULT: READY FOR REVIEW. 2 new files (repo-root CONTEXT.md w/ 13 real terms; generic seed templates/common/CONTEXT.md, single-brace, distinct) + edits to RA, SA, AI-GUIDE (110 lines), dev-map, test-init.{ps1,sh} (symmetric assertion), plugin.json/marketplace.json/both README version badges → 0.34.0, CHANGELOG [0.34.0]. Dev had Bash (PS denied): verify_all.sh 32/0/0, test-init.sh 273 (+3), test-real-project.sh 90/90. No count-claim touched, no new check, no new placeholder.
+- 2026-06-19 · Stage 4 regression gate (PM): verify_all.sh PASS 32/0/0 = no hard stop. verify_all.ps1 BLOCKED (env deny rule on PowerShell, main + sub-agent) → green-by-symmetry (G.3/G.4/I.6 are shell-symmetric checks over the same files; verify_all.ps1 itself unedited). PS regression run = operator-unrun (deny rule), carried to delivery follow-ups.
+- 2026-06-19 · Baseline reconcile (PM): baseline.json test_init_bash_no_python3_assertions 270→273 (captured real). test_init_ps_assertions left 308 + both README test--init- badges left 308/308 = OPERATOR-PENDING (cannot capture PS total; fabricated-tally insight 2026-06-04 forbids guessing). last_verify→2026-06-19.
+- 2026-06-19 · PM routing: ADVANCE to Stage 5 (Code Review). intervention.md re-check: absent.
+- 2026-06-19 · Stage 5 dispatch: harness-kit:code-reviewer (read-only; PM persists 05).
+- 2026-06-19 · Stage 5 RESULT: **APPROVED WITH NOTES** (0 BLOCKER / 0 MAJOR / 2 MINOR / 3 NIT). 10/10 ACs, full design fidelity, no route-back. 2 MINOR advisory: (a) 04 prose stale re baseline (file state correct — bash field IS reconciled to 273), (b) 13 terms vs design "aim ~8-12" (within spirit). F-1 confirmed the only intentional deferral. PM persisted 05_CODE_REVIEW.md.
+- 2026-06-19 · PM routing: stages 5 satisfied → ADVANCE to Stage 6 (QA). intervention.md re-check: absent.
+- 2026-06-19 · Stage 6 dispatch: harness-kit:qa-tester (has Bash, PS denied; self-writes 06 with mandatory ## Adversarial tests).

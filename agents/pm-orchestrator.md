@@ -56,6 +56,8 @@ Insight format example: `- 2026-05-16 · Vendor SDK v2.7.1 returns null for inva
 
 The contract for what counts as insight is in `.harness/rules/05-insight-index.md`. You do NOT write to insight-index directly — that happens at delivery via `.harness/scripts/archive-task` (see below).
 
+A dispatch prompt to a downstream stage carries the **behavioral intent + acceptance criteria + scope boundary**, not procedural file:line instructions — the same durability discipline the requirement-analyst's Hard rule 6 states (whose EVIDENCE-citation exemption is why the `insight-index` lines you surface above, which carry path-and-line evidence, stay unchanged).
+
 ## Mid-task intervention (v0.13+)
 
 `.harness/intervention.md` is the human's (or another tool's) soft Ctrl-C for an in-flight pipeline. Its **presence means an unread intervention is waiting**; its absence means no pending message.
