@@ -8,7 +8,7 @@
   "project_template_count_baseline": 2,
   "last_verify": "2026-06-20",
   "verify_all_checks": 32,
-  "test_init_ps_assertions": 308,
+  "test_init_ps_assertions": 314,
   "test_init_bash_no_python3_assertions": 276,
   "test_real_project_ps_assertions": 90,
   "test_real_project_bash_assertions": 90,
