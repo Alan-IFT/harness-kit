@@ -23,6 +23,8 @@
 | T-11b | entropy-watch-harness | Add the `/harness` single-task stage-7 delivery surface calling the SAME shared remind-if-due check (so both harness and stream auto-remind). | full | T-11a | done |
 | T-11c | entropy-watch-persist | Findings-persistence store: open findings re-surface, fixed ones drop, user-declined ones go to `.harness/rejected-decisions.md` (no re-litigation). | full | T-11a | done (decline-filter only; standalone store DECLINED as overkill) |
 
+| T-12 | resilient-hooks | Fix the per-turn `Stop hook error: bash: .harness/scripts/harness-sync.sh: No such file or directory`: (A) make the harness sync/ambient lifecycle hooks FAIL-OPEN + `$CLAUDE_PROJECT_DIR`-anchored (missing/unreachable script no-ops silently, cwd-independent) in the template + dogfood + /harness-upgrade repair path (guard-rm stays fail-CLOSED — safety); (B) stop distributing this repo's dogfood `.claude/settings.json` (move dev hooks to gitignored `.claude/settings.local.json`). Root cause: brittle relative-path hook (T-020 only ensured the script lands, didn't make the hook resilient). | full | — | done |
+
 ## Notes (optional)
 
 - This batch adopts six ideas distilled from a deep read of github.com/mattpocock/skills (research artifact at `c:\Programs\_research\mattpocock-adoption-plan.html`). Mapping: T-02=① shared-language CONTEXT.md, T-03=② grill interview, T-04=③ skill-authoring vocabulary, T-05=④ durable agent-brief, T-06=⑤ tracer-bullet vertical slices + smart-zone sizing, T-07=⑥ deep-module design vocabulary.

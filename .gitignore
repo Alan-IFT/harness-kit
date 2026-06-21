@@ -54,3 +54,7 @@ verification_history.log
 
 # Claude Code runtime — session lockfile, regenerated each session
 .claude/scheduled_tasks.lock
+
+# Harness — local dogfood hooks (T-12, v0.44.0); never committed, never distributed.
+# `*.local` above does NOT match this (it matches names ending in `.local`, not `.local.json`).
+.claude/settings.local.json

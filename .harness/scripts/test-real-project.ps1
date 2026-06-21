@@ -108,10 +108,14 @@ function Test-Fixture {
             "STACK"        = $Stack
             "TODAY"        = $today
             "ENABLE_HOOK"  = "false"
-            "SYNC_COMMAND" = if ($isWin) { "pwsh -File .harness/scripts/harness-sync.ps1" } else { "bash .harness/scripts/harness-sync.sh" }
-            "GUARD_COMMAND" = if ($isWin) { "pwsh -NoProfile -File .harness/scripts/guard-rm.ps1" } else { "bash .harness/scripts/guard-rm.sh" }
-            "AMBIENT_PROMPT_COMMAND" = if ($isWin) { "pwsh -NoProfile -File .harness/scripts/ambient-prompt.ps1" } else { "bash .harness/scripts/ambient-prompt.sh" }
-            "AMBIENT_RESET_COMMAND"  = if ($isWin) { "pwsh -NoProfile -File .harness/scripts/ambient-reset.ps1" } else { "bash .harness/scripts/ambient-reset.sh" }
+            # T-12: live FIXTURE-AUTHORING site — the *_COMMAND values are the RESILIENT form
+            # (convenience hooks fail-OPEN + $CLAUDE_PROJECT_DIR-anchored; guard-rm fail-CLOSED,
+            # NO `|| exit 0`). JSON-escaped bytes copied byte-identical from test-init.ps1 (AC-7).
+            # Copy-TemplateLayer uses .Replace() (ordinal-literal), so the `&`/`$env:` are safe.
+            "SYNC_COMMAND" = if ($isWin) { 'pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/harness-sync.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/harness-sync.ps1 }; exit 0\"' } else { 'sh -c ''cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null && [ -f .harness/scripts/harness-sync.sh ] && exec bash .harness/scripts/harness-sync.sh || exit 0''' }
+            "GUARD_COMMAND" = if ($isWin) { 'pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR; & pwsh -NoProfile -File .harness/scripts/guard-rm.ps1\"' } else { 'sh -c ''cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null && bash .harness/scripts/guard-rm.sh''' }
+            "AMBIENT_PROMPT_COMMAND" = if ($isWin) { 'pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/ambient-prompt.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/ambient-prompt.ps1 }; exit 0\"' } else { 'sh -c ''cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null && [ -f .harness/scripts/ambient-prompt.sh ] && exec bash .harness/scripts/ambient-prompt.sh || exit 0''' }
+            "AMBIENT_RESET_COMMAND"  = if ($isWin) { 'pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/ambient-reset.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/ambient-reset.ps1 }; exit 0\"' } else { 'sh -c ''cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null && [ -f .harness/scripts/ambient-reset.sh ] && exec bash .harness/scripts/ambient-reset.sh || exit 0''' }
         }
         Copy-TemplateLayer -Source (Join-Path $templateRoot "common") -Target $tmp -Vars $vars
         Copy-TemplateLayer -Source (Join-Path $templateRoot $ProjectType) -Target $tmp -Vars $vars

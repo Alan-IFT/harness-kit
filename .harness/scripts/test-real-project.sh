@@ -37,36 +37,66 @@ assert() {
     fi
 }
 
+# T-12: this is a live FIXTURE-AUTHORING site (builds the fixture's FINAL settings),
+# so the *_COMMAND values are the RESILIENT form — fail-OPEN + $CLAUDE_PROJECT_DIR-anchored
+# for the convenience hooks, fail-CLOSED (no `|| exit 0`) for guard-rm. JSON-ESCAPED bytes
+# (inner " as \") so the substituted settings match the resilient literals byte-for-byte.
+# These literals are copied byte-identical from test-init.sh (AC-7: no surviving brittle
+# authoring form for the convenience hooks).
 case "${OSTYPE:-}" in
     msys*|cygwin*|win32)
-        SYNC_COMMAND="pwsh -File .harness/scripts/harness-sync.ps1"
-        GUARD_COMMAND="pwsh -NoProfile -File .harness/scripts/guard-rm.ps1"
-        AMBIENT_PROMPT_COMMAND="pwsh -NoProfile -File .harness/scripts/ambient-prompt.ps1"
-        AMBIENT_RESET_COMMAND="pwsh -NoProfile -File .harness/scripts/ambient-reset.ps1"
+        SYNC_COMMAND='pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/harness-sync.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/harness-sync.ps1 }; exit 0\"'
+        GUARD_COMMAND='pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR; & pwsh -NoProfile -File .harness/scripts/guard-rm.ps1\"'
+        AMBIENT_PROMPT_COMMAND='pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/ambient-prompt.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/ambient-prompt.ps1 }; exit 0\"'
+        AMBIENT_RESET_COMMAND='pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/ambient-reset.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/ambient-reset.ps1 }; exit 0\"'
         ;;
     *)
-        SYNC_COMMAND="bash .harness/scripts/harness-sync.sh"
-        GUARD_COMMAND="bash .harness/scripts/guard-rm.sh"
-        AMBIENT_PROMPT_COMMAND="bash .harness/scripts/ambient-prompt.sh"
-        AMBIENT_RESET_COMMAND="bash .harness/scripts/ambient-reset.sh"
+        SYNC_COMMAND="sh -c 'cd \\\"\$CLAUDE_PROJECT_DIR\\\" 2>/dev/null && [ -f .harness/scripts/harness-sync.sh ] && exec bash .harness/scripts/harness-sync.sh || exit 0'"
+        GUARD_COMMAND="sh -c 'cd \\\"\$CLAUDE_PROJECT_DIR\\\" 2>/dev/null && bash .harness/scripts/guard-rm.sh'"
+        AMBIENT_PROMPT_COMMAND="sh -c 'cd \\\"\$CLAUDE_PROJECT_DIR\\\" 2>/dev/null && [ -f .harness/scripts/ambient-prompt.sh ] && exec bash .harness/scripts/ambient-prompt.sh || exit 0'"
+        AMBIENT_RESET_COMMAND="sh -c 'cd \\\"\$CLAUDE_PROJECT_DIR\\\" 2>/dev/null && [ -f .harness/scripts/ambient-reset.sh ] && exec bash .harness/scripts/ambient-reset.sh || exit 0'"
         ;;
 esac
+
+# Literal replace-all (no sed): immune to bash 5.2's `&`-means-matched-text rule in
+# ${var//pat/repl} AND to sed delimiter/metachar collisions. The T-12 resilient command
+# values carry `&` (`& pwsh`), `|` (unix `||`), `;`, and `{`/`}` — none of which are safe
+# in a sed replacement. Splits on the needle and concatenates verbatim. (Mirrors test-init.sh.)
+ti_replace_all() {
+    local rest="$1" needle="$2" repl="$3" out=""
+    while [[ "$rest" == *"$needle"* ]]; do
+        out="$out${rest%%"$needle"*}$repl"
+        rest="${rest#*"$needle"}"
+    done
+    printf '%s' "$out$rest"
+}
 
 substitute() {
     local file="$1" project_name="$2" project_type="$3" stack="$4"
     local tmp; tmp=$(mktemp)
+    # The simple scalar placeholders stay on sed (their values are plain text).
     sed \
         -e "s|{{PROJECT_NAME}}|$project_name|g" \
         -e "s|{{PROJECT_TYPE}}|$project_type|g" \
         -e "s|{{STACK}}|$stack|g" \
         -e "s|{{TODAY}}|$today|g" \
         -e "s|{{ENABLE_HOOK}}|false|g" \
-        -e "s|{{SYNC_COMMAND}}|$SYNC_COMMAND|g" \
-        -e "s|{{GUARD_COMMAND}}|$GUARD_COMMAND|g" \
-        -e "s|{{AMBIENT_PROMPT_COMMAND}}|$AMBIENT_PROMPT_COMMAND|g" \
-        -e "s|{{AMBIENT_RESET_COMMAND}}|$AMBIENT_RESET_COMMAND|g" \
         "$file" > "$tmp"
-    mv "$tmp" "$file"
+    # The four command placeholders carry the resilient strings (sed-unsafe metachars),
+    # so substitute them with the literal replace-all helper on the file content. Only
+    # files that actually carry a command placeholder are rewritten this way; everything
+    # else keeps sed's byte-exact output.
+    if grep -q '{{SYNC_COMMAND}}\|{{GUARD_COMMAND}}\|{{AMBIENT_PROMPT_COMMAND}}\|{{AMBIENT_RESET_COMMAND}}' "$tmp"; then
+        local content; content="$(cat "$tmp")"
+        content="$(ti_replace_all "$content" "{{SYNC_COMMAND}}" "$SYNC_COMMAND")"
+        content="$(ti_replace_all "$content" "{{GUARD_COMMAND}}" "$GUARD_COMMAND")"
+        content="$(ti_replace_all "$content" "{{AMBIENT_PROMPT_COMMAND}}" "$AMBIENT_PROMPT_COMMAND")"
+        content="$(ti_replace_all "$content" "{{AMBIENT_RESET_COMMAND}}" "$AMBIENT_RESET_COMMAND")"
+        printf '%s\n' "$content" > "$file"
+        rm -f "$tmp"
+    else
+        mv "$tmp" "$file"
+    fi
 }
 
 copy_tree() {

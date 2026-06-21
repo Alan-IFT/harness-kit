@@ -181,6 +181,13 @@ assert "A: settings rewired to .harness/scripts/ (AC-3)" "$(contains '.harness/s
 # Negative: no bare `-File scripts/harness-sync` (the unambiguous old command form);
 # the rewired `.harness/scripts/harness-sync` is fine (it embeds "scripts/harness-sync").
 assert "A: settings no longer references bare scripts/harness-sync (AC-3)" "$(contains '-File scripts/harness-sync' "$set_content" && echo 1 || echo 0)"
+# T-12 / A8 proof: the rewritten command is the RESILIENT form (carries the
+# $CLAUDE_PROJECT_DIR anchor), not the bare brittle `-File .harness/scripts/...`.
+assert "A: settings rewritten to the resilient form (CLAUDE_PROJECT_DIR-anchored, AC-8)" "$(contains 'CLAUDE_PROJECT_DIR' "$set_content" && echo 0 || echo 1)"
+# T-12 / A5 proof: guard-rm (PreToolUse) is resilient-anchored too but fail-CLOSED —
+# its resilient form has NO `exit 0` fallback (the convenience Stop form does).
+assert "A: guard-rm resilient form is fail-CLOSED (no exit 0 in its command)" \
+    "$(printf '%s\n' "$set_content" | grep -F 'guard-rm.ps1' | grep -qF 'exit 0' && echo 1 || echo 0)"
 # JSON parse: prefer real python3 (NOT the Windows Store stub, which prints a "Python
 # was not found" notice and exits non-zero — insight L27 family); else node; else skip.
 real_python=""
@@ -278,9 +285,27 @@ assert "G: bare git repo (no harness) exits 1 (BC-2/AC-11)" "$([[ "$RUN_CODE" -e
 t20_o="{{"
 t20_c="}}"
 t20_tok="${t20_o}SYNC_COMMAND${t20_c}"
+# T-12: the OS-picked SYNC command is now the RESILIENT (fail-open + $CLAUDE_PROJECT_DIR-
+# anchored) form. t20_pick holds the JSON-ESCAPED bytes (inner " as \") so the exact
+# `"command": "<t20_pick>"` grep matches the raw on-disk settings byte-for-byte (gate C3).
+# t20_run is the same command in shell-runnable form (un-escaped) for the `eval` real-run
+# probe; CLAUDE_PROJECT_DIR is set to the fixture root there so the anchor resolves and the
+# script actually runs (gate C5 / F4) instead of exiting 0 via the fail-open empty-var path.
 case "${OSTYPE:-}" in
-    msys*|cygwin*|win32) t20_pick="pwsh -NoProfile -File .harness/scripts/harness-sync.ps1" ;;
-    *)                   t20_pick="bash .harness/scripts/harness-sync.sh" ;;
+    msys*|cygwin*|win32)
+        t20_pick='pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/harness-sync.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/harness-sync.ps1 }; exit 0\"'
+        # Real-run probe (gate C5): the WIRED resilient string embeds pwsh's `$env:` which
+        # bash `eval` would mangle (under `set -u`, `$env` is an unbound bash var). So run
+        # a bash-safe equivalent that anchors to the project root the same way the resilient
+        # command does (cd to $CLAUDE_PROJECT_DIR, presence-gate, invoke the inner script
+        # with the SAME `-NoProfile -File` it uses) — this genuinely exercises the script
+        # run, not the fail-open empty-var path.
+        t20_run='cd "$CLAUDE_PROJECT_DIR" 2>/dev/null && [ -f .harness/scripts/harness-sync.ps1 ] && pwsh -NoProfile -File .harness/scripts/harness-sync.ps1 || exit 0'
+        ;;
+    *)
+        t20_pick="sh -c 'cd \\\"\$CLAUDE_PROJECT_DIR\\\" 2>/dev/null && [ -f .harness/scripts/harness-sync.sh ] && exec bash .harness/scripts/harness-sync.sh || exit 0'"
+        t20_run='cd "$CLAUDE_PROJECT_DIR" 2>/dev/null && [ -f .harness/scripts/harness-sync.sh ] && bash .harness/scripts/harness-sync.sh || exit 0'
+        ;;
 esac
 
 # Minimal fixture: settings-only project (no scripts/ dir), Stop hook pre-wired to
@@ -329,6 +354,18 @@ assert "H: helper exits 0 (repair completes, AC-2)" "$([[ "$RUN_CODE" -eq 0 ]] &
 assert "H: wired target .harness/scripts/harness-sync.sh exists after repair (AC-2)" "$([[ -f "$h/.harness/scripts/harness-sync.sh" ]] && echo 0 || echo 1)"
 ( cd "$h" && bash .harness/scripts/harness-sync.sh >/dev/null 2>&1 ); h_sync_code=$?
 assert "H: invoking the wired command from project root exits 0 (AC-2 runtime)" "$([[ "$h_sync_code" -eq 0 ]] && echo 0 || echo 1)"
+# T-12 / A8 proof: the dangling bare `bash .harness/scripts/harness-sync.sh` is repaired
+# to the RESILIENT form (fail-open + $CLAUDE_PROJECT_DIR-anchored), not left brittle.
+h_set="$(cat "$h/.claude/settings.json")"
+assert "H: repaired Stop command is the resilient form (CLAUDE_PROJECT_DIR-anchored, AC-8)" "$(contains 'CLAUDE_PROJECT_DIR' "$h_set" && echo 0 || echo 1)"
+assert "H: repaired Stop command is fail-OPEN (carries the convenience exit 0 terminator)" "$(contains '|| exit 0' "$h_set" && echo 0 || echo 1)"
+# Real-run probe (gate C5 / F4): anchor to the project root the same way the resilient
+# command does (cd to $CLAUDE_PROJECT_DIR, presence-gate, invoke the inner script) so the
+# script actually runs, instead of the fail-open empty-var path. bash-safe equivalent (the
+# wired string's pwsh `$env:` would be mangled by bash eval under `set -u`).
+h_run='cd "$CLAUDE_PROJECT_DIR" 2>/dev/null && [ -f .harness/scripts/harness-sync.sh ] && bash .harness/scripts/harness-sync.sh || exit 0'
+( cd "$h" && CLAUDE_PROJECT_DIR="$h" eval "$h_run" >/dev/null 2>&1 ); h_wired_code=$?
+assert "H: invoking the wired RESILIENT command (anchored) exits 0 (AC-2 runtime)" "$([[ "$h_wired_code" -eq 0 ]] && echo 0 || echo 1)"
 assert "H: no CONFLICT|congruence in output (end state congruent)" "$(contains 'CONFLICT|congruence' "$RUN_OUT" && echo 1 || echo 0)"
 assert "H: [C1] custom build-scripts/deploy.sh hook NOT flagged (left-bounded ERE)" "$(contains 'build-scripts' "$RUN_OUT" && echo 1 || echo 0)"
 h_set_before="$(cat "$h/.claude/settings.json")"
@@ -383,9 +420,18 @@ assert "P: apply exits 0 (AC-9)" "$([[ "$RUN_CODE" -eq 0 ]] && echo 0 || echo 1)
 p_set="$(cat "$p_fix/.claude/settings.json")"
 assert "P: wired command equals the OS-picked variant (AC-9)" "$(contains "\"command\": \"$t20_pick\"" "$p_set" && echo 0 || echo 1)"
 assert "P: no assembled token opener remains in settings (AC-9)" "$(contains "$t20_o" "$p_set" && echo 1 || echo 0)"
-p_target="${t20_pick##* }"   # last token of the picked command = the script path
+# T-12: the resilient string no longer ends in the script path (it ends in `0\"` / `0'`),
+# so extract the .harness/scripts/<name>.<ext> token via the same left-bounded ERE the
+# congruence scans use, not "last space-token".
+p_target="$(printf '%s\n' "$t20_pick" \
+    | grep -oE "(^|[\"' =])(\.harness/)?scripts/[A-Za-z0-9._-]+\.(ps1|sh)" \
+    | sed -E "s|^[\"' =]||" | head -1)"
 assert "P: the picked command's target file exists (AC-9)" "$([[ -f "$p_fix/$p_target" ]] && echo 0 || echo 1)"
-( cd "$p_fix" && eval "$t20_pick" >/dev/null 2>&1 ); p_run_code=$?
+# Exercise the REAL run path (gate C5 / F4): set CLAUDE_PROJECT_DIR so the resilient
+# anchor resolves to the fixture root and the script actually runs, instead of exiting 0
+# via the fail-open empty-var branch. Use the shell-runnable t20_run (not the JSON-escaped
+# t20_pick). The harness-sync.sh that just landed exits 0 -> the wired command exits 0.
+( cd "$p_fix" && CLAUDE_PROJECT_DIR="$p_fix" eval "$t20_run" >/dev/null 2>&1 ); p_run_code=$?
 assert "P: invoking the repaired wired command from project root exits 0 (AC-9)" "$([[ "$p_run_code" -eq 0 ]] && echo 0 || echo 1)"
 p_bak_count=$(ls "$p_fix/.claude/"settings.json.bak-* 2>/dev/null | wc -l)
 assert "P: exactly one settings .bak written by the repair (FR-R3)" "$([[ "$p_bak_count" -eq 1 ]] && echo 0 || echo 1)"
@@ -458,7 +504,10 @@ echo "--- Fixture M2: healthy migrate unchanged (B10) ---"
 m2="$(new_prereloc_fixture healthy 1)"; tmp_dirs+=("$m2")
 m2_out="$(cd "$m2" && bash "$migrate_helper" 2>&1)"; m2_code=$?
 assert "M2: healthy migrate exits 0" "$([[ "$m2_code" -eq 0 ]] && echo 0 || echo 1)"
-assert "M2: settings rewired to .harness/scripts/harness-sync.ps1" "$(contains '-File .harness/scripts/harness-sync.ps1' "$(cat "$m2/.claude/settings.json")" && echo 0 || echo 1)"
+m2_set="$(cat "$m2/.claude/settings.json")"
+assert "M2: settings rewired to .harness/scripts/harness-sync.ps1" "$(contains '-File .harness/scripts/harness-sync.ps1' "$m2_set" && echo 0 || echo 1)"
+# T-12 / A8: migrate also resilient-ifies the brittle command (CLAUDE_PROJECT_DIR anchor).
+assert "M2: migrated command is the resilient form (CLAUDE_PROJECT_DIR-anchored, A8)" "$(contains 'CLAUDE_PROJECT_DIR' "$m2_set" && echo 0 || echo 1)"
 m2_bak_before=$(ls "$m2/.claude/"settings.json.bak-* 2>/dev/null | wc -l)
 m2_out2="$(cd "$m2" && bash "$migrate_helper" 2>&1)"; m2_code2=$?
 m2_bak_after=$(ls "$m2/.claude/"settings.json.bak-* 2>/dev/null | wc -l)
@@ -484,6 +533,50 @@ else
     assert "M3: failed write left settings untouched on disk" "$(contains '-File scripts/harness-sync.ps1' "$(cat "$m3/.claude/settings.json")" && echo 0 || echo 1)"
 fi
 chmod u+w "$m3/.claude/settings.json" 2>/dev/null || true
+
+# --- Fixture Z: AC-5 RUNTIME fail-closed mutation probe (T-12) ---------------------
+# The fail-CLOSED safety invariant was previously only STRUCTURAL (asserting the guard
+# command string carries no `exit 0`). This is the codified RUNTIME mutation the code
+# review asked for: build the resilient guard command, attempt a genuinely destructive
+# call, and assert the guard BLOCKS it when present — then DELETE guard-rm and assert
+# the same command exits NON-zero (never a silent allow). guard-rm convenience hooks may
+# fail open; the safety hook may not. A regression here is a release blocker.
+echo ""
+echo "--- Fixture Z: AC-5 runtime fail-closed mutation probe (T-12) ---"
+z_guard_src="$repo_root/.harness/scripts/guard-rm.sh"
+if [[ ! -f "$z_guard_src" ]]; then
+    echo "  [SKIP] Z: guard-rm.sh not found in repo — runtime probe skipped"
+else
+    z="$(mktemp -d -t "harness-upgrade-ac5-XXXXXX")"; tmp_dirs+=("$z")
+    mkdir -p "$z/.harness/scripts"
+    ( cd "$z" && git init -q )   # guard needs a .git ancestor to be active
+    cp "$z_guard_src" "$z/.harness/scripts/guard-rm.sh"
+    # The resilient bash guard command, transcribed from design §3.4 (fail-CLOSED: no exit 0).
+    z_guard_cmd='sh -c '\''cd "$CLAUDE_PROJECT_DIR" 2>/dev/null && bash .harness/scripts/guard-rm.sh'\'''
+    z_destructive='{"tool_input":{"command":"rm -rf /etc/harness-ac5-outside-target"}}'
+    z_benign='{"tool_input":{"command":"ls -la"}}'
+
+    # Z1: guard PRESENT -> destructive call is BLOCKED (non-zero).
+    ( export CLAUDE_PROJECT_DIR="$z"; cd "$z"; printf '%s' "$z_destructive" | eval "$z_guard_cmd" ) >/dev/null 2>&1
+    z1_rc=$?
+    assert "Z1: guard PRESENT blocks a destructive out-of-repo rm (rc!=0)" "$([[ "$z1_rc" -ne 0 ]] && echo 0 || echo 1)"
+
+    # Z1b: sanity — a benign call is ALLOWED (rc=0), proving the guard is not blanket-blocking.
+    ( export CLAUDE_PROJECT_DIR="$z"; cd "$z"; printf '%s' "$z_benign" | eval "$z_guard_cmd" ) >/dev/null 2>&1
+    z1b_rc=$?
+    assert "Z1b: guard PRESENT allows a benign command (rc=0, guard genuinely ran)" "$([[ "$z1b_rc" -eq 0 ]] && echo 0 || echo 1)"
+
+    # Z2: MUTATE — delete guard-rm.sh -> the same command must exit NON-zero (fail-CLOSED).
+    rm -f "$z/.harness/scripts/guard-rm.sh"
+    ( export CLAUDE_PROJECT_DIR="$z"; cd "$z"; printf '%s' "$z_destructive" | eval "$z_guard_cmd" ) >/dev/null 2>&1
+    z2_rc=$?
+    assert "Z2: guard ABSENT (mutation) -> command exits non-zero, never silent-allow (fail-CLOSED)" "$([[ "$z2_rc" -ne 0 ]] && echo 0 || echo 1)"
+
+    # Z3: degenerate empty \$CLAUDE_PROJECT_DIR + absent guard -> still non-zero (fail-CLOSED).
+    ( export CLAUDE_PROJECT_DIR=""; cd "$z"; printf '%s' "$z_destructive" | eval "$z_guard_cmd" ) >/dev/null 2>&1
+    z3_rc=$?
+    assert "Z3: empty CLAUDE_PROJECT_DIR + absent guard -> non-zero (fail-CLOSED degenerate)" "$([[ "$z3_rc" -ne 0 ]] && echo 0 || echo 1)"
+fi
 
 echo ""
 echo "=== Summary ==="

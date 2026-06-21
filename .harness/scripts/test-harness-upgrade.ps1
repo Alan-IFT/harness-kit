@@ -193,6 +193,15 @@ try {
     # `.harness/scripts/harness-sync` legitimately embeds "scripts/harness-sync".
     Assert "A: settings no longer references bare scripts/harness-sync (AC-3)" { -not $set.Contains('-File scripts/harness-sync') }
     Assert "A: settings still parses as JSON (AC-3)" { ($set | ConvertFrom-Json) -ne $null }
+    # T-12 / A8 proof: the rewritten command is the RESILIENT form ($CLAUDE_PROJECT_DIR-
+    # anchored), not the bare brittle `-File .harness/scripts/...`.
+    Assert "A: settings rewritten to the resilient form (CLAUDE_PROJECT_DIR-anchored, AC-8)" { $set.Contains('CLAUDE_PROJECT_DIR') }
+    # T-12 / A5 proof: guard-rm (PreToolUse) is resilient-anchored but fail-CLOSED — its
+    # resilient form carries NO `exit 0` fallback (the convenience Stop form does).
+    Assert "A: guard-rm resilient form is fail-CLOSED (no exit 0 in its command)" {
+        $gLine = ($set -split "`n") | Where-Object { $_.Contains('guard-rm.ps1') }
+        -not ($gLine -join "`n").Contains('exit 0')
+    }
     # AC-2 — hook points at new path.
     $hook = Get-Content (Join-Path $a ".git/hooks/pre-commit") -Raw
     Assert "A: pre-commit hook references .harness/scripts/harness-sync (AC-2)" { $hook -match '\.harness/scripts/harness-sync\.' }
@@ -277,10 +286,18 @@ try {
     $t20o = "{" + "{"
     $t20c = "}" + "}"
     $t20tok = $t20o + "SYNC_COMMAND" + $t20c
-    $t20pick = if ($IsWindows -or $env:OS -eq "Windows_NT") {
-        "pwsh -NoProfile -File .harness/scripts/harness-sync.ps1"
+    # T-12: the OS-picked SYNC command is now the RESILIENT (fail-open + $CLAUDE_PROJECT_DIR-
+    # anchored) form. $t20pick holds the JSON-ESCAPED bytes (inner " as \") so the exact
+    # `"command": "<t20pick>"` match equals the raw on-disk settings byte-for-byte (gate C3).
+    # $t20run is a runnable equivalent (gate C5): it anchors to $env:CLAUDE_PROJECT_DIR the
+    # same way the wired command does, presence-gates, and invokes the inner script — so the
+    # script actually runs rather than exiting 0 via the fail-open empty-var path.
+    if ($IsWindows -or $env:OS -eq "Windows_NT") {
+        $t20pick = 'pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/harness-sync.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/harness-sync.ps1 }; exit 0\"'
+        $t20run = 'Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/harness-sync.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/harness-sync.ps1 }; exit 0'
     } else {
-        "bash .harness/scripts/harness-sync.sh"
+        $t20pick = 'sh -c ''cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null && [ -f .harness/scripts/harness-sync.sh ] && exec bash .harness/scripts/harness-sync.sh || exit 0'''
+        $t20run = 'bash -c ''cd "$CLAUDE_PROJECT_DIR" 2>/dev/null && [ -f .harness/scripts/harness-sync.sh ] && bash .harness/scripts/harness-sync.sh || exit 0'''
     }
 
     # Minimal fixture: settings-only project (no scripts/ dir), Stop hook pre-wired to
@@ -346,6 +363,23 @@ try {
         $hSyncCode = $LASTEXITCODE
     } finally { Pop-Location }
     Assert "H: invoking the wired command from project root exits 0 (AC-2 runtime)" { $hSyncCode -eq 0 }
+    # T-12 / A8 proof: the dangling bare `pwsh -File .harness/scripts/harness-sync.ps1` is
+    # repaired to the RESILIENT form ($CLAUDE_PROJECT_DIR-anchored, fail-open exit 0), not
+    # left brittle.
+    $hSet = Get-Content (Join-Path $h ".claude/settings.json") -Raw
+    Assert "H: repaired Stop command is the resilient form (CLAUDE_PROJECT_DIR-anchored, AC-8)" { $hSet.Contains('CLAUDE_PROJECT_DIR') }
+    Assert "H: repaired Stop command is fail-OPEN (carries the convenience exit 0 terminator)" { $hSet.Contains('exit 0') }
+    # Real-run probe via the wired resilient command (gate C5 / F4): set CLAUDE_PROJECT_DIR
+    # so the anchor resolves and the script actually runs (not the fail-open empty-var path).
+    Push-Location $h
+    $hPrevCpd = $env:CLAUDE_PROJECT_DIR
+    try {
+        $env:CLAUDE_PROJECT_DIR = $h
+        Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue
+        if (Test-Path -LiteralPath .harness/scripts/harness-sync.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/harness-sync.ps1 *> $null }
+        $hWiredCode = $LASTEXITCODE
+    } finally { $env:CLAUDE_PROJECT_DIR = $hPrevCpd; Pop-Location }
+    Assert "H: invoking the wired RESILIENT command (anchored) exits 0 (AC-2 runtime)" { $hWiredCode -eq 0 }
     Assert "H: no CONFLICT|congruence in output (end state congruent)" { $rh.out -notmatch 'CONFLICT\|congruence' }
     Assert "H: [C1] custom build-scripts/deploy.sh hook NOT flagged (left-bounded regex)" { -not $rh.out.Contains('build-scripts') }
     $hSetBefore = Get-Content (Join-Path $h ".claude/settings.json") -Raw
@@ -401,13 +435,22 @@ try {
     $pSet = Get-Content (Join-Path $pFix ".claude/settings.json") -Raw
     Assert "P: wired command equals the OS-picked variant (AC-9)" { $pSet.Contains('"command": "' + $t20pick + '"') }
     Assert "P: no assembled token opener remains in settings (AC-9)" { -not $pSet.Contains($t20o) }
-    $pTarget = $t20pick.Split(" ")[-1]   # last token of the picked command = the script path
+    # T-12: the resilient string no longer ends in the script path (it ends in `0\"`/`0'`),
+    # so extract the .harness/scripts/<name>.<ext> token via the same left-bounded regex the
+    # congruence scans use, not "last space-token".
+    $pTok = [regex]::Match($t20pick, '(^|["'' =])((\.harness/)?scripts/[A-Za-z0-9._-]+\.(ps1|sh))')
+    $pTarget = $pTok.Groups[2].Value
     Assert "P: the picked command's target file exists (AC-9)" { Test-Path (Join-Path $pFix $pTarget) }
+    # Real-run probe (gate C5 / F4): set CLAUDE_PROJECT_DIR so the resilient anchor resolves
+    # to the fixture root and the script actually runs, instead of the fail-open empty-var
+    # path. Run $t20run (the runnable equivalent) rather than the JSON-escaped $t20pick.
     Push-Location $pFix
+    $prevCpd = $env:CLAUDE_PROJECT_DIR
     try {
-        Invoke-Expression $t20pick *> $null
+        $env:CLAUDE_PROJECT_DIR = $pFix
+        Invoke-Expression $t20run *> $null
         $pRunCode = $LASTEXITCODE
-    } finally { Pop-Location }
+    } finally { $env:CLAUDE_PROJECT_DIR = $prevCpd; Pop-Location }
     Assert "P: invoking the repaired wired command from project root exits 0 (AC-9)" { $pRunCode -eq 0 }
     $pBakCount = (Get-ChildItem (Join-Path $pFix ".claude") -Filter "settings.json.bak-*" -File -ErrorAction SilentlyContinue).Count
     Assert "P: exactly one settings .bak written by the repair (FR-R3)" { $pBakCount -eq 1 }
@@ -490,7 +533,10 @@ try {
         $m2code = $LASTEXITCODE
     } finally { Pop-Location }
     Assert "M2: healthy migrate exits 0" { $m2code -eq 0 }
-    Assert "M2: settings rewired to .harness/scripts/harness-sync.ps1" { (Get-Content (Join-Path $m2 ".claude/settings.json") -Raw).Contains('-File .harness/scripts/harness-sync.ps1') }
+    $m2Set = Get-Content (Join-Path $m2 ".claude/settings.json") -Raw
+    Assert "M2: settings rewired to .harness/scripts/harness-sync.ps1" { $m2Set.Contains('-File .harness/scripts/harness-sync.ps1') }
+    # T-12 / A8: migrate also resilient-ifies the brittle command (CLAUDE_PROJECT_DIR anchor).
+    Assert "M2: migrated command is the resilient form (CLAUDE_PROJECT_DIR-anchored, A8)" { $m2Set.Contains('CLAUDE_PROJECT_DIR') }
     $m2BakBefore = (Get-ChildItem (Join-Path $m2 ".claude") -Filter "settings.json.bak-*" -File -ErrorAction SilentlyContinue).Count
     Push-Location $m2
     try {
@@ -526,6 +572,44 @@ try {
         Assert "M3: failed write left settings untouched on disk" { (Get-Content $m3Settings -Raw).Contains('-File scripts/harness-sync.ps1') }
     }
     Set-ItemProperty -Path $m3Settings -Name IsReadOnly -Value $false
+
+    # --- Fixture Z: AC-5 RUNTIME fail-closed mutation probe (T-12) ------------------
+    # Codifies the runtime fail-CLOSED invariant the code review asked for: build the
+    # resilient pwsh guard command, attempt a destructive call, assert the guard BLOCKS
+    # it when present, then DELETE guard-rm.ps1 and assert the same command exits
+    # NON-zero (never a silent allow). Mirror of the bash Fixture Z.
+    Write-Host "`n--- Fixture Z: AC-5 runtime fail-closed mutation probe (T-12) ---" -ForegroundColor Cyan
+    $zGuardSrc = Join-Path $repoRoot ".harness/scripts/guard-rm.ps1"
+    if (-not (Test-Path $zGuardSrc)) {
+        Write-Host "  [SKIP] Z: guard-rm.ps1 not found in repo — runtime probe skipped" -ForegroundColor Yellow
+    } else {
+        $z = Join-Path ([System.IO.Path]::GetTempPath()) ("harness-upgrade-ac5-" + [System.Guid]::NewGuid().ToString("N").Substring(0, 8))
+        New-Item -ItemType Directory -Path (Join-Path $z ".harness/scripts") -Force | Out-Null
+        $tmpDirs += $z
+        Push-Location $z; try { & git init -q } finally { Pop-Location }
+        Copy-Item -Path $zGuardSrc -Destination (Join-Path $z ".harness/scripts/guard-rm.ps1")
+        $zGuard = Join-Path $z ".harness/scripts/guard-rm.ps1"
+        $zDestructive = '{"tool_input":{"command":"rm -rf /etc/harness-ac5-outside-target"}}'
+        $zBenign = '{"tool_input":{"command":"ls -la"}}'
+        # Resilient pwsh guard command, transcribed from design 3.4 (fail-CLOSED: no exit 0).
+        $env:CLAUDE_PROJECT_DIR = $z
+        Push-Location $z
+        try {
+            # Z1: guard PRESENT -> destructive call BLOCKED (non-zero).
+            $zDestructive | & pwsh -NoProfile -Command "Set-Location -LiteralPath `$env:CLAUDE_PROJECT_DIR; & pwsh -NoProfile -File .harness/scripts/guard-rm.ps1" *> $null
+            $z1rc = $LASTEXITCODE
+            Assert "Z1: guard PRESENT blocks a destructive out-of-repo rm (rc!=0)" { $z1rc -ne 0 }
+            # Z1b: benign call ALLOWED (rc=0).
+            $zBenign | & pwsh -NoProfile -Command "Set-Location -LiteralPath `$env:CLAUDE_PROJECT_DIR; & pwsh -NoProfile -File .harness/scripts/guard-rm.ps1" *> $null
+            $z1brc = $LASTEXITCODE
+            Assert "Z1b: guard PRESENT allows a benign command (rc=0, guard genuinely ran)" { $z1brc -eq 0 }
+            # Z2: MUTATE — delete guard-rm.ps1 -> same command exits NON-zero (fail-CLOSED).
+            Remove-Item -Force $zGuard
+            $zDestructive | & pwsh -NoProfile -Command "Set-Location -LiteralPath `$env:CLAUDE_PROJECT_DIR; & pwsh -NoProfile -File .harness/scripts/guard-rm.ps1" *> $null
+            $z2rc = $LASTEXITCODE
+            Assert "Z2: guard ABSENT (mutation) -> command exits non-zero, never silent-allow (fail-CLOSED)" { $z2rc -ne 0 }
+        } finally { Pop-Location; Remove-Item Env:CLAUDE_PROJECT_DIR -ErrorAction SilentlyContinue }
+    }
 
     Write-Host "`n=== Summary ===" -ForegroundColor Cyan
     Write-Host "  PASS: $pass" -ForegroundColor Green

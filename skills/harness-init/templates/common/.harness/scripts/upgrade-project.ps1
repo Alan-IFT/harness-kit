@@ -99,6 +99,32 @@ $exitCode = 0
 
 function Emit($line) { Write-Output $line }
 
+# Get-ResilientCmd <tool> <isWindows> — return the T-12 RESILIENT hook command string,
+# JSON-escaped (inner " as \") so it drops straight into a JSON "command" value
+# byte-identical to settings.json.tmpl after substitution.
+#   convenience hooks (harness-sync / ambient-prompt / ambient-reset): fail-OPEN —
+#     anchor to $CLAUDE_PROJECT_DIR, exit 0 silently if the script is absent/unreachable.
+#   guard-rm (safety): fail-CLOSED — anchor but NO exit-0 fallback, so a missing /
+#     unreachable guard yields a non-zero exit (the Bash call is blocked).
+# The space-preceded bare `.harness/scripts/<tool>.<ext>` token is preserved so the
+# unchanged left-bounded congruence regex still parses + existence-checks it (OQ-3a).
+# Case-sensitive literals; .Split not -split elsewhere (insight 2026-06-08 family).
+function Get-ResilientCmd($tool, $forWin) {
+    if ($forWin) {
+        if ($tool -eq "guard-rm") {
+            return ('pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR; & pwsh -NoProfile -File .harness/scripts/{0}.ps1\"' -f $tool)
+        } else {
+            return ('pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/{0}.ps1 -PathType Leaf) {{ & pwsh -NoProfile -File .harness/scripts/{0}.ps1 }}; exit 0\"' -f $tool)
+        }
+    } else {
+        if ($tool -eq "guard-rm") {
+            return ('sh -c ''cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null && bash .harness/scripts/{0}.sh''' -f $tool)
+        } else {
+            return ('sh -c ''cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null && [ -f .harness/scripts/{0}.sh ] && exec bash .harness/scripts/{0}.sh || exit 0''' -f $tool)
+        }
+    }
+}
+
 Emit ("TYPE|{0}" -f $Type)
 
 # --- S1 relocation (verbatim known-set + git-mv-preserving + SKIP-unless-Force) ---
@@ -250,12 +276,14 @@ if (-not (Test-Path $settings)) {
     foreach ($ph in $phPairs) {
         $tok = $phOpen + $ph.Name + $phClose
         if ($IsWindows) {
-            $cmd = "pwsh -NoProfile -File .harness/scripts/$($ph.Tool).ps1"
             $gateTarget = "$($ph.Tool).ps1"
         } else {
-            $cmd = "bash .harness/scripts/$($ph.Tool).sh"
             $gateTarget = "$($ph.Tool).sh"
         }
+        # T-12: emit the RESILIENT (fail-open/closed + $CLAUDE_PROJECT_DIR-anchored) form
+        # so a placeholder-repaired hook is born resilient, not brittle. JSON-escaped
+        # bytes — byte-identical to settings.json.tmpl after substitution.
+        $cmd = Get-ResilientCmd $ph.Tool $IsWindows
         if ($new.Contains($tok) -and (Test-TargetPresent $gateTarget)) {
             $new = $new.Replace($tok, $cmd)
             Emit ("{0}|REWIRE-PLACEHOLDER|.claude/settings.json ({1} -> {2})" -f ($(if ($DryRun) { "PLAN" } else { "RESULT" })), $ph.Name, $cmd)
@@ -269,6 +297,9 @@ if (-not (Test-Path $settings)) {
     # Known cosmetic nuance (gate F-4): when only ONE shell variant's target is
     # present, doc strings mentioning both variants end half-migrated. Idempotent and
     # harmless — the terminal scan only checks "command" lines, never doc keys.
+    # T-12 ordering: S3.1 runs BEFORE S3.2 so a pre-T-007 bare `scripts/<tool>` brittle
+    # command is first normalized to `.harness/scripts/<tool>` and then S3.2 can match +
+    # resilient-ify it (the resilient swap only knows the `.harness/`-prefixed brittle).
     foreach ($toolExt in @("harness-sync.ps1", "harness-sync.sh", "guard-rm.ps1", "guard-rm.sh")) {
         if (Test-TargetPresent $toolExt) {
             $new = $new.Replace("scripts/$toolExt", ".harness/scripts/$toolExt")
@@ -277,6 +308,39 @@ if (-not (Test-Path $settings)) {
     # Collapse the double prefix produced when an already-migrated `.harness/scripts/...`
     # substring matched the `scripts/...` target -> true fixed point (idempotent).
     $new = $new.Replace(".harness/.harness/scripts/", ".harness/scripts/")
+
+    # S3.2 — brittle -> resilient rewrite (T-12 / A8, design §4.3). S3.1 above only adds
+    # the `.harness/` prefix; it does NOT convert a brittle command into the resilient
+    # (fail-open/closed + $CLAUDE_PROJECT_DIR-anchored) form. This step does. For each of
+    # the four {tool}x{ext} brittle forms, if the `.harness/`-prefixed brittle command
+    # value is present verbatim AND its target is (projected) present, swap the WHOLE
+    # brittle command VALUE for the OS-picked resilient string. Ordinal .Replace (R1).
+    # Gated on Test-TargetPresent so a brittle command pointing at a missing script is
+    # left for the terminal scan to flag (never rewritten into a resilient-but-dangling
+    # form). The needle is double-quote-bounded ("<brittle>") so it matches ONLY a bare
+    # brittle "command" value, never the same bare token embedded INSIDE an already-
+    # resilient value — idempotent without a whole-file sentinel (second run = NOOP, no
+    # .bak churn — B10), robust to mixed states. Raw-text, never re-serialize (DO-3);
+    # $schema untouched. R4: only the four harness tool names are eligible.
+    foreach ($s32Tool in @("harness-sync", "guard-rm", "ambient-prompt", "ambient-reset")) {
+        foreach ($s32Ext in @("ps1", "sh")) {
+            $s32Target = "$s32Tool.$s32Ext"
+            if (-not (Test-TargetPresent $s32Target)) { continue }
+            if ($s32Ext -eq "ps1") {
+                $s32Brittle = "pwsh -NoProfile -File .harness/scripts/$s32Target"
+                $s32Win = $true
+            } else {
+                $s32Brittle = "bash .harness/scripts/$s32Target"
+                $s32Win = $false
+            }
+            $s32Needle = '"' + $s32Brittle + '"'
+            if ($new.Contains($s32Needle)) {
+                $s32Cmd = Get-ResilientCmd $s32Tool $s32Win
+                $new = $new.Replace($s32Needle, ('"' + $s32Cmd + '"'))
+                Emit ("{0}|REWIRE-RESILIENT|.claude/settings.json ({1}.{2} -> resilient form)" -f ($(if ($DryRun) { "PLAN" } else { "RESULT" })), $s32Tool, $s32Ext)
+            }
+        }
+    }
 
     if ($new -cne $raw) {
         Emit ("{0}|REWIRE|.claude/settings.json (hook command paths)" -f ($(if ($DryRun) { "PLAN" } else { "RESULT" })))

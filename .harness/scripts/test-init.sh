@@ -38,36 +38,66 @@ assert() {
 # NOTE: -NoProfile on Windows mirrors harness-init/SKILL.md step 5 rule.
 # Without it, every Bash tool call eats $PROFILE startup cost (NFR-Perf).
 # See 06_TEST_REPORT.md D-3 (3.7s p50 → 10ms with -NoProfile).
+# T-12: the OS-picked hook commands are the RESILIENT form — fail-OPEN +
+# $CLAUDE_PROJECT_DIR-anchored for the convenience hooks, fail-CLOSED for guard-rm.
+# These literals are the JSON-ESCAPED bytes (inner " as \") so the exact-string
+# `grep -qF '"command": "<literal>"'` assertions match the substituted .tmpl byte-for-byte
+# (gate C3), AND they equal what settings.json.tmpl carries after the substitute() below.
 case "${OSTYPE:-}" in
     msys*|cygwin*|win32)
-        SYNC_COMMAND="pwsh -NoProfile -File .harness/scripts/harness-sync.ps1"
-        GUARD_COMMAND="pwsh -NoProfile -File .harness/scripts/guard-rm.ps1"
-        AMBIENT_PROMPT_COMMAND="pwsh -NoProfile -File .harness/scripts/ambient-prompt.ps1"
-        AMBIENT_RESET_COMMAND="pwsh -NoProfile -File .harness/scripts/ambient-reset.ps1"
+        SYNC_COMMAND='pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/harness-sync.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/harness-sync.ps1 }; exit 0\"'
+        GUARD_COMMAND='pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR; & pwsh -NoProfile -File .harness/scripts/guard-rm.ps1\"'
+        AMBIENT_PROMPT_COMMAND='pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/ambient-prompt.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/ambient-prompt.ps1 }; exit 0\"'
+        AMBIENT_RESET_COMMAND='pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/ambient-reset.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/ambient-reset.ps1 }; exit 0\"'
         ;;
     *)
-        SYNC_COMMAND="bash .harness/scripts/harness-sync.sh"
-        GUARD_COMMAND="bash .harness/scripts/guard-rm.sh"
-        AMBIENT_PROMPT_COMMAND="bash .harness/scripts/ambient-prompt.sh"
-        AMBIENT_RESET_COMMAND="bash .harness/scripts/ambient-reset.sh"
+        SYNC_COMMAND="sh -c 'cd \\\"\$CLAUDE_PROJECT_DIR\\\" 2>/dev/null && [ -f .harness/scripts/harness-sync.sh ] && exec bash .harness/scripts/harness-sync.sh || exit 0'"
+        GUARD_COMMAND="sh -c 'cd \\\"\$CLAUDE_PROJECT_DIR\\\" 2>/dev/null && bash .harness/scripts/guard-rm.sh'"
+        AMBIENT_PROMPT_COMMAND="sh -c 'cd \\\"\$CLAUDE_PROJECT_DIR\\\" 2>/dev/null && [ -f .harness/scripts/ambient-prompt.sh ] && exec bash .harness/scripts/ambient-prompt.sh || exit 0'"
+        AMBIENT_RESET_COMMAND="sh -c 'cd \\\"\$CLAUDE_PROJECT_DIR\\\" 2>/dev/null && [ -f .harness/scripts/ambient-reset.sh ] && exec bash .harness/scripts/ambient-reset.sh || exit 0'"
         ;;
 esac
+
+# Literal replace-all (no sed): immune to bash 5.2's `&`-means-matched-text rule in
+# ${var//pat/repl} AND to sed delimiter/metachar collisions. The T-12 resilient command
+# values carry `&` (`& pwsh`), `|` (unix `||`), `;`, and `{`/`}` — none of which are safe
+# in a sed replacement. Splits on the needle and concatenates verbatim.
+ti_replace_all() {
+    local rest="$1" needle="$2" repl="$3" out=""
+    while [[ "$rest" == *"$needle"* ]]; do
+        out="$out${rest%%"$needle"*}$repl"
+        rest="${rest#*"$needle"}"
+    done
+    printf '%s' "$out$rest"
+}
 
 substitute() {
     local file="$1" project_name="$2" project_type="$3" stack="$4"
     local tmp; tmp=$(mktemp)
+    # The simple scalar placeholders stay on sed (their values are plain text).
     sed \
         -e "s|{{PROJECT_NAME}}|$project_name|g" \
         -e "s|{{PROJECT_TYPE}}|$project_type|g" \
         -e "s|{{STACK}}|$stack|g" \
         -e "s|{{TODAY}}|$today|g" \
         -e "s|{{ENABLE_HOOK}}|false|g" \
-        -e "s|{{SYNC_COMMAND}}|$SYNC_COMMAND|g" \
-        -e "s|{{GUARD_COMMAND}}|$GUARD_COMMAND|g" \
-        -e "s|{{AMBIENT_PROMPT_COMMAND}}|$AMBIENT_PROMPT_COMMAND|g" \
-        -e "s|{{AMBIENT_RESET_COMMAND}}|$AMBIENT_RESET_COMMAND|g" \
         "$file" > "$tmp"
-    mv "$tmp" "$file"
+    # The four command placeholders carry the resilient strings (sed-unsafe metachars),
+    # so substitute them with the literal replace-all helper on the file content. Only
+    # files that actually carry a command placeholder are rewritten this way; everything
+    # else keeps sed's byte-exact output (preserving the original trailing-newline state
+    # so the AC-10 byte-compare is unaffected).
+    if grep -q '{{SYNC_COMMAND}}\|{{GUARD_COMMAND}}\|{{AMBIENT_PROMPT_COMMAND}}\|{{AMBIENT_RESET_COMMAND}}' "$tmp"; then
+        local content; content="$(cat "$tmp")"
+        content="$(ti_replace_all "$content" "{{SYNC_COMMAND}}" "$SYNC_COMMAND")"
+        content="$(ti_replace_all "$content" "{{GUARD_COMMAND}}" "$GUARD_COMMAND")"
+        content="$(ti_replace_all "$content" "{{AMBIENT_PROMPT_COMMAND}}" "$AMBIENT_PROMPT_COMMAND")"
+        content="$(ti_replace_all "$content" "{{AMBIENT_RESET_COMMAND}}" "$AMBIENT_RESET_COMMAND")"
+        printf '%s\n' "$content" > "$file"
+        rm -f "$tmp"
+    else
+        mv "$tmp" "$file"
+    fi
 }
 
 copy_layer() {
@@ -555,12 +585,27 @@ SETTINGS
     assert "[migrate] OLD scripts/guard-rm.ps1 vacated" "[[ ! -f '$tmp/scripts/guard-rm.ps1' ]]"
     assert "[migrate] OLD scripts/baseline.json vacated" "[[ ! -f '$tmp/scripts/baseline.json' ]]"
     assert "[migrate] user-authored scripts/deploy.sh NOT moved" "[[ -f '$tmp/scripts/deploy.sh' ]]"
+    # T-12: migrate now ALSO resilient-ifies (A8) — the rewired command embeds the inner
+    # `& pwsh -NoProfile -File .harness/scripts/<tool>.ps1` so this substring still matches,
+    # and additionally carries the $CLAUDE_PROJECT_DIR anchor (asserted explicitly below).
     assert "[migrate] settings Stop command -> .harness/scripts/harness-sync.ps1" \
         "grep -qF 'pwsh -NoProfile -File .harness/scripts/harness-sync.ps1' '$tmp/.claude/settings.json'"
     assert "[migrate] settings PreToolUse command -> .harness/scripts/guard-rm.ps1" \
         "grep -qF 'pwsh -NoProfile -File .harness/scripts/guard-rm.ps1' '$tmp/.claude/settings.json'"
+    # T-12 / A8 proof: the migrated commands are the RESILIENT form ($CLAUDE_PROJECT_DIR-
+    # anchored), and guard-rm stays fail-CLOSED (no `exit 0` on its command line).
+    assert "[migrate] commands are the resilient form (CLAUDE_PROJECT_DIR-anchored, A8)" \
+        "grep -qF 'CLAUDE_PROJECT_DIR' '$tmp/.claude/settings.json'"
+    assert "[migrate] guard-rm resilient form is fail-CLOSED (no exit 0 on its command)" \
+        "! { grep -F 'guard-rm.ps1' '$tmp/.claude/settings.json' | grep -qF 'exit 0'; }"
+    # The _doc_sync_hook doc string ('...bash scripts/harness-sync.sh') is prefix-rewired by
+    # S3.1 to '.harness/scripts/harness-sync.sh' but is NOT a "command" line, so S3.2 leaves
+    # it as the bare path (doc strings are never made resilient). Mask the migrated path and
+    # confirm no stale BARE scripts/harness-sync. survives anywhere (doc key or command).
     assert "[migrate] _doc_sync_hook doc string rewired (no stale bare scripts/harness-sync.)" \
         "grep -qF '.harness/scripts/harness-sync.sh' '$tmp/.claude/settings.json' && ! sed 's|\.harness/scripts/harness-sync\.|XX|g' '$tmp/.claude/settings.json' | grep -qE 'scripts/harness-sync\.'"
+    # -NoProfile count: each resilient PS command carries TWO (-Command outer + -File inner),
+    # so Stop + PreToolUse give >=4; the old brittle form gave exactly 2. >=2 stays the floor.
     assert "[migrate] -NoProfile retained (>=2 hits)" \
         "(( \$(grep -c -- '-NoProfile' '$tmp/.claude/settings.json') >= 2 ))"
     assert "[migrate] \$schema unchanged" \

@@ -90,6 +90,46 @@ exit_code=0
 emit() { printf '%s\n' "$1"; }
 verb_prefix() { if [[ "$DRY_RUN" == true ]]; then echo "PLAN"; else echo "RESULT"; fi; }
 
+# resilient_cmd <tool> <is_windows> — print the T-12 RESILIENT hook command string,
+# JSON-escaped (inner " as \") so it can be dropped straight into a JSON "command"
+# value byte-identical to settings.json.tmpl after substitution.
+#   convenience hooks (harness-sync / ambient-prompt / ambient-reset): fail-OPEN —
+#     anchor to $CLAUDE_PROJECT_DIR, exit 0 silently if the script is absent/unreachable.
+#   guard-rm (safety): fail-CLOSED — anchor but NO `|| exit 0` / no `exit 0` fallback,
+#     so a missing/unreachable guard yields a non-zero exit (the Bash call is blocked).
+# The space-preceded bare `.harness/scripts/<tool>.<ext>` token is preserved so the
+# unchanged left-bounded congruence ERE still parses + existence-checks it (OQ-3a).
+resilient_cmd() {
+    local rc_tool="$1" rc_win="$2"
+    if [[ "$rc_win" == true ]]; then
+        if [[ "$rc_tool" == "guard-rm" ]]; then
+            printf '%s' "pwsh -NoProfile -Command \\\"Set-Location -LiteralPath \$env:CLAUDE_PROJECT_DIR; & pwsh -NoProfile -File .harness/scripts/$rc_tool.ps1\\\""
+        else
+            printf '%s' "pwsh -NoProfile -Command \\\"Set-Location -LiteralPath \$env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/$rc_tool.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/$rc_tool.ps1 }; exit 0\\\""
+        fi
+    else
+        if [[ "$rc_tool" == "guard-rm" ]]; then
+            printf '%s' "sh -c 'cd \\\"\$CLAUDE_PROJECT_DIR\\\" 2>/dev/null && bash .harness/scripts/$rc_tool.sh'"
+        else
+            printf '%s' "sh -c 'cd \\\"\$CLAUDE_PROJECT_DIR\\\" 2>/dev/null && [ -f .harness/scripts/$rc_tool.sh ] && exec bash .harness/scripts/$rc_tool.sh || exit 0'"
+        fi
+    fi
+}
+
+# str_replace_all <haystack> <needle> <replacement> — literal replace-all that is
+# IMMUNE to bash 5.2's `&`-means-matched-text rule in ${var//pat/repl} (the resilient
+# command contains a literal `&`, which ${//} would otherwise expand to the match).
+# Splits on the needle and concatenates verbatim — neither needle nor replacement is
+# treated as a pattern. Mirrors PS String.Replace (which is already literal).
+str_replace_all() {
+    local rest="$1" needle="$2" repl="$3" out=""
+    while [[ "$rest" == *"$needle"* ]]; do
+        out="$out${rest%%"$needle"*}$repl"
+        rest="${rest#*"$needle"}"
+    done
+    printf '%s' "$out$rest"
+}
+
 emit "TYPE|$TYPE"
 
 # --- S1 relocation --------------------------------------------------------------
@@ -222,6 +262,11 @@ else
     # assembled from pieces so this shipped helper never contains a literal
     # double-brace token (insight 2026-06-08; test-init's blanket placeholder scan).
     # Replacement values contain no token opener, so a second run is a no-op (B10).
+    # T-12: the emitted command is the RESILIENT form (resilient_cmd) — fail-open +
+    # $CLAUDE_PROJECT_DIR-anchored for the convenience hooks, fail-CLOSED for guard-rm
+    # — so a placeholder-repaired hook is born resilient, not brittle. The value lands
+    # inside a JSON string, so resilient_cmd returns the JSON-escaped bytes (inner " as
+    # \") — byte-identical to what settings.json.tmpl carries after substitution.
     ph_o="{{"; ph_c="}}"
     is_windows=false
     case "${OSTYPE:-}" in msys*|cygwin*|win32) is_windows=true ;; esac
@@ -230,14 +275,13 @@ else
     for ph_i in "${!ph_names[@]}"; do
         ph_tok="${ph_o}${ph_names[$ph_i]}${ph_c}"
         if [[ "$is_windows" == true ]]; then
-            ph_cmd="pwsh -NoProfile -File .harness/scripts/${ph_tools[$ph_i]}.ps1"
             ph_target="${ph_tools[$ph_i]}.ps1"
         else
-            ph_cmd="bash .harness/scripts/${ph_tools[$ph_i]}.sh"
             ph_target="${ph_tools[$ph_i]}.sh"
         fi
+        ph_cmd="$(resilient_cmd "${ph_tools[$ph_i]}" "$is_windows")"
         if printf '%s' "$settings_new" | grep -qF -- "$ph_tok" && target_present "$ph_target"; then
-            settings_new="${settings_new//"$ph_tok"/$ph_cmd}"
+            settings_new="$(str_replace_all "$settings_new" "$ph_tok" "$ph_cmd")"
             emit "$(verb_prefix)|REWIRE-PLACEHOLDER|.claude/settings.json (${ph_names[$ph_i]} -> $ph_cmd)"
         fi
     done
@@ -249,6 +293,9 @@ else
     # Known cosmetic nuance (gate F-4): when only ONE shell variant's target is
     # present, doc strings mentioning both variants end half-migrated. Idempotent and
     # harmless — the terminal scan only checks "command" lines, never doc keys.
+    # T-12 ordering: S3.1 runs BEFORE S3.2 so a pre-T-007 bare `scripts/<tool>` brittle
+    # command is first normalized to `.harness/scripts/<tool>` and then S3.2 can match +
+    # resilient-ify it (the resilient swap only knows the `.harness/`-prefixed brittle).
     for tool_ext in harness-sync.ps1 harness-sync.sh guard-rm.ps1 guard-rm.sh; do
         if target_present "$tool_ext"; then
             tool_base="${tool_ext%.*}"
@@ -258,6 +305,44 @@ else
         fi
     done
     settings_new="$(printf '%s\n' "$settings_new" | sed -e 's|\.harness/\.harness/scripts/|.harness/scripts/|g')"
+
+    # S3.2 — brittle -> resilient rewrite (T-12 / A8, design §4.3). S3.1 above only adds
+    # the `.harness/` prefix; it does NOT convert a brittle command
+    # (`bash .harness/scripts/harness-sync.sh` / `pwsh -NoProfile -File .harness/...`)
+    # into the resilient (fail-open/closed + $CLAUDE_PROJECT_DIR-anchored) form. This
+    # step does. For each of the four {tool}x{ext} brittle forms, if the `.harness/`-
+    # prefixed brittle command value is present verbatim AND its target is (projected)
+    # present, swap the WHOLE brittle command VALUE for the OS-picked resilient string.
+    # Pure ordinal bash substring replace (no sed) so the resilient value's `&`/`|`/`;`
+    # metachars are inert. Gated on target_present so a brittle command pointing at a
+    # missing script is left for the terminal scan to flag (never rewritten into a
+    # resilient-but-dangling form). The needle is double-quote-bounded ("<brittle>") so
+    # it matches ONLY a bare brittle "command" value, never the same bare token embedded
+    # INSIDE an already-resilient value (there it sits in single quotes / Set-Location
+    # body, not "..."), which makes the rewrite idempotent without a whole-file sentinel
+    # (second run = NOOP, no .bak churn — B10) and robust to mixed states. Raw-text,
+    # never re-serialize (DO-3); $schema untouched. R4: only the four harness tool names
+    # are eligible — a user's custom hook is never a rewrite candidate.
+    s32_tools=(harness-sync guard-rm ambient-prompt ambient-reset)
+    for s32_tool in "${s32_tools[@]}"; do
+        for s32_ext in ps1 sh; do
+            s32_target="$s32_tool.$s32_ext"
+            target_present "$s32_target" || continue
+            if [[ "$s32_ext" == "ps1" ]]; then
+                s32_brittle="pwsh -NoProfile -File .harness/scripts/$s32_target"
+                s32_win=true
+            else
+                s32_brittle="bash .harness/scripts/$s32_target"
+                s32_win=false
+            fi
+            s32_needle="\"$s32_brittle\""
+            if [[ "$settings_new" == *"$s32_needle"* ]]; then
+                s32_cmd="$(resilient_cmd "$s32_tool" "$s32_win")"
+                settings_new="$(str_replace_all "$settings_new" "$s32_needle" "\"$s32_cmd\"")"
+                emit "$(verb_prefix)|REWIRE-RESILIENT|.claude/settings.json ($s32_tool.$s32_ext -> resilient form)"
+            fi
+        done
+    done
 
     if [[ "$settings_new" != "$settings_raw" ]]; then
         emit "$(verb_prefix)|REWIRE|.claude/settings.json (hook command paths)"

@@ -98,6 +98,15 @@ How to compute each state:
   `(^|["' =])(\.harness/)?scripts/<name>.(ps1|sh)` — the boundary means a custom
   command in a dirname merely *ending* in `scripts/` (e.g. `build-scripts/deploy.sh`)
   is never extracted, so user-custom hooks are not flagged.
+- **Resilient command form (v0.44+, T-12).** A healthy hook command is now anchored
+  (`cd "$CLAUDE_PROJECT_DIR"` / `Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR`)
+  and fail-open (convenience hooks end `… || exit 0` / `…; exit 0`) or fail-closed
+  (guard-rm has the anchor but NO `exit 0` fallback). This anchor does NOT change the
+  extractable token: the bare space-preceded `.harness/scripts/<name>.<ext>` still
+  appears (after `[ -f ` / `Test-Path -LiteralPath ` and after `exec bash` / `-File`),
+  so the same left-bounded pattern parses it and the existence check is unchanged. A
+  resilient healthy project computes to `ok`; the anchor never makes a dangling script
+  look present.
 - `ok` — every extracted path exists. `not wired` — settings absent, no `hooks` key,
   or no entry for the event (not a crash; report it plainly).
 - `DANGLING` — a path is extracted but the file does not exist. Print the exact

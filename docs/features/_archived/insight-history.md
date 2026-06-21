@@ -57,3 +57,11 @@
 ## Rotated 2026-06-20
 
 - 2026-05-23 · v0.18.0 upgraded the I.6 retired-claim guard (insight L18) from literal-substring to a gap-tolerant ordered-anchor scan with per-entry line-scoped `exclude` tokens — a retired claim re-phrased with a word inserted between the banned tokens is now caught, and accurate negated prose is suppressed by the `exclude`. Exempt-dir widened to all of `docs/features/`; the `test-verify-i6.{ps1,sh}` regression pair must be added to the I.6 exempt-FILE list (it holds a verbatim copy of the banned list, same reason verify_all is exempt). · evidence: T-004, .harness/scripts/verify_all.{sh,ps1} I.6 block
+
+## Rotated 2026-06-21
+
+- 2026-05-23 · GNU grep 3.0 as shipped with Git-for-Windows MSYS aborts (SIGABRT, exit 134) when `-F` and `-i` are combined; `-F -q`, `-i -q`, and `-E -i` are unaffected. Use bash-native `shopt -s nocasematch` + `[[ == *glob* ]]` for case-insensitive literal substring tests in dogfood scripts. Also: `Get-Command bash` on Windows resolves the WindowsApps WSL launcher stub first, not Git-bash — derive Git-bash from `git.exe`'s install root (`<Git>\bin\bash.exe`) instead. · evidence: T-004, .harness/scripts/verify_all.sh + test-verify-i6.ps1
+
+## Rotated 2026-06-21 (T-12 operator PS verification)
+
+- 2026-05-23 · A pattern-matching guard's per-entry false-positive analysis must be backed by an actual matcher run over the live tree, not per-family hand-reasoning — in T-004 three "§6 zero hits" design claims were falsified by `verify_all` runs (00-core.md.tmpl:7; concepts.md:104 v0.2-on-wrong-line; READMEs entry-#10). Rely on `verify_all` as the canonical exhaustive scan from the design stage onward. · evidence: T-004 design rollbacks 1-3

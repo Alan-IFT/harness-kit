@@ -28,6 +28,27 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# Get-ResilientCmd <tool> <isWindows> — return the T-12 RESILIENT hook command string,
+# JSON-escaped (inner " as \"). Convenience hooks (harness-sync) fail-OPEN + anchored to
+# $CLAUDE_PROJECT_DIR; guard-rm (safety) fail-CLOSED (no exit-0 fallback). The space-
+# preceded bare `.harness/scripts/<tool>.<ext>` token survives so the unchanged left-
+# bounded congruence regex still parses + existence-checks it (OQ-3a).
+function Get-ResilientCmd($tool, $forWin) {
+    if ($forWin) {
+        if ($tool -eq "guard-rm") {
+            return ('pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR; & pwsh -NoProfile -File .harness/scripts/{0}.ps1\"' -f $tool)
+        } else {
+            return ('pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/{0}.ps1 -PathType Leaf) {{ & pwsh -NoProfile -File .harness/scripts/{0}.ps1 }}; exit 0\"' -f $tool)
+        }
+    } else {
+        if ($tool -eq "guard-rm") {
+            return ('sh -c ''cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null && bash .harness/scripts/{0}.sh''' -f $tool)
+        } else {
+            return ('sh -c ''cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null && [ -f .harness/scripts/{0}.sh ] && exec bash .harness/scripts/{0}.sh || exit 0''' -f $tool)
+        }
+    }
+}
+
 # Run from the project root (the directory that contains .claude/ and scripts/).
 $root = (Get-Location).Path
 $settings = Join-Path $root ".claude/settings.json"
@@ -120,6 +141,36 @@ foreach ($toolExt in @("harness-sync.ps1", "harness-sync.sh", "guard-rm.ps1", "g
 # substring matched the `scripts/...` replace target. This makes the transform a
 # true fixed point: running it on already-migrated text yields the same text.
 $new = $new.Replace(".harness/.harness/scripts/", ".harness/scripts/")
+
+# Brittle -> resilient rewrite (T-12 / A8, design §4.3). The prefix rewire above only
+# adds `.harness/`; it does NOT make the hook fail-open/closed + $CLAUDE_PROJECT_DIR-
+# anchored. For each {tool}x{ext}, if the `.harness/`-prefixed brittle command VALUE is
+# present verbatim AND its target is (projected) present, swap the WHOLE value for the
+# OS-picked resilient string. Ordinal .Replace (R1). Double-quote-bounded needle ->
+# idempotent (a second run sees the resilient value, not the bare brittle "command", so
+# no .bak churn — B10) and gated on target-present so a brittle command pointing at a
+# missing script is left for the terminal scan to flag. R4: only harness tool names.
+foreach ($s32Tool in @("harness-sync", "guard-rm", "ambient-prompt", "ambient-reset")) {
+    foreach ($s32Ext in @("ps1", "sh")) {
+        $s32Target = "$s32Tool.$s32Ext"
+        $s32Present = (Test-Path (Join-Path $dstDir $s32Target)) -or
+                      ($DryRun -and ($plannedMoves -ccontains $s32Target))
+        if (-not $s32Present) { continue }
+        if ($s32Ext -eq "ps1") {
+            $s32Brittle = "pwsh -NoProfile -File .harness/scripts/$s32Target"
+            $s32Win = $true
+        } else {
+            $s32Brittle = "bash .harness/scripts/$s32Target"
+            $s32Win = $false
+        }
+        $s32Needle = '"' + $s32Brittle + '"'
+        if ($new.Contains($s32Needle)) {
+            $s32Cmd = Get-ResilientCmd $s32Tool $s32Win
+            $new = $new.Replace($s32Needle, ('"' + $s32Cmd + '"'))
+        }
+    }
+}
+
 # Only an actual content change counts as needing a settings write (idempotent:
 # already-migrated text is a fixed point -> $new -ceq $raw -> no .bak, no write).
 $needsSettings = ($new -cne $raw)

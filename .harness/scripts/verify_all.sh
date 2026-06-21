@@ -294,20 +294,30 @@ for f in .harness/scripts/guard-rm.ps1 .harness/scripts/guard-rm.sh \
          skills/harness-init/templates/common/.harness/scripts/guard-rm.sh; do
     [[ -f "$f" ]] || f2_problems="$f2_problems missing:$f"
 done
-# Dogfood .claude/settings.json must contain a PreToolUse hook calling guard-rm.
-# Use grep heuristic (avoid jq dependency); mirrors G.3's grep approach.
-if [[ -f .claude/settings.json ]]; then
-    if ! grep -q '"PreToolUse"' .claude/settings.json; then
-        f2_problems="$f2_problems .claude/settings.json:no_PreToolUse"
-    fi
-    if ! grep -q '"matcher"[[:space:]]*:[[:space:]]*"Bash"' .claude/settings.json; then
-        f2_problems="$f2_problems .claude/settings.json:no_Bash_matcher"
-    fi
-    if ! grep -qE 'guard-rm\.(ps1|sh)' .claude/settings.json; then
-        f2_problems="$f2_problems .claude/settings.json:no_guard-rm_command"
-    fi
+# Dogfood guard-rm PreToolUse wiring must exist. T-12 (v0.44.0): the dogfood hooks
+# moved OUT of the committed .claude/settings.json into the gitignored
+# .claude/settings.local.json (so the published plugin ships no leakable hooks). Read
+# the guard-rm evidence from settings.local.json when it carries the hooks, and fall
+# back to settings.json otherwise (a user project that keeps hooks in the committed
+# file is still validated). Use grep heuristic (avoid jq); mirrors G.3's grep approach.
+f2_hooks_file=""
+if [[ -f .claude/settings.local.json ]] && grep -q '"PreToolUse"' .claude/settings.local.json; then
+    f2_hooks_file=".claude/settings.local.json"
+elif [[ -f .claude/settings.json ]]; then
+    f2_hooks_file=".claude/settings.json"
+fi
+if [[ -z "$f2_hooks_file" ]]; then
+    f2_problems="$f2_problems missing:.claude/settings.json-or-settings.local.json"
 else
-    f2_problems="$f2_problems missing:.claude/settings.json"
+    if ! grep -q '"PreToolUse"' "$f2_hooks_file"; then
+        f2_problems="$f2_problems $f2_hooks_file:no_PreToolUse"
+    fi
+    if ! grep -q '"matcher"[[:space:]]*:[[:space:]]*"Bash"' "$f2_hooks_file"; then
+        f2_problems="$f2_problems $f2_hooks_file:no_Bash_matcher"
+    fi
+    if ! grep -qE 'guard-rm\.(ps1|sh)' "$f2_hooks_file"; then
+        f2_problems="$f2_problems $f2_hooks_file:no_guard-rm_command"
+    fi
 fi
 # Template .claude/settings.json.tmpl must have {{GUARD_COMMAND}} + PreToolUse
 tmpl=skills/harness-init/templates/common/.claude/settings.json.tmpl
@@ -640,7 +650,11 @@ fi
 # sufficient to detect both known failure classes without a full JSON parser.
 j1_canonical='https://json.schemastore.org/claude-code-settings.json'
 j1_valid_hook_events="PreToolUse PostToolUse PostToolUseFailure PermissionRequest PermissionDenied Notification UserPromptSubmit UserPromptExpansion Stop StopFailure SubagentStart SubagentStop PreCompact PostCompact PostToolBatch Elicitation ElicitationResult TeammateIdle TaskCompleted TaskCreated Setup InstructionsLoaded CwdChanged FileChanged ConfigChange WorktreeCreate WorktreeRemove SessionStart SessionEnd"
-j1_targets=(".claude/settings.json" "skills/harness-init/templates/common/.claude/settings.json.tmpl")
+# T-12 (v0.44.0): .claude/settings.local.json now holds the dogfood hooks (relocated
+# from settings.json). Validate its $schema + hook-event keys where they now live. The
+# `[[ -f ]] || continue` guard makes a missing target a clean skip (user projects that
+# never create a settings.local.json are unaffected).
+j1_targets=(".claude/settings.json" ".claude/settings.local.json" "skills/harness-init/templates/common/.claude/settings.json.tmpl")
 j1_failures=""
 for jt in "${j1_targets[@]}"; do
     [[ -f "$jt" ]] || continue

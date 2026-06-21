@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.44.0] - 2026-06-21
+
+### Fixed — resilient-hooks (T-12): stop the per-turn Stop-hook error + stop distributing dogfood hooks
+
+The recurring `Stop hook error: bash: .harness/scripts/harness-sync.sh: No such file or directory`
+is gone: the harness lifecycle hooks are now resilient at the wiring layer, and this repo no longer
+ships its own dogfood hooks in the published plugin.
+
+- **Resilient hook command form (slice A).** The three convenience hooks (Stop→harness-sync,
+  UserPromptSubmit→ambient-prompt, SessionStart→ambient-reset) are now **fail-OPEN** and
+  `$CLAUDE_PROJECT_DIR`-anchored: a missing/unreachable script exits 0 silently (no per-turn error),
+  and launching Claude Code from a subdirectory still resolves the script. The safety hook
+  (PreToolUse→guard-rm) gets the same anchor but stays **fail-CLOSED** (no `|| exit 0`) — a missing
+  guard blocks the Bash call, never silently allows it. Both OS variants (pwsh + sh) are specified.
+- **Distributed everywhere.** `settings.json.tmpl` (via the four `{{…}}_COMMAND` placeholders),
+  `/harness-init` step 5 + `/harness-adopt` step 6 derivation tables, and the
+  `/harness-upgrade` + `migrate-scripts-layout` repair paths all emit the resilient form. The repair
+  path additionally **rewrites a pre-existing brittle command into the resilient form** (A8),
+  idempotently, gated on the target script being present.
+- **Congruence scans unchanged.** The resilient form keeps a space-preceded bare
+  `.harness/scripts/<name>.<ext>` token, so every hook↔script congruence scan (verify_all E.4b/D.4b,
+  harness-status §3c, the upgrade/migrate terminal scans, test drivers) parses + existence-checks it
+  with zero extraction-pattern changes.
+- **No more leaked dogfood hooks (slice B).** This repo's active dev hooks moved from the committed
+  `.claude/settings.json` (now hooks-less, permissions retained) into a gitignored
+  `.claude/settings.local.json` (resilient form). verify_all F.2 + J.1 read the dogfood hooks from
+  settings.local.json when present; J.1 now also validates that file's schema.
+- No new `verify_all` check (count stays 32); skills 17 / agents 8 unchanged.
+
 ## [0.43.0] - 2026-06-20
 
 ### Added — entropy-watch-persist (T-11c): declined findings stop re-litigating

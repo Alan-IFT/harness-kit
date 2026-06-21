@@ -7,6 +7,14 @@ A `PreToolUse` hook in `.claude/settings.json` that runs
 blocks the call when any destructive verb targets a path that resolves outside
 the nearest `.git/` ancestor of the current working directory.
 
+> **Dogfood note (T-12, v0.44.0):** in THIS repo the guard hook lives in the
+> gitignored `.claude/settings.local.json` (the committed `.claude/settings.json` ships
+> hooks-less so the published plugin distributes none). User projects created by
+> `/harness-init` / `/harness-adopt` keep the guard in their own committed
+> `.claude/settings.json` as described below — that is unchanged. The hook command is
+> now the resilient `$CLAUDE_PROJECT_DIR`-anchored, **fail-CLOSED** form (a missing
+> guard blocks the call; never made fail-open).
+
 The hook is auto-installed by `/harness-init` and `/harness-adopt` (with a
 merge prompt). It is **always on** by default; the documented disable path is
 one line (see below).

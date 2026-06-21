@@ -308,10 +308,10 @@ Substitution rules (same as `/harness-init`):
 | `{{STACK}}` | from step 3 |
 | `{{TODAY}}` | today's date `YYYY-MM-DD` |
 | `{{ENABLE_HOOK}}` | from step 3 |
-| `{{SYNC_COMMAND}}` | OS-picked harness-sync invocation for the Stop hook — same rule as `/harness-init` step 5 (see `skills/harness-init/SKILL.md` placeholder table; Windows → `pwsh -NoProfile -File .harness/scripts/harness-sync.ps1`, macOS/Linux → `bash .harness/scripts/harness-sync.sh`). Never improvise this command and never leave the literal token in the written settings.json. |
-| `{{GUARD_COMMAND}}` | OS-picked guard-rm invocation for the PreToolUse hook — same OS-pick rule as `{{SYNC_COMMAND}}` (init step 5 table). |
-| `{{AMBIENT_PROMPT_COMMAND}}` | OS-picked ambient-prompt invocation for the UserPromptSubmit hook — same OS-pick rule as `{{SYNC_COMMAND}}` (init step 5 table). |
-| `{{AMBIENT_RESET_COMMAND}}` | OS-picked ambient-reset invocation for the SessionStart hook — same OS-pick rule as `{{SYNC_COMMAND}}` (init step 5 table). |
+| `{{SYNC_COMMAND}}` | OS-picked harness-sync invocation for the Stop hook in the **RESILIENT** form (v0.44+, T-12: fail-OPEN + `$CLAUDE_PROJECT_DIR`-anchored, JSON-escaped) — same rule + exact bytes as `/harness-init` step 5 (see `skills/harness-init/SKILL.md` placeholder table for both OS strings). Never improvise this command and never leave the literal token in the written settings.json. |
+| `{{GUARD_COMMAND}}` | OS-picked guard-rm invocation for the PreToolUse hook — same OS-pick rule as `{{SYNC_COMMAND}}` (init step 5 table). **Resilient but fail-CLOSED**: same `$CLAUDE_PROJECT_DIR` anchor, but NO `\|\| exit 0` / no `exit 0` fallback (safety — a missing guard must block, never silently allow). |
+| `{{AMBIENT_PROMPT_COMMAND}}` | OS-picked ambient-prompt invocation for the UserPromptSubmit hook in the resilient fail-OPEN form — same OS-pick rule + bytes as `{{SYNC_COMMAND}}` (init step 5 table). |
+| `{{AMBIENT_RESET_COMMAND}}` | OS-picked ambient-reset invocation for the SessionStart hook in the resilient fail-OPEN form — same OS-pick rule + bytes as `{{SYNC_COMMAND}}` (init step 5 table). |
 
 For `.harness/rules/00-core.md`: if `.harness-adopt/CLAUDE.draft.md` has content beyond
 the template, append it as a new fragment `.harness/rules/80-existing-conventions.md` so

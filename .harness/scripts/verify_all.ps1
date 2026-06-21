@@ -280,15 +280,29 @@ Step "F.2" "Guard-rm scripts and PreToolUse wiring present" {
                      "skills/harness-init/templates/common/.harness/scripts/guard-rm.sh")) {
         if (-not (Test-Path $f)) { throw "Missing $f" }
     }
-    # Dogfood .claude/settings.json must JSON-parse and have a PreToolUse hook calling guard-rm
-    $settings = Get-Content ".claude/settings.json" -Raw | ConvertFrom-Json
+    # Dogfood guard-rm PreToolUse wiring must exist. T-12 (v0.44.0): the dogfood hooks
+    # moved OUT of the committed .claude/settings.json into the gitignored
+    # .claude/settings.local.json (so the published plugin ships no leakable hooks). Read
+    # the guard-rm evidence from settings.local.json when it carries the hooks, falling
+    # back to settings.json otherwise (a user project that keeps hooks in the committed
+    # file is still validated).
+    $hooksFile = $null
+    if ((Test-Path ".claude/settings.local.json") -and `
+        ((Get-Content ".claude/settings.local.json" -Raw | ConvertFrom-Json).hooks.PreToolUse)) {
+        $hooksFile = ".claude/settings.local.json"
+    } elseif (Test-Path ".claude/settings.json") {
+        $hooksFile = ".claude/settings.json"
+    } else {
+        throw "missing .claude/settings.json and .claude/settings.local.json"
+    }
+    $settings = Get-Content $hooksFile -Raw | ConvertFrom-Json
     $pre = $settings.hooks.PreToolUse
-    if (-not $pre -or $pre.Count -lt 1) { throw ".claude/settings.json missing hooks.PreToolUse[]" }
+    if (-not $pre -or $pre.Count -lt 1) { throw "$hooksFile missing hooks.PreToolUse[]" }
     $first = $pre[0]
-    if ($first.matcher -ne "Bash") { throw ".claude/settings.json PreToolUse[0].matcher should be 'Bash', got '$($first.matcher)'" }
-    if (-not $first.hooks -or $first.hooks.Count -lt 1) { throw ".claude/settings.json PreToolUse[0].hooks missing" }
+    if ($first.matcher -ne "Bash") { throw "$hooksFile PreToolUse[0].matcher should be 'Bash', got '$($first.matcher)'" }
+    if (-not $first.hooks -or $first.hooks.Count -lt 1) { throw "$hooksFile PreToolUse[0].hooks missing" }
     $cmd = $first.hooks[0].command
-    if ($cmd -notmatch 'guard-rm\.(ps1|sh)') { throw ".claude/settings.json PreToolUse command does not reference guard-rm: $cmd" }
+    if ($cmd -notmatch 'guard-rm\.(ps1|sh)') { throw "$hooksFile PreToolUse command does not reference guard-rm: $cmd" }
     # Template settings.json.tmpl must contain {{GUARD_COMMAND}} and PreToolUse
     $tmpl = Get-Content "skills/harness-init/templates/common/.claude/settings.json.tmpl" -Raw
     if ($tmpl -notmatch [regex]::Escape("{{GUARD_COMMAND}}")) { throw "template settings.json.tmpl missing {{GUARD_COMMAND}}" }
@@ -585,8 +599,13 @@ Step "J.1" "settings.json schema integrity (.claude/ + template)" {
         'WorktreeCreate', 'WorktreeRemove', 'SessionStart', 'SessionEnd'
     )
     $canonicalSchema = 'https://json.schemastore.org/claude-code-settings.json'
+    # T-12 (v0.44.0): .claude/settings.local.json now holds the dogfood hooks (relocated
+    # from settings.json). Validate its $schema + hook-event keys where they now live. The
+    # `Test-Path` guard makes a missing target a clean skip (user projects without a
+    # settings.local.json are unaffected).
     $targets = @(
         @{ path = '.claude/settings.json'; isTemplate = $false },
+        @{ path = '.claude/settings.local.json'; isTemplate = $false },
         @{ path = 'skills/harness-init/templates/common/.claude/settings.json.tmpl'; isTemplate = $true }
     )
     $failures = @()

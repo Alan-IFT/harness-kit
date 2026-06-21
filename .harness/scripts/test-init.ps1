@@ -71,7 +71,10 @@ function Copy-TemplateLayer {
         if ($needsSubst) {
             $content = Get-Content $_.FullName -Raw
             foreach ($k in $Vars.Keys) {
-                $content = $content -replace [regex]::Escape("{{$k}}"), $Vars[$k]
+                # Literal .Replace, NOT -replace: the T-12 resilient command values carry
+                # `$env:CLAUDE_PROJECT_DIR` / `$CLAUDE_PROJECT_DIR`, and -replace would treat
+                # `$...` in the replacement as a regex backreference token and mangle it.
+                $content = $content.Replace("{{$k}}", [string]$Vars[$k])
             }
             [System.IO.File]::WriteAllText($destPath, $content)
         } else {
@@ -93,25 +96,21 @@ function Test-Type {
         # NOTE: -NoProfile on Windows mirrors harness-init/SKILL.md step 5 rule.
         # Without it, every Bash tool call eats $PROFILE startup cost (NFR-Perf).
         # See 06_TEST_REPORT.md D-3 (3.7s p50 → 10ms with -NoProfile).
-        $syncCmd = if ($IsWindows -or $env:OS -eq "Windows_NT") {
-            "pwsh -NoProfile -File .harness/scripts/harness-sync.ps1"
+        # T-12: the OS-picked hook commands are the RESILIENT form (fail-OPEN +
+        # $CLAUDE_PROJECT_DIR-anchored for the convenience hooks, fail-CLOSED for guard-rm).
+        # JSON-ESCAPED bytes (inner " as \") so the exact `"command": "<literal>"` match
+        # equals the substituted .tmpl byte-for-byte (gate C3).
+        $win = ($IsWindows -or $env:OS -eq "Windows_NT")
+        if ($win) {
+            $syncCmd          = 'pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/harness-sync.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/harness-sync.ps1 }; exit 0\"'
+            $guardCmd         = 'pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR; & pwsh -NoProfile -File .harness/scripts/guard-rm.ps1\"'
+            $ambientPromptCmd = 'pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/ambient-prompt.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/ambient-prompt.ps1 }; exit 0\"'
+            $ambientResetCmd  = 'pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/ambient-reset.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/ambient-reset.ps1 }; exit 0\"'
         } else {
-            "bash .harness/scripts/harness-sync.sh"
-        }
-        $guardCmd = if ($IsWindows -or $env:OS -eq "Windows_NT") {
-            "pwsh -NoProfile -File .harness/scripts/guard-rm.ps1"
-        } else {
-            "bash .harness/scripts/guard-rm.sh"
-        }
-        $ambientPromptCmd = if ($IsWindows -or $env:OS -eq "Windows_NT") {
-            "pwsh -NoProfile -File .harness/scripts/ambient-prompt.ps1"
-        } else {
-            "bash .harness/scripts/ambient-prompt.sh"
-        }
-        $ambientResetCmd = if ($IsWindows -or $env:OS -eq "Windows_NT") {
-            "pwsh -NoProfile -File .harness/scripts/ambient-reset.ps1"
-        } else {
-            "bash .harness/scripts/ambient-reset.sh"
+            $syncCmd          = 'sh -c ''cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null && [ -f .harness/scripts/harness-sync.sh ] && exec bash .harness/scripts/harness-sync.sh || exit 0'''
+            $guardCmd         = 'sh -c ''cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null && bash .harness/scripts/guard-rm.sh'''
+            $ambientPromptCmd = 'sh -c ''cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null && [ -f .harness/scripts/ambient-prompt.sh ] && exec bash .harness/scripts/ambient-prompt.sh || exit 0'''
+            $ambientResetCmd  = 'sh -c ''cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null && [ -f .harness/scripts/ambient-reset.sh ] && exec bash .harness/scripts/ambient-reset.sh || exit 0'''
         }
         $vars = @{
             "PROJECT_NAME"  = "test-project"
@@ -396,7 +395,7 @@ function Test-Type {
             } elseif (Test-Path $srcTmpl) {
                 $tmplContent = Get-Content $srcTmpl -Raw
                 foreach ($k in $vars.Keys) {
-                    $tmplContent = $tmplContent -replace [regex]::Escape("{{$k}}"), $vars[$k]
+                    $tmplContent = $tmplContent.Replace("{{$k}}", [string]$vars[$k])  # literal (T-12: $-safe)
                 }
                 # Copy-TemplateLayer writes with WriteAllText (UTF-8 no BOM by
                 # default in .NET). Mirror that exactly so the comparison is fair.
@@ -580,13 +579,16 @@ function Test-Migrate {
     $tmp = Join-Path ([System.IO.Path]::GetTempPath()) "harness-test-migrate-$(Get-Random)"
     New-Item -ItemType Directory -Path $tmp -Force | Out-Null
     try {
+        # T-12: resilient OS-picked commands (JSON-escaped) for the pre-downgrade settings;
+        # the synthetic downgrade below overwrites .claude/settings.json with a hand-written
+        # OLD-layout brittle one anyway, so these only feed the template-copy substitution.
         $vars = @{
             "PROJECT_NAME"  = "migrate-test"; "PROJECT_TYPE" = "generic"
             "STACK"         = "Rust CLI tool"; "TODAY" = $today; "ENABLE_HOOK" = "false"
-            "SYNC_COMMAND"  = "pwsh -NoProfile -File .harness/scripts/harness-sync.ps1"
-            "GUARD_COMMAND" = "pwsh -NoProfile -File .harness/scripts/guard-rm.ps1"
-            "AMBIENT_PROMPT_COMMAND" = "pwsh -NoProfile -File .harness/scripts/ambient-prompt.ps1"
-            "AMBIENT_RESET_COMMAND"  = "pwsh -NoProfile -File .harness/scripts/ambient-reset.ps1"
+            "SYNC_COMMAND"  = 'pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/harness-sync.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/harness-sync.ps1 }; exit 0\"'
+            "GUARD_COMMAND" = 'pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR; & pwsh -NoProfile -File .harness/scripts/guard-rm.ps1\"'
+            "AMBIENT_PROMPT_COMMAND" = 'pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/ambient-prompt.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/ambient-prompt.ps1 }; exit 0\"'
+            "AMBIENT_RESET_COMMAND"  = 'pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/ambient-reset.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/ambient-reset.ps1 }; exit 0\"'
         }
         Copy-TemplateLayer -Source (Join-Path $templateRoot "common") -Target $tmp -Vars $vars
         Copy-TemplateLayer -Source (Join-Path $templateRoot "generic") -Target $tmp -Vars $vars
@@ -642,20 +644,32 @@ function Test-Migrate {
             Assert "[migrate] user-authored scripts/deploy.sh NOT moved" { Test-Path (Join-Path $tmp "scripts/deploy.sh") }
 
             $s = Get-Content (Join-Path $tmp ".claude/settings.json") -Raw
-            Assert "[migrate] settings Stop command -> .harness/scripts/harness-sync.ps1" {
+            # T-12: migrate now ALSO resilient-ifies (A8). The parsed command is the full
+            # resilient string (ConvertFrom-Json un-escapes the inner \" to "), so compare
+            # against the RESILIENT value, not the bare brittle one. The runnable resilient
+            # form below matches Get-ResilientCmd's output with real (un-escaped) quotes.
+            $expSync  = 'pwsh -NoProfile -Command "Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/harness-sync.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/harness-sync.ps1 }; exit 0"'
+            $expGuard = 'pwsh -NoProfile -Command "Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR; & pwsh -NoProfile -File .harness/scripts/guard-rm.ps1"'
+            Assert "[migrate] settings Stop command -> resilient .harness/scripts/harness-sync.ps1 (A8)" {
                 $j = $s | ConvertFrom-Json
-                $j.hooks.Stop[0].hooks[0].command -eq "pwsh -NoProfile -File .harness/scripts/harness-sync.ps1"
+                $j.hooks.Stop[0].hooks[0].command -eq $expSync
             }
-            Assert "[migrate] settings PreToolUse command -> .harness/scripts/guard-rm.ps1" {
+            Assert "[migrate] settings PreToolUse command -> resilient .harness/scripts/guard-rm.ps1 (A8)" {
                 $j = $s | ConvertFrom-Json
-                $j.hooks.PreToolUse[0].hooks[0].command -eq "pwsh -NoProfile -File .harness/scripts/guard-rm.ps1"
+                $j.hooks.PreToolUse[0].hooks[0].command -eq $expGuard
+            }
+            Assert "[migrate] Stop command is the resilient form (CLAUDE_PROJECT_DIR-anchored)" {
+                ($s | ConvertFrom-Json).hooks.Stop[0].hooks[0].command.Contains('CLAUDE_PROJECT_DIR')
+            }
+            Assert "[migrate] guard-rm resilient form is fail-CLOSED (no exit 0 on its command)" {
+                -not (($s | ConvertFrom-Json).hooks.PreToolUse[0].hooks[0].command.Contains('exit 0'))
             }
             Assert "[migrate] settings _doc_sync_hook doc string rewired (no stale bare scripts/harness-sync.)" {
                 $j = $s | ConvertFrom-Json
-                # Must contain the migrated form, and contain NO bare `scripts/harness-sync.`
-                # that isn't part of `.harness/scripts/harness-sync.` (negative lookbehind on
-                # a literal `scripts/...`, NOT on a `.`-any-char that the prior regex used and
-                # which falsely matched the space before `.harness/...`).
+                # The doc string is prefix-rewired by S3.1 but NOT made resilient (S3.2 only
+                # touches "command" lines). Must contain the migrated `.harness/scripts/`
+                # form, and contain NO bare `scripts/harness-sync.` that isn't part of
+                # `.harness/scripts/harness-sync.` (negative lookbehind on a literal path).
                 ($j._doc_sync_hook -match '\.harness/scripts/harness-sync\.sh') -and
                 ($j._doc_sync_hook -notmatch '(?<!\.harness/)scripts/harness-sync\.')
             }
@@ -663,7 +677,7 @@ function Test-Migrate {
                 $j = $s | ConvertFrom-Json
                 ($j.permissions.allow -join ' ') -match '\.harness/scripts/harness-sync\.sh'
             }
-            Assert "[migrate] -NoProfile retained in both hook commands" {
+            Assert "[migrate] -NoProfile retained (>=2 hits; resilient form carries more)" {
                 ([regex]::Matches($s, '-NoProfile')).Count -ge 2
             }
             Assert "[migrate] \$schema unchanged" {
@@ -694,12 +708,17 @@ function Test-ZhOverlay {
     $tmp = Join-Path ([System.IO.Path]::GetTempPath()) "harness-test-zh-$(Get-Random)"
     New-Item -ItemType Directory -Path $tmp -Force | Out-Null
     try {
+        # T-12: live FIXTURE-AUTHORING site — *_COMMAND values are the RESILIENT form
+        # (convenience hooks fail-OPEN + $CLAUDE_PROJECT_DIR-anchored; guard-rm fail-CLOSED,
+        # NO `|| exit 0`). JSON-escaped bytes copied byte-identical from the main *_COMMAND
+        # literal block above; the zh-overlay substitution uses .Replace() (ordinal-literal,
+        # so `&`/`$env:` survive) (AC-7).
         $vars = @{ "PROJECT_NAME"="zh-test"; "PROJECT_TYPE"="fullstack"; "STACK"="Next.js + NestJS";
                    "TODAY"=$today; "ENABLE_HOOK"="false";
-                   "SYNC_COMMAND"="pwsh -NoProfile -File .harness/scripts/harness-sync.ps1";
-                   "GUARD_COMMAND"="pwsh -NoProfile -File .harness/scripts/guard-rm.ps1";
-                   "AMBIENT_PROMPT_COMMAND"="pwsh -NoProfile -File .harness/scripts/ambient-prompt.ps1";
-                   "AMBIENT_RESET_COMMAND"="pwsh -NoProfile -File .harness/scripts/ambient-reset.ps1" }
+                   "SYNC_COMMAND"='pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/harness-sync.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/harness-sync.ps1 }; exit 0\"';
+                   "GUARD_COMMAND"='pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR; & pwsh -NoProfile -File .harness/scripts/guard-rm.ps1\"';
+                   "AMBIENT_PROMPT_COMMAND"='pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/ambient-prompt.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/ambient-prompt.ps1 }; exit 0\"';
+                   "AMBIENT_RESET_COMMAND"='pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/ambient-reset.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/ambient-reset.ps1 }; exit 0\"' }
         Copy-TemplateLayer -Source (Join-Path $templateRoot "common")        -Target $tmp -Vars $vars
         Copy-TemplateLayer -Source (Join-Path $templateRoot "fullstack")      -Target $tmp -Vars $vars
         # The i18n/zh overlay now carries only the 2 human-facing files (the 3 policy-carrying
@@ -786,7 +805,7 @@ function Test-ZhOverlay {
             $ci = [array]::IndexOf($composedLines, $bodyStart)
 
             $commonRaw = [System.IO.File]::ReadAllText((Join-Path $templateRoot "common/.harness/rules/00-core.md.tmpl"), [System.Text.UTF8Encoding]::new($false))
-            foreach ($k in $vars.Keys) { $commonRaw = $commonRaw -replace [regex]::Escape("{{$k}}"), $vars[$k] }
+            foreach ($k in $vars.Keys) { $commonRaw = $commonRaw.Replace("{{$k}}", [string]$vars[$k]) }  # literal (T-12: $-safe)
             $commonLines = & $toLines $commonRaw
             $ki = [array]::IndexOf($commonLines, $bodyStart)
 
