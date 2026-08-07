@@ -38,11 +38,11 @@
  */
 
 /** The four recognized tool ids, in the fixed order `tools` emits them. */
-const TOOLS = ['harness-sync', 'guard-rm', 'ambient-prompt', 'ambient-reset'] as const;
-type Tool = (typeof TOOLS)[number];
+export const TOOLS = ['harness-sync', 'guard-rm', 'ambient-prompt', 'ambient-reset'] as const;
+export type Tool = (typeof TOOLS)[number];
 
 const OSES = ['windows', 'unix'] as const;
-type TargetOs = (typeof OSES)[number];
+export type TargetOs = (typeof OSES)[number];
 
 const QUERIES = 'tools|event|matcher|semantics|command|hostos';
 
@@ -53,14 +53,14 @@ const QUERIES = 'tools|event|matcher|semantics|command|hostos';
  */
 const ESCQ = '\\"';
 
-const EVENTS: Record<Tool, string> = {
+export const EVENTS: Record<Tool, string> = {
   'harness-sync': 'Stop',
   'guard-rm': 'PreToolUse',
   'ambient-prompt': 'UserPromptSubmit',
   'ambient-reset': 'SessionStart',
 };
 
-function isTool(value: string): value is Tool {
+export function isTool(value: string): value is Tool {
   return (TOOLS as readonly string[]).includes(value);
 }
 
@@ -68,11 +68,11 @@ function isTargetOs(value: string): value is TargetOs {
   return (OSES as readonly string[]).includes(value);
 }
 
-function matcherOf(tool: Tool): string {
+export function matcherOf(tool: Tool): string {
   return tool === 'guard-rm' ? 'Bash' : 'none';
 }
 
-function semanticsOf(tool: Tool): string {
+export function semanticsOf(tool: Tool): string {
   return tool === 'guard-rm' ? 'fail-closed' : 'fail-open';
 }
 
@@ -83,7 +83,7 @@ function semanticsOf(tool: Tool): string {
  * The tool id is interpolated into a space-preceded bare ` .harness/scripts/<tool>.<ext>`
  * path so the existing congruence extraction in the verify gate keeps working.
  */
-function commandOf(tool: Tool, os: TargetOs): string {
+export function commandOf(tool: Tool, os: TargetOs): string {
   if (os === 'windows') {
     if (tool === 'guard-rm') {
       return (
@@ -107,7 +107,7 @@ function commandOf(tool: Tool, os: TargetOs): string {
 }
 
 /** The host this process runs on. The only query that reads the environment. */
-function hostOs(): TargetOs {
+export function hostOs(): TargetOs {
   return process.platform === 'win32' ? 'windows' : 'unix';
 }
 

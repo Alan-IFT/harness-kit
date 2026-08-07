@@ -59,13 +59,33 @@ tsconfig.json                     strict, outDir .harness/scripts, newLine lf
 | 1 | `hook-spec` | 8.2 KB | **done** — 40/40 byte-identical, twin still in place |
 | 2 | `guard-rm` | 36.9 KB | **done** — 87/87 corpus + 62/62 raw, twin still wired |
 | 4a | vitest + native tests for `guard-rm` | — | **done** — 93 tests |
-| 3 | `verify_all` | 47.5 KB | pending |
+| 3 | `install-hooks` | 16.3 KB | **done** — 12/12 scenarios, 33 native tests |
+| 6 | `verify_all`, **rewritten slim** | 47.5 KB | pending |
 | 4b | remaining 7 shell test drivers | ~228 KB | pending |
 | 5 | remaining tooling scripts | 120.9 KB | pending |
 
-Stage 4 was pulled ahead of stage 3 for the reason in constraint 5: a ported component
-needs native tests before its twin can go, and the gate (`verify_all`) is easier and safer
-to port once a test framework exists to port it against.
+Stage 4 was pulled ahead for the reason in constraint 5: a ported component needs native
+tests before its twin can go, and the gate is easier and safer to port once a test
+framework exists to port it against.
+
+**Stage 3 was then re-aimed from `verify_all` to `install-hooks`.** Of `verify_all`'s 32
+checks, roughly 25 verify the scaffolding's own documentary self-consistency — exactly what
+§9.2 of the migration brief says to delete when it is slimmed to secret scan, lint, test,
+build and guard wiring. Porting those faithfully would be porting code the plan already
+intends to remove. `verify_all` therefore moves to stage 6 and will be **rewritten slim
+rather than ported**, which is a separate decision from this migration and should not be
+mixed into it.
+
+`install-hooks` was the better target: §9.2 keeps it, it is the consumer of `hook-spec`, and
+porting it completes a vertical slice — `hook-spec` + `guard-rm` + `install-hooks` is the
+entire safety-hook subsystem, now in one language.
+
+The port **imports** the spec instead of shelling out to it. The bash original spawned
+`bash hook-spec.sh` seventeen times per run (1 hostos + 1 tools + 4 × 4 per-tool); the port
+reads the same single source of truth in-process. The ALL-FOUR-OR-NOTHING and
+FOUR-DISTINCT-EVENTS invariants are kept even though the spec is now a typed import — they
+guard against a future edit producing a partial wiring that still passes the terminal
+confirmation, which is derived from those same answers.
 
 The native suite paid for itself on its first run by finding a **fail-open divergence the
 62-case differential could not see**: `extractCommand` ran its heuristic fallback only when

@@ -38,9 +38,15 @@
  *   node .harness/scripts/hook-spec.js command guard-rm unix
  */
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.EVENTS = exports.TOOLS = void 0;
+exports.isTool = isTool;
+exports.matcherOf = matcherOf;
+exports.semanticsOf = semanticsOf;
+exports.commandOf = commandOf;
+exports.hostOs = hostOs;
 exports.run = run;
 /** The four recognized tool ids, in the fixed order `tools` emits them. */
-const TOOLS = ['harness-sync', 'guard-rm', 'ambient-prompt', 'ambient-reset'];
+exports.TOOLS = ['harness-sync', 'guard-rm', 'ambient-prompt', 'ambient-reset'];
 const OSES = ['windows', 'unix'];
 const QUERIES = 'tools|event|matcher|semantics|command|hostos';
 /**
@@ -49,14 +55,14 @@ const QUERIES = 'tools|event|matcher|semantics|command|hostos';
  * constant because getting this wrong is invisible until a hook fails to fire.
  */
 const ESCQ = '\\"';
-const EVENTS = {
+exports.EVENTS = {
     'harness-sync': 'Stop',
     'guard-rm': 'PreToolUse',
     'ambient-prompt': 'UserPromptSubmit',
     'ambient-reset': 'SessionStart',
 };
 function isTool(value) {
-    return TOOLS.includes(value);
+    return exports.TOOLS.includes(value);
 }
 function isTargetOs(value) {
     return OSES.includes(value);
@@ -111,7 +117,7 @@ function run(argv) {
             if (arity !== 0) {
                 die(`unrecognized arity for query 'tools': expected 0 arguments, got ${arity}`);
             }
-            emit(...TOOLS);
+            emit(...exports.TOOLS);
             return;
         }
         case 'event':
@@ -124,7 +130,7 @@ function run(argv) {
             if (!isTool(tool))
                 die(`unrecognized tool: ${tool}`);
             if (query === 'event')
-                emit(EVENTS[tool]);
+                emit(exports.EVENTS[tool]);
             else if (query === 'matcher')
                 emit(matcherOf(tool));
             else
