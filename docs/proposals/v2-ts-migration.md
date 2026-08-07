@@ -37,6 +37,11 @@ forces a cross-shell decision, and 27 decisions are queued awaiting a Windows ho
    committed — never against a value the port itself produced.
 4. **Each differential must be proved non-vacuous** by mutating the port and observing the
    failure, before it is trusted.
+5. **A twin may not be deleted until its port has native tests.** The differential is a
+   *migration* instrument: it measures the port against the shell file and dies the day that
+   file is removed. A port whose only evidence is the differential has, at cutover, no
+   evidence at all. Native tests are the thing that outlives the migration, and they must
+   exist first — see stage 4's ordering below.
 
 ## Layout
 
@@ -53,9 +58,22 @@ tsconfig.json                     strict, outDir .harness/scripts, newLine lf
 |---|---|---:|---|
 | 1 | `hook-spec` | 8.2 KB | **done** — 40/40 byte-identical, twin still in place |
 | 2 | `guard-rm` | 36.9 KB | **done** — 87/87 corpus + 62/62 raw, twin still wired |
+| 4a | vitest + native tests for `guard-rm` | — | **done** — 93 tests |
 | 3 | `verify_all` | 47.5 KB | pending |
-| 4 | 8 test drivers to a test framework | 240.1 KB | pending |
+| 4b | remaining 7 shell test drivers | ~228 KB | pending |
 | 5 | remaining tooling scripts | 120.9 KB | pending |
+
+Stage 4 was pulled ahead of stage 3 for the reason in constraint 5: a ported component
+needs native tests before its twin can go, and the gate (`verify_all`) is easier and safer
+to port once a test framework exists to port it against.
+
+The native suite paid for itself on its first run by finding a **fail-open divergence the
+62-case differential could not see**: `extractCommand` ran its heuristic fallback only when
+`JSON.parse` threw, whereas the shell twin gates its fallback on the extracted command being
+*empty*. A payload that parses as JSON but carries the command outside `tool_input.command`
+was therefore returned as `''` and allowed unexamined. Every differential case used a
+well-formed payload, so only a test written against the contract rather than against the
+twin could reach it.
 
 Stage 1 deliberately does **not** cut consumers over. The port exists and is proven
 equivalent; `hook-spec.{sh,ps1}` remain live. Cutover happens when the consumers that call

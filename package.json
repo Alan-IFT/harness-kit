@@ -7,10 +7,13 @@
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "diff-hook-spec": "bash tools/diff-hook-spec.sh"
+    "test": "vitest run",
+    "diff-hook-spec": "bash tools/diff-hook-spec.sh",
+    "diff-guard-rm": "bash tools/diff-guard-rm.sh"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.10"
   }
 }

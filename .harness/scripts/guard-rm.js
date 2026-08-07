@@ -39,6 +39,7 @@ exports.resolveLeaf = resolveLeaf;
 exports.isDescendant = isDescendant;
 exports.skipPrefix = skipPrefix;
 exports.extractCommand = extractCommand;
+exports.judge = judge;
 exports.main = main;
 const fs = require("node:fs");
 const path = require("node:path");
@@ -86,6 +87,8 @@ const isShellVerb = (t) => SHELL_VERBS.has(t.toLowerCase());
 let parseFailed = false;
 let segmentOffending = [];
 let repoRoot = '';
+/** The directory relative paths resolve against. Injected so tests need no chdir. */
+let judgeCwd = '';
 // ---------------------------------------------------------------- 5. tokenizer
 /**
  * Whitespace-aware quote tokenizer. Quotes toggle state and are dropped, so `''`
@@ -728,7 +731,7 @@ function walkPaths(start, toks) {
             if (t.startsWith('-') && t.length > 1)
                 continue;
         }
-        const abs = resolveLeaf(t, process.cwd());
+        const abs = resolveLeaf(t, judgeCwd);
         if (!isDescendant(abs, repoRoot))
             segmentOffending.push(abs);
     }
@@ -809,7 +812,7 @@ function classifySegment(segment, depth) {
             const t = tokens[j];
             if (t.startsWith('-'))
                 break;
-            const abs = resolveLeaf(t, process.cwd());
+            const abs = resolveLeaf(t, judgeCwd);
             if (!isDescendant(abs, repoRoot))
                 segmentOffending.push(abs);
         }
@@ -863,7 +866,15 @@ function classifyCommandString(s, depth) {
     }
 }
 // -------------------------------------------------------------------- 1. input
-/** Extract `.tool_input.command`, falling back to the shell twin's heuristic. */
+/**
+ * Extract `.tool_input.command`, falling back to the shell twin's heuristic.
+ *
+ * The fallback fires whenever the structured read yields EMPTY — not only when the
+ * payload fails to parse. That distinction is load-bearing and fail-open if missed:
+ * the shell twin gates its fallback on `[[ -z "$cmd" ]]`, so a payload that parses
+ * as JSON but carries the command somewhere other than `tool_input.command` still
+ * gets judged. Returning '' there instead would allow the command unexamined.
+ */
 function extractCommand(payload) {
     try {
         const data = JSON.parse(payload);
@@ -871,26 +882,26 @@ function extractCommand(payload) {
             const toolInput = data['tool_input'];
             if (toolInput && typeof toolInput === 'object') {
                 const command = toolInput['command'];
-                if (typeof command === 'string')
+                if (typeof command === 'string' && command !== '')
                     return command;
             }
         }
-        return '';
     }
     catch {
-        // Heuristic fallback for the one-level Claude Code shape, matching the shell
-        // twin byte-for-byte: greedy-match between `"command":"` and the closing `"}`.
-        const flat = payload.replace(/\n/g, '');
-        const m = /"command"[ \t]*:[ \t]*"(.*)"[ \t]*}/.exec(flat);
-        if (m === null || m[1] === undefined)
-            return '';
-        let cmd = m[1];
-        // Whitespace escapes first, then \" before \\ so a literal \\ survives.
-        cmd = cmd.split('\\n').join('\n').split('\\r').join('\r').split('\\t').join('\t');
-        cmd = cmd.split('\\"').join('"');
-        cmd = cmd.split('\\\\').join('\\');
-        return cmd;
+        // fall through to the heuristic
     }
+    // Heuristic for the one-level Claude Code shape, matching the shell twin:
+    // greedy-match between `"command":"` and the closing `"}`.
+    const flat = payload.replace(/\n/g, '');
+    const m = /"command"[ \t]*:[ \t]*"(.*)"[ \t]*}/.exec(flat);
+    if (m === null || m[1] === undefined)
+        return '';
+    let cmd = m[1];
+    // Whitespace escapes first, then \" before \\ so a literal \\ survives.
+    cmd = cmd.split('\\n').join('\n').split('\\r').join('\r').split('\\t').join('\t');
+    cmd = cmd.split('\\"').join('"');
+    cmd = cmd.split('\\\\').join('\\');
+    return cmd;
 }
 /** Walk up to the nearest `.git/` ancestor of cwd; '' when there is none. */
 function findRepoRoot(startDir) {
@@ -912,51 +923,51 @@ function findRepoRoot(startDir) {
 const OVERRIDE_MESSAGE = 'harness-kit guard-rm: override active (HARNESS_ALLOW_OUTSIDE_RM=1) — allowing destructive command.';
 const PARSE_FAIL_MESSAGE = 'harness-kit guard-rm: BLOCKED — could not parse the command safely (unbalanced quotes, ' +
     'nesting past depth 2, or an unterminated here-document); override with HARNESS_ALLOW_OUTSIDE_RM=1 if intended.';
-function main() {
-    let payload = '';
-    try {
-        payload = fs.readFileSync(0, 'utf8');
-    }
-    catch {
-        return 0;
-    }
+/**
+ * The whole guard as a pure function of its inputs.
+ *
+ * Split out from `main` so the behaviour can be tested in-process rather than only
+ * through a subprocess differential against the shell twin. That distinction matters
+ * on a schedule: the differential is a MIGRATION instrument and dies with the twin,
+ * so a port needs native tests before its twin can be deleted.
+ *
+ * @param payload    the raw JSON the hook receives on stdin
+ * @param cwd        the directory the hook runs in
+ * @param envOverride value of HARNESS_ALLOW_OUTSIDE_RM, or undefined
+ */
+function judge(payload, cwd, envOverride) {
     if (payload === '')
-        return 0;
+        return { code: 0, stderr: '' };
     let cmd = extractCommand(payload);
     if (cmd === '')
-        return 0;
+        return { code: 0, stderr: '' };
     // 2. Override env var.
-    if (process.env['HARNESS_ALLOW_OUTSIDE_RM'] === '1') {
-        process.stderr.write(`${OVERRIDE_MESSAGE}\n`);
-        return 0;
-    }
+    if (envOverride === '1')
+        return { code: 0, stderr: `${OVERRIDE_MESSAGE}\n` };
     // 2b. Command-text override prefix. Evaluated EXACTLY ONCE, on the top-level
     // command, before the .git/ walk and before any parsing — never per position.
     // Re-applying it per position would make
     // `echo x && HARNESS_ALLOW_OUTSIDE_RM=1 rm -rf /etc/x` self-authorizing.
     const ovrTrim = cmd.replace(/^[ \t\n\r\f\v]+/, '');
     if (ovrTrim.startsWith('HARNESS_ALLOW_OUTSIDE_RM=1 ') || ovrTrim.startsWith('HARNESS_ALLOW_OUTSIDE_RM=1\t')) {
-        process.stderr.write(`${OVERRIDE_MESSAGE}\n`);
-        return 0;
+        return { code: 0, stderr: `${OVERRIDE_MESSAGE}\n` };
     }
     // 3. Nearest .git/ ancestor.
-    repoRoot = findRepoRoot(process.cwd());
+    repoRoot = findRepoRoot(cwd);
     if (repoRoot === '') {
-        process.stderr.write('harness-kit guard-rm: WARN no .git/ ancestor — guard inactive.\n');
-        return 0;
+        return { code: 0, stderr: 'harness-kit guard-rm: WARN no .git/ ancestor — guard inactive.\n' };
     }
     // 4. Truncate (boundary B11).
     cmd = cmd.slice(0, MAX_COMMAND);
     // 9. Judge every command position.
     parseFailed = false;
     segmentOffending = [];
+    judgeCwd = cwd;
     classifyCommandString(cmd, 0);
-    if (parseFailed) {
-        process.stderr.write(`${PARSE_FAIL_MESSAGE}\n`);
-        return 2;
-    }
+    if (parseFailed)
+        return { code: 2, stderr: `${PARSE_FAIL_MESSAGE}\n` };
     if (segmentOffending.length === 0)
-        return 0;
+        return { code: 0, stderr: '' };
     // 10. Emit BLOCK message.
     const lines = [
         'harness-kit guard-rm: BLOCKED — destructive command targets path outside project root.',
@@ -967,8 +978,20 @@ function main() {
         '    HARNESS_ALLOW_OUTSIDE_RM=1 set for that single call.',
         '  See .harness/rules/75-safety-hook.md to fully disable.',
     ];
-    process.stderr.write(`${lines.join('\n')}\n`);
-    return 2;
+    return { code: 2, stderr: `${lines.join('\n')}\n` };
+}
+function main() {
+    let payload = '';
+    try {
+        payload = fs.readFileSync(0, 'utf8');
+    }
+    catch {
+        return 0;
+    }
+    const verdict = judge(payload, process.cwd(), process.env['HARNESS_ALLOW_OUTSIDE_RM']);
+    if (verdict.stderr !== '')
+        process.stderr.write(verdict.stderr);
+    return verdict.code;
 }
 if (require.main === module) {
     // A throw here would exit non-zero, which reads as a BLOCK. That is the correct
