@@ -5,6 +5,135 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.47.0] - 2026-08-07
+
+### Changed — v2 migration, first landing: a query layer, a TypeScript core, and two gates that close defect classes
+
+This release is the executable half of the v2 plan. Its through-line is that **an
+instrument nobody runs will rot silently**, so every claim below is attached to something
+that fails loudly when it stops being true.
+
+#### The safety-hook subsystem is one language
+
+`guard-rm`, `hook-spec` and `install-hooks` are implemented in `src/*.ts`, compiled to
+committed `.harness/scripts/*.js`. Their `.sh` and `.ps1` are now **two-line launchers**
+over the compiled output — `exec node "$(dirname -- "$0")/<name>.js" "$@"` — so stdin,
+stdout, stderr and exit status pass through untouched.
+
+The launcher form is what made this shippable without a coordinated cutover: 27 files
+reference `guard-rm.sh` and `hook-spec` is called by 16 scripts, and none of them changed.
+Neither did the deliberately-frozen byte-form literals, nor the live hook wiring. Sizes:
+`guard-rm.sh` 36.9 KB → 694 B, `hook-spec.sh` 8.2 KB → 699 B, `install-hooks.sh`
+16.3 KB → 719 B, and the same for each `.ps1`. There is no logic left in them to diverge.
+
+`guard-rm`'s launcher stays fail-CLOSED by construction: a missing `node` makes `exec` fail
+non-zero, which is a BLOCK.
+
+Node was chosen after measuring the one thing that could have vetoed it. `guard-rm` runs on
+every Bash tool call; `bash guard-rm.sh` measured **0.03 s** against **0.01 s** for Node cold
+start, because 968 lines of shell doing character scanning is slower than starting a runtime.
+Node is already a hard dependency — Claude Code is a Node application — so requiring it costs
+nothing, while requiring `bash` *and* `pwsh` costs two implementations of everything.
+
+- **Fixed: a fail-open bug in the bash guard**, found by the differential and invisible to the
+  87-case corpus because every row asserts a verdict and none asserts a resolved path.
+  `resolve_leaf`'s tilde branch read `${p#~/}`; bash tilde-expands the *pattern*, so it never
+  matched a literal `~/…` and yielded `$HOME/~/rest`. That spurious segment absorbs a later
+  `..`, so with a repo root at `$HOME` an outside path could collapse to an inside one. The
+  pwsh twin was always correct — only the bash line had diverged, silently, for as long as
+  both existed.
+
+#### `doc-query` — one query layer, three document classes
+
+Three problems turned out to be one shape: a document of addressable units where the consumer
+needs some units, not the document. Memory stores were read whole six times per task; the
+01+02+03 stage contracts are a 67 KB read of which a measured 48% is addressed to the
+Developer; rule fragments load whole.
+
+`doc-query` returns whole **units** — an insight entry, a decision record, a stage-doc
+section — from named documents. It summarises, indexes and copies nothing: the text printed
+is the original at its original location.
+
+Measured over the 12-item MEM control set:
+
+| retrieval | accuracy | tokens |
+|---|---:|---:|
+| read the whole document | 12/12 | 81,899 |
+| repo-wide search skipping dot-directories | **0/12** | 0 |
+| repo-wide search, all directories | 12/12 | 53,457 |
+| `doc-query --in memory` | 11/12 | **4,535** |
+
+The zero is the important number: every store lives under `.harness/`, ripgrep skips
+dot-directories by default, and Claude Code's Grep tool is ripgrep-backed — so a reflexive
+search returns **zero bytes** and reads as "no results" rather than "wrong search".
+
+On stage documents, matching a unit's heading rather than its body is the difference between
+1.4× and **11.6×**: a Developer's seven section queries cost 8.2 KB against 94.9 KB for
+reading 01+02+03 whole. No authoring change was needed — the `## ` sections already exist.
+
+- Seven agent-contract sites that said *read the index* now query it. Only 2 of the 8 agents
+  hold `Bash`, so the rule states two forms: script-capable agents call `doc-query`, the rest
+  use `Grep` with an **explicit `path`**. Granting the reviewers `Bash` was rejected — it
+  would surrender the read-only isolation `reviewer-write-grant` exists to protect.
+
+#### Two new checks, each closing a defect class rather than an instance
+
+- **`D.4` — agent contracts stay within their granted tools.** A contract could name a duty
+  its agent was physically incapable of performing. It had happened three times: both
+  reviewers name stage documents they hold no `Write` for; **`pm-orchestrator` was told twice
+  to run `archive-task`** — "the #1 cause of long-term bloat" if skipped — while holding no
+  shell; and this migration's own first pass told six agents to run a script five of them
+  cannot run. Every instance was caught by a careful reader, which is not a mechanism.
+  `rejected-decisions.md` names this remedy directly under `reviewer-write-grant`.
+  **pm-orchestrator gains `Bash`**; the audit is clean across all eight contracts.
+
+- **`D.5` — the TypeScript unit suite.** 209 tests existed and the declared gate never ran
+  them, so a broken port could reach a green `verify_all`. One check for the whole suite
+  rather than one per tool. WARN, not FAIL, without `node_modules`, so a fresh clone stays
+  meaningful.
+
+#### The control set became self-checking
+
+`evals/retrieval-eval.md` is what every acceptance decision here is argued from, and it had
+rotted from this release's own changes: five CODE citations pointed at lines 191, 711 and 903
+of a `guard-rm.sh` that now ends at 12, unnoticed for a working session. A sixth had been
+stale since v0.30. CODE anchors now cite a file and a **symbol**, never a line — a symbol
+survives a refactor — and `eval-anchors` fails the build when any citation stops resolving.
+
+#### Measured reductions
+
+| | before | after |
+|---|---:|---:|
+| Plugin always-on cost | 4,138 tok | **3,278 tok** |
+| `insight-index` reads per 7-stage task | ~35,100 tok | ~2,280 tok |
+| Stage-4 contract ingest | ~26,993 tok | ~2,318 tok |
+| `docs/tasks.md` | 58,409 B | 6,019 B |
+| `AI-GUIDE.md` | 16,291 B | 13,267 B |
+
+`docs/tasks.md` reached 57 KB across 65 lines while `I.5` capped it at 300 *lines* — the cap
+measured the wrong thing. `I.1` and `I.4` had the same shape and gained byte arms too.
+
+#### Decisions recorded rather than taken
+
+- **CodeGraph** is wired via `.mcp.json` at the plugin root, telemetry and update-check
+  disabled. It indexes **neither bash nor PowerShell** — proved by experiment, not inferred
+  from the shipped grammars — so before this release it saw 6 of 612 tracked files, all
+  throwaway fixtures. After the TypeScript work it sees real source.
+- **agentmemory is declined on measurement.** Scoped search reaches 9–12 of 12 at 5–18×
+  cheaper than today, and exactly 1 of 12 failures is the kind semantic retrieval fixes.
+  Against that it brings a hard-pinned `iii-engine` of unverified provenance, a cross-agent
+  leak fixed only in v0.9.28, and a 0.9.x line.
+- **The brief's `<10,000` token bar is arithmetically unreachable** and was restated. The
+  measured platform floor is 26,012 tokens in an empty directory; harness-kit's static
+  contribution to a cold session is 1,558.
+
+#### Also
+
+- `sync-self` gains Mapping 10 — the four committed `.js` files — in both shells.
+- Four more skill descriptions trimmed; mechanism belongs in the body, which is paid on
+  invoke, not the frontmatter, which is paid every session.
+- `AI-GUIDE.md` drops two sections that restated the skill listing Claude Code already loads.
+
 ## [0.46.0] - 2026-07-31
 
 ### Changed — operator-obligation-home (T-24): the release-gating operator obligations get one home
