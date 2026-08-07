@@ -70,6 +70,7 @@ $mappings = @(
     @{ from = ".harness/scripts/hook-spec.js"; to = ".harness/scripts/hook-spec.js"; type = "file" }
     @{ from = ".harness/scripts/guard-rm.js"; to = ".harness/scripts/guard-rm.js"; type = "file" }
     @{ from = ".harness/scripts/install-hooks.js"; to = ".harness/scripts/install-hooks.js"; type = "file" }
+    @{ from = ".harness/scripts/doc-query.js"; to = ".harness/scripts/doc-query.js"; type = "file" }
 )
 
 $drift = @()

@@ -14,7 +14,7 @@
 #   B2  the same search with dot-directories included — the corrected reflex.
 #   B3  the same search SCOPED to the memory documents, 2 lines of context — what an agent
 #       that already knows where to look does.
-#   B5  `memory-search` — the stores are named in the tool, and the unit returned is the
+#   B5  `doc-query --in memory` — the stores are named in the tool, and the unit returned is the
 #       WHOLE ENTRY containing the match. Built because B1 and B3/B4 measured two problems
 #       a better backend does not fix: an unscoped search misses everything under a
 #       dot-directory, and a line window either truncates a fact or drags in its neighbours.
@@ -72,7 +72,7 @@ CASES=(
 
 a_tok=0; b1_tok=0; b2_tok=0; b3_tok=0; b4_tok=0; b5_tok=0
 b1_hit=0; b2_hit=0; b3_hit=0; b4_hit=0; b5_hit=0; n=0; capped=0
-MEMSEARCH=.harness/scripts/memory-search.js
+MEMSEARCH=.harness/scripts/doc-query.js
 
 tok() { awk -v b="$1" -v c="$CPT" 'BEGIN{printf "%.0f", b/c}'; }
 
@@ -91,7 +91,7 @@ for row in "${CASES[@]}"; do
     b2_out=$(grep -rn -C2 -- "$term" . 2>/dev/null | head -c "$CAP")
     b3_out=$(grep -n -C2 -- "$term" "${MEM_DOCS[@]}" 2>/dev/null | head -c "$CAP")
     b4_out=$(grep -n -C10 -- "$term" "${MEM_DOCS[@]}" 2>/dev/null | head -c "$CAP")
-    b5_out=$(node "$MEMSEARCH" --all "$term" 2>/dev/null | head -c "$CAP")
+    b5_out=$(node "$MEMSEARCH" --in memory "$term" 2>/dev/null | head -c "$CAP")
 
     for arm in 1 2 3 4 5; do
         case $arm in
@@ -132,14 +132,14 @@ printf 'accuracy   B1 skip-dot     %2d/%d\n' "$b1_hit" "$n"
 printf 'accuracy   B2 all dirs     %2d/%d\n' "$b2_hit" "$n"
 printf 'accuracy   B3 scoped       %2d/%d\n' "$b3_hit" "$n"
 printf 'accuracy   B4 entry-sized %2d/%d\n' "$b4_hit" "$n"
-printf 'accuracy   B5 memory-search %2d/%d\n' "$b5_hit" "$n"
+printf 'accuracy   B5 doc-query    %2d/%d\n' "$b5_hit" "$n"
 echo
 printf 'tokens     A  read-whole  %7d\n' "$a_tok"
 printf 'tokens     B1 skip-dot    %7d\n' "$b1_tok"
 printf 'tokens     B2 all dirs    %7d\n' "$b2_tok"
 printf 'tokens     B3 scoped      %7d\n' "$b3_tok"
 printf 'tokens     B4 entry-sized %7d\n' "$b4_tok"
-printf 'tokens     B5 memory-search %6d\n' "$b5_tok"
+printf 'tokens     B5 doc-query    %6d\n' "$b5_tok"
 echo
 awk -v a="$a_tok" -v b="$b2_tok" -v c="$b3_tok" -v d="$b4_tok" -v e="$b5_tok" 'BEGIN{
   if (b > 0) printf "B2 costs %5.1f%% of A  (%.1fx cheaper)\n", b*100/a, a/b

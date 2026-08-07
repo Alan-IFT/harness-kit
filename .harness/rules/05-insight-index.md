@@ -18,7 +18,7 @@ For this repo specifically, valid insight examples are things like:
 **If you hold `Bash`** (developer, qa-tester):
 
 ```bash
-node .harness/scripts/memory-search.js <term>        # add --all for the off-path stores
+node .harness/scripts/doc-query.js --in memory <term>
 ```
 
 **If you do not** (requirement-analyst, solution-architect, gate-reviewer, code-reviewer,
@@ -40,7 +40,7 @@ not assumed (`evals/run-mem-baseline.sh`, 12 items):
   which Claude Code's Grep tool is built on — skips dot-directories by default.
 - A scoped search at ±2 lines scores 8/12 and at ±10 lines 10/12, because one fact is one
   long wrapped paragraph: a line window either truncates the fact or drags in its neighbour.
-- `memory-search` scores **11/12 at 18× fewer tokens than reading the documents**. The one
+- `doc-query` scores **11/12 at 18× fewer tokens than reading the documents**. The one
   miss is an item whose answer lives in `verify_all.sh`, not in a store at all.
 
 The corollary for writing: an entry is the retrieval unit, so **keep one fact in one
