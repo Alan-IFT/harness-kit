@@ -58,3 +58,6 @@ verification_history.log
 # Harness — local dogfood hooks (T-12, v0.44.0); never committed, never distributed.
 # `*.local` above does NOT match this (it matches names ending in `.local`, not `.local.json`).
 .claude/settings.local.json
+
+# CodeGraph local index (v2 migration, P2)
+.codegraph/

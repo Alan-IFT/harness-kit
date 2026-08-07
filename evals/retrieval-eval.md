@@ -110,11 +110,26 @@ to ~25,270.
 | C10 | Which script pairs does `sync-self` hold byte-identical with `templates/common/`? | 8 pairs: `harness-sync`, `install-hooks`, `archive-task`, `guard-rm`, `migrate-scripts-layout`, `upgrade-project`, `language-policy`, `hook-spec`. It does **not** sync `.harness/rules/` or agents. | `.harness/scripts/sync-self.sh`; `AI-GUIDE.md:77` |
 
 **C-category note.** These are the questions a Solution Architect or Code Reviewer asks.
-Today they are answered by full-file reads of a 968-line and a 934-line script. `codegraph_node`
-/ `codegraph_callers` / `codegraph_impact` should answer C1–C4 and C9 at a fraction of the tokens.
-C5–C8 and C10 are *semi-structural* — the answer lives in data tables and comments, not the call
-graph, so CodeGraph may legitimately lose these to grep. **Score the two sub-groups separately;
-a CodeGraph win on C1–C4/C9 with a loss on C5–C8/C10 is the expected and acceptable result.**
+Today they are answered by full-file reads of a 968-line and a 934-line script.
+
+> ### ⚠️ CODE cannot gate P2. Measured 2026-08-07.
+>
+> Every C item is anchored in a `.sh` file, and **CodeGraph v1.5.0 indexes neither bash nor
+> PowerShell.** Proved by experiment, not by reading the docs: a directory holding `ctl.py`,
+> `lib.sh` and `lib2.ps1` indexes to 1 file / 4 nodes — the Python one. Indexing harness-kit
+> itself yields **6 files, 26 nodes, 39 edges out of 612 tracked files**, and all six are
+> throwaway `tests/fixtures/` sample apps plus one JSON mock. Not one of the repo's 33 `.sh`
+> or 32 `.ps1` files — its entire moving-parts surface, 1.28 MB — is visible.
+>
+> `tree-sitter-bash.wasm` does ship inside the package, but it arrives via the generic
+> `tree-sitter-wasms` dependency and is not wired into the language map. Grammar presence is
+> not support; that is exactly why this was tested rather than inferred.
+>
+> **Consequence.** C1–C10 stay in this file as a *grep-vs-full-read* comparison, which is
+> still worth scoring, but they cannot serve as the P2 acceptance gate. P2 must be validated
+> on a target project in an indexed language (TypeScript, TSX and Python are confirmed
+> working from the fixtures), not on harness-kit. Until such a project is named, **P2 has no
+> acceptance instrument.**
 
 ---
 
