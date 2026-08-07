@@ -544,16 +544,23 @@ else
     step "I.4" "insight-index.md ≤30 insight entries" "PASS"
 fi
 
-# I.5 — docs/tasks.md ≤300 lines
+# I.5 — docs/tasks.md ≤300 lines AND ≤24576 bytes
+# The byte arm exists because the line arm alone is vacuous for this file: a row is one
+# physical line regardless of how much prose is packed into its Outcome cell, so the file
+# reached 57 KB at 65 lines and PASSed. Rows are pointers; the prose belongs in the task's
+# own 07_DELIVERY.md, which the Doc folder column already addresses.
 if [[ -f docs/tasks.md ]]; then
     n=$(wc -l < docs/tasks.md)
+    b=$(wc -c < docs/tasks.md)
     if (( n > 300 )); then
-        step "I.5" "docs/tasks.md ≤300 lines" "WARN" "$n lines — rotate oldest Completed rows to docs/tasks-archive.md"
+        step "I.5" "docs/tasks.md ≤300 lines and ≤24 KB" "WARN" "$n lines — rotate oldest Completed rows to docs/tasks-archive.md"
+    elif (( b > 24576 )); then
+        step "I.5" "docs/tasks.md ≤300 lines and ≤24 KB" "WARN" "$b bytes — compact Outcome cells to one clause; the task folder holds the full record"
     else
-        step "I.5" "docs/tasks.md ≤300 lines" "PASS"
+        step "I.5" "docs/tasks.md ≤300 lines and ≤24 KB" "PASS"
     fi
 else
-    step "I.5" "docs/tasks.md ≤300 lines" "PASS"
+    step "I.5" "docs/tasks.md ≤300 lines and ≤24 KB" "PASS"
 fi
 
 # I.7 — Ignored INTERVENE supervision reports (v0.17+, WARN-only)

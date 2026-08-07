@@ -308,3 +308,13 @@ origin field records how the two diverged.
 - Security: no
 - Origin: T-13 `hook-truth-spec`. Enumerating source `docs/features/_archived/hook-truth-spec/04_DEVELOPMENT.md:280-289`, widened at `:450-451`; the `32 Assert calls` figure is amended at `07_DELIVERY.md:76`, corroborated at `06_TEST_REPORT.md:462,485-486`; bound (i) is also stated at `04_DEVELOPMENT.md:429-432` and `07_DELIVERY.md:73`, bound (ii) at `04_DEVELOPMENT.md:418-419` and `07_DELIVERY.md:74`. The mirror at `.harness/scripts/baseline.json:_qa_note_t13`, in the span this task excised into this file, differed: it dropped all three line spans, the `n-11` handle, the worked `-join` example, the `(template + repo)` scope and "Eighth and last — no ninth", and it alone carried the `$nDistinct` byte-form, the `Out-String` warning, the array-joined capture and the KNOWN BOUNDS paragraph — all of which are carried above.
 - Last discharged: never
+
+### V2P1-1 — verify_all.ps1 I.5 byte arm executed on Windows
+
+- Id: V2P1-1
+- Action: `verify_all.ps1`'s `I.5` gained a second WARN arm measuring `(Get-Item "docs/tasks.md").Length` against 24576, mirroring the bash twin's `wc -c`. **Only the bash twin was executed** — this host has no `pwsh`. Two PS-specific points to confirm. First, `(Get-Item).Length` returns the on-disk byte count, so a CRLF working copy of `docs/tasks.md` measures **larger** than the same file under bash; `.gitattributes` governs the checkout, and the 24576 cap must not be crossed by line-ending expansion alone. At 6019 bytes over 48 lines the CRLF worst case is 6067, so the current file has ~4x headroom, but a future file near the cap could diverge across shells. Second, the byte arm is ordered **after** the line arm and returns `$false` on its own, so a file breaching both reports the line message — matching the bash twin's `elif` ordering.
+- Artifacts: `.harness/scripts/verify_all.ps1` `I.5` block, `.harness/scripts/verify_all.sh:547-563`, `docs/tasks.md`
+- Pass observable: `pwsh -File .harness/scripts/verify_all.ps1` reports `[I.5] docs/tasks.md <=300 lines and <=24 KB ... PASS` with run totals 32/0/0 exit 0; then, against the pre-change 58409-byte `docs/tasks.md` restored from `git show 9036590:docs/tasks.md`, the same check reports WARN and the run exits 1 — the anti-vacuity pair the bash twin was proved with
+- Security: no
+- Origin: v2 migration P1, branch `v2-migration`. The bash twin was proved by mutating the artifact rather than by reading the pattern: the pre-change 58 KB file WARNs at exit 1, and a 24000-byte file PASSes just under the boundary. The PS twin has had neither run.
+- Last discharged: never

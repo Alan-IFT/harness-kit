@@ -517,12 +517,22 @@ Step "I.4" "insight-index.md <=30 insight entries" {
     }
 }
 
-Step "I.5" "docs/tasks.md <=300 lines" {
+# The byte arm exists because the line arm alone is vacuous for this file: a row is one
+# physical line regardless of how much prose is packed into its Outcome cell, so the file
+# reached 57 KB at 65 lines and PASSed. Rows are pointers; the prose belongs in the task's
+# own 07_DELIVERY.md, which the Doc folder column already addresses.
+Step "I.5" "docs/tasks.md <=300 lines and <=24 KB" {
     if (-not (Test-Path "docs/tasks.md")) { return }
     $n = (Get-Content "docs/tasks.md" | Measure-Object -Line).Lines
+    $b = (Get-Item "docs/tasks.md").Length
     if ($n -gt 300) {
         Write-Host "" -NoNewline
         Write-Host " ($n lines — rotate oldest Completed rows to docs/tasks-archive.md)" -ForegroundColor Yellow -NoNewline
+        return $false
+    }
+    if ($b -gt 24576) {
+        Write-Host "" -NoNewline
+        Write-Host " ($b bytes — compact Outcome cells to one clause; the task folder holds the full record)" -ForegroundColor Yellow -NoNewline
         return $false
     }
 }
