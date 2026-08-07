@@ -64,3 +64,6 @@ verification_history.log
 
 # TypeScript build (v2 migration)
 node_modules/
+
+# Per-task durable progress — machine-local, not repository content.
+.harness/state/

@@ -52,7 +52,7 @@ author-reported partial return; on any failure **nothing is written at all** —
 record the reason in `PM_LOG.md`. On round N ≥ 2 the same duty covers the same path: its content is replaced, never appended
 to, and the round record still reaches `PM_LOG.md` only.
 
-## Task modes (v0.11+)
+## Task modes
 
 A task's `mode` is recorded in `docs/tasks.md` (default: `full`). Each mode runs a subset of the 7 stages:
 
@@ -68,6 +68,12 @@ When a user invokes a mode skill, **respect the mode**. Do not silently switch t
 **Resuming partial tasks**: if a previous `/harness-plan` run produced 01-03 with a GR `APPROVED FOR DEVELOPMENT` verdict, and the user now wants to continue with `/harness`, **skip stages 1-3** and jump to Developer. PM_LOG.md records this resume point.
 
 ## Cross-task memory (read at task start)
+
+**Before anything else, read the task's durable state** — `node .harness/scripts/task-state.js
+show <slug>`. It reports the stage, the rounds spent at each, and the consecutive streak at
+the current one; **exit 3 means escalate — stop routing and ask the human.** On a new task run
+`task-state init <slug> --mode <mode>`, and after every stage run `task-state verdict <slug>
+--stage <n> --verdict "<verdict word>"`. Counters only — the reasoning goes in the task folder.
 
 Before dispatching stage 1, **query the insight index** for the task's salient terms (an entry is one bullet plus every line wrapped under it — surface it whole or not at all). If any entry applies, include it in the dispatch prompt to the relevant downstream agent, typically the Architect or Developer. You hold no `Bash`, so use `Grep` with an explicit `path`; see `.harness/rules/05-insight-index.md` for why an unscoped search returns nothing.
 
@@ -98,7 +104,7 @@ changed · why · which finding id` — in its final message; **you** write it i
 stage document itself is corrected in place to current state. If an agent returns a stage document
 containing a `## Round N` / changelog section, route it back to that agent.
 
-## Mid-task intervention (v0.13+)
+## Mid-task intervention
 
 `.harness/intervention.md` is the human's (or another tool's) soft Ctrl-C for an in-flight pipeline. Its **presence means an unread intervention is waiting**; its absence means no pending message.
 
@@ -122,12 +128,11 @@ containing a `## Round N` / changelog section, route it back to that agent.
 
 **You must NOT** write `.harness/intervention.md` yourself. Agents communicate via stage docs + BLOCKED markers; intervention.md is reserved for the human or out-of-band tool channel. The full protocol is in `.harness/rules/65-intervention.md`.
 
-## Document size discipline (v0.14+)
+## Document size discipline
 
-Caps + the "reference don't paste" rule live in `.harness/rules/70-doc-size.md`. You enforce two of them operationally:
-
-- **PM_LOG.md compaction**: when an active task's `PM_LOG.md` approaches 500 lines (typically only in `goal` mode), compact older stages per rule 70 before dispatching the next stage. PM owns this — never delegate.
-- **archive-task on completion**: always run `.harness/scripts/archive-task --task <slug>` for `full` and `goal` modes (step 10 below). Skipping it is the #1 cause of long-term bloat — insight-index fills, stage docs pile under `docs/features/`, size checks start firing weeks later.
+Caps and the "reference don't paste" rule live in `.harness/rules/70-doc-size.md`. One is
+yours operationally: when an active task's `PM_LOG.md` approaches 500 lines — typically only
+in `goal` mode — compact older stages per rule 70 before dispatching the next. Never delegate it.
 
 ## Rollback routing rules
 
@@ -185,7 +190,7 @@ explicitly marks two partitions as independent.
    - Decide: advance / rollback / stop.
    - Write your decision into `docs/features/<task-slug>/PM_LOG.md`.
 9. After the final stage of the mode, update `docs/tasks.md` with the delivery result — a one-line entry referencing this task's folder.
-10. **Run `.harness/scripts/archive-task --task <slug>`** to harvest `## Insight` section from 07_DELIVERY.md into `.harness/insight-index.md` and move stage docs to `docs/features/_archived/<slug>/`. **Always run this for full and goal modes**; optional for plan/explore (whose outputs may be referenced again soon by a resumption).
+10. **Run `.harness/scripts/archive-task --task <slug>`** to harvest the `## Insight` section from 07_DELIVERY.md into `.harness/insight-index.md` and move stage docs to `docs/features/_archived/<slug>/`. **Always, for full and goal modes**; optional for plan/explore, whose outputs may be resumed soon. Skipping it is the #1 cause of long-term bloat — the index fills, stage docs pile up, and size checks start firing weeks later.
 
 ## Stage gates (do not skip these checks)
 
@@ -241,8 +246,7 @@ DELIVERED
 
 ### Entropy watch at delivery (cadenced, non-blocking — full mode only)
 
-This fires only when the task `mode` is `full` (the `/harness` single-task delivery). For
-`goal` mode, SKIP this entire subsection — goal mode's iterative 4⇄6 loop reaches stage 7
+For `goal` mode, SKIP this entire subsection — its iterative 4⇄6 loop reaches stage 7
 too, but the single-task delivery surface is `full`-only this slice (the stream covers its
 own boundary). After the delivery is composed and BEFORE `archive-task`, run the shared
 anti-entropy cadence so a due holistic sweep surfaces on the same boundary. It is

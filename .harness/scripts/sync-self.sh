@@ -101,6 +101,7 @@ sync_file "$template_common/.harness/scripts/hook-spec.js"     "$repo_root/.harn
 sync_file "$template_common/.harness/scripts/guard-rm.js"      "$repo_root/.harness/scripts/guard-rm.js"      ".harness/scripts/guard-rm.js"
 sync_file "$template_common/.harness/scripts/install-hooks.js" "$repo_root/.harness/scripts/install-hooks.js" ".harness/scripts/install-hooks.js"
 sync_file "$template_common/.harness/scripts/doc-query.js"     "$repo_root/.harness/scripts/doc-query.js"     ".harness/scripts/doc-query.js"
+sync_file "$template_common/.harness/scripts/task-state.js"    "$repo_root/.harness/scripts/task-state.js"    ".harness/scripts/task-state.js"
 
 if [[ "$CHECK" == true ]]; then
     if (( ${#drift[@]} > 0 )); then
