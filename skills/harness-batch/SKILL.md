@@ -1,6 +1,6 @@
 ---
 name: harness-batch
-description: Run a list of tasks (T-01...T-NN) through the 7-stage pipeline in sequence. Reads docs/batches/<batch-id>/BATCH_PLAN.md and dispatches pm-orchestrator per task via the Task tool, so each task gets its own isolated context and the batch orchestrator itself only accumulates per-task summaries. Use when you have multiple tasks (from /harness-plan decomposition, an accumulated backlog, post-checkup integrations, or an external list) and want fire-and-forget execution instead of /harness × N. Stops on strong signals only: verify_all FAIL, pm-orchestrator FAIL verdict, 3 same-stage rollbacks, intervention.md STOP, safety hook block.
+description: Run a fixed list of tasks (T-01...T-NN) through the 7-stage pipeline in sequence, one isolated context per task, stopping only on strong signals. Use when you have several known tasks — from /harness-plan decomposition, a backlog, or an external list — and want fire-and-forget execution instead of /harness run N times. NOT /harness-stream (a pool you keep adding to mid-run).
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, AskUserQuestion, TodoWrite, Task
 ---
 

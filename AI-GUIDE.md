@@ -72,38 +72,37 @@ The framework agents are **plugin-native** (`harness-kit:<name>`, auto-discovere
 
 ## Scripts (the moving parts)
 
-- `.harness/scripts/verify_all.{ps1,sh}` — total verification (32 checks, including I.1-I.5 doc-size WARN guards + F.2 guard-rm scripts + settings-template wiring + I.6 gap-tolerant retired-claim guard + I.7 ignored-INTERVENE-report guard + D.3 AI-generated 50-*.md sanity + J.1 settings.json schema integrity). **Must PASS before declaring done.**
-- `.harness/scripts/harness-sync.{ps1,sh}` — copy `.harness/agents/` (partition `dev-*` only since v0.30; framework agents are plugin-provided) + `.harness/skills/` to `.claude/`. v0.10 narrow scope.
-- `.harness/scripts/sync-self.{ps1,sh}` — keep this repo's 8 dogfood script pairs (harness-sync, install-hooks, archive-task, guard-rm, migrate-scripts-layout, upgrade-project, language-policy, hook-spec) byte-identical with `templates/common/`. **No longer mirrors agents** (framework agents are edited directly in the plugin-native top-level `agents/` since v0.30) and **does NOT sync `.harness/rules/` — those are bespoke per repo.**
-- `.harness/scripts/hook-spec.{ps1,sh}` — the **hook wiring spec** (v0.45+): the single source for `(hook tool × target OS) → command byte-form`, plus each tool's `event`, `matcher` and fail-open/fail-closed `semantics`, and `hostos`. Pure CLI, no I/O; exit 2 with an empty stdout on unrecognized input. `guard-rm` is fail-CLOSED. Call the twin of your own shell.
-- `.harness/scripts/install-hooks.{ps1,sh}` — one-shot installer for `.git/hooks/pre-commit` (runs `harness-sync --check`). Since v0.45 it also bootstraps a missing `.claude/settings.local.json` from `hook-spec` **when** the committed settings declares no lifecycle hooks and no machine-local file exists — this is how a fresh clone of this repo gets its (gitignored) hooks back. Idempotent; never overwrites an existing file; never edits `.gitignore`.
-- `.harness/scripts/archive-task.{ps1,sh}` — archive a completed task: harvest `## Insight` section from 07_DELIVERY.md to `.harness/insight-index.md`, move 7 stage docs to `docs/features/_archived/<task>/`, rotate whole old insight entries to `docs/features/_archived/insight-history.md` if >30 entries.
-- `.harness/scripts/test-init.{ps1,sh}` — regression for `/harness-init` on empty dirs.
-- `.harness/scripts/test-real-project.{ps1,sh}` — regression overlaying templates on real fixtures.
-- `.harness/scripts/test-supervisor.{ps1,sh}` — regression for the supervisor agent + `/harness-supervise` skill (v0.17+).
-- `.harness/scripts/test-verify-i6.{ps1,sh}` — regression for the `verify_all` I.6 gap-tolerant retired-claim matcher (v0.18+).
-- `.harness/scripts/ambient-prompt.{ps1,sh}` — `UserPromptSubmit` heartbeat hook for `/harness-stream` ambient mode (v0.22+). No-op unless `.harness/ambient.flag` exists; when present it injects an ingest+drain instruction. Pwsh command needs `-NoProfile`. Not in `sync-self`'s mirror set — dogfood + template copies are maintained in lockstep by hand.
-- `.harness/scripts/ambient-reset.{ps1,sh}` — `SessionStart` hook for `/harness-stream` ambient mode: deletes `.harness/ambient.flag` at the start of every new session so ambient is session-scoped (no "off" keyword). Pwsh command needs `-NoProfile`. Not in `sync-self`'s mirror set — dogfood + template copies maintained in lockstep by hand.
+Every script's header states its own contract. This is the index, not a restatement.
+
+- `verify_all.{ps1,sh}` — total verification (32 checks). **Must PASS before declaring done.**
+- `guard-rm.{ps1,sh}` — destructive-command `PreToolUse` guard. **fail-CLOSED**; see `.harness/rules/75-safety-hook.md`.
+- `hook-spec.{ps1,sh}` — the single source for `(hook tool x target OS) -> command byte-form`, plus each tool's event, matcher and fail-open/closed semantics. Pure; no I/O.
+- `install-hooks.{ps1,sh}` — installs `.git/hooks/pre-commit`; bootstraps a missing `.claude/settings.local.json` from `hook-spec` only when nothing is wired. Never overwrites an existing file.
+- `harness-sync.{ps1,sh}` — copy `.harness/agents/` + `.harness/skills/` into `.claude/`.
+- `sync-self.{ps1,sh}` — hold this repo dogfood scripts byte-identical with `templates/common/`. Does **not** sync `.harness/rules/` — those are bespoke per repo.
+- `archive-task.{ps1,sh}` — archive a completed task: harvest its `## Insight` section into `.harness/insight-index.md`, rotate past 30 entries into `docs/features/_archived/insight-history.md`, move the stage docs.
+- `test-*.{ps1,sh}` — one regression driver per subject; run `bash .harness/scripts/test-<name>.sh`.
+- `entropy-cadence`, `ambient-prompt`, `ambient-reset`, `language-policy`, `upgrade-project`, `migrate-scripts-layout` — support the like-named skills.
+
+**TypeScript**: `guard-rm`, `hook-spec` and `install-hooks` are implemented in `src/*.ts`,
+compiled to `.harness/scripts/*.js` and committed; the `.sh` / `.ps1` beside them are
+two-line launchers holding no logic. After editing `src/`, run `npm run build`, then
+`npm test` (150 unit tests). See `docs/proposals/v2-ts-migration.md`.
 
 ## Workflow entry — pick the right mode
 
-| Mode | Use when (English triggers) | Use when (中文触发) | Skill |
-|---|---|---|---|
-| Pre-pipeline alignment interview | "grill me on this" / "interview me about this plan" / "pin down what I actually want before we build" | "拷问我的需求" / "逐条对齐需求" / "动手前先把需求问清楚" | `/harness-grill` |
-| Full 7-stage pipeline | "Add X" / "Fix bug Y" / "Refactor Z to ..." — real shipping work | "加一个 ..." / "修个 bug" / "重构成 ..." | `/harness` |
-| Plan only (stages 1-3) | "Vet this design" / "evaluate the approach before coding" | "评审一下..." / "先别动手" / "设计上行不行" | `/harness-plan` |
-| Explore / feasibility | "Can we do X?" / "Is library Y feasible?" — research | "能不能..." / "可行吗" / "调研一下" | `/harness-explore` |
-| Goal loop (Dev + QA) | "Keep improving until X" / "iterate to N% coverage" | "持续优化到..." / "循环改进直到..." | `/harness-goal` |
-| Batch (list of tasks) | "Run T-01...T-NN as a batch" / "batch the backlog" | "批量跑 T-01~T-09" / "把这批一起跑了" | `/harness-batch` |
-| Stream (living pool) | "keep draining a pool I keep adding to" / "fire tasks at me as I think of them, just watch results" | "边开发边不断加任务" / "想到啥需求就丢进去，只看结果" | `/harness-stream` |
-| Anti-entropy sweep | "clean up the codebase entropy" / "what's rotting / where's the ball of mud" / "do an anti-entropy sweep" | "减熵巡检" / "做一次反熵巡检" / "整体看看哪里在腐化" | `/harness-deflate` |
-| Trivial | Typo, comment, single-line dependency bump | typo / 注释 / 改个变量名 | Direct edit + `.harness/scripts/verify_all` |
-| Mid-task redirect | "stop the pipeline" / "tell dev to skip X" / "leave a note for QA" | "停一下" / "让 dev 别动 X" / "顺便告诉 QA…" | `/harness-intervene` |
-| Upgrade an old project | "bring my old harness project up to date" / "the scripts are in the old `scripts/` layout" | "把旧的 harness 项目升级到最新" / "脚本还在旧的 scripts/ 目录" | `/harness-upgrade` |
-| Set / switch / refresh project language | "make this project English" / "switch to Chinese output" / "refresh the language policy" | "切到中文输出" / "改成英文" / "刷新语言策略" | `/harness-language` |
-| Switch decision/escalation mode | "let the AI decide on its own" / "make it ask me first" / "use my own decision rules" | "切换决策模式" / "让 AI 自己拿主意" / "改成人工决策" / "用我自己的决策规则" | `/harness-decision-mode` |
+Every mode is a skill, and Claude Code already carries all 17 skill descriptions in the
+session prompt — each with its own English and Chinese triggers and its "NOT /other-skill"
+disambiguation. Restating them here was a second copy that nothing kept in sync. Describe
+the work and the right skill is selected; `/harness` is the full 7-stage pipeline and the
+rest narrow it (`-plan` stages 1-3 only, `-explore` research, `-goal` a Dev+QA loop,
+`-batch` / `-stream` a task pool, `-grill` a pre-pipeline interview).
 
-Declare-done gate (**all non-trivial modes**): `.harness/scripts/verify_all` PASS + (if 7-stage or goal) QA's `06_TEST_REPORT.md` has an `## Adversarial tests` section.
+Trivial work — a typo, a comment, a single-line dependency bump — takes no skill: edit
+directly, then run `.harness/scripts/verify_all`.
+
+Declare-done gate (**all non-trivial modes**): `.harness/scripts/verify_all` PASS + (if
+7-stage or goal) QA's `06_TEST_REPORT.md` has an `## Adversarial tests` section.
 
 ## Editing rules
 

@@ -1,6 +1,6 @@
 ---
 name: harness-init
-description: Bootstrap a new project with the full Harness Engineering skeleton — Claude-native by default (the 7 framework agents come from the harness-kit plugin as harness-kit:<name>; the project carries only rules, skills, and any partition dev-* agents in .harness/, plus the Claude Code binding in .claude/ + CLAUDE.md). Use this when starting a fresh fullstack or backend project that wants AI-driven development from day one.
+description: Bootstrap a NEW project with the full Harness Engineering skeleton — rules, skills, scripts and the Claude Code binding. Use when starting a fresh fullstack or backend project that wants AI-driven development from day one. NOT /harness-adopt (an existing codebase), NOT /harness-upgrade (a harness project that is merely stale).
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, AskUserQuestion, TodoWrite
 ---
 

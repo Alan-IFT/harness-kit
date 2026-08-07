@@ -1,13 +1,10 @@
 ---
 name: harness-language
 description: Set, switch (English <-> Chinese), or refresh a harness project's
-  output-language policy by surgically rewriting only the three policy-bearing surfaces
-  (.harness/rules/00-core.md section + CLAUDE.md top line + .github/copilot-instructions.md
-  top line) to the target language's current canonical text — non-destructively,
-  idempotently, with a dry-run preview and a .bak per edited file. Self-bootstraps the
-  canonical text from the plugin template cache, so even an old project that predates the
-  current policy can pull it. Use to change a project's working language or to refresh a
-  stale policy; for layout upgrades use /harness-upgrade.
+  output-language policy. Non-destructive, idempotent, with a dry-run preview. Use to
+  change a project's working language or to refresh a stale policy — "switch to Chinese
+  output", "make this project English", "切到中文输出". NOT /harness-upgrade (layout and
+  version), NOT /harness-decision-mode (how much the AI decides on its own).
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, AskUserQuestion, TodoWrite
 ---
 

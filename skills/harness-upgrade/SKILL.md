@@ -1,11 +1,10 @@
 ---
 name: harness-upgrade
 description: Upgrade an already-initialized but stale harness project to the current
-  plugin layout — relocate scripts to .harness/scripts/, re-install the pre-commit
-  hook, rewire settings hook paths, regenerate verify_all from the current type
-  template — non-destructively, idempotently, with a dry-run preview, then prove it
-  with a green verify_all. Use when a project HAS harness but is OLD; for projects
-  with no harness at all use /harness-adopt.
+  plugin layout, non-destructively and idempotently, with a dry-run preview, then prove
+  it with a green verify_all. Use when a project HAS harness but is OLD. NOT
+  /harness-adopt (a project with no harness at all), NOT /harness-language (output
+  language only).
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, AskUserQuestion, TodoWrite
 ---
 
