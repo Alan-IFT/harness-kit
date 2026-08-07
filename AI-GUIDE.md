@@ -40,7 +40,7 @@ Stack: Markdown (skills, agent definitions, docs) + PowerShell + Bash (verify_al
 - **`.harness/rejected-decisions.md`** — deliberately-declined requests/approaches + why (the fourth memory kind: declined options, distinct from truths / autonomy principles / glossary). Read it at a non-trivial decide-point before proposing a new approach/feature; append a record when something is deliberately declined. The habit is governed by `25-decision-policy.md`. Absent is fine — a convenience, not a gate.
 - **`.harness/operator-obligations.md`** — the release-gating **operator obligations** (the fifth memory kind: outstanding human duties). Each entry carries one step a human operator must perform on a host this repo's agents cannot reach — almost all of it PowerShell — with its artifacts, pass observable, security marking, origin and discharge record. Not on any always-read path: read it before a release tag, and append a new obligation there with the next unused id — never into `.harness/scripts/baseline.json`, which pins numeric baselines only.
 
-Before declaring any task complete, run `.harness/scripts/verify_all` and confirm all PASS checks are green (32/32; check count grows with releases) — this is the gate, not a rule fragment.
+Before declaring any task complete, run `.harness/scripts/verify_all` and confirm all PASS checks are green (33/33; check count grows with releases) — this is the gate, not a rule fragment.
 
 If you add a new fragment to `.harness/rules/`, append a line above with its filename, a 1-line description, and the trigger condition.
 
@@ -74,7 +74,7 @@ The framework agents are **plugin-native** (`harness-kit:<name>`, auto-discovere
 
 Every script's header states its own contract. This is the index, not a restatement.
 
-- `verify_all.{ps1,sh}` — total verification (32 checks). **Must PASS before declaring done.**
+- `verify_all.{ps1,sh}` — total verification (33 checks). **Must PASS before declaring done.**
 - `guard-rm.{ps1,sh}` — destructive-command `PreToolUse` guard. **fail-CLOSED**; see `.harness/rules/75-safety-hook.md`.
 - `hook-spec.{ps1,sh}` — the single source for `(hook tool x target OS) -> command byte-form`, plus each tool's event, matcher and fail-open/closed semantics. Pure; no I/O.
 - `install-hooks.{ps1,sh}` — installs `.git/hooks/pre-commit`; bootstraps a missing `.claude/settings.local.json` from `hook-spec` only when nothing is wired. Never overwrites an existing file.

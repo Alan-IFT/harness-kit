@@ -190,6 +190,30 @@ else
     step "D.3" "AI-generated 50-*.md sanity (per-section sources, headings, no placeholders)" "FAIL" "$d3_problems"
 fi
 
+# D.4 — agent contracts stay within their granted tools (v2 migration)
+#
+# A contract can name a duty its agent is physically incapable of performing, and until this
+# check nothing noticed. It had happened three times: both reviewers name stage documents
+# they hold no `Write` for; `pm-orchestrator` was told twice to run `archive-task` while
+# holding no shell; and the v2 migration's first pass told six agents to run a query script
+# five of them cannot run.
+#
+# `.harness/rejected-decisions.md` names this remedy directly — `reviewer-write-grant` may be
+# re-surfaced with "a check that reads an agent's `tools:` line". FAIL, not WARN: an agent
+# instructed to do what it cannot do produces a silent no-op, and a silent no-op in the
+# archive path is what the PM contract itself calls the #1 cause of long-term bloat.
+if [[ -f .harness/scripts/capability-audit.js ]] && command -v node >/dev/null 2>&1; then
+    if d4_out=$(node .harness/scripts/capability-audit.js 2>&1); then
+        step "D.4" "Agent contracts within granted tools" "PASS"
+    else
+        step "D.4" "Agent contracts within granted tools" "FAIL" "$d4_out"
+    fi
+else
+    # No node, or a project that does not carry the audit: the check cannot run, and saying
+    # PASS would be a green light over an unexamined surface.
+    step "D.4" "Agent contracts within granted tools" "WARN" "capability-audit.js or node unavailable"
+fi
+
 # E.1 — Layer 1: templates/common/ → repo .harness/ + harness-sync
 if bash "$repo_root/.harness/scripts/sync-self.sh" --check &>/dev/null; then
     step "E.1" "Layer 1: .harness/ matches templates/common/.harness/" "PASS"

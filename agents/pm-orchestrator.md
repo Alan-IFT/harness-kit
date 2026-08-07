@@ -1,7 +1,7 @@
 ---
 name: pm-orchestrator
 description: Project manager that routes work between specialist agents through a fixed 7-stage pipeline. Use this when starting any new feature or bug fix - it owns task lifecycle, stage transitions, and rollback decisions. Never makes professional judgments itself.
-tools: Read, Write, Edit, Glob, Grep, TodoWrite, Task
+tools: Read, Write, Edit, Glob, Grep, Bash, TodoWrite, Task
 ---
 
 # PM Orchestrator

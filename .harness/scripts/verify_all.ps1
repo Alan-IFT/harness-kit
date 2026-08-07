@@ -192,6 +192,24 @@ Step "D.3" "AI-generated 50-*.md sanity (per-section sources, headings, no place
 
 # E. Self-consistency (dogfood — two layers)
 # Layer 1: templates/common/ → repo .harness/ + .harness/scripts/harness-sync
+
+# D.4 — agent contracts stay within their granted tools (v2 migration). See the bash twin
+# for the three latent instances that motivated it. FAIL, not WARN: an agent instructed to
+# do what it cannot do produces a silent no-op.
+Step "D.4" "Agent contracts within granted tools" {
+    $auditPath = ".harness/scripts/capability-audit.js"
+    if (-not (Test-Path $auditPath)) {
+        Write-Host "" -NoNewline
+        Write-Host " (capability-audit.js unavailable)" -ForegroundColor Yellow -NoNewline
+        return $false
+    }
+    $out = @(& node $auditPath 2>&1 | ForEach-Object { [string]$_ }) -join "`n"
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host ""
+        Write-Host $out -ForegroundColor Red
+        return $false
+    }
+}
 Step "E.1" "Layer 1: .harness/ matches templates/common/.harness/" {
     & (Join-Path $PSScriptRoot "sync-self.ps1") -Check
     if ($LASTEXITCODE -ne 0) { throw "Layer 1 drift — run .harness/scripts/sync-self.ps1 to fix" }
