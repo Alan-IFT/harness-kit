@@ -224,3 +224,66 @@ work that should land with P4, not before.
 2. **Script the STATE extraction** over the 43 `PM_LOG.md` ledgers (deferred to P4).
 3. **Run configuration A** (today's full-document reads) to capture the accuracy *and* token
    baseline. Without it P1's "accuracy did not regress" claim is unfalsifiable.
+
+---
+
+## P3 baseline result — measured 2026-08-07
+
+`evals/run-mem-baseline.sh` runs the 12 MEM items through four retrieval configurations.
+Scoring is mechanical (does the expected evidence string appear in the arm's output?), so
+no judge model is involved.
+
+| arm | what it is | accuracy | tokens | vs A |
+|---|---|---:|---:|---:|
+| **A** | read the whole document — today | 12/12 | 81,899 | — |
+| **B1** | repo-wide search that skips dot-directories | **0/12** | 0 | — |
+| **B2** | the same search, dot-directories included | 12/12 | 50,332 | 1.6× |
+| **B3** | scoped to the memory docs, 2 lines of context | 7/12 | 4,551 | **18.0×** |
+| **B4** | scoped, entry-sized context window | 9/12 | 16,615 | 4.9× |
+
+### Three findings
+
+**1. The dot-directory hazard is not theoretical — it is total.** B1 scores **0 of 12** and
+returns **zero bytes**, so it reads as "no results" rather than "wrong search". Every MEM
+answer lives under `.harness/`, and Claude Code's Grep tool is ripgrep-backed, which skips
+dot-directories by default. This is the live case for every agent in this repo, and it is
+the single largest retrieval risk measured anywhere in this migration.
+
+**2. Unscoped search is barely worth doing.** B2 buys full accuracy for only 1.6× fewer
+tokens than reading the documents outright, because a repo-wide match sprays across
+`CHANGELOG.md` and 7.4 MB of archived tasks. "Grep instead of read" is not the win the
+brief assumed; **scoping** is where the 18× lives.
+
+**3. B4's three misses have three different causes, and only one argues for a backend.**
+
+- **M3** — its answer is in `verify_all.sh`, not a memory store, so the scoped arms cannot
+  reach it by construction. This is the eval set's own mis-categorisation, not a retrieval
+  failure. Marked in the runner rather than deleted.
+- **M12** — the keyword hits but the evidence sits outside a ±10-line window, because one
+  fact is stored as one long wrapped paragraph. The fix is the storage **unit**, not the
+  storage **engine**: one fact per retrievable chunk makes a hit return the whole fact.
+- **M6** — the literal search term never appears, because the source writes ``` `PreToolUse` ```
+  with backticks. This is genuine literal-vs-semantic brittleness, and it is the only one of
+  the twelve that a semantic backend would fix.
+
+### Recommendation: do not adopt agentmemory on this evidence
+
+§5.3 sets the bar — a backend that does not beat search does not get merged. Scoped search
+reaches 9–12 of 12 at 5–18× cheaper than today, and exactly **1 of 12** failures is the kind
+semantic retrieval addresses. Against that, `agentmemory` brings a hard-pinned `iii-engine`
+dependency whose provenance the brief itself records as unverified, a cross-agent memory leak
+fixed only in v0.9.28, and a 0.9.x version line.
+
+By the brief's own test — *does it remove a decision point or add one?* — it adds several to
+remove roughly 8% of one category's misses.
+
+**Adopt instead, in this order, none of which is a new component:**
+
+1. **Make scoping the default.** Teach every agent to search the memory documents by name
+   before searching the repo. This is the 18× and it costs nothing.
+2. **Fix the retrieval unit.** One fact per chunk in `insight-index.md`, so a hit returns a
+   whole fact instead of a window into one. This closes the M12 class.
+3. **Re-home M3** into `RULE`, where it belongs.
+
+Re-run this baseline before revisiting the question. The bar a backend must clear is **B3**,
+not A and not B2.
