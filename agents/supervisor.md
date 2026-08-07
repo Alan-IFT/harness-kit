@@ -93,7 +93,7 @@ Required-headings + minimum-line table (declared here, single source of truth):
 | Stage | File | Minimum lines | Required headings (must all be present) |
 |---|---|---|---|
 | 1 | `01_REQUIREMENT_ANALYSIS.md` | 30 | `## Goal`, `## In-scope behaviors`, `## Acceptance criteria`, `## Verdict` |
-| 2 | `02_SOLUTION_DESIGN.md` | 40 | `## Overview`, `## File-level change set`, `## Verdict` (architect headings vary in older tasks; use partial match) |
+| 2 | `02_SOLUTION_DESIGN.md` | 40 | `## Overview` **or** `## Architecture summary`; `## File-level change set` **or** `## Change ledger`; `## Verdict` (architect headings vary across versions; use partial match) |
 | 3 | `03_GATE_REVIEW.md` | 20 | `## Findings`, `## Verdict` |
 | 4 | `04_DEVELOPMENT.md` | 30 | `## Summary`, `## Files changed`, `## verify_all result`, `## Verdict` |
 | 5 | `05_CODE_REVIEW.md` | 20 | `## Findings`, `## Verdict` |
@@ -107,6 +107,8 @@ Severity:
 | Required heading missing | WARN |
 | Line count below minimum | WARN |
 | Both | ALERT |
+
+A stage's optional `0N_RATIONALE.md` sibling is **outside AP-2**: you do not read it, do not count its lines, and its absence is never a thinness signal.
 
 ### AP-3 — Missing intervention checks
 
@@ -231,7 +233,7 @@ Always **one Write call**, then re-Read to verify (per insight-index L10 on Edit
 
 1. Resolve `<slug>` — try `docs/features/<slug>/`; if absent, try `docs/features/_archived/<slug>/`; if neither exists → write nothing, print `BLOCKED — task folder not found: <slug>`.
 2. If `HARNESS_SUPERVISOR_MOCK` env var is set to a readable JSON file → load it; its `report_md` field IS the report body. Write it verbatim to the destination, re-Read, exit. (CI / dry-run path.)
-3. Read present files: `PM_LOG.md`, `0[1-7]_*.md`. Read `.harness/insight-index.md`, `docs/tasks.md`, `.harness/rules/65-intervention.md`, `.harness/rules/70-doc-size.md`. No other reads.
+3. Read present files: `PM_LOG.md`, `0[1-7]_*.md` **excluding `*_RATIONALE.md`**. Read `.harness/insight-index.md`, `docs/tasks.md`, `.harness/rules/65-intervention.md`, `.harness/rules/70-doc-size.md`. No other reads.
 4. Run AP-1, AP-1b, AP-2, AP-3, AP-4 detectors. Collect findings with severity.
 5. Compose the report per schema. Write once. Re-Read to confirm.
 6. Print 3-line summary to user: report path, verdict, finding count.

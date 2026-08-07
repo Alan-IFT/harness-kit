@@ -19,15 +19,75 @@ one line (see below).
 
 ## Trigger verbs
 
-| Family | Verbs (first token after optional `sudo`) |
-|---|---|
-| POSIX `rm` family | `rm`, `rmdir`, `unlink`, `shred`, `srm` |
-| Windows / pwsh | `Remove-Item`, `del`, `erase`, `Clear-RecycleBin` |
-| `find` deletion | `find … -delete` (`-delete` anywhere among the args) |
-| Nested pwsh | `pwsh -c "<cmd>"`, `pwsh -Command "<cmd>"`, `powershell -c …` — the quoted command is re-tokenized and the same rules apply (max recursion depth 2; deeper nesting → BLOCK with parse-failure message) |
+POSIX `rm` family: `rm`, `rmdir`, `unlink`, `shred`, `srm`. Windows / pwsh:
+`Remove-Item`, `del`, `erase`, `Clear-RecycleBin`. Plus `find … -delete`
+(`-delete` anywhere among the args). Everything else (`mv`, `cp`, `>`
+redirection, `git`, build tools, …) is **not** guarded by this hook.
 
-Everything else (`mv`, `cp`, `>` redirection, `git`, build tools, …) is **not**
-guarded by this hook. It only catches destructive verbs.
+## Where the verbs are looked for — the coverage claim (v0.46.0)
+
+A **command position** is an offset at which a shell begins parsing a new simple
+command. The guard evaluates the destructive-verb rule at **every command
+position it can identify in one command line**, not just the first token of each
+top-level pipe segment (which is all it did before v0.46.0).
+
+| Command-line form | Behaviour |
+|---|---|
+| `A ; B` · `A && B` · `A \|\| B` · `A & B` · newline- or CRLF-separated · `A \| B` | Every position judged |
+| `( A ; B )` subshell · `{ A ; B ; }` brace group (nesting depth ≤ 2) | Inner positions judged |
+| `$( A )`, backticks, `<( A )` / `>( A )` | Inner positions judged |
+| Leading `VAR=value` / `VAR+=value` assignment prefixes, `sudo [-E\|-H\|-u USER]`, shell reserved words (`do`, `then`, …) | Transparent — the real verb is judged |
+| Argv carriers `xargs`, `env`, `nohup`, `nice`, `time`, `timeout`, `command`, `exec`, `find … -exec` | Every remaining token is a candidate position; a destructive verb among them is judged. These are **not** destructive verbs themselves |
+| Nested interpreters `pwsh -c` / `powershell -c` / `bash -c` / `sh` / `dash` / `zsh` / `ksh` | Inner string re-parsed at depth+1; depth > 2 → BLOCK |
+| Quoted literal text, here-document bodies, `#` comments | Data, not command positions → ALLOW |
+| Redirection operators and targets (`> f`, `2>&1`, `>>`) | Not command positions; the verb set is unchanged |
+| Unbalanced quotes · nesting past depth 2 · unterminated here-document · any structure the parser cannot resolve | **BLOCK** (fail-closed) |
+
+The guard never *removes* a position it judged before v0.46.0: the widened parse
+is a strict superset, so the change can only ever block more, never less.
+
+## Residual limitations (what this guard genuinely does NOT cover)
+
+A guard that overstates its coverage is worse than one that names its edges.
+
+1. **Verb spelling** — `/bin/rm`, `\rm`, `$(which rm)` are not recognized.
+   `'rm'` / `"rm"` and `command rm` **are** (quotes are stripped; `command` is a carrier).
+2. **Indirection** — `eval "$X"`, `$CMD -rf /etc/x`, aliases, shell functions,
+   `./script.sh`, a Makefile target. Out of reach for a text-only guard.
+3. **`cd` is not modelled** — `cd /tmp && rm -rf ./x` is now *evaluated*, but
+   `./x` resolves against the guard's own cwd, so it judges in-project.
+4. **Paths that are not literal text** — `rm -rf $HOME/x` resolves the literal token, so it ALLOWs
+   where `~/x` BLOCKs; so does `rm -rf $'/etc/x'`, an ANSI-C-quoted *literal* that bash does execute.
+   In `rm -rf $(cat list)` the inner command is judged as its own position but the *target* is not
+   resolvable. Parameter-expansion interiors (`${x:-$(cmd)}`) are copied verbatim: no inner position.
+5. **A leading token other than `NAME=`/`NAME+=`, `sudo` or a reserved word hides the verb of its own position** — a redirection (`> f rm -rf /etc/x`,
+   `2>/dev/null rm …`, `2>&1 rm …`, `< /dev/null rm …`), an array element (`a[0]=1 rm …`), an empty token (`'' rm …`), or `xargs bash --rcfile f -c "rm …"`
+   (a carrier's interpreter takes only arg 1). Pre-existing. Bash runs all but the empty form — at any chain position, and in `( )`/`$( )`/`bash -c`.
+6. **Beyond 8192 characters** — content past truncation is unjudged.
+7. **The override authorizes the whole line, not one position.** A leading
+   `HARNESS_ALLOW_OUTSIDE_RM=1` exits 0 before any parsing, so every chained
+   position after it is allowed too — the one place the guard is deliberately
+   not chain-aware, so the authorization stays visible at the head of the line.
+8. **Non-Claude-Code writers** — `PreToolUse` governs only Claude Code's Bash
+   tool; Write/Edit, other agents and other IDEs are unaffected (that is also
+   the repair path if the guard is ever left unrunnable). **The PowerShell twin
+   is verified by symmetry only** until an operator runs it on Windows.
+
+## Accepted over-blocks (fail-closed by design — use the override)
+
+The widened parse retains the pre-change pass in full, and that pass has no
+backslash, comment or here-document awareness. So the over-block surface is a
+**superset** of the pre-v0.46.0 one. Known, deliberate cases:
+
+| Input shape | Why it blocks |
+|---|---|
+| An odd `'` or `"` anywhere — including inside a here-document body or a comment | The byte-unchanged tokenizer counts every quote. Pre-existing; e.g. `cat > f <<'EOF' … don't … EOF`, and every `$'it\'s'` ANSI-C string |
+| A backslash-escaped quote pair that **spans** a top-level separator, e.g. `echo \"a ; b\"` | The scanner splits at the separator, leaving a position with odd quote parity. The same text with real quotes (`echo "a ; b"`), or with no separator between the escaped quotes, is fine |
+| `rm -rf ./build \| tee /tmp/x.log` | The whole line is judged as one position too (that is what keeps `pwsh -c "… \| Tee-Object C:\log"` blocked), so `rm`'s token walk reaches the absolute outside path after the pipe |
+| `bash <script> "<a command string as an argument>"`, and `bash <<EOF … EOF`, whose here-document fragment is judged the same way | Every non-option argument of a shell interpreter is judged as a command string. That is what catches `bash -c "rm -rf /etc/x"`; the cost is that a destructive command passed as data blocks too |
+| A carrier verb with a literal destructive verb among its arguments and an outside path later, e.g. `timeout 5 grep -r rm /etc` | The carrier scan dispatches at the token `rm` and walks the remaining tokens as paths. `ls \| xargs grep rm` (no outside path) still ALLOWs |
+| Nesting deeper than 2, e.g. `echo "$(basename "$(dirname "$(pwd)")")"` | Depth bound |
+| Unbalanced or unterminated structure, e.g. `cat <<EOF` with no terminator | Fail-closed |
 
 ## Path resolution rules
 
@@ -41,31 +101,36 @@ guarded by this hook. It only catches destructive verbs.
 - **Globs** (`/tmp/*.log`): literal — the guard does not expand them. The
   literal prefix is what gets checked, so `/tmp/*.log` resolves under `/tmp/`
   and is outside-root.
-- `$repoRoot` is the **nearest** `.git/` ancestor of `cwd` (walked manually —
-  the guard never spawns `git` itself, to stay under the 50 ms wall-clock
-  budget). If no `.git/` ancestor exists, the guard exits 0 with a stderr
-  WARN line and the tool call proceeds — "refuse to protect loudly" beats
-  false-blocking CI scratch shells.
+- `$repoRoot` is the **nearest** `.git/` ancestor of `cwd`, walked manually —
+  the guard never spawns `git` itself. If no `.git/` ancestor exists, the guard
+  exits 0 with a stderr WARN line and the tool call proceeds — "refuse to
+  protect loudly" beats false-blocking CI scratch shells.
+
+## Wall-clock cost (measured, v0.46.0 — the old "under 50 ms" claim is retired)
+
+Bash guard, Linux/i5-12400/bash 5.2, median of 3 repeats × 10 invocations, pre → post. Typical
+commands got **faster** (~20 forks per segment removed): ~110-char chain 43 → **40 ms**,
+`echo hi > ./f` 42 → **35 ms**. A full 8192-character line — the truncation bound, so the worst
+case — was ~1.5 s and is now **~1.5-3.1 s**, the spread set by shape not length: a dense
+819-`&&` chain is dearest, one long word or a fail-closed here-doc cheapest. Order of magnitude on
+this host, not a budget — `${s:$i:1}` is O(i), so every character pass is O(n²), the scanner adds
+a third, and the pre-change guard already paid most of it. Nothing forks per token: a slow block
+means a long command, not a process storm, far from any hook timeout; no path fails open.
 
 ## Override (per-call escape hatch)
 
-Set the environment variable `HARNESS_ALLOW_OUTSIDE_RM=1` for a single call.
+Set `HARNESS_ALLOW_OUTSIDE_RM=1` for a single call — either in the hook process
+environment, or as a **leading prefix on the command text** (bash
+`HARNESS_ALLOW_OUTSIDE_RM=1 rm -rf /tmp/some-thing`; PowerShell
+`$env:HARNESS_ALLOW_OUTSIDE_RM=1; Remove-Item -Recurse C:\some\external\path`).
 
-Bash:
-
-```
-HARNESS_ALLOW_OUTSIDE_RM=1 rm -rf /tmp/some-thing
-```
-
-PowerShell:
-
-```
-$env:HARNESS_ALLOW_OUTSIDE_RM=1; Remove-Item -Recurse C:\some\external\path
-```
-
-When the override is active, the guard emits a single stderr INFO line
-(`override active …`) and exits 0 without parsing. Claude Code records the
-INFO line in the tool transcript so the override is auditable.
+Both forms exit 0 without parsing and emit a single stderr INFO line
+(`override active …`) that Claude Code records in the transcript, so the
+override is auditable. Before v0.46.0 the command-text prefix reached exit 0
+*silently*, through the unrecognized-verb path — it was an escape hatch that
+left no trace. Only a prefix at offset 0 of the whole line counts, and only the
+exact value `1`: `echo x && HARNESS_ALLOW_OUTSIDE_RM=1 rm -rf /etc/x` is **not**
+self-authorizing, it BLOCKs.
 
 The override is intentionally **per-call and visible**. It cannot be persisted
 in any committed file — `.claude/settings.json` does not accept it, and the
@@ -78,22 +143,44 @@ the matcher==="Bash" entry pointing at `guard-rm`). To re-enable, re-run
 `/harness-adopt` (it merges the PreToolUse block back in) or copy from
 `skills/harness-init/templates/common/.claude/settings.json.tmpl`.
 
+**Removing the hooks from the committed file is not enough if anyone runs
+`.harness/scripts/install-hooks`.** That installer treats "the committed settings
+declares no lifecycle hooks AND there is no `.claude/settings.local.json`" as "this
+project has no hooks at all", and bootstraps a machine-local file wiring all four events
+from the hook wiring spec (`.harness/scripts/hook-spec`) — so a disable done only in the
+committed file would be re-armed on the next run. To keep the hooks off **persistently**,
+leave a machine-local file in place carrying an empty hooks object:
+
+```
+{ "hooks": {} }   ->  .claude/settings.local.json
+```
+
+The installer keys on **presence alone** and never reads, overwrites, backs up or repairs
+an existing `.claude/settings.local.json`, so that file is the durable opt-out. The
+direction of risk is restore-only by design: the bootstrap can re-arm the guard, never
+weaken it, it prints the path it created plus a one-line undo command, and it changes no
+`.gitignore` — if this project tracks `.claude/`, add the machine-local file yourself.
+
 ## Failure modes
 
 | Failure | What happens | Fix |
 |---|---|---|
 | Guard script missing on disk | PreToolUse hook itself fails → Claude Code blocks the call with the hook error in the transcript | Reinstall: `/harness-adopt`, or copy `.harness/scripts/guard-rm.{ps1,sh}` from the harness-kit templates |
-| Parse failure on nested pwsh / unbalanced quotes | BLOCK with explicit "could not parse …" message | Re-issue without the nested quoting, or use override if you know the command is safe |
+| Unbalanced quotes anywhere in the line (including inside a here-doc body or a comment) | BLOCK with the "could not parse …" message | Re-issue with balanced quoting, or use the override |
+| Nesting past depth 2, or an unterminated here-document | Same BLOCK | Split the line, or use the override |
+| A destructive command passed as *data* (see accepted over-blocks) | BLOCK | Use the override for that call |
 | `.git/` not found anywhere up the cwd chain | WARN to stderr, exit 0 (tool call proceeds) | Make sure you're in a real project, or initialize git |
-| Performance over 50 ms | Not a failure, but log it | The guard is straight-line code and avoids spawning subprocesses; if you see slow blocks, file an issue with timings |
 
 ## Boundaries
 
 - **In-project deletions are allowed.** `rm -rf node_modules`, `rm -rf .next/`,
   `rm -rf build/` from inside the repo are fine — by design. The guard's scope
   is "rm OUTSIDE the project root".
-- **Out of scope (v0.15)**: `mv` / `cp` / redirect-overwrite (`> file`) —
-  common-legit and not addressed here. Re-evaluate only if an incident occurs.
+- **Out of scope**: `mv` / `cp` / redirect-overwrite (`> file`) — common-legit
+  and not addressed here. Re-evaluate only if an incident occurs. Operator
+  **chaining** (`;`, `&&`, `||`, `&`, newline, groups, substitutions, argv
+  carriers, nested interpreters) is **no longer** out of scope — see the
+  coverage claim above.
 - **Out of scope**: tool calls issued by Write/Edit, Cursor, Copilot, or any
   AI tool other than Claude Code. PreToolUse only governs Claude Code's tool
   calls. For other tools the policy is documented best-practice; the

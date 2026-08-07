@@ -281,56 +281,91 @@ fi
 
 # F.1 — script symmetry
 missing_sym=""
-for pair in verify_all sync-self harness-sync test-init test-real-project ambient-prompt ambient-reset upgrade-project language-policy entropy-cadence; do
+for pair in verify_all sync-self harness-sync test-init test-real-project ambient-prompt ambient-reset upgrade-project language-policy entropy-cadence hook-spec; do
     [[ -f ".harness/scripts/$pair.ps1" ]] || missing_sym="$missing_sym .harness/scripts/$pair.ps1"
     [[ -f ".harness/scripts/$pair.sh" ]] || missing_sym="$missing_sym .harness/scripts/$pair.sh"
 done
 [[ -z "$missing_sym" ]] && step "F.1" "Script pairs (.ps1 + .sh) present" "PASS" || step "F.1" "Script pairs present" "FAIL" "missing:$missing_sym"
 
-# F.2 — Guard-rm scripts and PreToolUse wiring present (v0.15+)
+# F.2 — Guard-rm scripts and settings-template guard wiring present (v0.15+; narrowed T-15)
+# TRACKED CONTENT ONLY. This check reads NO settings file — not the committed
+# .claude/settings.json, not the gitignored .claude/settings.local.json. Its result is a
+# function of tracked repository content, so a fresh clone and CI get the same verdict as
+# the maintainer's machine. Whether THIS machine has the guard wired is a machine fact with
+# no correct expression in a repository gate: the documented durable opt-out is a PRESENT
+# machine-local file carrying an empty hooks object (.harness/rules/75-safety-hook.md), so
+# even a presence-conditional assertion would fail a legitimate state. That dimension is
+# owned and reported by /harness-status §0 "Effective hook source" (T-14). Guard BEHAVIOUR
+# was never this check's job and is not affected: it is covered by
+# .harness/scripts/test-guard-rm.{ps1,sh} over evals/guard-rm-cases.md.
 f2_problems=""
 for f in .harness/scripts/guard-rm.ps1 .harness/scripts/guard-rm.sh \
          skills/harness-init/templates/common/.harness/scripts/guard-rm.ps1 \
          skills/harness-init/templates/common/.harness/scripts/guard-rm.sh; do
     [[ -f "$f" ]] || f2_problems="$f2_problems missing:$f"
 done
-# Dogfood guard-rm PreToolUse wiring must exist. T-12 (v0.44.0): the dogfood hooks
-# moved OUT of the committed .claude/settings.json into the gitignored
-# .claude/settings.local.json (so the published plugin ships no leakable hooks). Read
-# the guard-rm evidence from settings.local.json when it carries the hooks, and fall
-# back to settings.json otherwise (a user project that keeps hooks in the committed
-# file is still validated). Use grep heuristic (avoid jq); mirrors G.3's grep approach.
-f2_hooks_file=""
-if [[ -f .claude/settings.local.json ]] && grep -q '"PreToolUse"' .claude/settings.local.json; then
-    f2_hooks_file=".claude/settings.local.json"
-elif [[ -f .claude/settings.json ]]; then
-    f2_hooks_file=".claude/settings.json"
-fi
-if [[ -z "$f2_hooks_file" ]]; then
-    f2_problems="$f2_problems missing:.claude/settings.json-or-settings.local.json"
-else
-    if ! grep -q '"PreToolUse"' "$f2_hooks_file"; then
-        f2_problems="$f2_problems $f2_hooks_file:no_PreToolUse"
-    fi
-    if ! grep -q '"matcher"[[:space:]]*:[[:space:]]*"Bash"' "$f2_hooks_file"; then
-        f2_problems="$f2_problems $f2_hooks_file:no_Bash_matcher"
-    fi
-    if ! grep -qE 'guard-rm\.(ps1|sh)' "$f2_hooks_file"; then
-        f2_problems="$f2_problems $f2_hooks_file:no_guard-rm_command"
-    fi
-fi
-# Template .claude/settings.json.tmpl must have {{GUARD_COMMAND}} + PreToolUse
+# The distributed settings template must carry the guard command placeholder and a real
+# PreToolUse hook KEY. The key form ("PreToolUse" + optional space + colon) is required on
+# purpose: the same file's _guard_hook documentation string also contains the bare word
+# PreToolUse, so an unanchored match would still PASS with the hook block deleted.
+# T-16 (T-15's containment residual): presence anywhere in the file is not enough — the
+# placeholder and a "command" key must live INSIDE the PreToolUse block, otherwise a
+# template whose guard command sat in the Stop block with an EMPTY PreToolUse array would
+# still PASS. Containment window, no JSON parser (neither gate shell has one):
+#   start = first line matching the key form
+#   IND   = leading [ \t] width of that line (each character worth 1, both shells)
+#   term  = first j > start that is non-blank AND has leading width <= IND, else EOF
+#   window = [start, term-1]   <- the terminator line itself is EXCLUDED, so an inline
+#            SIBLING event at width IND cannot donate evidence to PreToolUse
+# `<= IND` (not `== IND`) is what makes the rule total: if "PreToolUse" is the LAST key
+# inside `hooks`, every following line dedents past IND and never returns to it.
 tmpl=skills/harness-init/templates/common/.claude/settings.json.tmpl
 if [[ -f "$tmpl" ]]; then
     grep -q '{{GUARD_COMMAND}}' "$tmpl" || f2_problems="$f2_problems $tmpl:no_GUARD_COMMAND_placeholder"
-    grep -q 'PreToolUse' "$tmpl" || f2_problems="$f2_problems $tmpl:no_PreToolUse"
+    # awk prints the window; exit 2 = no key form found, exit 3 = no terminator before EOF.
+    # `set -uo pipefail` (no -e) here, so a non-zero command substitution does not abort:
+    # capture $? explicitly.
+    f2_window="$(awk '
+        { line[NR] = $0 }
+        END {
+            start = 0
+            for (i = 1; i <= NR; i++) {
+                if (line[i] ~ /^[ \t]*"PreToolUse"[ \t]*:/) { start = i; break }
+            }
+            if (start == 0) { exit 2 }
+            match(line[start], /^[ \t]*/); ind = RLENGTH
+            term = NR + 1
+            for (j = start + 1; j <= NR; j++) {
+                if (line[j] ~ /^[ \t]*$/) { continue }
+                match(line[j], /^[ \t]*/)
+                if (RLENGTH <= ind) { term = j; break }
+            }
+            for (k = start; k <= term - 1; k++) { print line[k] }
+            if (term == NR + 1) { exit 3 }
+            exit 0
+        }' "$tmpl")"
+    f2_rc=$?
+    if (( f2_rc == 2 )); then
+        f2_problems="$f2_problems $tmpl:no_PreToolUse_block"
+    else
+        (( f2_rc == 3 )) && f2_problems="$f2_problems $tmpl:PreToolUse_block_unterminated"
+        grep -q '{{GUARD_COMMAND}}' <<< "$f2_window" \
+            || f2_problems="$f2_problems $tmpl:guard_command_not_in_PreToolUse"
+        # [[:space:]] here, NOT `[ \t]` — and this is deliberately NOT harmonized with
+        # the awk above. awk turns `\t` inside an ERE into a TAB; grep does not: GNU grep
+        # 3.11 reads `[ \t]` as the class {space, backslash, t}, so it MISSES a real tab
+        # and MATCHES `"command"t:`. Measured, T-16 round 2. The PowerShell twin's
+        # `[ \t]` is exact there because .NET does interpret the escape.
+        grep -qE '"command"[[:space:]]*:' <<< "$f2_window" \
+            || f2_problems="$f2_problems $tmpl:PreToolUse_no_command_entry"
+    fi
 else
     f2_problems="$f2_problems missing:$tmpl"
 fi
 if [[ -z "$f2_problems" ]]; then
-    step "F.2" "Guard-rm scripts and PreToolUse wiring present" "PASS"
+    step "F.2" "Guard-rm scripts and settings-template guard wiring present" "PASS"
 else
-    step "F.2" "Guard-rm scripts and PreToolUse wiring present" "FAIL" "$f2_problems"
+    step "F.2" "Guard-rm scripts and settings-template guard wiring present" "FAIL" "$f2_problems"
 fi
 
 # G.1 — README mentions skills
@@ -423,16 +458,90 @@ else
     step "I.3" "Agent definitions ≤300 lines each" "PASS"
 fi
 
-# I.4 — insight-index ≤30 evidence lines (defense-in-depth; archive-task normally rotates)
+# I.4 — insight-index ≤30 insight ENTRIES (defense-in-depth; archive-task normally rotates)
+#
+# ONE INSIGHT-SCAN over ONE file yields BOTH figures — the cap count (entries)
+# and the unaccounted count — so this check and archive-task can never hold two
+# notions of "entry". This is archive-task.sh's INSIGHT-SCAN, mode `index`
+# (pass A + pass B; pass C is section-only). The `grep -c` cap arm it replaced
+# counted bullet LINES, which is a second notion of "entry" inside one check.
+#
+# MATCHER REGISTER: every pattern here is evaluated by bash's `[[ =~ ]]`
+# POSIX-ERE engine only, held in a variable and left UNQUOTED at the match site.
+# The HTML-comment tokens are FIXED STRINGS, registered with no regex engine.
 if [[ -f .harness/insight-index.md ]]; then
-    n=$(grep -c '^[[:space:]]*-[[:space:]]' .harness/insight-index.md || true)
-    if (( n > 30 )); then
-        step "I.4" "insight-index.md ≤30 evidence lines" "WARN" "$n evidence lines — archive-task auto-rotates; manual overflow"
+    i4_re_entry='^[[:space:]]*-[[:space:]]'
+    i4_re_blank='^[[:space:]]*$'
+    i4_re_heading='^#{2,6}[[:space:]]'
+    i4_lines=()
+    mapfile -t i4_lines < .harness/insight-index.md
+    i4_n=${#i4_lines[@]}
+    for (( i4_i = 0; i4_i < i4_n; i4_i++ )); do
+        i4_t="${i4_lines[i4_i]##*[![:space:]]}"
+        i4_lines[i4_i]="${i4_lines[i4_i]%"$i4_t"}"
+    done
+    # Pass A — header block: the walk stops at the first entry-start line that
+    # is NOT inside an open HTML comment, so the shipped template's commented
+    # example bullet is header, not an entry.
+    i4_hdr_end=-1; i4_cs=0; i4_open_at=-1; i4_stopped=0
+    for (( i4_i = 0; i4_i < i4_n; i4_i++ )); do
+        if (( i4_cs == 0 )) && [[ ${i4_lines[i4_i]} =~ $i4_re_entry ]]; then
+            i4_hdr_end=$(( i4_i - 1 )); i4_stopped=1; break
+        fi
+        i4_rest="${i4_lines[i4_i]}"
+        while [[ -n "$i4_rest" ]]; do
+            i4_po=-1; i4_pc=-1
+            if [[ "$i4_rest" == *'<!--'* ]]; then i4_pre="${i4_rest%%'<!--'*}"; i4_po=${#i4_pre}; fi
+            if [[ "$i4_rest" == *'-->'* ]];  then i4_pre="${i4_rest%%'-->'*}";  i4_pc=${#i4_pre}; fi
+            if (( i4_po < 0 && i4_pc < 0 )); then break; fi
+            if (( i4_po >= 0 && ( i4_pc < 0 || i4_po < i4_pc ) )); then
+                i4_cs=1; i4_open_at=$i4_i; i4_rest="${i4_rest:$(( i4_po + 4 ))}"
+            else
+                i4_cs=0; i4_rest="${i4_rest:$(( i4_pc + 3 ))}"
+            fi
+        done
+    done
+    i4_entries=0; i4_unacc=0; i4_first=-1; i4_in_entry=0
+    if (( i4_stopped == 0 )); then
+        i4_hdr_end=$(( i4_n - 1 ))
+        # A comment still open at EOF makes the whole file header block: every
+        # later append lands INSIDE the comment and both gates would read 0
+        # entries. Report its opening line as unaccounted instead.
+        if (( i4_cs == 1 )); then i4_unacc=1; i4_first=$i4_open_at; fi
+    fi
+    # Pass B — kinds, over the lines after the header block.
+    for (( i4_i = i4_hdr_end + 1; i4_i < i4_n; i4_i++ )); do
+        if [[ ${i4_lines[i4_i]} =~ $i4_re_blank ]]; then i4_in_entry=0; continue; fi
+        if [[ ${i4_lines[i4_i]} =~ $i4_re_entry ]]; then
+            i4_entries=$(( i4_entries + 1 )); i4_in_entry=1; continue
+        fi
+        # A `##`/`###`… heading is never a continuation (see archive-task.sh).
+        if [[ ${i4_lines[i4_i]} =~ $i4_re_heading ]]; then
+            i4_in_entry=0
+            i4_unacc=$(( i4_unacc + 1 ))
+            if (( i4_first < 0 )); then i4_first=$i4_i; fi
+            continue
+        fi
+        if (( i4_in_entry == 1 )); then continue; fi
+        i4_unacc=$(( i4_unacc + 1 ))
+        if (( i4_first < 0 )); then i4_first=$i4_i; fi
+    done
+    if (( i4_entries > 30 || i4_unacc > 0 )); then
+        i4_detail="$i4_entries entries, $i4_unacc unaccounted line(s)"
+        if (( i4_unacc > 0 )); then
+            i4_detail="$i4_detail, first at line $(( i4_first + 1 ))"
+        fi
+        i4_detail="$i4_detail — archive-task auto-rotates entries; an unaccounted line makes archive-task refuse (exit 3)"
+        step "I.4" "insight-index.md ≤30 insight entries" "WARN" "$i4_detail"
+        # step() prints a detail line only for FAIL, so echo it here: B-14/K-26
+        # require this WARN to NAME both counts and the 1-based line number of
+        # the first unaccounted line, which is the whole point of the condition.
+        echo "      $i4_detail"
     else
-        step "I.4" "insight-index.md ≤30 evidence lines" "PASS"
+        step "I.4" "insight-index.md ≤30 insight entries" "PASS"
     fi
 else
-    step "I.4" "insight-index.md ≤30 evidence lines" "PASS"
+    step "I.4" "insight-index.md ≤30 insight entries" "PASS"
 fi
 
 # I.5 — docs/tasks.md ≤300 lines

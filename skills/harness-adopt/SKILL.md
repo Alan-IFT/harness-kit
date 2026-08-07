@@ -308,10 +308,16 @@ Substitution rules (same as `/harness-init`):
 | `{{STACK}}` | from step 3 |
 | `{{TODAY}}` | today's date `YYYY-MM-DD` |
 | `{{ENABLE_HOOK}}` | from step 3 |
-| `{{SYNC_COMMAND}}` | OS-picked harness-sync invocation for the Stop hook in the **RESILIENT** form (v0.44+, T-12: fail-OPEN + `$CLAUDE_PROJECT_DIR`-anchored, JSON-escaped) — same rule + exact bytes as `/harness-init` step 5 (see `skills/harness-init/SKILL.md` placeholder table for both OS strings). Never improvise this command and never leave the literal token in the written settings.json. |
-| `{{GUARD_COMMAND}}` | OS-picked guard-rm invocation for the PreToolUse hook — same OS-pick rule as `{{SYNC_COMMAND}}` (init step 5 table). **Resilient but fail-CLOSED**: same `$CLAUDE_PROJECT_DIR` anchor, but NO `\|\| exit 0` / no `exit 0` fallback (safety — a missing guard must block, never silently allow). |
-| `{{AMBIENT_PROMPT_COMMAND}}` | OS-picked ambient-prompt invocation for the UserPromptSubmit hook in the resilient fail-OPEN form — same OS-pick rule + bytes as `{{SYNC_COMMAND}}` (init step 5 table). |
-| `{{AMBIENT_RESET_COMMAND}}` | OS-picked ambient-reset invocation for the SessionStart hook in the resilient fail-OPEN form — same OS-pick rule + bytes as `{{SYNC_COMMAND}}` (init step 5 table). |
+| `{{SYNC_COMMAND}}` | Tool id **`harness-sync`**. Event `Stop`, matcher `none`, **fail-OPEN**. |
+| `{{GUARD_COMMAND}}` | Tool id **`guard-rm`**. Event `PreToolUse`, matcher `Bash`, **fail-CLOSED** — the spec's answer carries NO `\|\| exit 0` / no trailing `exit 0` (safety: a missing guard must block, never silently allow). Never add a fallback. |
+| `{{AMBIENT_PROMPT_COMMAND}}` | Tool id **`ambient-prompt`**. Event `UserPromptSubmit`, matcher `none`, **fail-OPEN**. |
+| `{{AMBIENT_RESET_COMMAND}}` | Tool id **`ambient-reset`**. Event `SessionStart`, matcher `none`, **fail-OPEN**. |
+
+For all four `*_COMMAND` rows: obtain the byte-form by **invoking the hook wiring spec** and pasting
+the captured line verbatim. The procedure — which twin to call, why you must never cross shells, and
+what to do when the spec is unavailable — is written once under **"Obtaining a hook command value"**
+in `skills/harness-init/SKILL.md` step 5; follow it there and do not restate it. Never improvise
+these commands, and never leave a literal token in the written `settings.json`.
 
 For `.harness/rules/00-core.md`: if `.harness-adopt/CLAUDE.draft.md` has content beyond
 the template, append it as a new fragment `.harness/rules/80-existing-conventions.md` so

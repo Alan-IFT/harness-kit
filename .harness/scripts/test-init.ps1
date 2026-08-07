@@ -30,6 +30,55 @@ $pass = 0
 $fail = 0
 $failures = @()
 
+# T-13: all EIGHT hook byte-forms are defined UNCONDITIONALLY at script scope; Test-Type
+# BINDS the four host-OS $*Cmd variables from them below. Pure re-binding — the bytes the
+# substitution injects are exactly the bytes it injected before — so every pre-existing
+# exact-string assertion is unaffected. The unconditional definitions exist so the T-13
+# spec block can lockstep-compare all 8 cells from one run. These fixtures are HAND
+# COPIES: they catch fixture drift, they are NOT independent evidence (the live oracle is).
+# Single-quoted literals throughout: the bodies carry \" and un-interpolated $env: tokens.
+$expWinSync           = 'pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/harness-sync.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/harness-sync.ps1 }; exit 0\"'
+$expWinGuard          = 'pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR; & pwsh -NoProfile -File .harness/scripts/guard-rm.ps1\"'
+$expWinAmbientPrompt  = 'pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/ambient-prompt.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/ambient-prompt.ps1 }; exit 0\"'
+$expWinAmbientReset   = 'pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/ambient-reset.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/ambient-reset.ps1 }; exit 0\"'
+$expUnixSync          = 'sh -c ''cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null && [ -f .harness/scripts/harness-sync.sh ] && exec bash .harness/scripts/harness-sync.sh || exit 0'''
+$expUnixGuard         = 'sh -c ''cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null && bash .harness/scripts/guard-rm.sh'''
+$expUnixAmbientPrompt = 'sh -c ''cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null && [ -f .harness/scripts/ambient-prompt.sh ] && exec bash .harness/scripts/ambient-prompt.sh || exit 0'''
+$expUnixAmbientReset  = 'sh -c ''cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null && [ -f .harness/scripts/ambient-reset.sh ] && exec bash .harness/scripts/ambient-reset.sh || exit 0'''
+
+# Get-HookFixture <tool> <os> — the hand-copied fixture for one (tool, OS) cell.
+function Get-HookFixture($tool, $targetOs) {
+    if ($targetOs -ceq 'windows') {
+        if ($tool -ceq 'harness-sync')   { return $expWinSync }
+        if ($tool -ceq 'guard-rm')       { return $expWinGuard }
+        if ($tool -ceq 'ambient-prompt') { return $expWinAmbientPrompt }
+        return $expWinAmbientReset
+    }
+    if ($tool -ceq 'harness-sync')   { return $expUnixSync }
+    if ($tool -ceq 'guard-rm')       { return $expUnixGuard }
+    if ($tool -ceq 'ambient-prompt') { return $expUnixAmbientPrompt }
+    return $expUnixAmbientReset
+}
+
+# Invoke-HookSpecQuery — run the spec CLI and record its exit code in
+# $script:hookSpecExit. Never crossing shells: the PS twin calls the PS twin.
+$script:hookSpecPath = Join-Path $repoRoot ".harness/scripts/hook-spec.ps1"
+$script:hookSpecExit = 0
+function Invoke-HookSpecQuery {
+    param([string[]]$SpecQuery)
+    $script:hookSpecExit = 99
+    $text = ''
+    try {
+        $raw = & pwsh -NoProfile -File $script:hookSpecPath @SpecQuery 2>$null
+        $script:hookSpecExit = $LASTEXITCODE
+        if ($null -ne $raw) { $text = ($raw -join "`n") }
+    } catch {
+        $script:hookSpecExit = 99
+        $text = ''
+    }
+    return $text
+}
+
 function Assert($name, [scriptblock]$check) {
     try {
         $r = & $check
@@ -100,17 +149,18 @@ function Test-Type {
         # $CLAUDE_PROJECT_DIR-anchored for the convenience hooks, fail-CLOSED for guard-rm).
         # JSON-ESCAPED bytes (inner " as \") so the exact `"command": "<literal>"` match
         # equals the substituted .tmpl byte-for-byte (gate C3).
+        # T-13: pure re-binding from the eight script-scope fixtures defined at the top.
         $win = ($IsWindows -or $env:OS -eq "Windows_NT")
         if ($win) {
-            $syncCmd          = 'pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/harness-sync.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/harness-sync.ps1 }; exit 0\"'
-            $guardCmd         = 'pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR; & pwsh -NoProfile -File .harness/scripts/guard-rm.ps1\"'
-            $ambientPromptCmd = 'pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/ambient-prompt.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/ambient-prompt.ps1 }; exit 0\"'
-            $ambientResetCmd  = 'pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/ambient-reset.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/ambient-reset.ps1 }; exit 0\"'
+            $syncCmd          = $expWinSync
+            $guardCmd         = $expWinGuard
+            $ambientPromptCmd = $expWinAmbientPrompt
+            $ambientResetCmd  = $expWinAmbientReset
         } else {
-            $syncCmd          = 'sh -c ''cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null && [ -f .harness/scripts/harness-sync.sh ] && exec bash .harness/scripts/harness-sync.sh || exit 0'''
-            $guardCmd         = 'sh -c ''cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null && bash .harness/scripts/guard-rm.sh'''
-            $ambientPromptCmd = 'sh -c ''cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null && [ -f .harness/scripts/ambient-prompt.sh ] && exec bash .harness/scripts/ambient-prompt.sh || exit 0'''
-            $ambientResetCmd  = 'sh -c ''cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null && [ -f .harness/scripts/ambient-reset.sh ] && exec bash .harness/scripts/ambient-reset.sh || exit 0'''
+            $syncCmd          = $expUnixSync
+            $guardCmd         = $expUnixGuard
+            $ambientPromptCmd = $expUnixAmbientPrompt
+            $ambientResetCmd  = $expUnixAmbientReset
         }
         $vars = @{
             "PROJECT_NAME"  = "test-project"
@@ -647,7 +697,9 @@ function Test-Migrate {
             # T-12: migrate now ALSO resilient-ifies (A8). The parsed command is the full
             # resilient string (ConvertFrom-Json un-escapes the inner \" to "), so compare
             # against the RESILIENT value, not the bare brittle one. The runnable resilient
-            # form below matches Get-ResilientCmd's output with real (un-escaped) quotes.
+            # form below matches hook-spec.ps1's `command <tool> windows` answer with real
+            # (un-escaped) quotes — a THIRD escaping level the spec deliberately does not
+            # emit, so this literal is a deliberate retention (T-16, hook-spec.ps1 header).
             $expSync  = 'pwsh -NoProfile -Command "Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/harness-sync.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/harness-sync.ps1 }; exit 0"'
             $expGuard = 'pwsh -NoProfile -Command "Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR; & pwsh -NoProfile -File .harness/scripts/guard-rm.ps1"'
             Assert "[migrate] settings Stop command -> resilient .harness/scripts/harness-sync.ps1 (A8)" {
@@ -819,6 +871,436 @@ function Test-ZhOverlay {
     }
 }
 
+# === T-13: the hook wiring spec (AC-1..AC-4, FR-1..FR-7, NFR-2) ====================
+# ORACLE (re-anchored by T-16): the FROZEN $exp* fixture table at the top of this file.
+# Until T-16 the oracle was the LIVE Get-ResilientCmd, AST-extracted from
+# upgrade-project.ps1. T-16 retired that helper: the four derivation flows now QUERY
+# hook-spec.ps1, so comparing the spec against a flow would compare the spec with itself
+# — green, and measuring nothing. A test must not derive its expectation from the
+# artifact under test, so Group A now compares the spec against the frozen literals,
+# which are the ONLY independent anchor left for all four flows.
+# SCOPE NOTE: the frozen literals in this file and in test-real-project.{sh,ps1} are a
+# DELIBERATE non-retirement, recorded in .harness/rejected-decisions.md
+# (hook-byteform-test-literal-retirement) and in hook-spec.{sh,ps1}'s header. Standing
+# END-TO-END coverage of a flow-EMITTED byte string lives in test-harness-upgrade
+# (.ps1 M2/T20 vs $t20Pick) for one (tool, OS, flow) cell; the rest is residual RES-1.
+function Test-HookSpec {
+    Write-Host ""
+    Write-Host "=== Testing: hook wiring spec (T-13) ===" -ForegroundColor Cyan
+    # PowerShell 7.4+ turns a non-zero NATIVE exit code into a terminating error while
+    # $ErrorActionPreference is Stop; Group E deliberately expects non-zero exits, so opt
+    # out for this block only (function scope shadows the global).
+    $PSNativeCommandUseErrorActionPreference = $false
+
+    Assert "[T-13] hook-spec.ps1 present at .harness/scripts/" { Test-Path $script:hookSpecPath }
+
+    # MANDATORY anti-vacuity gate on the ORACLE ITSELF: an empty / broken fixture must
+    # fail THIS named assertion loudly, never silently degrade the 8 below.
+    $oracleProbe = [string](Get-HookFixture guard-rm windows)
+    Assert "[T-16][oracle] ANTI-VACUITY: the frozen `$exp* fixture (guard-rm, windows) is a non-empty string naming guard-rm.ps1" {
+        ($oracleProbe.Length -gt 0) -and ($oracleProbe.Contains('guard-rm.ps1'))
+    }
+
+    foreach ($os in @('windows', 'unix')) {
+        $ext = 'sh'
+        if ($os -ceq 'windows') { $ext = 'ps1' }
+        foreach ($tool in @('harness-sync', 'guard-rm', 'ambient-prompt', 'ambient-reset')) {
+            $actual = Invoke-HookSpecQuery @('command', $tool, $os)
+            $specRc = $script:hookSpecExit
+            $fixture = [string](Get-HookFixture $tool $os)
+            # Group A — INDEPENDENT of every flow: spec vs. the FROZEN fixture, all 8 cells.
+            Assert "[T-16][A] command $tool $os is byte-equal to the FROZEN test-init fixture (independent of every flow)" {
+                ($specRc -eq 0) -and ($actual.Length -gt 0) -and ($actual -ceq $fixture)
+            }
+            # Group C — the existing left-bounded congruence regex still finds the path.
+            Assert "[T-13][C] congruence regex extracts .harness/scripts/$tool.$ext from the $os command" {
+                $m = [regex]::Matches($actual, "(^|[`"' =])(\.harness/)?scripts/[A-Za-z0-9._-]+\.(ps1|sh)")
+                $found = $false
+                foreach ($hit in $m) {
+                    if ($hit.Value.TrimStart('"', "'", ' ', '=') -ceq ".harness/scripts/$tool.$ext") { $found = $true }
+                }
+                $found
+            }
+        }
+    }
+
+    # --- Group A' (T-16): two STANDING 4-row scans over the four derivation-flow files.
+    #     Lifted OUT of the per-cell loop above (which now carries 2 Asserts per cell, not
+    #     3) and written as a separate 8-row block: 17 T-16-affected rows in, 17 out.
+    #     Scan 1 is the AC-3 regression: no hook-command byte-form idiom may reappear on a
+    #     NON-COMMENT line of a flow. Scan 2 is the &-hazard regression (insight
+    #     2026-06-21): no pattern-substitution operator may touch a spec-derived value —
+    #     ${var//pat/repl} and its ${arr[i]//}, ${!ref//}, ${var/pat/repl} siblings in bash
+    #     (bash 5.2's patsub_replacement expands an unescaped `&` in the REPLACEMENT to the
+    #     matched text, and the byte-forms contain a literal `&`), and -replace in
+    #     PowerShell (whose replacement half interprets $& / $1). Comment lines are
+    #     excluded: a comment can neither emit a command nor perform a substitution, and
+    #     these flows legitimately DOCUMENT both idioms.
+    #     PRE-T-16 BASELINE, measured on bash: scan 1 was RED on all four files (16
+    #     non-comment hits, inside the resilient_cmd / Get-ResilientCmd bodies T-16
+    #     deleted); scan 2 was already green. Green-after-red is the point.
+    $flowFiles = @('upgrade-project.sh', 'upgrade-project.ps1',
+                   'migrate-scripts-layout.sh', 'migrate-scripts-layout.ps1')
+    #     A MISSING flow file scores "missing", never 0 — otherwise deleting a flow would
+    #     make both of its scan rows vacuously green.
+    foreach ($flowFile in $flowFiles) {
+        $flowPath = Join-Path $repoRoot ".harness/scripts/$flowFile"
+        $idiomHits = 'missing'
+        if (Test-Path -LiteralPath $flowPath -PathType Leaf) {
+            # Case-sensitive (-cmatch / -cnotmatch), no IgnoreCase: the bash twin greps
+            # case-sensitively, and both scans must count the same lines.
+            $flowLines = @(@((Get-Content $flowPath -Raw) -split "`r?`n") | Where-Object { $_ -cnotmatch '^[ \t]*#' })
+            $idiomHits = [string]@($flowLines | Where-Object {
+                ($_ -cmatch 'Set-Location -LiteralPath') -or ($_ -cmatch 'CLAUDE_PROJECT_DIR')
+            }).Count
+        }
+        Assert "[T-16][A'] $flowFile carries no hook-command byte-form idiom outside comments (got $idiomHits)" {
+            $idiomHits -ceq '0'
+        }
+    }
+    foreach ($flowFile in $flowFiles) {
+        $flowPath = Join-Path $repoRoot ".harness/scripts/$flowFile"
+        if ($flowFile -clike '*.sh') {
+            $subPattern = '\$\{[!#]?[A-Za-z_][A-Za-z0-9_]*(\[[^\]]*\])?/'
+        } else {
+            $subPattern = '-replace'
+        }
+        $subHits = 'missing'
+        if (Test-Path -LiteralPath $flowPath -PathType Leaf) {
+            $flowLines = @(@((Get-Content $flowPath -Raw) -split "`r?`n") | Where-Object { $_ -cnotmatch '^[ \t]*#' })
+            $subHits = [string]@($flowLines | Where-Object { $_ -cmatch $subPattern }).Count
+        }
+        Assert "[T-16][A'] $flowFile uses no pattern-substitution operator (& / patsub hazard) (got $subHits)" {
+            $subHits -ceq '0'
+        }
+    }
+
+    # Group B — failure semantics, and the guard is fail-CLOSED on real output.
+    foreach ($tool in @('harness-sync', 'guard-rm', 'ambient-prompt', 'ambient-reset')) {
+        $expectedSem = 'fail-open'
+        if ($tool -ceq 'guard-rm') { $expectedSem = 'fail-closed' }
+        $sem = Invoke-HookSpecQuery @('semantics', $tool)
+        Assert "[T-13][B] semantics $tool == $expectedSem" { $sem -ceq $expectedSem }
+    }
+    foreach ($os in @('windows', 'unix')) {
+        $guardCommand = Invoke-HookSpecQuery @('command', 'guard-rm', $os)
+        Assert "[T-13][B] guard-rm command ($os) carries NO '|| exit 0' and NO 'exit 0' fallback (fail-CLOSED, NFR-2)" {
+            ($guardCommand.Length -gt 0) -and (-not $guardCommand.Contains('|| exit 0')) -and (-not $guardCommand.Contains('exit 0'))
+        }
+    }
+
+    # Group D — event / matcher / tool list (the installer's contract).
+    foreach ($tool in @('harness-sync', 'guard-rm', 'ambient-prompt', 'ambient-reset')) {
+        $expectedEvent = 'SessionStart'
+        if ($tool -ceq 'harness-sync')   { $expectedEvent = 'Stop' }
+        if ($tool -ceq 'guard-rm')       { $expectedEvent = 'PreToolUse' }
+        if ($tool -ceq 'ambient-prompt') { $expectedEvent = 'UserPromptSubmit' }
+        $ev = Invoke-HookSpecQuery @('event', $tool)
+        Assert "[T-13][D] event $tool == $expectedEvent" { $ev -ceq $expectedEvent }
+        $expectedMatcher = 'none'
+        if ($tool -ceq 'guard-rm') { $expectedMatcher = 'Bash' }
+        $mt = Invoke-HookSpecQuery @('matcher', $tool)
+        Assert "[T-13][D] matcher $tool == $expectedMatcher (non-empty sentinel for 'no matcher')" { $mt -ceq $expectedMatcher }
+    }
+    $toolList = Invoke-HookSpecQuery @('tools')
+    Assert "[T-13][D] tools emits the 4 ids in the fixed order" {
+        $toolList -ceq "harness-sync`nguard-rm`nambient-prompt`nambient-reset"
+    }
+    $hostAnswer = Invoke-HookSpecQuery @('hostos')
+    Assert "[T-13][D] hostos answers windows|unix (no third variant)" {
+        ($hostAnswer -ceq 'windows') -or ($hostAnswer -ceq 'unix')
+    }
+
+    # Group E — totality: bad input yields EMPTY stdout and a non-zero exit.
+    $bad = Invoke-HookSpecQuery @('command', 'bogus-tool', 'unix')
+    $badRc = $script:hookSpecExit
+    Assert "[T-13][E] unknown tool -> non-zero exit with EMPTY stdout (FR-7/B-1)" {
+        ($badRc -ne 0) -and ($bad.Length -eq 0)
+    }
+    $bad = Invoke-HookSpecQuery @('command', 'guard-rm', 'dos')
+    $badRc = $script:hookSpecExit
+    Assert "[T-13][E] unknown os -> non-zero exit with EMPTY stdout (FR-7/B-1)" {
+        ($badRc -ne 0) -and ($bad.Length -eq 0)
+    }
+    $bad = Invoke-HookSpecQuery @('not-a-query')
+    $badRc = $script:hookSpecExit
+    Assert "[T-13][E] unknown query -> non-zero exit with EMPTY stdout (FR-7/B-1)" {
+        ($badRc -ne 0) -and ($bad.Length -eq 0)
+    }
+}
+
+# === T-13: the installer bootstrap (AC-5, AC-6, AC-7, FR-8..FR-12, B-2/B-3/B-8/B-9) ==
+# Own temp tree; `.git` is a bare directory — the installer only tests for it, so no git
+# binary is needed. No python3 dependency anywhere in this block.
+function Test-InstallBootstrap {
+    Write-Host ""
+    Write-Host "=== Testing: install-hooks machine-local bootstrap (T-13) ===" -ForegroundColor Cyan
+    # See Test-HookSpec: the negative rows below expect non-zero native exit codes.
+    $PSNativeCommandUseErrorActionPreference = $false
+
+    $tmp = Join-Path ([System.IO.Path]::GetTempPath()) "harness-test-install-$(Get-Random)"
+    New-Item -ItemType Directory -Path $tmp -Force | Out-Null
+    try {
+        # HOST-bound, exactly like Test-Type and like the bash twin's copy_layer /
+        # substitute: pinning the Windows fixtures here would make the generated
+        # project's committed settings disagree with the host's byte-forms.
+        $win = ($IsWindows -or $env:OS -eq "Windows_NT")
+        if ($win) {
+            $syncCmd          = $expWinSync
+            $guardCmd         = $expWinGuard
+            $ambientPromptCmd = $expWinAmbientPrompt
+            $ambientResetCmd  = $expWinAmbientReset
+        } else {
+            $syncCmd          = $expUnixSync
+            $guardCmd         = $expUnixGuard
+            $ambientPromptCmd = $expUnixAmbientPrompt
+            $ambientResetCmd  = $expUnixAmbientReset
+        }
+        $vars = @{
+            "PROJECT_NAME"  = "install-test"
+            "PROJECT_TYPE"  = "generic"
+            "STACK"         = "Rust CLI tool"
+            "TODAY"         = $today
+            "ENABLE_HOOK"   = "false"
+            "SYNC_COMMAND"  = $syncCmd
+            "GUARD_COMMAND" = $guardCmd
+            "AMBIENT_PROMPT_COMMAND" = $ambientPromptCmd
+            "AMBIENT_RESET_COMMAND"  = $ambientResetCmd
+        }
+        Copy-TemplateLayer -Source (Join-Path $templateRoot "common")  -Target $tmp -Vars $vars
+        Copy-TemplateLayer -Source (Join-Path $templateRoot "generic") -Target $tmp -Vars $vars
+        New-Item -ItemType Directory -Path (Join-Path $tmp ".git") -Force | Out-Null
+
+        $inst = Join-Path $tmp ".harness/scripts/install-hooks.ps1"
+        $claudeDir = Join-Path $tmp ".claude"
+        $committed = Join-Path $claudeDir "settings.json"
+        $localSet = Join-Path $claudeDir "settings.local.json"
+        $projSpec = Join-Path $tmp ".harness/scripts/hook-spec.ps1"
+
+        Assert "[T-13][install] installer present after init" { Test-Path $inst }
+        Assert "[T-13][install] hook-spec pair distributed into the generated project (FR-6)" {
+            (Test-Path $projSpec) -and (Test-Path (Join-Path $tmp ".harness/scripts/hook-spec.sh"))
+        }
+
+        # (1) committed settings DECLARES hooks -> no machine-local file (AC-7 / FR-10)
+        & pwsh -NoProfile -File $inst | Out-Null
+        $rc = $LASTEXITCODE
+        Assert "[T-13][install] project whose committed settings has hooks: exit 0 and NO local file (AC-7/FR-10)" {
+            ($rc -eq 0) -and (-not (Test-Path $localSet))
+        }
+        Assert "[T-13][install] pre-existing pre-commit hook behavior preserved (FR-13)" {
+            Test-Path (Join-Path $tmp ".git/hooks/pre-commit")
+        }
+
+        # (2) empty the committed hooks object -> the bootstrap path (AC-5, FR-11, B-13)
+        $srcLines = [System.IO.File]::ReadAllText($committed).Split("`n")
+        $kept = [System.Collections.Generic.List[string]]::new()
+        $skip = $false
+        foreach ($rawLine in $srcLines) {
+            $line = $rawLine
+            if ($line.EndsWith("`r")) { $line = $line.Substring(0, $line.Length - 1) }
+            if ($line -ceq '  "hooks": {') { $kept.Add('  "hooks": {}'); $skip = $true; continue }
+            if ($skip -and (($line -ceq '  }') -or ($line -ceq '  },'))) { $skip = $false; continue }
+            if ($skip) { continue }
+            $kept.Add($line)
+        }
+        [System.IO.File]::WriteAllText($committed, ($kept.ToArray() -join "`n"))
+        Assert "[T-13][install] fixture precondition: committed settings now declares an empty hooks object" {
+            [System.IO.File]::ReadAllText($committed).Contains('"hooks": {}')
+        }
+
+        $bootOut = (& pwsh -NoProfile -File $inst 2>&1) -join "`n"
+        $rc = $LASTEXITCODE
+        Assert "[T-13][install] bootstrap created .claude/settings.local.json, exit 0 (AC-5/FR-8)" {
+            ($rc -eq 0) -and (Test-Path $localSet)
+        }
+
+        $generated = ''
+        if (Test-Path $localSet) { $generated = [System.IO.File]::ReadAllText($localSet) }
+        Assert "[T-13][install] generated file carries the canonical .json schema URL (FR-11)" {
+            $generated.Contains('"$schema": "https://json.schemastore.org/claude-code-settings.json"')
+        }
+        Assert "[T-13][install] generated file wires PreToolUse with matcher Bash (FR-11)" {
+            $generated.Contains('"PreToolUse"') -and $generated.Contains('"matcher": "Bash"')
+        }
+        Assert "[T-13][install] generated file wires all four real hook event names (FR-11)" {
+            $generated.Contains('"Stop"') -and $generated.Contains('"UserPromptSubmit"') -and $generated.Contains('"SessionStart"')
+        }
+        Assert "[T-13][install] no underscore doc key inside the hooks object (root only - FR-11)" {
+            -not [regex]::IsMatch($generated, '(?m)^ {4}"_')
+        }
+        $projHostOs = (& pwsh -NoProfile -File $projSpec hostos) -join ''
+        foreach ($tool in @('harness-sync', 'guard-rm', 'ambient-prompt', 'ambient-reset')) {
+            $projCmd = (& pwsh -NoProfile -File $projSpec command $tool $projHostOs) -join ''
+            Assert "[T-13][install] generated file carries the spec's $tool command verbatim (AC-5)" {
+                ($projCmd.Length -gt 0) -and $generated.Contains($projCmd)
+            }
+        }
+        $bytes = [System.IO.File]::ReadAllBytes($localSet)
+        Assert "[T-13][install] generated file is BOM-free (first byte is '{')" { $bytes[0] -eq 123 }
+        Assert "[T-13][install] generated file has LF endings only (no CR)" { -not $generated.Contains("`r") }
+        Assert "[T-13][install] generated file ends with EXACTLY one trailing newline" {
+            ($bytes[$bytes.Length - 1] -eq 10) -and ($bytes[$bytes.Length - 2] -ne 10)
+        }
+        Assert "[T-13][install] report names the created path (FR-12)" { $bootOut.Contains('settings.local.json') }
+        Assert "[T-13][install] report gives the one-line removal command in this shell's form (FR-12)" {
+            $bootOut.Contains('Remove: Remove-Item ')
+        }
+        Assert "[T-13][install] report carries the machine-local / .gitignore advisory (FR-12/AC-14)" {
+            $bootOut.Contains('machine-local') -and $bootOut.Contains('.gitignore')
+        }
+        Assert "[T-13][install] report calls out the fail-closed guard hook (FR-12)" { $bootOut.Contains('fail-closed') }
+        Assert "[T-13][install] installer created no .gitignore (B-15/NFR-4c)" {
+            -not (Test-Path (Join-Path $tmp ".gitignore"))
+        }
+
+        # (3) idempotence: byte-identical, no backup, no temp sibling (AC-6, B-9)
+        $snapshot = [System.IO.File]::ReadAllBytes($localSet)
+        $secondOut = (& pwsh -NoProfile -File $inst 2>&1) -join "`n"
+        $rc = $LASTEXITCODE
+        Assert "[T-13][install] second run leaves the file BYTE-IDENTICAL, exit 0 (AC-6/FR-9/B-9)" {
+            $after = [System.IO.File]::ReadAllBytes($localSet)
+            $same = ($rc -eq 0) -and ($after.Length -eq $snapshot.Length)
+            if ($same) {
+                for ($k = 0; $k -lt $after.Length; $k++) {
+                    if ($after[$k] -ne $snapshot[$k]) { $same = $false; break }
+                }
+            }
+            $same
+        }
+        Assert "[T-13][install] second run reports it took no action (FR-9)" {
+            $secondOut.Contains('left byte-untouched')
+        }
+        # -Filter goes through the Win32 wildcard engine, whose legacy `name.*` semantics
+        # are NOT the bash twin's `find -name 'settings.local.json.*'` (which can never
+        # match `settings.local.json` itself). Exclude the target by exact name so the
+        # two twins assert the same thing on every host; @() keeps .Count valid on none.
+        Assert "[T-13][install] no settings.local.json.* temp/backup sibling survives (AC-6)" {
+            @(Get-ChildItem -Path $claudeDir -Filter "settings.local.json.*" -File -ErrorAction SilentlyContinue |
+                Where-Object { $_.Name -ne 'settings.local.json' }).Count -eq 0
+        }
+        Assert "[T-13][install] no *.bak* file anywhere under .claude/ (AC-6)" {
+            (Get-ChildItem -Path $claudeDir -Filter "*.bak*" -File -ErrorAction SilentlyContinue).Count -eq 0
+        }
+
+        # (4) B-7: an empty-hooks local file is the persistent opt-out - never overwritten.
+        [System.IO.File]::WriteAllText($localSet, "{`n  `"hooks`": {}`n}`n")
+        $optOut = [System.IO.File]::ReadAllText($localSet)
+        & pwsh -NoProfile -File $inst | Out-Null
+        $rc = $LASTEXITCODE
+        Assert "[T-13][install] empty-hooks local file (B-7 opt-out) is left BYTE-UNTOUCHED" {
+            ($rc -eq 0) -and ([System.IO.File]::ReadAllText($localSet) -ceq $optOut)
+        }
+
+        # (5) B-5: an unparseable COMMITTED settings file changes nothing at all, exit 3.
+        Remove-Item -LiteralPath $localSet -Force -ErrorAction SilentlyContinue
+        Remove-Item -LiteralPath (Join-Path $tmp ".git/hooks/pre-commit") -Force -ErrorAction SilentlyContinue
+        $goodSettings = [System.IO.File]::ReadAllText($committed)
+        [System.IO.File]::WriteAllText($committed, "not json")
+        & pwsh -NoProfile -File $inst 2>&1 | Out-Null
+        $rc = $LASTEXITCODE
+        Assert "[T-13][install] unparseable committed settings -> exit 3, NOTHING written (B-5)" {
+            ($rc -eq 3) -and (-not (Test-Path $localSet)) -and (-not (Test-Path (Join-Path $tmp ".git/hooks/pre-commit")))
+        }
+        [System.IO.File]::WriteAllText($committed, $goodSettings)
+
+        # (6) B-8: an unwritable .claude/ leaves the target ABSENT with a non-zero exit.
+        #     Self-disables with a notice where the platform ignores the mode (root, ACLs).
+        $roEnforced = $false
+        if ($IsLinux -or $IsMacOS) {
+            & chmod a-w $claudeDir
+            $probeFile = Join-Path $claudeDir ".wtest"
+            try {
+                [System.IO.File]::WriteAllText($probeFile, "x")
+                Remove-Item -LiteralPath $probeFile -Force -ErrorAction SilentlyContinue
+            } catch { $roEnforced = $true }
+        }
+        if ($roEnforced) {
+            & pwsh -NoProfile -File $inst 2>&1 | Out-Null
+            $rc = $LASTEXITCODE
+            Assert "[T-13][install] unwritable .claude/ -> non-zero exit, target left ABSENT (B-8)" {
+                ($rc -ne 0) -and (-not (Test-Path $localSet))
+            }
+        } else {
+            Write-Host "  [SKIP] [T-13][install] read-only .claude/ probe - not enforceable on this platform" -ForegroundColor Yellow
+        }
+        if ($IsLinux -or $IsMacOS) { & chmod u+w $claudeDir }
+
+        # (7) FC-4 all-four-or-nothing: a spec that lists FEWER than four tool ids is a
+        #     partial wiring - possibly one with no destructive-command guard at all -
+        #     and must be refused outright: exit 4, nothing written. The stub delegates
+        #     every query except `tools` to the real spec, so only the arity differs.
+        Remove-Item -LiteralPath $localSet -Force -ErrorAction SilentlyContinue
+        $goodSpec = Join-Path $tmp "hook-spec.good.ps1"
+        Move-Item -LiteralPath $projSpec -Destination $goodSpec -Force
+        $stubLines = @(
+            '$hsGood = ' + "'" + $goodSpec + "'"
+            'if ($args.Count -ge 1 -and $args[0] -eq "tools") {'
+            '    (& pwsh -NoProfile -File $hsGood tools) | Select-Object -First 3'
+            '    exit 0'
+            '}'
+            '& pwsh -NoProfile -File $hsGood @args'
+            'exit $LASTEXITCODE'
+        )
+        [System.IO.File]::WriteAllText($projSpec, (($stubLines -join "`n") + "`n"))
+        #     The DIAGNOSTIC is matched too, not just the exit code: exit 4 alone is
+        #     vacuous - a silently broken stub (wrong hsGood path, pwsh unavailable, a
+        #     parse error in the generated stub) also exits 4, via Stop-OnSpecFailure
+        #     'tools', without ever reaching the arity branch, and the row would stay
+        #     green while proving nothing. Matching "expected 4 ids, got 3" pins the
+        #     row to that branch by construction.
+        #     Captured as an ARRAY joined by hand, never `| Out-String`: Out-String
+        #     re-wraps at the host buffer width and could split the matched phrase.
+        $fc4Out = @(& pwsh -NoProfile -File $inst 2>&1 | ForEach-Object { [string]$_ }) -join "`n"
+        $rc = $LASTEXITCODE
+        Assert "[T-13][install] spec listing fewer than 4 tool ids -> exit 4, NOTHING written (FC-4)" {
+            ($rc -eq 4) -and (-not (Test-Path $localSet)) -and
+            ($fc4Out.IndexOf('expected 4 ids, got 3', [System.StringComparison]::Ordinal) -ge 0)
+        }
+        Move-Item -LiteralPath $goodSpec -Destination $projSpec -Force
+
+        # (8) FC-4, SECOND axis: four ids that collapse to fewer than four DISTINCT
+        #     hook EVENTS are a partial wiring too - one event on disk instead of four,
+        #     plus duplicate JSON keys - and must be refused BEFORE anything is written:
+        #     exit 4, target ABSENT. This row is the anti-revert coverage for the
+        #     distinct-events gate: delete that gate and this same spec sails through
+        #     the arity check, the installer exits 0 with the file PRESENT, and the row
+        #     goes red. The stub answers `tools` with the guard id four times and
+        #     delegates every other query, so ONLY the event multiplicity differs.
+        Remove-Item -LiteralPath $localSet -Force -ErrorAction SilentlyContinue
+        Move-Item -LiteralPath $projSpec -Destination $goodSpec -Force
+        $dupLines = @(
+            '$hsGood = ' + "'" + $goodSpec + "'"
+            'if ($args.Count -ge 1 -and $args[0] -eq "tools") {'
+            '    "guard-rm"; "guard-rm"; "guard-rm"; "guard-rm"'
+            '    exit 0'
+            '}'
+            '& pwsh -NoProfile -File $hsGood @args'
+            'exit $LASTEXITCODE'
+        )
+        [System.IO.File]::WriteAllText($projSpec, (($dupLines -join "`n") + "`n"))
+        #     The DISTINCT-gate diagnostic is matched too, for exactly the reason row
+        #     (7) matches the arity one, and captured the same way: an array joined by
+        #     hand, never `| Out-String`, which re-wraps at the host buffer width.
+        $fc4dOut = @(& pwsh -NoProfile -File $inst 2>&1 | ForEach-Object { [string]$_ }) -join "`n"
+        $rc = $LASTEXITCODE
+        Assert "[T-13][install] spec answering 4 ids that collapse to 1 event -> exit 4, NOTHING written (FC-4)" {
+            ($rc -eq 4) -and (-not (Test-Path $localSet)) -and
+            ($fc4dOut.IndexOf('expected 4 DISTINCT hook events, got 1', [System.StringComparison]::Ordinal) -ge 0)
+        }
+        Move-Item -LiteralPath $goodSpec -Destination $projSpec -Force
+
+        # (9) B-14: not a git repository -> exit 1, unchanged behavior (FR-13).
+        Remove-Item -Recurse -Force (Join-Path $tmp ".git") -ErrorAction SilentlyContinue
+        & pwsh -NoProfile -File $inst 2>&1 | Out-Null
+        $rc = $LASTEXITCODE
+        Assert "[T-13][install] not a git repository -> exit 1 (FR-13/B-14, unchanged)" { $rc -eq 1 }
+    } finally {
+        if (-not $KeepTemp) { Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue }
+        else { Write-Host "Temp dir kept: $tmp" -ForegroundColor Yellow }
+    }
+}
+
 Write-Host "=== test-init: simulating /harness-init flow (v0.2) ===" -ForegroundColor Cyan
 Write-Host "Repo: $repoRoot"
 
@@ -836,6 +1318,12 @@ if ($Type -in @("all", "both")) {
 }
 if ($Type -in @("all", "both")) {
     Test-ZhOverlay
+}
+# T-13: the spec block runs UNCONDITIONALLY (a pure CLI probe, no fixture tree); the
+# installer bootstrap block is fixture-backed and gated like Test-Migrate.
+Test-HookSpec
+if ($Type -in @("all", "both")) {
+    Test-InstallBootstrap
 }
 
 # BUG-2 regression (v0.16.0 rollback round 2): verify the broadened D.2/D.3

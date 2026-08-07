@@ -25,14 +25,14 @@ This project uses the **Harness 7-agent pipeline**: PM Orchestrator → Requirem
 - **`.harness/rules/50-{{PROJECT_TYPE}}.md`** (**when touching code**): project-type overlay, partitioning, stack conventions <!-- ai-native-init: when /harness-init Q6 = Yes, the skill's step 5b.8 Edits this line to point at `50-<project-slug>.md` instead -->
 - **`.harness/rules/60-tool-handoff.md`** (**when switching Claude Code ↔ Copilot**): state lives in files, not chat memory
 - **`.harness/rules/65-intervention.md`** (**when running, observing, or redirecting any `/harness*` task**): `.harness/intervention.md` is a single-shot signal file (STOP / REDIRECT / SKIP / NOTE) that PM consumes at every stage boundary
-- **`.harness/rules/70-doc-size.md`** (**when adding or reviewing long-lived docs, or when `verify_all` flags an `F.*` WARN**): soft caps on AI-GUIDE / rules / agents / insight-index / tasks.md / per-task docs; "reference don't paste" + PM_LOG compaction + always-archive discipline
+- **`.harness/rules/70-doc-size.md`** (**when adding or reviewing long-lived docs, when writing any section of a stage doc, or when `verify_all` flags an `F.*` WARN**): soft caps on AI-GUIDE / rules / agents / insight-index / tasks.md / per-task docs; "reference don't paste" + PM_LOG compaction + always-archive discipline + the stage-doc contract/rationale boundary rule
 - **`.harness/rules/75-safety-hook.md`** (**when running, observing, or disabling the destructive-command guardrail**): `PreToolUse` hook on Bash tool calls; blocks destructive commands targeting paths outside the `.git/` ancestor of cwd; override `HARNESS_ALLOW_OUTSIDE_RM=1`.
 - **`.harness/rules/_ai-native-prompt.md`** (**reference only — only read if customizing the AI-native init/adopt drafting prompt**): canonical prompt the `/harness-init` step 5b and `/harness-adopt` step 4b hand to the orchestrator model when drafting a tailored `50-<project-slug>.md`. Not a runtime rule; the leading `_` marks it as documentation.
 
 If you add a new fragment, append a line above with its filename, a 1-line description, and the trigger condition.
 
 **Memory layer**:
-- **`.harness/insight-index.md`** — ≤30 evidence-backed lines of project-specific facts. Read at task start; append at task end (only with evidence).
+- **`.harness/insight-index.md`** — ≤30 evidence-backed entries of project-specific facts (an entry is one bullet plus any lines wrapped under it). Read at task start; append at task end (only with evidence).
 - **`.harness/decision-rubric.md`** — the principles the AI decides by under Mode 2 (Preset) / Mode 3 (Custom); read at every escalate-or-decide point (see `.harness/rules/25-decision-policy.md`). Edit to widen / narrow autonomy.
 
 ## Skills (standard procedures, invoked per task type)
@@ -48,9 +48,9 @@ The 7 framework agents are provided by the harness-kit plugin — dispatch as `h
 - `harness-kit:pm-orchestrator` — takes new tasks, routes
 - `harness-kit:requirement-analyst` — writes `01_REQUIREMENT_ANALYSIS.md`
 - `harness-kit:solution-architect` — writes `02_SOLUTION_DESIGN.md`
-- `harness-kit:gate-reviewer` — writes `03_GATE_REVIEW.md`
+- `harness-kit:gate-reviewer` — authors `03_GATE_REVIEW.md`; the PM Orchestrator writes it
 - `harness-kit:developer` (or project-local partitions: `dev-frontend` / `dev-backend` / `dev-db` / `dev-api` / `dev-services`) — writes `04_DEVELOPMENT.md`
-- `harness-kit:code-reviewer` — writes `05_CODE_REVIEW.md`
+- `harness-kit:code-reviewer` — authors `05_CODE_REVIEW.md`; the PM Orchestrator writes it
 - `harness-kit:qa-tester` — writes `06_TEST_REPORT.md`
 
 **Claude Code sub-agent dispatch — already implemented.** PM Orchestrator uses Claude Code's `Task` tool to spawn each downstream role in its own context (`harness-kit:<name>`); see the `harness-kit:pm-orchestrator` contract for the exact dispatch contract. Non-Claude tools (Copilot/Cursor) are not currently first-class for the framework agents (they're plugin-provided).

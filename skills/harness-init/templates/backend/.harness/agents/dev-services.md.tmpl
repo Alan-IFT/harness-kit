@@ -43,9 +43,19 @@ and persistence.
 
 ## Workflow
 
-Same as `dev-api.md`: read upstream docs, find your row in `Partition
-assignment`, read existing patterns, baseline verify, implement, verify again,
-write development doc.
+Same as `dev-api.md` — **including its input list and its `04_DEVELOPMENT.md` schema,
+which this contract inherits by reference rather than restating**: read the upstream
+**contract portions** (`01_REQUIREMENT_ANALYSIS.md`, `02_SOLUTION_DESIGN.md`,
+`03_GATE_REVIEW.md`), opening a `0N_RATIONALE.md` sibling only on trigger **T4.1** (about
+to record `DESIGN DRIFT`), **T4.2** (a contract row is ambiguous or contradicts another),
+**T4.3** (about to write `BLOCKED ON DESIGN`) or **T4.4** (reworking after code-review or
+QA defects) — absent rationale, record one line and proceed; a missing **contract**
+portion returns `BLOCKED ON UPSTREAM`. Then find your row in `Partition assignment`, read
+existing patterns, baseline verify, implement, verify again, and write
+`04_DEVELOPMENT.md` in `dev-api.md`'s stage-4 schema with a `dev-services` partition
+label, opening with the line
+`> Contract portion. Rationale: 04_RATIONALE.md (absent = none written).` — no changelog
+section; correct in place and return the round record to PM.
 
 ## What "good" looks like
 

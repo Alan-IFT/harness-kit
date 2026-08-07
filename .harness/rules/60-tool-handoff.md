@@ -28,11 +28,11 @@ When the user says "continue task T-XXX" or "what's in progress":
    started, if multiple).
 2. Read `docs/features/<task-slug>/PM_LOG.md` — the last entry tells you which
    agent should act next and any pending blockers.
-3. Read every existing stage document in order: `01_REQUIREMENT_ANALYSIS.md`,
-   `02_SOLUTION_DESIGN.md`, `03_GATE_REVIEW.md`, `04_DEVELOPMENT.md`
-   (or `04a_DEVELOPMENT_<partition>.md` for partitioned mode),
-   `05_CODE_REVIEW.md`, `06_TEST_REPORT.md`. Skip any that don't exist —
-   that's the stage you're at or before.
+3. Read the existing **contract** documents in order: `01_REQUIREMENT_ANALYSIS.md`,
+   `02_SOLUTION_DESIGN.md`, `03_GATE_REVIEW.md`, `04_DEVELOPMENT.md`,
+   `05_CODE_REVIEW.md`, `06_TEST_REPORT.md`. Skip any that don't exist — that's
+   the stage you're at or before. Open a `0N_RATIONALE.md` sibling only when one
+   of your role's named rationale triggers fires; its absence never blocks.
 4. Determine the role to assume:
    - If using Claude Code: PM Orchestrator (yourself if you're the PM) reads
      the partition assignment from `02_SOLUTION_DESIGN.md` and dispatches the
@@ -69,10 +69,13 @@ switching IDE, end of session:
 ### Tool-specific notes
 
 - **Claude Code**: PM Orchestrator is the routing agent. It reads PM_LOG,
-  dispatches sub-agents. The full 7-stage pipeline is native. The Stop hook
-  in `.claude/settings.json` auto-runs `.harness/scripts/harness-sync` at session
-  end, so `.harness/` edits flow to `CLAUDE.md` + `.github/copilot-instructions.md`
-  without user intervention.
+  dispatches sub-agents. The full 7-stage pipeline is native. A Stop hook
+  auto-runs `.harness/scripts/harness-sync` at session end, so `.harness/` edits
+  flow to `CLAUDE.md` + `.github/copilot-instructions.md` without user
+  intervention. A generated project ships that hook in its committed
+  `.claude/settings.json`; this repo keeps its own machine-local, and
+  `/harness-status` §0 "Effective hook source" reports which file a given project
+  loads it from.
 - **GitHub Copilot / Cursor**: No sub-agent dispatch, and since v0.30 the
   framework agents are plugin-provided to Claude Code — they're **not**
   materialized in the project, so playing a framework role from a local

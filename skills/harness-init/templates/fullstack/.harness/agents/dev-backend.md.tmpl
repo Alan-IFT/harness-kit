@@ -38,8 +38,19 @@ then run `.harness/scripts/harness-sync`.
 
 ## Workflow
 
-Same as `developer.md` and `dev-frontend.md`. Identify in-scope files; if any are
-outside owned paths, escalate to PM rather than reach across.
+Same as `developer.md` and `dev-frontend.md` — **including their input list and their
+`04_DEVELOPMENT.md` schema, which this contract inherits by reference rather than
+restating**: read the upstream **contract portions** (`01_REQUIREMENT_ANALYSIS.md`,
+`02_SOLUTION_DESIGN.md`, `03_GATE_REVIEW.md`); open a `0N_RATIONALE.md` sibling only on
+trigger **T4.1** (about to record `DESIGN DRIFT`), **T4.2** (a contract row is ambiguous or
+contradicts another), **T4.3** (about to write `BLOCKED ON DESIGN`) or **T4.4** (reworking
+after code-review or QA defects) — absent rationale, record one line and proceed; a missing
+**contract** portion returns `BLOCKED ON UPSTREAM`. Write `04_DEVELOPMENT.md` (that exact
+filename) in `dev-frontend.md`'s partition schema with `Backend` substituted for
+`Frontend`, opening with the line
+`> Contract portion. Rationale: 04_RATIONALE.md (absent = none written).`, and never
+add a changelog section — correct in place and return the round record to PM. Identify
+in-scope files; if any are outside owned paths, escalate to PM rather than reach across.
 
 ## Common cross-partition coordination
 

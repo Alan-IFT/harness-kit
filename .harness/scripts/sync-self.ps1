@@ -19,6 +19,8 @@
 #   .harness/scripts/upgrade-project.sh         → .harness/scripts/upgrade-project.sh
 #   .harness/scripts/language-policy.ps1        → .harness/scripts/language-policy.ps1
 #   .harness/scripts/language-policy.sh         → .harness/scripts/language-policy.sh
+#   .harness/scripts/hook-spec.ps1              → .harness/scripts/hook-spec.ps1
+#   .harness/scripts/hook-spec.sh               → .harness/scripts/hook-spec.sh
 #
 # Run before commit if you've edited any of the above. verify_all step E.1 FAILs
 # on drift.
@@ -59,6 +61,8 @@ $mappings = @(
     @{ from = ".harness/scripts/upgrade-project.sh"; to = ".harness/scripts/upgrade-project.sh"; type = "file" }
     @{ from = ".harness/scripts/language-policy.ps1"; to = ".harness/scripts/language-policy.ps1"; type = "file" }
     @{ from = ".harness/scripts/language-policy.sh"; to = ".harness/scripts/language-policy.sh"; type = "file" }
+    @{ from = ".harness/scripts/hook-spec.ps1"; to = ".harness/scripts/hook-spec.ps1"; type = "file" }
+    @{ from = ".harness/scripts/hook-spec.sh"; to = ".harness/scripts/hook-spec.sh"; type = "file" }
 )
 
 $drift = @()

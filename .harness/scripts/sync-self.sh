@@ -87,6 +87,11 @@ sync_file "$template_common/.harness/scripts/upgrade-project.sh"  "$repo_root/.h
 sync_file "$template_common/.harness/scripts/language-policy.ps1" "$repo_root/.harness/scripts/language-policy.ps1" ".harness/scripts/language-policy.ps1"
 sync_file "$template_common/.harness/scripts/language-policy.sh"  "$repo_root/.harness/scripts/language-policy.sh"  ".harness/scripts/language-policy.sh"
 
+# Mapping 9: hook-spec (T-13 hook wiring spec — the single source for the
+# (hook tool x target OS) command byte-forms + failure semantics)
+sync_file "$template_common/.harness/scripts/hook-spec.ps1" "$repo_root/.harness/scripts/hook-spec.ps1" ".harness/scripts/hook-spec.ps1"
+sync_file "$template_common/.harness/scripts/hook-spec.sh"  "$repo_root/.harness/scripts/hook-spec.sh"  ".harness/scripts/hook-spec.sh"
+
 if [[ "$CHECK" == true ]]; then
     if (( ${#drift[@]} > 0 )); then
         echo "Drift detected:" >&2

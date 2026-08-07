@@ -71,7 +71,7 @@ Ask **six questions** in a single `AskUserQuestion` call:
    - Skip this question. Defaults to single developer. After init, the AI can be asked to "add partition agents for X" — it will create custom `.harness/agents/dev-*.md` based on the actual project layout. See `.harness/rules/50-generic.md` for the documented partitioning procedure.
 
 5. **Project output language** — this is a **project-wide policy**, not just doc language. Options:
-   - `English (default)` — **All AI output in this project will be in English**. That includes: chat replies, agent-to-agent hand-offs, every per-task document (`01_REQUIREMENT_ANALYSIS.md` through `07_DELIVERY.md`, `PM_LOG.md`), updates to `tasks.md` / `dev-map.md`, error messages, status reports. Even if the user writes in another language, AI responds in English.
+   - `English (default)` — **All AI output in this project will be in English**. That includes: chat replies, agent-to-agent hand-offs, every per-task document under `docs/features/<task>/`, updates to `tasks.md` / `dev-map.md`, error messages, status reports. Even if the user writes in another language, AI responds in English.
    - `中文 (Chinese)` — **按消费者分流**：面向人的产出（对话回复、错误消息、状态/进度报告、给用户的交付总结、README 及人读文档）用**中文**；面向下游 agent/LLM 的产出（01–07 阶段文档、PM_LOG、tasks.md/dev-map/insight-index 台账、agent/rule/AI-GUIDE/CLAUDE 编辑、代码注释、commit message）用**英文**。即使用户用其他语言提问，对话回复仍用中文。
    - The policy is enforced by an "Output language" section at the top of CLAUDE.md. Agents read CLAUDE.md and follow the rule.
    - Agent definitions and verify_all scripts stay in English regardless (LLM reads English fine, file count manageable). Only output is constrained.
@@ -184,10 +184,39 @@ Replace these placeholders in any `.tmpl` file:
 | `{{ENABLE_HOOK}}` | `true` or `false` from Q3 |
 | `{{PARTITIONED}}` | `true` or `false` from Q4 (default `false` if Q4 was skipped) |
 | `{{LANG}}` | `en` (default) or `zh` from Q5 |
-| `{{SYNC_COMMAND}}` | OS-detected harness-sync invocation for the Stop hook, in the **RESILIENT** form (v0.44+, T-12): fail-OPEN + `$CLAUDE_PROJECT_DIR`-anchored so a missing/unreachable script exits 0 silently and a subdirectory launch still resolves. **Windows** → `pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/harness-sync.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/harness-sync.ps1 }; exit 0\"`. **macOS / Linux** → `sh -c 'cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null && [ -f .harness/scripts/harness-sync.sh ] && exec bash .harness/scripts/harness-sync.sh \|\| exit 0'`. Detect via `$IsWindows` (PowerShell) or `[[ "$OSTYPE" == "msys"* \|\| "$OSTYPE" == "cygwin"* \|\| "$OSTYPE" == "win32" ]]` (bash). Used only in `.claude/settings.json`. The value lands inside a JSON string, so the inner `"` are JSON-escaped to `\"`. The Windows `-NoProfile` flag (on BOTH the outer `-Command` and the inner `-File`) avoids loading the user's `$PROFILE` on every hook invocation (measured 3-4s → 10ms in QA 06_TEST_REPORT.md D-3). The bare space-preceded `.harness/scripts/harness-sync.<ext>` token MUST survive so the congruence scans (step 10b / verify_all E.4b) still parse it. |
-| `{{GUARD_COMMAND}}` | OS-detected guard-rm invocation for the PreToolUse hook (destructive-command safety, v0.15+), in the **RESILIENT but fail-CLOSED** form (v0.44+, T-12): same `$CLAUDE_PROJECT_DIR` anchor as the convenience hooks BUT with **NO `\|\| exit 0` / no `exit 0` fallback**, so a missing/unreachable guard yields a non-zero exit and the Bash call is NOT silently allowed (safety — never make this fail-open). **Windows** → `pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR; & pwsh -NoProfile -File .harness/scripts/guard-rm.ps1\"`. **macOS / Linux** → `sh -c 'cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null && bash .harness/scripts/guard-rm.sh'`. Mirror the same OS detection used for `{{SYNC_COMMAND}}`. Used only in `.claude/settings.json`. See `.harness/rules/75-safety-hook.md` for the contract. The Windows `-NoProfile` flag is essential here — without it, every Bash tool call eats the user's `$PROFILE` startup cost (NFR-Perf was violated in QA testing; see 06_TEST_REPORT.md D-3). |
-| `{{AMBIENT_PROMPT_COMMAND}}` | OS-detected ambient-prompt invocation for the UserPromptSubmit hook (`/harness-stream` ambient heartbeat, v0.22+; OS-picked since v0.31), in the **RESILIENT** (fail-OPEN + `$CLAUDE_PROJECT_DIR`-anchored) form (v0.44+, T-12). **Windows** → `pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/ambient-prompt.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/ambient-prompt.ps1 }; exit 0\"`. **macOS / Linux** → `sh -c 'cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null && [ -f .harness/scripts/ambient-prompt.sh ] && exec bash .harness/scripts/ambient-prompt.sh \|\| exit 0'`. Mirror the same OS detection used for `{{SYNC_COMMAND}}`. Used only in `.claude/settings.json`. |
-| `{{AMBIENT_RESET_COMMAND}}` | OS-detected ambient-reset invocation for the SessionStart hook (deletes `.harness/ambient.flag` so ambient mode is session-scoped), in the **RESILIENT** (fail-OPEN + `$CLAUDE_PROJECT_DIR`-anchored) form (v0.44+, T-12). **Windows** → `pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/ambient-reset.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/ambient-reset.ps1 }; exit 0\"`. **macOS / Linux** → `sh -c 'cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null && [ -f .harness/scripts/ambient-reset.sh ] && exec bash .harness/scripts/ambient-reset.sh \|\| exit 0'`. Mirror the same OS detection used for `{{SYNC_COMMAND}}`. Used only in `.claude/settings.json`. |
+| `{{SYNC_COMMAND}}` | Tool id **`harness-sync`**. Event `Stop`, matcher `none`, **fail-OPEN** (a missing/unreachable script exits 0 silently, so a broken convenience hook never blocks you). Obtain the byte-form from the hook wiring spec — see **Obtaining a hook command value** below. Used only in `.claude/settings.json`. |
+| `{{GUARD_COMMAND}}` | Tool id **`guard-rm`**. Event `PreToolUse`, matcher `Bash`, **fail-CLOSED** (destructive-command safety, v0.15+): the spec's answer deliberately carries **no `\|\| exit 0` and no trailing `exit 0`**, so a missing/unreachable guard yields a non-zero exit and the Bash call is NOT silently allowed. Never make this fail-open, and never hand-edit the value to add a fallback. See `.harness/rules/75-safety-hook.md` for the contract. Obtain the byte-form from the hook wiring spec — see below. Used only in `.claude/settings.json`. |
+| `{{AMBIENT_PROMPT_COMMAND}}` | Tool id **`ambient-prompt`**. Event `UserPromptSubmit`, matcher `none`, **fail-OPEN** (`/harness-stream` ambient heartbeat, v0.22+; OS-picked since v0.31). Obtain the byte-form from the hook wiring spec — see below. Used only in `.claude/settings.json`. |
+| `{{AMBIENT_RESET_COMMAND}}` | Tool id **`ambient-reset`**. Event `SessionStart`, matcher `none`, **fail-OPEN** (deletes `.harness/ambient.flag` so ambient mode is session-scoped). Obtain the byte-form from the hook wiring spec — see below. Used only in `.claude/settings.json`. |
+
+**Obtaining a hook command value — invoke the spec, paste the answer.** For each of the four
+`*_COMMAND` placeholders, run the hook wiring spec twin **for the shell you are running in**, from
+the target project root (the template copy landed at `.harness/scripts/hook-spec.{sh,ps1}` in the
+earlier copy step; if you are substituting before that copy, use
+`<template-root>/skills/harness-init/templates/common/.harness/scripts/hook-spec.{sh,ps1}`):
+
+- macOS / Linux / MSYS bash — `bash .harness/scripts/hook-spec.sh command <tool> "$(bash .harness/scripts/hook-spec.sh hostos)"`
+- Windows PowerShell — `pwsh -NoProfile -File .harness/scripts/hook-spec.ps1 command <tool> (pwsh -NoProfile -File .harness/scripts/hook-spec.ps1 hostos)`
+
+where `<tool>` is the tool id named in the placeholder's row. **Never call the other shell's twin**:
+an MSYS bash capturing pwsh output through `$( … )` strips the trailing newline but leaves the `\r`,
+which corrupts the value. Paste the captured line **verbatim** into the placeholder's position — do
+not re-escape it, re-wrap it, reformat it, or add or remove a single character; it is already at the
+JSON-string escaping level the settings file needs (the value lands inside a JSON string, so its
+inner `"` are already `\"`). The same spec answers this hook's event (`hook-spec … event <tool>`),
+matcher (`matcher <tool>`) and fail-open/fail-closed classification (`semantics <tool>`) if you need
+to confirm the row.
+
+Two properties of the answer you must not disturb: the bare space-preceded
+`.harness/scripts/<tool>.<ext>` token MUST survive so the congruence scans (step 10b /
+`verify_all` `E.4b`) still parse it; and on Windows the `-NoProfile` flag (on BOTH the outer
+`-Command` and the inner `-File`) is what keeps every hook invocation from loading the user's
+`$PROFILE` (measured 3.7 s → 10 ms, QA `06_TEST_REPORT.md` D-3).
+
+**If the spec is missing, or exits non-zero, or answers with an empty line: stop.** Leave the
+placeholder unresolved, report the failure naming the tool and the path you tried, and do **not**
+improvise a command, copy one from another project, or reconstruct one from documentation. The
+step-10b congruence assertion will flag the unresolved token, which is the correct, visible outcome.
 
 ### 5b. AI customization (opt-in, v0.16+)
 

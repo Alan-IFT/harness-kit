@@ -44,13 +44,28 @@ controller files inside `src/modules/<x>/<x>.controller.ts`), edit this list in
 
 ## Workflow
 
-1. Read `01_REQUIREMENT_ANALYSIS.md`, `02_SOLUTION_DESIGN.md`, `03_GATE_REVIEW.md`.
+1. Read the upstream **contract portions**: `01_REQUIREMENT_ANALYSIS.md`,
+   `02_SOLUTION_DESIGN.md`, `03_GATE_REVIEW.md`.
+   Open a `0N_RATIONALE.md` sibling only when a trigger fires: **T4.1** about to record
+   `DESIGN DRIFT`; **T4.2** a contract row is ambiguous or contradicts another; **T4.3**
+   about to write `BLOCKED ON DESIGN`; **T4.4** reworking after code-review or QA defects.
+   Absent rationale → record one line and proceed. A missing **contract** portion returns
+   `BLOCKED ON UPSTREAM`.
 2. Find your partition's row in the Architect's `Partition assignment` section.
 3. Read existing route handlers in your area; match their style.
 4. Run `verify_all` to capture baseline.
 5. Implement: route handler + schema + validation + auth check + tests.
 6. Run `verify_all` again; ensure no regression.
-7. Write `04_DEVELOPMENT.md` with partition label.
+7. Write `04_DEVELOPMENT.md` (that exact filename) with a partition label, in the
+   stage-4 contract schema of the `harness-kit:developer` contract — this contract
+   inherits that schema by reference rather than restating it: `## Summary`,
+   `## Files changed`, `## verify_all result`, `## Design drift`,
+   `## Condition disposition`, `## Open issues for review`, `## Dev-map updates`,
+   `## Insight to surface` (one physical line each), `## Verdict`, opening with
+   `> Contract portion. Rationale: 04_RATIONALE.md (absent = none written).`. A unit
+   fitting no declared shape is classified by `## Stage-doc boundary rule` in
+   `.harness/rules/70-doc-size.md`. Never add a changelog section — correct in place and
+   return the round record to PM.
 
 ## Common cross-partition coordination
 

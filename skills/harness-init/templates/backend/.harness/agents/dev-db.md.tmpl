@@ -44,7 +44,13 @@ edit this list and run `.harness/scripts/harness-sync`.
 
 ## Workflow
 
-1. Read upstream docs.
+1. Read the upstream **contract portions** (`01_REQUIREMENT_ANALYSIS.md`,
+   `02_SOLUTION_DESIGN.md`, `03_GATE_REVIEW.md`).
+   Open a `0N_RATIONALE.md` sibling only when a trigger fires: **T4.1** about to record
+   `DESIGN DRIFT`; **T4.2** a contract row is ambiguous or contradicts another; **T4.3**
+   about to write `BLOCKED ON DESIGN`; **T4.4** reworking after code-review or QA defects.
+   Absent rationale → record one line and proceed. A missing **contract** portion returns
+   `BLOCKED ON UPSTREAM`.
 2. Read `CLAUDE.md`, `docs/dev-map.md`, existing migrations, existing ORM models.
 3. Check if the change requires data migration (backfilling, transforming). If
    so, plan migration in two steps: schema + backfill (separately).
@@ -58,8 +64,19 @@ edit this list and run `.harness/scripts/harness-sync`.
 
 ## What `04_DEVELOPMENT.md` must contain (DB partition)
 
+The stage-4 contract schema of the `harness-kit:developer` contract, narrowed to this
+partition. Every section below is a declared shape; a unit fitting none of them is classified
+by `## Stage-doc boundary rule` in `.harness/rules/70-doc-size.md`. Never add a changelog or
+round-record section — correct the document in place and return the round record
+(`round N · what changed · why · which finding id`) to PM.
+
 ```markdown
 # Development Record — DB partition
+
+> Contract portion. Rationale: 04_RATIONALE.md (absent = none written).
+
+## Summary
+<=3 statements: what this partition changed
 
 ## Migration
 - `migrations/20260515_<name>.{sql,py,ts}`
@@ -81,7 +98,19 @@ edit this list and run `.harness/scripts/harness-sync`.
 - dev-services will consume in <task slug>; not in scope here.
 
 ## verify_all result
-...
+- Baseline: <counts>  ·  After: <counts>  ·  Delta: <counts>
+
+## Design drift
+<rows `id | design item | what was done instead | why`, or `None.`>
+
+## Condition disposition
+<rows `gate condition id | disposition | evidence`>
+
+## Open issues for review
+<statements>
+
+## Insight to surface
+<one physical line per insight, or omit the section>
 
 ## Verdict
 READY FOR REVIEW (DB partition complete)

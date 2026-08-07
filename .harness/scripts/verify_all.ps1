@@ -266,47 +266,86 @@ Step "E.6" "evals/golden-tasks.md present" {
 }
 
 # F. Symmetry (PowerShell <-> Bash pairs)
-Step "F.1" "verify_all, sync-self, harness-sync, test-init, test-real-project, ambient-prompt, ambient-reset, upgrade-project, language-policy, entropy-cadence exist in both .ps1 and .sh" {
-    foreach ($pair in @("verify_all", "sync-self", "harness-sync", "test-init", "test-real-project", "ambient-prompt", "ambient-reset", "upgrade-project", "language-policy", "entropy-cadence")) {
+Step "F.1" "verify_all, sync-self, harness-sync, test-init, test-real-project, ambient-prompt, ambient-reset, upgrade-project, language-policy, entropy-cadence, hook-spec exist in both .ps1 and .sh" {
+    foreach ($pair in @("verify_all", "sync-self", "harness-sync", "test-init", "test-real-project", "ambient-prompt", "ambient-reset", "upgrade-project", "language-policy", "entropy-cadence", "hook-spec")) {
         if (-not (Test-Path ".harness/scripts/$pair.ps1")) { throw "Missing .harness/scripts/$pair.ps1" }
         if (-not (Test-Path ".harness/scripts/$pair.sh")) { throw "Missing .harness/scripts/$pair.sh" }
     }
 }
 
-# F.2 — Guard-rm scripts and PreToolUse wiring present (v0.15+)
-Step "F.2" "Guard-rm scripts and PreToolUse wiring present" {
+# F.2 — Guard-rm scripts and settings-template guard wiring present (v0.15+; narrowed T-15)
+# TRACKED CONTENT ONLY. This check reads NO settings file — not the committed
+# .claude/settings.json, not the gitignored .claude/settings.local.json. Its result is a
+# function of tracked repository content, so a fresh clone and CI get the same verdict as
+# the maintainer's machine. Whether THIS machine has the guard wired is a machine fact with
+# no correct expression in a repository gate: the documented durable opt-out is a PRESENT
+# machine-local file carrying an empty hooks object (.harness/rules/75-safety-hook.md), so
+# even a presence-conditional assertion would fail a legitimate state. That dimension is
+# owned and reported by /harness-status §0 "Effective hook source" (T-14). Guard BEHAVIOUR
+# was never this check's job and is not affected: it is covered by
+# .harness/scripts/test-guard-rm.{ps1,sh} over evals/guard-rm-cases.md.
+Step "F.2" "Guard-rm scripts and settings-template guard wiring present" {
+    $problems = @()
     foreach ($f in @(".harness/scripts/guard-rm.ps1", ".harness/scripts/guard-rm.sh",
                      "skills/harness-init/templates/common/.harness/scripts/guard-rm.ps1",
                      "skills/harness-init/templates/common/.harness/scripts/guard-rm.sh")) {
-        if (-not (Test-Path $f)) { throw "Missing $f" }
+        if (-not (Test-Path $f)) { $problems += "missing:$f" }
     }
-    # Dogfood guard-rm PreToolUse wiring must exist. T-12 (v0.44.0): the dogfood hooks
-    # moved OUT of the committed .claude/settings.json into the gitignored
-    # .claude/settings.local.json (so the published plugin ships no leakable hooks). Read
-    # the guard-rm evidence from settings.local.json when it carries the hooks, falling
-    # back to settings.json otherwise (a user project that keeps hooks in the committed
-    # file is still validated).
-    $hooksFile = $null
-    if ((Test-Path ".claude/settings.local.json") -and `
-        ((Get-Content ".claude/settings.local.json" -Raw | ConvertFrom-Json).hooks.PreToolUse)) {
-        $hooksFile = ".claude/settings.local.json"
-    } elseif (Test-Path ".claude/settings.json") {
-        $hooksFile = ".claude/settings.json"
+    # The distributed settings template must carry the guard command placeholder and a real
+    # PreToolUse hook KEY. The key form ("PreToolUse" + optional space + colon) is required on
+    # purpose: the same file's _guard_hook documentation string also contains the bare word
+    # PreToolUse, so an unanchored match would still PASS with the hook block deleted.
+    # T-16 (T-15's containment residual): presence anywhere in the file is not enough — the
+    # placeholder and a "command" key must live INSIDE the PreToolUse block, otherwise a
+    # template whose guard command sat in the Stop block with an EMPTY PreToolUse array would
+    # still PASS. Containment window, no JSON parser (neither gate shell has one):
+    #   start = first line matching the key form
+    #   IND   = leading [ \t] width of that line (explicit class, NEVER \s: PowerShell's \s
+    #           spans Unicode whitespace and would measure a different width than bash awk)
+    #   term  = first j > start that is non-blank AND has leading width <= IND, else EOF
+    #   window = [start, term-1]   <- terminator line EXCLUDED, so an inline SIBLING event at
+    #            width IND cannot donate evidence to PreToolUse
+    # `-le $ind` (not `-eq`) is what makes the rule total: if "PreToolUse" is the LAST key
+    # inside `hooks`, every following line dedents past IND and never returns to it.
+    # $end is never < $start (the smallest terminator is $start+1), which matters because
+    # PowerShell's `..` SILENTLY REVERSES when the right bound is the smaller one.
+    $tmpl = "skills/harness-init/templates/common/.claude/settings.json.tmpl"
+    if (Test-Path $tmpl) {
+        $tmplText = Get-Content $tmpl -Raw
+        if ($tmplText -notmatch [regex]::Escape("{{GUARD_COMMAND}}")) {
+            $problems += "${tmpl}:no_GUARD_COMMAND_placeholder"
+        }
+        $lines = $tmplText -split "`r?`n"
+        $start = -1
+        for ($i = 0; $i -lt $lines.Count; $i++) {
+            if ($lines[$i] -cmatch '^[ \t]*"PreToolUse"[ \t]*:') { $start = $i; break }
+        }
+        if ($start -lt 0) {
+            $problems += "${tmpl}:no_PreToolUse_block"
+        } else {
+            $ind = [regex]::Match($lines[$start], '^[ \t]*').Length
+            $term = $lines.Count
+            for ($j = $start + 1; $j -lt $lines.Count; $j++) {
+                if ($lines[$j] -cmatch '^[ \t]*$') { continue }
+                if ([regex]::Match($lines[$j], '^[ \t]*').Length -le $ind) { $term = $j; break }
+            }
+            if ($term -eq $lines.Count) { $problems += "${tmpl}:PreToolUse_block_unterminated" }
+            $end = $term - 1
+            $window = (($lines[$start..$end]) -join "`n")
+            # Case-sensitive (-cnotmatch), no IgnoreCase: the bash twin's `grep -q` /
+            # `grep -qE` are case-sensitive, so a lowercase {{guard_command}} or a
+            # "COMMAND": key must reach the SAME verdict in both shells.
+            if ($window -cnotmatch [regex]::Escape("{{GUARD_COMMAND}}")) {
+                $problems += "${tmpl}:guard_command_not_in_PreToolUse"
+            }
+            if ($window -cnotmatch '"command"[ \t]*:') {
+                $problems += "${tmpl}:PreToolUse_no_command_entry"
+            }
+        }
     } else {
-        throw "missing .claude/settings.json and .claude/settings.local.json"
+        $problems += "missing:$tmpl"
     }
-    $settings = Get-Content $hooksFile -Raw | ConvertFrom-Json
-    $pre = $settings.hooks.PreToolUse
-    if (-not $pre -or $pre.Count -lt 1) { throw "$hooksFile missing hooks.PreToolUse[]" }
-    $first = $pre[0]
-    if ($first.matcher -ne "Bash") { throw "$hooksFile PreToolUse[0].matcher should be 'Bash', got '$($first.matcher)'" }
-    if (-not $first.hooks -or $first.hooks.Count -lt 1) { throw "$hooksFile PreToolUse[0].hooks missing" }
-    $cmd = $first.hooks[0].command
-    if ($cmd -notmatch 'guard-rm\.(ps1|sh)') { throw "$hooksFile PreToolUse command does not reference guard-rm: $cmd" }
-    # Template settings.json.tmpl must contain {{GUARD_COMMAND}} and PreToolUse
-    $tmpl = Get-Content "skills/harness-init/templates/common/.claude/settings.json.tmpl" -Raw
-    if ($tmpl -notmatch [regex]::Escape("{{GUARD_COMMAND}}")) { throw "template settings.json.tmpl missing {{GUARD_COMMAND}}" }
-    if ($tmpl -notmatch "PreToolUse") { throw "template settings.json.tmpl missing PreToolUse block" }
+    if ($problems.Count -gt 0) { throw ($problems -join ' ') }
 }
 
 # G. Documentation hygiene
@@ -406,12 +445,74 @@ Step "I.3" "Agent definitions <=300 lines each" {
     }
 }
 
-Step "I.4" "insight-index.md <=30 evidence lines" {
+Step "I.4" "insight-index.md <=30 insight entries" {
+    # ONE INSIGHT-SCAN over ONE file yields BOTH figures — the cap count
+    # (entries) and the unaccounted count — so this check and archive-task can
+    # never hold two notions of "entry". This is archive-task.ps1's
+    # INSIGHT-SCAN, mode 'index' (pass A + pass B; pass C is section-only). The
+    # Where-Object cap arm it replaced counted bullet LINES.
+    # Matchers: .NET regex only, `\s` the sole whitespace spelling; the HTML
+    # comment tokens are fixed strings, registered with no regex engine.
     if (-not (Test-Path ".harness/insight-index.md")) { return }
-    $n = @(Get-Content ".harness/insight-index.md" | Where-Object { $_ -match '^\s*-\s+' }).Count
-    if ($n -gt 30) {
+    $atReEntry = '^\s*-\s+'
+    $atReBlank = '^\s*$'
+    $atReHeading = '^#{2,6}\s'
+    # Wrap the WHOLE pipeline in @() — an empty index emits nothing and
+    # @($null) would otherwise yield a one-element array holding $null.
+    $atLines = @(@(Get-Content ".harness/insight-index.md") | ForEach-Object { $_.TrimEnd() })
+    $atN = $atLines.Count
+    $atHdrEnd = -1
+    $atCs = $false
+    $atOpenAt = -1
+    $atStopped = $false
+    for ($atI = 0; $atI -lt $atN; $atI++) {
+        if ((-not $atCs) -and ($atLines[$atI] -match $atReEntry)) {
+            $atHdrEnd = $atI - 1; $atStopped = $true; break
+        }
+        $atRest = $atLines[$atI]
+        while ($atRest.Length -gt 0) {
+            $atPo = $atRest.IndexOf('<!--')
+            $atPc = $atRest.IndexOf('-->')
+            if (($atPo -lt 0) -and ($atPc -lt 0)) { break }
+            if (($atPo -ge 0) -and (($atPc -lt 0) -or ($atPo -lt $atPc))) {
+                $atCs = $true; $atOpenAt = $atI; $atRest = $atRest.Substring($atPo + 4)
+            } else {
+                $atCs = $false; $atRest = $atRest.Substring($atPc + 3)
+            }
+        }
+    }
+    $atEntries = 0
+    $atUnacc = 0
+    $atFirst = -1
+    $atInEntry = $false
+    if (-not $atStopped) {
+        $atHdrEnd = $atN - 1
+        # A comment still open at EOF makes the whole file header block: every
+        # later append lands INSIDE the comment and both gates would read 0
+        # entries. Report its opening line as unaccounted instead.
+        if ($atCs) { $atUnacc = 1; $atFirst = $atOpenAt }
+    }
+    for ($atI = $atHdrEnd + 1; $atI -lt $atN; $atI++) {
+        if ($atLines[$atI] -match $atReBlank) { $atInEntry = $false; continue }
+        if ($atLines[$atI] -match $atReEntry) { $atEntries = $atEntries + 1; $atInEntry = $true; continue }
+        # A '##'/'###'... heading is never a continuation (see archive-task.ps1).
+        if ($atLines[$atI] -match $atReHeading) {
+            $atInEntry = $false
+            $atUnacc = $atUnacc + 1
+            if ($atFirst -lt 0) { $atFirst = $atI }
+            continue
+        }
+        if ($atInEntry) { continue }
+        $atUnacc = $atUnacc + 1
+        if ($atFirst -lt 0) { $atFirst = $atI }
+    }
+    if (($atEntries -gt 30) -or ($atUnacc -gt 0)) {
+        $atDetail = '{0} entries, {1} unaccounted line(s)' -f $atEntries, $atUnacc
+        if ($atUnacc -gt 0) {
+            $atDetail = '{0}, first at line {1}' -f $atDetail, ($atFirst + 1)
+        }
         Write-Host "" -NoNewline
-        Write-Host " ($n evidence lines — archive-task auto-rotates; manual overflow)" -ForegroundColor Yellow -NoNewline
+        Write-Host (' ({0} — archive-task auto-rotates entries; an unaccounted line makes archive-task refuse (exit 3))' -f $atDetail) -ForegroundColor Yellow -NoNewline
         return $false
     }
 }

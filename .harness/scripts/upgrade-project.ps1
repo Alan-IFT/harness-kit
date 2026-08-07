@@ -99,30 +99,84 @@ $exitCode = 0
 
 function Emit($line) { Write-Output $line }
 
-# Get-ResilientCmd <tool> <isWindows> — return the T-12 RESILIENT hook command string,
-# JSON-escaped (inner " as \") so it drops straight into a JSON "command" value
-# byte-identical to settings.json.tmpl after substitution.
-#   convenience hooks (harness-sync / ambient-prompt / ambient-reset): fail-OPEN —
-#     anchor to $CLAUDE_PROJECT_DIR, exit 0 silently if the script is absent/unreachable.
-#   guard-rm (safety): fail-CLOSED — anchor but NO exit-0 fallback, so a missing /
-#     unreachable guard yields a non-zero exit (the Bash call is blocked).
-# The space-preceded bare `.harness/scripts/<tool>.<ext>` token is preserved so the
-# unchanged left-bounded congruence regex still parses + existence-checks it (OQ-3a).
-# Case-sensitive literals; .Split not -split elsewhere (insight 2026-06-08 family).
-function Get-ResilientCmd($tool, $forWin) {
-    if ($forWin) {
-        if ($tool -eq "guard-rm") {
-            return ('pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR; & pwsh -NoProfile -File .harness/scripts/{0}.ps1\"' -f $tool)
-        } else {
-            return ('pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/{0}.ps1 -PathType Leaf) {{ & pwsh -NoProfile -File .harness/scripts/{0}.ps1 }}; exit 0\"' -f $tool)
-        }
-    } else {
-        if ($tool -eq "guard-rm") {
-            return ('sh -c ''cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null && bash .harness/scripts/{0}.sh''' -f $tool)
-        } else {
-            return ('sh -c ''cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null && [ -f .harness/scripts/{0}.sh ] && exec bash .harness/scripts/{0}.sh || exit 0''' -f $tool)
+# --- hook-spec adapter (T-16) ---------------------------------------------------
+# This flow no longer CARRIES any hook command byte-form: it ASKS the hook wiring
+# spec (hook-spec.ps1), the single source of truth for `(tool, target OS) -> command`.
+# Get-ResilientCmd is RETIRED — after delegation it would be a pass-through mapping a
+# boolean to windows/unix, and every call site needs a failure branch anyway.
+#
+# DEFINITIONS + inert scalars ONLY: nothing below runs at definition time and no flow
+# variable is READ at definition time, so this block sits exactly where Get-ResilientCmd
+# sat and no binding order changes. Candidate resolution is LAZY (first query) and
+# memoised, so it happens long after $templateCommonScripts / $dstDir are bound.
+#
+# Failure convention — there is NO third return path: either the spec's bytes, or
+# $null. No default, no fallback, no embedded copy. That is what keeps guard-rm
+# fail-CLOSED by construction: a caller with no answer writes NOTHING and can never
+# emit a permissive guard command.
+#
+# Cache writes MUST be $script:-scoped: a bare `$hsCacheKey += ...` inside a function
+# creates a function-local copy (copy-on-write scoping) and the cache silently never
+# fills. `$script:hsCacheVal += $null` appends a $null ELEMENT (it does not no-op the
+# way `+= @()` would), which is what keeps the two arrays index-aligned for a cached
+# FAILURE.
+#
+# Cross-shell prohibition (spec header): this adapter only ever forms `hook-spec.ps1`
+# candidates and runs them with pwsh, so it can never capture the bash twin.
+$script:hsSpecPath = ''       # ''  = not resolved yet
+                              # '-' = resolved, NOT FOUND (a real path can never be '-')
+$script:hsCacheKey = @()
+$script:hsCacheVal = @()      # parallel arrays; a cached FAILURE is stored as $null
+
+function Resolve-HookSpecPath {                  # lazy; the body runs at most once per run
+    if ($script:hsSpecPath -cne '') { return }
+    $cands = @()
+    if ($templateCommonScripts) { $cands += (Join-Path $templateCommonScripts "hook-spec.ps1") }
+    if ($PSScriptRoot)          { $cands += (Join-Path $PSScriptRoot "hook-spec.ps1") }
+    if ($dstDir)                { $cands += (Join-Path $dstDir "hook-spec.ps1") }
+    foreach ($c in $cands) {
+        if (Test-Path -LiteralPath $c -PathType Leaf) { $script:hsSpecPath = $c; return }
+    }
+    $script:hsSpecPath = '-'
+}
+
+function Get-HookSpecPathForMessage {            # the <path-or-"not found"> of a GAP| record
+    if (($script:hsSpecPath -ceq '-') -or ($script:hsSpecPath -ceq '')) { return 'not found' }
+    return $script:hsSpecPath
+}
+
+function Invoke-HookSpecCached([string]$CacheKey, [string[]]$SpecArgs) {
+    for ($i = 0; $i -lt $script:hsCacheKey.Count; $i++) {
+        if ($script:hsCacheKey[$i] -ceq $CacheKey) { return $script:hsCacheVal[$i] }
+    }
+    # A non-zero NATIVE exit under $ErrorActionPreference='Stop' becomes a terminating
+    # error on PS 7.4+, and the spec answers exit 2 BY DESIGN. Opt out for THIS function
+    # scope only (precedent: test-init.ps1) AND keep the try/catch: the catch must force
+    # $LASTEXITCODE non-zero, otherwise a STALE zero from an earlier native call would
+    # make the next test accept a $null answer.
+    $PSNativeCommandUseErrorActionPreference = $false
+    Resolve-HookSpecPath
+    $val = $null
+    if ($script:hsSpecPath -cne '-') {
+        try   { $out = & pwsh -NoProfile -File $script:hsSpecPath @SpecArgs }
+        catch { $out = $null; $global:LASTEXITCODE = 1 }
+        if (($LASTEXITCODE -eq 0) -and ($null -ne $out)) {
+            $first = @($out) | Select-Object -First 1        # NEVER [string]$out on an array:
+            $s = [string]$first                              # PS joins the elements with a SPACE
+            if (-not [string]::IsNullOrEmpty($s)) { $val = $s }
         }
     }
+    $script:hsCacheKey += $CacheKey
+    $script:hsCacheVal += $val
+    return $val
+}
+
+function Get-HookSpecCommand([string]$tool, [string]$targetOs) {
+    return (Invoke-HookSpecCached ("cmd/{0}/{1}" -f $tool, $targetOs) @('command', $tool, $targetOs))
+}
+
+function Get-HookSpecHostOs {
+    return (Invoke-HookSpecCached 'hostos' @('hostos'))
 }
 
 Emit ("TYPE|{0}" -f $Type)
@@ -267,26 +321,40 @@ if (-not (Test-Path $settings)) {
     # terminal scan flags an un-repairable token instead -> exit 4). String ops are
     # ordinal + case-sensitive (.Contains/.Replace — R1 discipline). Replacement
     # values contain no token opener, so a second run is a no-op (B10).
-    $phPairs = @(
-        @{ Name = "SYNC_COMMAND";           Tool = "harness-sync" },
-        @{ Name = "GUARD_COMMAND";          Tool = "guard-rm" },
-        @{ Name = "AMBIENT_PROMPT_COMMAND"; Tool = "ambient-prompt" },
-        @{ Name = "AMBIENT_RESET_COMMAND";  Tool = "ambient-reset" }
-    )
-    foreach ($ph in $phPairs) {
-        $tok = $phOpen + $ph.Name + $phClose
-        if ($IsWindows) {
-            $gateTarget = "$($ph.Tool).ps1"
-        } else {
-            $gateTarget = "$($ph.Tool).sh"
-        }
-        # T-12: emit the RESILIENT (fail-open/closed + $CLAUDE_PROJECT_DIR-anchored) form
-        # so a placeholder-repaired hook is born resilient, not brittle. JSON-escaped
-        # bytes — byte-identical to settings.json.tmpl after substitution.
-        $cmd = Get-ResilientCmd $ph.Tool $IsWindows
-        if ($new.Contains($tok) -and (Test-TargetPresent $gateTarget)) {
-            $new = $new.Replace($tok, $cmd)
-            Emit ("{0}|REWIRE-PLACEHOLDER|.claude/settings.json ({1} -> {2})" -f ($(if ($DryRun) { "PLAN" } else { "RESULT" })), $ph.Name, $cmd)
+    # T-16: the emitted command AND the host-OS token both come from the hook wiring
+    # spec — this flow carries no byte-form copy and no $OSTYPE/$IsWindows hook-wiring
+    # branch. $hsIsWin is deliberately NOT named $isWindows: PowerShell identifiers are
+    # case-insensitive and $IsWindows is a read-only automatic (T-12 shipped that once).
+    # Spec unavailable => the placeholder is LEFT IN PLACE (never emptied, never
+    # improvised) and one GAP| record is emitted; the terminal congruence scan then
+    # flags the unresolved token and owns the exit code (4), exactly as before.
+    $hsOs = Get-HookSpecHostOs
+    $hsIsWin = ($hsOs -ceq 'windows')
+    if ($null -eq $hsOs) {
+        Emit "GAP|hook-spec|absent|.claude/settings.json (host OS undeterminable — SYNC_COMMAND, GUARD_COMMAND, AMBIENT_PROMPT_COMMAND, AMBIENT_RESET_COMMAND left unresolved)"
+    } else {
+        $phPairs = @(
+            @{ Name = "SYNC_COMMAND";           Tool = "harness-sync" },
+            @{ Name = "GUARD_COMMAND";          Tool = "guard-rm" },
+            @{ Name = "AMBIENT_PROMPT_COMMAND"; Tool = "ambient-prompt" },
+            @{ Name = "AMBIENT_RESET_COMMAND";  Tool = "ambient-reset" }
+        )
+        foreach ($ph in $phPairs) {
+            $tok = $phOpen + $ph.Name + $phClose
+            if ($hsIsWin) {
+                $gateTarget = "$($ph.Tool).ps1"
+            } else {
+                $gateTarget = "$($ph.Tool).sh"
+            }
+            if ($new.Contains($tok) -and (Test-TargetPresent $gateTarget)) {
+                $cmd = Get-HookSpecCommand $ph.Tool $hsOs
+                if ($null -eq $cmd) {
+                    Emit ("GAP|hook-spec|absent|.claude/settings.json ({0}: hook wiring spec unavailable at {1} — placeholder left unresolved)" -f $ph.Name, (Get-HookSpecPathForMessage))
+                    continue
+                }
+                $new = $new.Replace($tok, $cmd)
+                Emit ("{0}|REWIRE-PLACEHOLDER|.claude/settings.json ({1} -> {2})" -f ($(if ($DryRun) { "PLAN" } else { "RESULT" })), $ph.Name, $cmd)
+            }
         }
     }
 
@@ -328,14 +396,22 @@ if (-not (Test-Path $settings)) {
             if (-not (Test-TargetPresent $s32Target)) { continue }
             if ($s32Ext -eq "ps1") {
                 $s32Brittle = "pwsh -NoProfile -File .harness/scripts/$s32Target"
-                $s32Win = $true
+                $s32Os = 'windows'
             } else {
                 $s32Brittle = "bash .harness/scripts/$s32Target"
-                $s32Win = $false
+                $s32Os = 'unix'
             }
             $s32Needle = '"' + $s32Brittle + '"'
             if ($new.Contains($s32Needle)) {
-                $s32Cmd = Get-ResilientCmd $s32Tool $s32Win
+                # T-16: byte-form from the spec. Spec unavailable => the EXISTING brittle
+                # value is left byte-untouched (never emptied, never improvised) and one
+                # GAP| record is emitted. Exit stays 0: the value is the pre-existing one
+                # and its target was already proven present by the gate above.
+                $s32Cmd = Get-HookSpecCommand $s32Tool $s32Os
+                if ($null -eq $s32Cmd) {
+                    Emit ("GAP|hook-spec|absent|.claude/settings.json ({0}.{1}: hook wiring spec unavailable — brittle command left as-is)" -f $s32Tool, $s32Ext)
+                    continue
+                }
                 $new = $new.Replace($s32Needle, ('"' + $s32Cmd + '"'))
                 Emit ("{0}|REWIRE-RESILIENT|.claude/settings.json ({1}.{2} -> resilient form)" -f ($(if ($DryRun) { "PLAN" } else { "RESULT" })), $s32Tool, $s32Ext)
             }

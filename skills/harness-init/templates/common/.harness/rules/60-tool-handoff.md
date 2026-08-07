@@ -28,11 +28,11 @@ When the user says "continue task T-XXX" or "what's in progress":
    started, if multiple).
 2. Read `docs/features/<task-slug>/PM_LOG.md` — the last entry tells you which
    agent should act next and any pending blockers.
-3. Read every existing stage document in order: `01_REQUIREMENT_ANALYSIS.md`,
-   `02_SOLUTION_DESIGN.md`, `03_GATE_REVIEW.md`, `04_DEVELOPMENT.md`
-   (or `04a_DEVELOPMENT_<partition>.md` for partitioned mode),
-   `05_CODE_REVIEW.md`, `06_TEST_REPORT.md`. Skip any that don't exist —
-   that's the stage you're at or before.
+3. Read the existing **contract** documents in order: `01_REQUIREMENT_ANALYSIS.md`,
+   `02_SOLUTION_DESIGN.md`, `03_GATE_REVIEW.md`, `04_DEVELOPMENT.md`,
+   `05_CODE_REVIEW.md`, `06_TEST_REPORT.md`. Skip any that don't exist — that's
+   the stage you're at or before. Open a `0N_RATIONALE.md` sibling only when one
+   of your role's named rationale triggers fires; its absence never blocks.
 4. Determine the role to assume:
    - If using Claude Code: PM Orchestrator (yourself if you're the PM) reads
      the partition assignment from `02_SOLUTION_DESIGN.md` and dispatches the

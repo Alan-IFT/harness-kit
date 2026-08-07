@@ -123,6 +123,16 @@ not part of this implementation.)
   test-harness-upgrade.sh 85/0 (+6 resilient asserts), test-supervisor.sh 45/0, test-verify-i6.sh 58/0,
   test-language.sh 39/0, test-real-project.sh 90/0.
 
+> **CORRECTION added 2026-07-31 by T-13 `hook-truth-spec` (do not read the line above as a capture).**
+> The `test-init.sh 278/0` above was **not** produced by a real bash run. This very commit (`cb0ed57`)
+> introduced the single-quote-bearing unix byte-form of the ambient hook commands, which the two
+> `[T-020]` "OS-picked variant" assertions interpolated into the string `assert()` `eval`s — so on a
+> unix host the driver `exec`s `ambient-prompt.sh` over itself and dies mid-run. Settled empirically
+> in T-13: `cb0ed57` extracted into a scratch worktree and run on a real unix box stops after **72**
+> PASSes with **no `=== Result ===` line** and exit 1; with only the `eval` fix applied to that same
+> pre-change driver it prints `PASS: 278 / FAIL: 0`. The **value** 278 is right; the **run record**
+> is not — it was hand-derived as 276 + 2. Same correction applies to `06_QA_REPORT.md` §6.
+
 ## Design drift (flagged for reviewer)
 
 1. **`DESIGN DRIFT` (minor, runtime-only) — `cd ""` with an EMPTY `$CLAUDE_PROJECT_DIR`.** The design

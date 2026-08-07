@@ -109,27 +109,77 @@ target_present() {
     return 1
 }
 
-# resilient_cmd <tool> <is_windows> — print the T-12 RESILIENT hook command string,
-# JSON-escaped (inner " as \"). Convenience hooks (harness-sync) fail-OPEN + anchored to
-# $CLAUDE_PROJECT_DIR; guard-rm (safety) fail-CLOSED (no exit-0 fallback). The space-
-# preceded bare `.harness/scripts/<tool>.<ext>` token survives so the unchanged left-
-# bounded congruence ERE still parses + existence-checks it (OQ-3a).
-resilient_cmd() {
-    local rc_tool="$1" rc_win="$2"
-    if [[ "$rc_win" == true ]]; then
-        if [[ "$rc_tool" == "guard-rm" ]]; then
-            printf '%s' "pwsh -NoProfile -Command \\\"Set-Location -LiteralPath \$env:CLAUDE_PROJECT_DIR; & pwsh -NoProfile -File .harness/scripts/$rc_tool.ps1\\\""
-        else
-            printf '%s' "pwsh -NoProfile -Command \\\"Set-Location -LiteralPath \$env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/$rc_tool.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/$rc_tool.ps1 }; exit 0\\\""
-        fi
-    else
-        if [[ "$rc_tool" == "guard-rm" ]]; then
-            printf '%s' "sh -c 'cd \\\"\$CLAUDE_PROJECT_DIR\\\" 2>/dev/null && bash .harness/scripts/$rc_tool.sh'"
-        else
-            printf '%s' "sh -c 'cd \\\"\$CLAUDE_PROJECT_DIR\\\" 2>/dev/null && [ -f .harness/scripts/$rc_tool.sh ] && exec bash .harness/scripts/$rc_tool.sh || exit 0'"
-        fi
-    fi
+# --- hook-spec adapter (T-16) ---------------------------------------------------
+# This flow no longer CARRIES any hook command byte-form: it ASKS the hook wiring
+# spec (hook-spec.sh), the single source of truth for `(tool, target OS) -> command`.
+# resilient_cmd is RETIRED. This flow runs from a project root with NO template-root
+# argument and may execute in a project that predates the spec entirely, so "spec
+# absent" is a normal, expected state — see the SPEC-GAP branch below.
+#
+# FUNCTIONS + inert scalars ONLY: nothing below runs at definition time and no flow
+# variable is READ at definition time. Candidate resolution is LAZY (first query) and
+# memoised, so it happens long after $dst_dir is bound.
+#
+# Failure convention — there is NO third return path: either exit 0 with the spec's
+# bytes in hsa_out, or non-zero with hsa_out="". No default, no fallback, no embedded
+# copy. That is what keeps guard-rm fail-CLOSED by construction: a caller with no
+# answer writes NOTHING and can never emit a permissive guard command.
+#
+# NEVER write x="$(hsa_command ...)": command substitution forks a subshell and every
+# cache write dies with it. Use the out variable hsa_out. `$(hsa_path)` IS fine — it
+# is a pure reader.
+#
+# Cross-shell prohibition (spec header): this adapter only ever forms `hook-spec.sh`
+# candidates and runs them with `bash`, so the MSYS CR-corruption is unreachable.
+hsa_bin=""            # ""  = not resolved yet
+                      # "-" = resolved, NOT FOUND (a real path can never be "-")
+hsa_out=""            # the last successful answer; "" after any failure
+hsa_n=0               # cache length; the three arrays below are index-addressed
+hsa_keys=(); hsa_vals=(); hsa_rcs=()   # parallel indexed arrays, <=9 entries, linear scan
+                                       # (deliberately NOT `declare -A`: bash 3.2 compatible,
+                                       #  matching the rest of this file)
+
+hsa_resolve() {                         # lazy; the body runs at most once per run
+    [[ -n "$hsa_bin" ]] && return 0
+    local c
+    local cands=()
+    cands+=("$(dirname -- "$0")/hook-spec.sh")        # unconditional, so the expansion
+    [[ -n "${dst_dir:-}" ]] && cands+=("$dst_dir/hook-spec.sh")   # below is never an
+    for c in "${cands[@]}"; do                        # empty-array expansion under set -u
+        [[ -f "$c" ]] && { hsa_bin="$c"; return 0; }
+    done
+    hsa_bin="-"
+    return 0
 }
+
+hsa_path() {
+    if [[ "$hsa_bin" == "-" || -z "$hsa_bin" ]]; then printf '%s' "not found"
+    else printf '%s' "$hsa_bin"; fi
+}
+
+hsa_query() {                           # $1 = cache key, $2.. = spec argv
+    local k="$1"; shift
+    local i v rc
+    for (( i = 0; i < hsa_n; i++ )); do          # C-STYLE loop over an explicit counter.
+        if [[ "${hsa_keys[$i]}" == "$k" ]]; then # NEVER `for i in "${!hsa_keys[@]}"`: an
+            hsa_out="${hsa_vals[$i]}"            # empty-array expansion is an UNBOUND
+            return "${hsa_rcs[$i]}"              # VARIABLE error under set -u on bash
+        fi                                       # < 4.4, incl. the macOS 3.2 this array
+    done                                         # choice exists for.
+    hsa_resolve
+    v=""; rc=1
+    if [[ "$hsa_bin" != "-" ]]; then
+        v="$(bash "$hsa_bin" "$@" 2>/dev/null)"; rc=$?     # set -uo, no -e: capture rc explicitly
+        (( rc == 0 )) && [[ -n "$v" ]] || { v=""; rc=1; }  # exit 2 AND empty stdout both land here
+    fi
+    hsa_keys[$hsa_n]="$k"; hsa_vals[$hsa_n]="$v"; hsa_rcs[$hsa_n]="$rc"
+    hsa_n=$(( hsa_n + 1 ))
+    hsa_out="$v"
+    return "$rc"
+}
+
+hsa_command() { hsa_query "cmd/$1/$2" command "$1" "$2"; }
+hsa_hostos()  { hsa_query "hostos"    hostos; }
 
 # str_replace_all <haystack> <needle> <replacement> — literal replace-all immune to
 # bash 5.2's `&`-means-matched-text rule in ${var//pat/repl} (the resilient command
@@ -183,15 +233,24 @@ for s32_tool in harness-sync guard-rm ambient-prompt ambient-reset; do
         target_present "$s32_target" || continue
         if [[ "$s32_ext" == "ps1" ]]; then
             s32_brittle="pwsh -NoProfile -File .harness/scripts/$s32_target"
-            s32_win=true
+            s32_os=windows
         else
             s32_brittle="bash .harness/scripts/$s32_target"
-            s32_win=false
+            s32_os=unix
         fi
         s32_needle="\"$s32_brittle\""
         if [[ "$settings_new" == *"$s32_needle"* ]]; then
-            s32_cmd="$(resilient_cmd "$s32_tool" "$s32_win")"
-            settings_new="$(str_replace_all "$settings_new" "$s32_needle" "\"$s32_cmd\"")"
+            # T-16: the byte-form comes from the hook wiring spec. Spec unavailable =>
+            # the EXISTING command value is left byte-untouched (never emptied, never
+            # improvised) and a SPEC-GAP record enters the plan. Exit stays 0: the value
+            # is the pre-existing one and its target was already proven present, so a
+            # partially repairable project does not become unrepairable.
+            if hsa_command "$s32_tool" "$s32_os"; then
+                s32_cmd="$hsa_out"
+                settings_new="$(str_replace_all "$settings_new" "$s32_needle" "\"$s32_cmd\"")"
+            else
+                plan+=("SPEC-GAP  .claude/settings.json ($s32_tool.$s32_ext: hook wiring spec unavailable at $(hsa_path) — command left unchanged; run /harness-upgrade)")
+            fi
         fi
     done
 done

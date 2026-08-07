@@ -19,7 +19,7 @@ Single command to invoke `.harness/scripts/verify_all` and capture the result.
    - `0` → PASS
    - `1` → WARN
    - `2` → FAIL
-5. If a task folder is active (`docs/features/<slug>/` exists with stages in progress), append the report to that task's `04_DEVELOPMENT.md`.
+5. If a task folder is active (`docs/features/<slug>/` exists with stages in progress), record the counts in that task's `## verify_all result` section; a full transcript goes to `04_RATIONALE.md`.
 6. Print summary to the user:
 
 ```

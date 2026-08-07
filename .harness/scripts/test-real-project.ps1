@@ -111,6 +111,12 @@ function Test-Fixture {
             # T-12: live FIXTURE-AUTHORING site — the *_COMMAND values are the RESILIENT form
             # (convenience hooks fail-OPEN + $CLAUDE_PROJECT_DIR-anchored; guard-rm fail-CLOSED,
             # NO `|| exit 0`). JSON-escaped bytes copied byte-identical from test-init.ps1 (AC-7).
+            # T-16: retained DELIBERATELY, not by oversight. This site BUILDS the fixture's
+            # final settings, so it must STATE the expected bytes rather than ask the artifact
+            # it is testing; deriving them from hook-spec here would make the fixture agree
+            # with the spec by construction and test nothing. Recorded in
+            # .harness/rejected-decisions.md (hook-byteform-test-literal-retirement) and named
+            # in hook-spec.{sh,ps1}'s header, which T-13's hand-off list omitted.
             # Copy-TemplateLayer uses .Replace() (ordinal-literal), so the `&`/`$env:` are safe.
             "SYNC_COMMAND" = if ($isWin) { 'pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/harness-sync.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/harness-sync.ps1 }; exit 0\"' } else { 'sh -c ''cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null && [ -f .harness/scripts/harness-sync.sh ] && exec bash .harness/scripts/harness-sync.sh || exit 0''' }
             "GUARD_COMMAND" = if ($isWin) { 'pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR; & pwsh -NoProfile -File .harness/scripts/guard-rm.ps1\"' } else { 'sh -c ''cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null && bash .harness/scripts/guard-rm.sh''' }

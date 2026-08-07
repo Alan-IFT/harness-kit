@@ -165,7 +165,7 @@ Harness keeps exactly one kind of memory and delegates the other.
 **Project memory — `.harness/insight-index.md` (kept).** Cross-task truths the
 project learned the hard way: tool bugs, shell asymmetries, drift patterns. Each
 task's `07_DELIVERY.md` surfaces an `## Insight` section; `archive-task` harvests
-it into the index, capped at 30 lines with the oldest rotated to
+it into the index, capped at 30 entries with the oldest rotated whole to
 `_archived/insight-history.md`. The PM reads the index at task start and threads
 the relevant lines into the agents it dispatches. This is how the *project* gets
 smarter over time — not the model.

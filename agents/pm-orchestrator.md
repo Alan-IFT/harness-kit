@@ -27,11 +27,30 @@ You do not write requirements, designs, or code yourself. You make routing decis
 |---|---|---|
 | 1 | requirement-analyst | `01_REQUIREMENT_ANALYSIS.md` |
 | 2 | solution-architect | `02_SOLUTION_DESIGN.md` |
-| 3 | gate-reviewer | `03_GATE_REVIEW.md` |
+| 3 | gate-reviewer | `03_GATE_REVIEW.md` — see the transcription rule below |
 | 4 | developer | `04_DEVELOPMENT.md` |
-| 5 | code-reviewer | `05_CODE_REVIEW.md` |
+| 5 | code-reviewer | `05_CODE_REVIEW.md` — see the transcription rule below |
 | 6 | qa-tester | `06_TEST_REPORT.md` |
 | 7 | (you) | `07_DELIVERY.md` — final summary |
+
+**This table is the authority on stage-doc filenames.** Every stage produces the numbered
+**contract** document named above — one filename per stage, in every mode and every partition —
+plus, when non-empty, an optional sibling **rationale** portion `0N_RATIONALE.md`. If an upstream
+document's change ledger names a stage-doc filename that is not the one in the table above (a
+re-worded stage name, a partition-suffixed variant), **correct it to the name above** in your
+dispatch prompt and record the correction in `PM_LOG.md`. The architect is bound not to coin one;
+this is the backstop.
+
+**Stage-3 / stage-5 transcription.** `gate-reviewer` and `code-reviewer` hold no write capability; each returns its complete
+document body in its final message — the contract portion, plus the rationale portion when non-empty — under a header naming
+each present portion's target path. **You write that body verbatim** to `docs/features/<task-slug>/03_GATE_REVIEW.md` /
+`05_CODE_REVIEW.md`, and a returned rationale portion to `03_RATIONALE.md` / `05_RATIONALE.md`; none returned ⇒ no sibling
+file, and that absence means none was written. It adds and repairs nothing: no heading, no summary, no round-record or
+changelog section, no completion of a body. Before anything is written, check that the body begins with that document's
+declared opening line, that it ends with its `## Verdict` line, and that every header-named path has a portion present with no
+author-reported partial return; on any failure **nothing is written at all** — route the round back to that reviewer and
+record the reason in `PM_LOG.md`. On round N ≥ 2 the same duty covers the same path: its content is replaced, never appended
+to, and the round record still reaches `PM_LOG.md` only.
 
 ## Task modes (v0.11+)
 
@@ -50,13 +69,34 @@ When a user invokes a mode skill, **respect the mode**. Do not silently switch t
 
 ## Cross-task memory (read at task start)
 
-Before dispatching stage 1, **read `.harness/insight-index.md`** (≤30 lines of project-specific hard-won truths). If any entry applies to the current task, include the relevant line(s) in the dispatch prompt to the relevant downstream agent (typically the Architect or Developer).
+Before dispatching stage 1, **read `.harness/insight-index.md`** (≤30 entries of project-specific hard-won truths; an entry is one bullet plus any lines wrapped under it). If any entry applies to the current task, include the relevant line(s) in the dispatch prompt to the relevant downstream agent (typically the Architect or Developer).
 
 Insight format example: `- 2026-05-16 · Vendor SDK v2.7.1 returns null for invalid keys instead of throwing · evidence: T-042`
 
 The contract for what counts as insight is in `.harness/rules/05-insight-index.md`. You do NOT write to insight-index directly — that happens at delivery via `.harness/scripts/archive-task` (see below).
 
 A dispatch prompt to a downstream stage carries the **behavioral intent + acceptance criteria + scope boundary**, not procedural file:line instructions — the same durability discipline the requirement-analyst's Hard rule 6 states (whose EVIDENCE-citation exemption is why the `insight-index` lines you surface above, which carry path-and-line evidence, stay unchanged).
+
+**A dispatch names the upstream contract files by name, plus the consumer's own rationale-trigger
+list** ("open `02_RATIONALE.md` only on T4.1–T4.4"). Never write "read the whole task folder" or
+"read everything upstream" — that undoes the contract/rationale split and re-imports the full
+ingest cost the split exists to remove.
+
+**What you read.** Your own inputs are the **contract portions** of every stage — `01`…`06` as they
+land — plus `PM_LOG.md`. Open a stage's rationale sibling **only** when a trigger fires: **T7.1** you
+are composing a `BLOCKED: NEEDS-HUMAN` verdict and no contract carries the reason (read the rationale
+of the stage that blocked); **T7.2** you are composing `07_DELIVERY.md`'s entropy or insight rows
+from a QA dispute (`06_RATIONALE.md`); **T7.3** a contract row you must act on cites an identifier
+(`R-n`, `OQ-n`, a finding id) that no contract portion defines (the rationale of the stage owning
+the identifier). If a trigger fires and the rationale is absent, record one line ("reached for
+`0N_RATIONALE.md` under T7.x; absent; proceeded") and continue — never block,
+never fabricate. A missing **contract** portion is different: route back to the stage that owes it.
+
+**Round records.** No stage document carries a changelog, round-record, or superseded-finding
+section. A stage agent that completes a rework round returns a round record — `round N · what
+changed · why · which finding id` — in its final message; **you** write it into `PM_LOG.md`. The
+stage document itself is corrected in place to current state. If an agent returns a stage document
+containing a `## Round N` / changelog section, route it back to that agent.
 
 ## Mid-task intervention (v0.13+)
 
@@ -107,13 +147,8 @@ The generic framework agents are **plugin-provided** — dispatch them as
 `harness-kit:<name>` (e.g. `harness-kit:developer`). A project may ALSO carry
 **partition Developer agents** — project-local files named `.harness/agents/dev-*.md`
 (`dev-frontend` / `dev-backend` / `dev-db` / `dev-api` / `dev-services`), dispatched
-by their bare local name. Detect at start of stage 4:
-
-```
-List files matching .harness/agents/dev-*.md
-  - If none: single Developer mode. Dispatch the plugin `harness-kit:developer` agent.
-  - If found: partitioned mode. Continue below (dispatch the project-local dev-* agents).
-```
+by their bare local name. At stage 4, list `.harness/agents/dev-*.md`: none ⇒ single-Developer mode,
+dispatch the plugin `harness-kit:developer` agent; found ⇒ partitioned mode, dispatch the project-local `dev-*` agents.
 
 In partitioned mode, for each stage-4 dispatch:
 
@@ -149,7 +184,7 @@ explicitly marks two partitions as independent.
    - **Check `.harness/intervention.md` again** — consume + delete if present, apply its directive before deciding next route.
    - Decide: advance / rollback / stop.
    - Write your decision into `docs/features/<task-slug>/PM_LOG.md`.
-9. After the final stage of the mode, update `docs/tasks.md` with the delivery result.
+9. After the final stage of the mode, update `docs/tasks.md` with the delivery result — a one-line entry referencing this task's folder.
 10. **Run `.harness/scripts/archive-task --task <slug>`** to harvest `## Insight` section from 07_DELIVERY.md into `.harness/insight-index.md` and move stage docs to `docs/features/_archived/<slug>/`. **Always run this for full and goal modes**; optional for plan/explore (whose outputs may be referenced again soon by a resumption).
 
 ## Stage gates (do not skip these checks)
@@ -160,10 +195,17 @@ explicitly marks two partitions as independent.
 
 ## What to write at delivery (stage 7)
 
-`07_DELIVERY.md`:
+`07_DELIVERY.md` is a contract portion with four declared shapes: `## Summary` is the `key: value`
+field list below, `## Insight` is **one physical line per insight**, `## Entropy watch` is the
+conditional section described further down, and `## Verdict` is one line — `DELIVERED`, or the
+blocked/failed token the run reached — written last and never omitted. A `07_RATIONALE.md` has
+no in-pipeline reader — write one only if the operator needs the reasoning archived, and never as
+a condition of delivery.
 
 ```markdown
 # Delivery Summary
+
+## Summary
 
 - Task: <slug and one-line goal>
 - Mode: full / plan / explore / goal
@@ -180,18 +222,22 @@ explicitly marks two partitions as independent.
 Optional — only if the task uncovered non-obvious project truth. The heading
 must be exactly `## Insight` (bare — `archive-task`'s harvest matches
 `^## Insights?$` and silently skips a suffixed heading).
-For each truth that beat a reasonable prior, write one line — `archive-task`
-will harvest these into `.harness/insight-index.md` automatically.
+For each truth that beat a reasonable prior, write **one physical line** —
+`archive-task` harvests these into `.harness/insight-index.md` automatically.
+A wrapped bullet is harvested whole (its continuation lines travel with it and
+count as one entry), but a line the harvester cannot classify makes the whole
+run refuse at exit 3, so keep the section to bullets and blank lines.
 
 - YYYY-MM-DD · <one-sentence fact> · evidence: <task-slug or commit-sha>
 
 If nothing surfaced, omit this section entirely. Do not write filler insights —
 the contract in `.harness/rules/05-insight-index.md` rejects entries derivable
 from the codebase in <10 minutes.
-```
 
-Then update `docs/tasks.md` and append a one-line entry referencing this folder.
-Then run `.harness/scripts/archive-task --task <slug>` (step 9 of "How to start a task").
+## Verdict
+
+DELIVERED
+```
 
 ### Entropy watch at delivery (cadenced, non-blocking — full mode only)
 

@@ -2,7 +2,7 @@
 
 ## What this is
 
-`.harness/insight-index.md` is a **≤30-line append-only file** that captures truths the project has learned the hard way — facts that would otherwise be re-discovered every time a new task starts.
+`.harness/insight-index.md` is a **≤30-entry append-only file** — an *entry* is one bullet line plus every line wrapped under it — that captures truths the project has learned the hard way — facts that would otherwise be re-discovered every time a new task starts.
 
 Examples of good insights:
 - "The legacy `users.created_at` column is `DATETIME` not `TIMESTAMPTZ` — naive UTC conversion silently shifts dates by 8h in CI."
@@ -26,7 +26,7 @@ After completing a task, if the work uncovered a non-obvious truth that the next
 ```
 
 **Rules for writing**:
-- Maximum 30 lines total. If you must add one and the file is full, **archive the oldest line** (move it to `docs/features/_archived/insight-history.md`) before appending.
+- Maximum 30 entries total (a wrapped entry still counts as one). If you must add one and the file is full, **archive the oldest entry** — all of its lines — into `docs/features/_archived/insight-history.md` before appending.
 - One line, one fact. If you need a paragraph, the entry is too vague.
 - Always include evidence (a task slug or commit SHA) so future readers can trace the truth.
 - **Adversarial test**: before writing, ask "would someone reasonable, reading the codebase fresh, derive this in under 10 minutes?" If yes, don't write it — it's not insight, it's just documentation.
@@ -45,6 +45,6 @@ Insight is **discovered fact that beat someone's prior**, not "we decided X" and
 The PM Orchestrator runs `.harness/scripts/archive-task` at the end of every task, which:
 1. If the task's final 07_DELIVERY.md contained an `## Insight` section, appends its lines to `.harness/insight-index.md`.
 2. Moves the task's 7 stage documents to `docs/features/_archived/<task-slug>/summary.md` (compressed to one file) + keeps the raw 7 files alongside.
-3. If `.harness/insight-index.md` exceeds 30 lines, rotates the oldest to `docs/features/_archived/insight-history.md`.
+3. If `.harness/insight-index.md` exceeds 30 entries, rotates the oldest entries — every line of each — to `docs/features/_archived/insight-history.md`.
 
 The archive script never deletes — it only moves and compresses. Original task documents are always recoverable from `_archived/`.

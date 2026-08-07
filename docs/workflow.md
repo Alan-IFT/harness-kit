@@ -14,6 +14,12 @@ The standard development workflow on this repo. Every non-trivial change flows t
 7. pm-orchestrator       →  07_DELIVERY.md
 ```
 
+Each numbered document above is the stage's **contract** portion — the binding text the next stage
+reads. A stage may also produce an optional sibling **rationale** portion `0N_RATIONALE.md` (same
+folder, same stage number) carrying its reasoning; it is written only when non-empty, and a
+downstream stage opens it only when one of that stage's named triggers fires. Round and rollback
+history lives in `PM_LOG.md`, never in a stage document.
+
 All per-task documents live under `docs/features/<task-slug>/`.
 
 ## Roles in one line each

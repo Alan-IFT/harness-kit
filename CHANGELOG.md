@@ -5,6 +5,279 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.46.0] - 2026-07-31
+
+### Changed — operator-obligation-home (T-24): the release-gating operator obligations get one home
+
+- The obligations a human must run on a host the agents cannot reach — almost all of it PowerShell —
+  now live in **`.harness/operator-obligations.md`**, one entry each with its action, artifacts, pass
+  observable, security marking, origin span and discharge record, counted by a command the file
+  publishes rather than by a stored total. They previously had to be reassembled from archived stage
+  documents and from prose inside `_qa_note_*` values of `.harness/scripts/baseline.json`; that prose
+  is gone from the pin file, every numeric key is byte-preserved, and the pin file now says in band
+  that a standing obligation is written in the ledger and not there. **The set was already losing
+  members:** the copy that travelled to the operator had dropped one obligation while splitting
+  another in two, so its count stayed right while its membership was wrong — which no count-based
+  check could have detected. Nothing is retired; the dropped obligation is carried in force.
+
+### Fixed — harvest-wrapped-insight (T-20): a wrapped `## Insight` bullet no longer loses its continuation lines
+
+`archive-task`'s harvester emitted only lines matching the bullet marker, so an insight authored as
+wrapped text lost every continuation line — **silently, at exit 0**, with the console echo reprinting
+the truncated first line so the result looked correct. T-15 lost 4/4 evidence pointers this way and
+it was caught only because that task's orchestrator re-read the artifact instead of trusting the echo.
+
+- **Rotation was worse than the harvester.** It derived its "header" as *every* non-bullet line in the
+  whole index and re-emitted that block first, so a stored continuation line was **hoisted above every
+  entry** rather than merely left behind. Fixing harvest alone would have shipped a worse defect.
+- **Harvest, rotation, the stored-index read and `I.4` now derive every figure from one classification
+  of one file.** `I.4`'s separate `grep -c` cap arm is gone, so a single check can no longer hold two
+  notions of what an entry is. The cap is measured in **entries**; a continuation line never counts
+  toward it, and `I.4`'s label and message now say so.
+- **Malformed input refuses instead of reporting success.** An unaccounted line exits **3** with the
+  document, the 1-based line number and the text named, **before any create, write, append or move** —
+  verified directly, including with rotation pending. A tally prints on every terminating path.
+- **Section discovery is a whole-document, fence-aware walk.** Every matching heading opens a section
+  (the pre-change `awk` re-armed on each one; an intermediate fix did not, and QA caught the
+  regression). A heading inside a fenced code block is neither opener nor terminator, with fence state
+  tracked **once** so the two can never disagree about where a section is; a fence open at EOF refuses;
+  and every heading skipped for being quoted is **counted and printed**, because an unreported
+  narrowing is the same silent-discard shape the task exists to remove.
+- **Single-line bullets are byte-identical to the pre-change script**, proven against the committed
+  pre-change scripts extracted from git and compared with `cmp`, never derived arithmetically.
+- New dogfood-only driver pair `test-archive-task.{sh,ps1}` — **186 assertions**, and **84/102** against
+  the pre-change script, corroborated at the label level rather than by totals. **No check was added:
+  the count stays 32**, and no version stamp moved.
+
+### Changed — stage-contract-split (T-18): every stage doc splits into a contract and an optional rationale
+
+- **A new `## Stage-doc boundary rule`** in `.harness/rules/70-doc-size.md` (and its `/harness-init` template seed) sends every unit of stage-doc content to exactly one of **contract**, **rationale**, **routing log** or **no home**, first match wins, with a terminal default. A finished script body pasted into a design now has *no location* rather than being discouraged.
+- **Each stage's numbered document is now its contract portion** — same filename, every section carrying a declared row or statement shape. Reasoning moves to an optional sibling `0N_RATIONALE.md`, written only when non-empty; round and rollback history moves to `PM_LOG.md`. No stage document carries a changelog section any more.
+- **Each downstream agent reads contracts by default** and opens a rationale only on a named trigger (T2.1–T2.4, T4.1–T4.4, T5.1–T5.4, T6.1–T6.3, T7.1–T7.3). The gate-reviewer still reads both portions of stages 1 and 2 by default, and its 8 audit dimensions are unchanged. All six partition `dev-*` templates carry the same input list, and each declares the stage-4 schema — three inline, three by reference to a named source contract.
+- **One filename per stage.** A phantom partition-suffixed stage-4 variant is retired from `60-tool-handoff.md` and its twin — no producer ever emitted it — and the architect is now bound to take stage-doc filenames from the PM's pipeline table rather than coin one.
+- **No script, check, cap or version stamp changed** — `verify_all` still reports 32 checks, and the `## Adversarial tests` / `## Insight` headings are byte-frozen because shipped mechanisms grep them.
+- **Existing projects** pick the new rule fragment up at re-init or by copying it; until then each agent contract's degradation clause applies its own schema and proceeds without blocking.
+
+### Changed — hook-truth-derivation (T-16): every artifact that writes a hook command now derives it from the spec
+
+Changing one hook command byte-form used to be a lockstep edit across 8 script files, 2 skill
+documents and 8 test files. It is now a **one-place edit** in `hook-spec.{sh,ps1}`.
+
+- **`resilient_cmd` / `Get-ResilientCmd` are retired** from `upgrade-project.{sh,ps1}` and
+  `migrate-scripts-layout.{sh,ps1}`. Each flow grows a small **spec adapter** that resolves the
+  `hook-spec` twin of its own shell **lazily** (first query, then memoised: ≤ 9 spec invocations
+  per run), and returns **"no answer"** rather than a fabricated string when it cannot. There is
+  no third return path — which is what keeps the `guard-rm` command **fail-CLOSED by
+  construction**: a flow with no answer writes nothing, on every branch.
+- **Host-OS discrimination comes from the spec too** (`hook-spec … hostos`), replacing the
+  per-flow `$OSTYPE` case and `$IsWindows` read.
+- **Emitted bytes are unchanged.** All 8 `(tool, OS)` cells of both flows were compared against a
+  pre-change capture of the retired helper: **0 differing lines, 8/8, both flows**.
+- **Spec unavailable is a supported state, not a failure to fabricate.** `upgrade-project` leaves
+  the placeholder or the brittle value in place and emits a `GAP|hook-spec|absent|…` record;
+  `migrate-scripts-layout` records a `SPEC-GAP` plan line, exits 0 and stays idempotent. The
+  terminal congruence scan still owns the exit code for a genuinely dangling wiring (exit 4).
+- **The two skill placeholder tables carry semantics, not bytes** — each row states its tool id,
+  event, matcher and fail-open/fail-closed classification, and points at one written-once
+  instruction to invoke the spec and paste the captured line verbatim.
+- **`verify_all` `F.2` now asserts containment, not mere presence** (T-15's residual): the guard
+  placeholder and a `"command"` key must live *inside* the `PreToolUse` block, measured with a
+  containment window over the settings template. A template whose guard command sat in the `Stop`
+  block with an empty `PreToolUse` array used to PASS; it now FAILs with two named tokens. **No
+  check was added — the count stays 32.**
+- **The `test-init` T-13 oracle was re-anchored.** It used to extract the live `resilient_cmd`
+  from the flow; after delegation that would compare the spec with itself. Group A now compares
+  the spec against the frozen `EXP_*` / `$exp*` fixtures, and Group A′ became two **standing**
+  4-row scans over the flow files (no byte-form idiom outside comments; no pattern-substitution
+  operator, the `&`/`patsub_replacement` regression). 17 rows in, 17 out — no pinned count moves.
+- **Three stale prose sentences** in `AI-GUIDE.md`, `docs/getting-started.md` and
+  `.harness/rules/60-tool-handoff.md` no longer claim this repo's hooks live in
+  `.claude/settings.json`; they state the durable fact and defer the location to
+  `/harness-status` §0 "Effective hook source".
+
+### Fixed — guard-cmd-chain (T-17): the destructive-command guard now judges every command position
+
+The `PreToolUse` guard judged only the first token of each top-level pipe segment, so a
+destructive verb reached through `&&`, `;`, `||`, `&`, a newline, a subshell or brace group,
+a command substitution, or an argv carrier such as `xargs` was **never judged at all**.
+`echo hi && rm -rf /etc/x` exited 0. This was a specification gap, not a coding slip — the
+rule document described the trigger as "the first token after optional `sudo`", so the code
+matched its written spec.
+
+- **New position scanner in `guard-rm.{ps1,sh}`** — a single-pass, quote/here-document/
+  comment-aware character lexer with an explicit nesting stack (depth bound 2), emitting the
+  substrings at which a shell begins a simple command. The classifier, path resolver
+  (`resolve_leaf`), root containment test and verdict machinery are **byte-unchanged**.
+- **The union is the load-bearing choice.** Every string is judged as `[the whole input] ∪
+  split_pipes(input) ∪ scanner positions`, and the whole input is retained **at every
+  recursion depth**. That is what keeps `pwsh -c "Remove-Item ./tmp | Tee-Object C:\log"`
+  blocked: decomposition alone would narrow the verb's token walk and flip it to ALLOW.
+- **Widened prefix strip** — assignment prefixes (`FOO=1`, `A+=1`), `sudo` (logic moved
+  verbatim) and shell reserved words (`do`, `then`, …) are now transparent.
+- **Argv carriers** `xargs`, `env`, `nohup`, `nice`, `time`, `timeout`, `command`, `exec`,
+  `find … -exec` expose further positions. They are **not** destructive verbs. For `find`
+  the carrier scan runs first without returning, then the untouched `-delete` branch.
+- **Nested `bash`/`sh`/`dash`/`zsh`/`ksh` `-c` strings** are re-parsed, next to the existing
+  `pwsh`/`powershell` branch.
+- **The command-text override is now audited.** `HARNESS_ALLOW_OUTSIDE_RM=1 rm -rf /tmp/x`
+  previously reached exit 0 *silently* through the unrecognized-verb path; it is now
+  recognized, emits the audit line, and is evaluated exactly once on the whole line — so
+  `echo x && HARNESS_ALLOW_OUTSIDE_RM=1 rm -rf /etc/x` is **not** self-authorizing.
+- **The verb set is unchanged.** `mv`, `cp` and `>` redirection stay deliberately unguarded;
+  this fixes *reachability* of the existing nine verbs, nothing more.
+- **Faster on typical commands.** The per-segment `printf | tr` verb loop (18 forks per
+  segment) is replaced by fork-free glob matching: a ~110-char chain went 49 → 46 ms and a
+  redirecting command 39 → 33 ms. Very long commands got slower (8192-char `&&` chain
+  1487 → 2251 ms) because bash string indexing is O(i); the rule document now carries the
+  measured figures instead of the never-true "under 50 ms" claim.
+- **An escaped redirection before `&` is a real separator.** `echo a\>& rm -rf /etc/x` used
+  to exit 0: the scanner read the raw byte before `&` and called an escaped `\>` a redirect.
+  The redirection operator is now recorded where it is actually emitted, so `\>&` / `\<&`
+  flush the position while a genuine `>&` dup-redirect still does not.
+- **A leading `&` is a separator too.** The index recorded above is compared against `i - 1`,
+  so its "none yet" sentinel must be unreachable by that comparison: at `i == 0` a `-1`
+  sentinel equals `i - 1` and appended the `&` instead of flushing it, which made
+  `& rm -rf /etc/x` and `pwsh -c "& Remove-Item -Recurse C:\Windows"` exit 0 (`&` is
+  PowerShell's call operator and the guard recurses into `pwsh -c` strings). The sentinel is
+  `-2`, outside the domain of `i - 1`, in both shells.
+- **Regression suite 17 → 87 rows** in `evals/guard-rm-cases.md` and both
+  `test-guard-rm.{ps1,sh}` drivers, in three-way lockstep. Both drivers gained an optional
+  guard-path argument (`[guard-path]` / `-Guard`) so a staged copy or a scratch mutant can be
+  driven without touching the live hook. The bash driver's `id|cmd|override|expected` row
+  encoding was replaced by flat 4-tuples — the old delimiter truncated every row containing
+  a `|`. Run against the pre-change guard the same suite scores 50/37.
+- **Coverage honesty.** `.harness/rules/75-safety-hook.md` (and its template twin) replaces
+  the false trigger description with the coverage claim, and adds a residual-limitations list
+  and an accepted-over-blocks table: the guard's over-block surface is a strict superset of
+  the old one, because the retained pre-change pass has no backslash, comment or
+  here-document awareness.
+- No new `verify_all` check (32 held), no new dependency, and no configuration that can
+  weaken the guard.
+
+### Changed — hook-truth-verify-scope (T-15): the guard-wiring gate check now asserts only what the repository can answer
+
+`verify_all`'s `F.2` selected a hooks evidence file at run time — `.claude/settings.local.json`
+when it carried `"PreToolUse"`, otherwise the committed `.claude/settings.json` — and asserted
+wiring against whichever won. Since v0.44.0 the committed file carries `"hooks": {}` on purpose,
+and the machine-local file is gitignored, so **a fresh clone and every CI run failed the release
+gate** on `no_PreToolUse no_Bash_matcher no_guard-rm_command` — an environment condition, not a
+repository defect. There is also no correct conditional form: the documented durable opt-out is a
+*present* machine-local file with an empty hooks object, so "assert only when the file exists"
+would turn a legitimate state into a gate failure.
+
+- **`F.2` is now a single-source check over tracked repository content.** It reads no settings
+  file in either shell. It asserts the four guard scripts exist (repo pair + distributed template
+  pair) and three facts about `templates/common/.claude/settings.json.tmpl`: that the template
+  exists, that it carries `{{GUARD_COMMAND}}`, and that it carries a `"PreToolUse"` hook key. All
+  seven assertions stay at **FAIL** severity; none was softened.
+- **The template's `PreToolUse` assertion is now anchored to the JSON key form**
+  (`"PreToolUse"` + optional whitespace + `:`). The old unanchored whole-file match was satisfied
+  by the template's own `_guard_hook` documentation string, so deleting the entire hook block
+  still passed — the assertion was vacuous in both shells.
+- **The PowerShell twin accumulates instead of throwing on the first problem**, so both shells
+  now report every problem in one message.
+- **Behavioural guard coverage is unchanged.** The gate never asserted what the guard *does*;
+  that coverage is `test-guard-rm.{ps1,sh}` over `evals/guard-rm-cases.md`, still **87 rows**,
+  unmoved. The machine dimension did not disappear either — it is owned and reported by
+  `/harness-status` §0 "Effective hook source" (v0.45.0, T-14).
+- Check count unchanged (32 held), no new check, no new dependency, no guard-script change.
+
+## [0.45.0] - 2026-07-31
+
+### Added — hook-truth-spec (T-13): one executable source of truth for the hook wiring
+
+The byte-form and failure semantics of each harness lifecycle-hook command were hand-duplicated
+across the derivation helpers, two SKILL prose tables, the test fixtures and the live settings
+files, so changing one form silently desynchronized the others.
+
+- **New script pair `.harness/scripts/hook-spec.{ps1,sh}`** (shipped from
+  `templates/common/`, so a generated project gets it too). A pure, side-effect-free CLI
+  answering `tools`, `event <tool>`, `matcher <tool>`, `semantics <tool>`,
+  `command <tool> <os>` and `hostos`. `command` emits the JSON-string-body form (inner `"`
+  already `\"`) every consumer writes into a settings file; unrecognized input yields an
+  empty stdout, a diagnostic on stderr and **exit 2**. `guard-rm` is **fail-CLOSED** (no
+  `|| exit 0`, no trailing `exit 0`); the three convenience hooks are fail-open.
+- **`install-hooks.{ps1,sh}` gained a second responsibility.** After installing the git
+  pre-commit hook unchanged, it bootstraps a missing `.claude/settings.local.json` from the
+  spec — **only** when the committed settings declares no lifecycle hooks and no
+  machine-local file exists. Idempotent (an existing file is left byte-untouched, no backup,
+  no `.bak`), atomic (temp-then-rename, confirmed by re-reading from disk), and loud: it
+  prints the created path, the four wired events, the one-line removal command and a
+  machine-local/`.gitignore` advisory. It edits no `.gitignore` on any path. New exit codes
+  `3` (unparseable committed settings — nothing written at all), `4` (the spec did not yield
+  four non-empty commands on four **distinct** hook events — nothing written), `5` (write or
+  confirmation failed — left absent on the write path, present-but-unconfirmed on the
+  terminal-confirmation path, and the diagnostic says which).
+  This is how a fresh clone of harness-kit regains its gitignored dogfood hooks.
+- `sync-self` mirror set 7 → **8 script pairs**; `verify_all` F.1 gains `hook-spec` in both
+  shells. **The check count stays 32** — no gate check was added, removed or narrowed.
+- Byte-identity is proven, not asserted: `test-init.{ps1,sh}` gained a `hook-spec` block that
+  compares all 8 `(tool, OS)` cells against the **live** `resilient_cmd` / `Get-ResilientCmd`
+  derivation helper (extracted, never sourced), behind a mandatory anti-vacuity assertion,
+  plus an installer-bootstrap block covering AC-5/AC-6/AC-7 and the boundary rows.
+
+### Fixed — hook-truth-status (T-14): the health report reads the settings file the hooks actually live in
+
+`/harness-status` computed every hook verdict from the hardcoded path `.claude/settings.json`,
+so on a project whose lifecycle hooks legitimately live in the machine-local settings file
+(this repository, since v0.44.0 / T-12) it reported the destructive-command guard as
+`DISABLED` while the guard was installed, wired and blocking, and reported all four events
+as `not wired` while all four were running.
+
+- **New `§0 Effective hook source`** in `skills/harness-status/SKILL.md`: one resolution
+  step per run over `.claude/settings.local.json` → `.claude/settings.json`, with a
+  four-state probe (`absent` / `unreadable` / `empty` / `present`) and a six-field result
+  (`SOURCE`, `SOURCE_KIND`, `HOOKS_JSON`, `UNKNOWN_FILES`, `OTHER_DECLARES`,
+  `MACHINE_STATE`). §1's guard row, §3b, §3c, §6's guard point and §7's fix line all read
+  that one answer and **name the file it resolved**; no section re-reads a settings path.
+- **§3b is now an eight-row, first-match-wins decision table** over the set of paths the
+  existing left-bounded pattern extracts from the guard entry's command. `installed and
+  wired` requires **every** extracted path to exist **and** at least one of them to be the
+  `guard-rm` script, so neither a chained command with a missing link nor a command that
+  merely mentions `guard-rm` can be reported healthy. The retired string
+  `DISABLED — .claude/settings.json has no PreToolUse for Bash` is gone; three new states
+  the report never owned before are named: `NOT INSTALLED ON THIS MACHINE`,
+  `HOOKS OFF (machine-local opt-out)` and `UNKNOWN` (a settings file that exists but does
+  not parse — never a healthy guard on the strength of the other file alone). Matcher,
+  guard-entry multiplicity and interpreter availability now print as adjuncts, the last
+  with its fail-closed consequence.
+- **The fix line is conditional on where the wiring lives.** `/harness-upgrade` rewrites
+  only the committed file, and `install-hooks` refuses to overwrite an existing
+  machine-local file, so machine-local wiring gets the removal-based repair — and, when the
+  committed file also declares hooks, the removal **alone** (chaining the installer there
+  would no-op). A repair that cannot reach the file the report just named is never printed.
+- **§3c enumerates from `hook-spec`, not from prose** (`tools`, `event <id>`, plus
+  `matcher guard-rm` and `semantics guard-rm` for §3b — `N+3` = 7 invocations for four
+  ids), invoking the twin of its own shell, with a labelled whole-answer fallback to the
+  four event names for projects generated before the spec shipped.
+- No hook script, settings file, template, installer or gate check changed; **the check
+  count stays 32**, the required-asset row count stays 14 and the health denominator stays
+  12. The `DANGLING` / `MALFORMED` tokens `/harness-upgrade`'s repair trigger keys on are
+  preserved. No `.ps1` was touched.
+
+### Fixed
+
+- `test-init.sh`: the two `[T-020]` "OS-picked variant" assertions interpolated a command
+  value containing single quotes into the string `assert()` evaluates, so on unix hosts the
+  driver ran `exec bash .harness/scripts/ambient-prompt.sh` **on itself** and every later
+  assertion silently never ran. Invisible on MSYS (the pwsh form carries no single quote).
+  The single-quote-bearing unix byte-form arrived with **T-12 / v0.44.0**, so the exposure
+  window is T-12 → HEAD. Captured against the pre-change driver: as committed it stops after
+  72 PASSes with no `=== Result ===` line; with only this fix applied it prints `PASS: 278`.
+  The pinned bash tally moves **278 → 354** (278 pre-existing, unchanged + 76 new).
+- `install-hooks.ps1`: the generated pre-commit body moved from an `@'…'@` here-string to a
+  line array joined with `` `n `` plus one explicit trailing `` `n ``. `.gitattributes` pins
+  `*.ps1` to CRLF, so the here-string had been emitting a CRLF `/bin/sh` hook that also
+  lacked the bash twin's trailing newline.
+
+### Docs
+
+- `.harness/rules/75-safety-hook.md` (+ its template twin): the "Fully disable" path now
+  states that removing hooks from the committed file alone is re-armed by `install-hooks`,
+  and that a machine-local file carrying an empty hooks object is the persistent opt-out.
+- `docs/dev-map.md`, `AI-GUIDE.md`, `.harness/rules/40-locations.md`: the spec artifact, the
+  installer's new behavior, and the 7 → 8 mirror-set count.
+
 ## [0.44.0] - 2026-06-21
 
 ### Fixed — resilient-hooks (T-12): stop the per-turn Stop-hook error + stop distributing dogfood hooks

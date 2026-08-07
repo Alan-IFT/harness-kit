@@ -69,3 +69,24 @@
 - 2026-06-21 · T-12 regression gate (post-archive): verify_all.sh PASS 32/0/0 → no hard stop · queue: 0 pending / 0 failed / 0 blocked → **POOL DRAINED**
 - 2026-06-21 · STREAM EXIT (resilient-hooks fix): normal — pool drained. T-12 DELIVERED v0.44.0, 0 rollbacks, 0 failed, 0 blocked. No hard stop. Gate conditions absorbed pre-Dev; CR nits fixed-forward (no same-stage rollback).
 
+2026-07-31T03:54:18Z · T-13 · dispatching pm-orchestrator · slug=hook-truth-spec · mode=full
+2026-07-31T09:29:59Z · T-13 · DELIVERED · slug=hook-truth-spec · verify_all=32\/0\/0 · rollbacks=4 · archived
+2026-07-31T09:30:26Z · T-14 · dispatching pm-orchestrator · slug=hook-truth-status · mode=full
+2026-07-31T12:22:16Z · T-14 · DELIVERED · slug=hook-truth-status · verify_all=32\/0\/0 · rollbacks=3 · archived
+2026-07-31T12:27:50Z · T-17 · dispatching pm-orchestrator · slug=guard-cmd-chain · mode=full · PRIORITY INTERLEAVE (operator-authorized, security)
+2026-07-31T17:29:08Z · T-17 · DELIVERED · slug=guard-cmd-chain · verify_all=32\/0\/0 · rollbacks=4 · bypass closed (stream-verified) · archived
+2026-07-31T17:30:16Z · T-15 · dispatching pm-orchestrator · slug=hook-truth-verify-scope · mode=full
+2026-07-31T19:55:02Z · T-15 · DELIVERED (PROCEED, not declined) · verify_all=32\/0\/0 · rollbacks=1 · archived
+2026-07-31T19:55:02Z · T-16 · dispatching pm-orchestrator · slug=hook-truth-derivation · mode=full · FINAL POOL ROW
+2026-08-01T03:16:59Z · T-16 · DELIVERED · verify_all=32\/0\/0 · rollbacks=2 · zero hand-synced byte-form copies remain · archived
+2026-08-01T03:16:59Z · T-19 · SKIPPED · superseded by T-18 structural split (summary header would be a second copy)
+2026-08-01T03:17:24Z · T-18 · dispatching pm-orchestrator · slug=stage-contract-split · mode=full
+2026-08-01T07:45:06Z · T-18 · DELIVERED · verify_all=32\/0\/0 · rollbacks=3+1 escalation · stage-4 read -37.7%, grade published as structural-for-multiline\/compliance-below · archived
+2026-08-01T07:45:38Z · T-20 · dispatching pm-orchestrator · slug=harvest-wrapped-insight · mode=full · first task under T-18 contract structure
+2026-08-01T13:26:52Z · T-20 · DELIVERED · verify_all=32\/0\/0 · rotation defect was HOIST not orphan · new driver test-archive-task 186\/0 · archived
+2026-08-01T13:29:57Z · T-21 · DONE (direct measurement, no pm-orchestrator) · 78% of spend is cache traffic; 128K cached tokens read per call · deliverable in docs\/proposals\/
+2026-08-01T13:30:45Z · T-22 · dispatching pm-orchestrator · slug=stage-model-tiering · mode=full · ASSESS-FIRST (T-21 downgraded this from primary to secondary lever)
+2026-08-01T16:12:01Z · T-22 · DELIVERED as DECLINE · nothing wired · delegated share 6.7-45% confidence LOW · RES-QA1 falsified clause repaired by stream · archived
+2026-08-02T01:58:28Z · T-23 · dispatching pm-orchestrator · slug=review-write-path · mode=full · from entropy EP-001
+2026-08-02T04:36:40Z · T-23 · DELIVERED · reviewers=named authors, PM=named writer, no capability changed · rollbacks=1 · archived
+2026-08-02T04:36:40Z · T-24 · dispatching pm-orchestrator · slug=operator-obligation-home · mode=full · from entropy EP-002

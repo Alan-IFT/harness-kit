@@ -65,7 +65,7 @@ If any of 1-3 is missing, the skill asks the user before running.
 ```
 docs/features/<task-slug>/
   goal_state.json          (the live state during the loop)
-  04_DEVELOPMENT.md        (accumulated dev log, one section per iteration)
+  04_DEVELOPMENT.md        (current-state contract; iteration history lives in goal_state.json + PM_LOG.md)
   06_TEST_REPORT.md        (final QA with adversarial tests)
   07_DELIVERY.md           (verdict + final measurement)
   PM_LOG.md

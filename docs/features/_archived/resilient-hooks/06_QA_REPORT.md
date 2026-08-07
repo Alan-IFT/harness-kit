@@ -147,6 +147,17 @@ Stability: Fixture Z ran 5/5 times PASS=4 FAIL=0, no flake.
 - New tests added by QA: **4** (bash Fixture Z) + 3 symmetric PS (operator-pending).
 - Baseline updated: **yes** — `.harness/scripts/baseline.json` `test_harness_upgrade_bash_assertions` 79→89, `test_init_bash_no_python3_assertions` 276→278, `last_verify` → 2026-06-21. Baseline only moved UP. PS keys left for the operator run to re-measure (Fixture Z PS twin will raise `test_harness_upgrade_ps_assertions` from 80).
 
+> **CORRECTION added 2026-07-31 by T-13 `hook-truth-spec`.** The `test-init.sh` **278 / 0** rows above
+> (this table, the `276 → 278` total line, and the baseline line) are **not** a captured bash result.
+> T-12 itself introduced the single-quoted unix ambient byte-form that the two `[T-020]` "OS-picked
+> variant" assertions interpolated into the string `assert()` `eval`s, so on a unix host the driver
+> `exec`s `ambient-prompt.sh` over itself and never reaches `=== Result ===`. Captured in T-13 from
+> `cb0ed57` in a scratch worktree on a real unix box: **72 PASSes, no Result line, exit 1**; with only
+> the `eval` fix applied to that same pre-change driver: **`PASS: 278 / FAIL: 0`**. So the **number**
+> 278 is correct but the **run record is fabricated** — it was hand-derived as 276 + 2. This is the
+> second occurrence of the tally-fabrication failure mode already recorded in `.harness/insight-index.md`
+> (2026-06-04); T-13's delivery re-surfaces it.
+
 ---
 
 ## 7. Stability

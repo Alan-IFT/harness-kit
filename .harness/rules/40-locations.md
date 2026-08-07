@@ -14,10 +14,12 @@
 | Supervisor skill (manual invocation, v0.17+) | `skills/harness-supervise/SKILL.md` |
 | Anti-entropy sweep skill (v0.41+) + its scan reference | `skills/harness-deflate/SKILL.md` + `skills/harness-deflate/references/entropy-scan.md` |
 | Entropy-watch cadence pair (shared remind-if-due, F.1 member) | `.harness/scripts/entropy-cadence.{ps1,sh}` (state: gitignored `.harness/entropy-watch.state`) |
+| Release-gating operator obligations (the standing list of steps a human must run on a host the agents cannot reach; append here, never into the pin file) | `.harness/operator-obligations.md` |
 | Project repo navigation | `docs/dev-map.md` |
 | Total verification | `.harness/scripts/verify_all.{ps1,sh}` |
 | Binding sync (`.harness/agents/` partition `dev-*` + `.harness/skills/` → `.claude/`) | `.harness/scripts/harness-sync.{ps1,sh}` |
 | Repo-self sync (`templates/` script pairs → `.harness/scripts/`; no agent mirror since v0.30) | `.harness/scripts/sync-self.{ps1,sh}` |
+| Hook wiring spec — `(hook tool × target OS) → command byte-form` + fail-open/fail-closed semantics + event + matcher (v0.45+, F.1 member) | `.harness/scripts/hook-spec.{ps1,sh}` (distributed from `templates/common/`; consumed by `install-hooks`) |
 | Init regression | `.harness/scripts/test-init.{ps1,sh}` |
 | Supervisor regression (v0.17+) | `.harness/scripts/test-supervisor.{ps1,sh}` |
 | Architecture overview (HTML) | `architecture.html` |
@@ -38,7 +40,7 @@
 - AI-GUIDE.md ↔ `.harness/rules/*.md` indexed both directions (no drift)
 - Project rules / docs / evals present
 - Script pairs (.ps1 + .sh) for verify_all / harness-sync / sync-self / test-init / test-real-project
-- Guard-rm scripts + `.claude/settings.json` PreToolUse wiring (F.2, v0.15+; FAIL if missing)
+- Guard-rm script pair (repo + distributed template) + the settings template's guard wiring (F.2, v0.15+; FAIL if missing; reads no settings file — machine hook state is reported by `/harness-status`)
 - README and CHANGELOG reference all skills
 - Version stamps consistent across `plugin.json` / `marketplace.json` / both README badges (G.3, v0.14.x+; FAIL on drift)
 - `.harness/intervention.md` not tracked (ephemeral file; v0.13+)

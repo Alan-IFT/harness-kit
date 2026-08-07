@@ -43,18 +43,51 @@ assert() {
 # These literals are the JSON-ESCAPED bytes (inner " as \") so the exact-string
 # `grep -qF '"command": "<literal>"'` assertions match the substituted .tmpl byte-for-byte
 # (gate C3), AND they equal what settings.json.tmpl carries after the substitute() below.
+# T-13: all EIGHT byte-forms are now defined UNCONDITIONALLY (EXP_WIN_* / EXP_UNIX_*)
+# and the four host-OS *_COMMAND variables are BOUND from the host set below. This is a
+# pure re-binding — the bytes substitute() injects are exactly the bytes it injected
+# before — so every pre-existing exact-string assertion is unaffected. The unconditional
+# definitions exist so the T-13 spec block can lockstep-compare all 8 cells from one run.
+# T-16: these fixtures are now THE ORACLE, not a lockstep hand copy. The four derivation
+# flows query hook-spec.{sh,ps1} instead of carrying byte-forms, so a spec-vs-flow
+# comparison would be circular; the frozen literals below are the only anchor that is
+# independent of every artifact under test. Deliberate non-retirement — see
+# .harness/rejected-decisions.md (hook-byteform-test-literal-retirement).
+EXP_WIN_SYNC='pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/harness-sync.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/harness-sync.ps1 }; exit 0\"'
+EXP_WIN_GUARD='pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR; & pwsh -NoProfile -File .harness/scripts/guard-rm.ps1\"'
+EXP_WIN_AMBIENT_PROMPT='pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/ambient-prompt.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/ambient-prompt.ps1 }; exit 0\"'
+EXP_WIN_AMBIENT_RESET='pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/ambient-reset.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/ambient-reset.ps1 }; exit 0\"'
+EXP_UNIX_SYNC="sh -c 'cd \\\"\$CLAUDE_PROJECT_DIR\\\" 2>/dev/null && [ -f .harness/scripts/harness-sync.sh ] && exec bash .harness/scripts/harness-sync.sh || exit 0'"
+EXP_UNIX_GUARD="sh -c 'cd \\\"\$CLAUDE_PROJECT_DIR\\\" 2>/dev/null && bash .harness/scripts/guard-rm.sh'"
+EXP_UNIX_AMBIENT_PROMPT="sh -c 'cd \\\"\$CLAUDE_PROJECT_DIR\\\" 2>/dev/null && [ -f .harness/scripts/ambient-prompt.sh ] && exec bash .harness/scripts/ambient-prompt.sh || exit 0'"
+EXP_UNIX_AMBIENT_RESET="sh -c 'cd \\\"\$CLAUDE_PROJECT_DIR\\\" 2>/dev/null && [ -f .harness/scripts/ambient-reset.sh ] && exec bash .harness/scripts/ambient-reset.sh || exit 0'"
+
+# hs_expected <tool> <os> — the hand-copied fixture for one (tool, OS) cell.
+hs_expected() {
+    case "$2/$1" in
+        windows/harness-sync)   printf '%s' "$EXP_WIN_SYNC" ;;
+        windows/guard-rm)       printf '%s' "$EXP_WIN_GUARD" ;;
+        windows/ambient-prompt) printf '%s' "$EXP_WIN_AMBIENT_PROMPT" ;;
+        windows/ambient-reset)  printf '%s' "$EXP_WIN_AMBIENT_RESET" ;;
+        unix/harness-sync)      printf '%s' "$EXP_UNIX_SYNC" ;;
+        unix/guard-rm)          printf '%s' "$EXP_UNIX_GUARD" ;;
+        unix/ambient-prompt)    printf '%s' "$EXP_UNIX_AMBIENT_PROMPT" ;;
+        unix/ambient-reset)     printf '%s' "$EXP_UNIX_AMBIENT_RESET" ;;
+    esac
+}
+
 case "${OSTYPE:-}" in
     msys*|cygwin*|win32)
-        SYNC_COMMAND='pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/harness-sync.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/harness-sync.ps1 }; exit 0\"'
-        GUARD_COMMAND='pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR; & pwsh -NoProfile -File .harness/scripts/guard-rm.ps1\"'
-        AMBIENT_PROMPT_COMMAND='pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/ambient-prompt.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/ambient-prompt.ps1 }; exit 0\"'
-        AMBIENT_RESET_COMMAND='pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/ambient-reset.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/ambient-reset.ps1 }; exit 0\"'
+        SYNC_COMMAND="$EXP_WIN_SYNC"
+        GUARD_COMMAND="$EXP_WIN_GUARD"
+        AMBIENT_PROMPT_COMMAND="$EXP_WIN_AMBIENT_PROMPT"
+        AMBIENT_RESET_COMMAND="$EXP_WIN_AMBIENT_RESET"
         ;;
     *)
-        SYNC_COMMAND="sh -c 'cd \\\"\$CLAUDE_PROJECT_DIR\\\" 2>/dev/null && [ -f .harness/scripts/harness-sync.sh ] && exec bash .harness/scripts/harness-sync.sh || exit 0'"
-        GUARD_COMMAND="sh -c 'cd \\\"\$CLAUDE_PROJECT_DIR\\\" 2>/dev/null && bash .harness/scripts/guard-rm.sh'"
-        AMBIENT_PROMPT_COMMAND="sh -c 'cd \\\"\$CLAUDE_PROJECT_DIR\\\" 2>/dev/null && [ -f .harness/scripts/ambient-prompt.sh ] && exec bash .harness/scripts/ambient-prompt.sh || exit 0'"
-        AMBIENT_RESET_COMMAND="sh -c 'cd \\\"\$CLAUDE_PROJECT_DIR\\\" 2>/dev/null && [ -f .harness/scripts/ambient-reset.sh ] && exec bash .harness/scripts/ambient-reset.sh || exit 0'"
+        SYNC_COMMAND="$EXP_UNIX_SYNC"
+        GUARD_COMMAND="$EXP_UNIX_GUARD"
+        AMBIENT_PROMPT_COMMAND="$EXP_UNIX_AMBIENT_PROMPT"
+        AMBIENT_RESET_COMMAND="$EXP_UNIX_AMBIENT_RESET"
         ;;
 esac
 
@@ -320,10 +353,22 @@ assert 'guard-rm' in d['hooks']['PreToolUse'][0]['hooks'][0]['command']
         | sort -u)
     assert "[T-020] every settings hook command path exists on disk (AC-5)" "[[ -z '$t20_viol' ]]"
     [[ -n "$t20_viol" ]] && echo "    dangling:$t20_viol" >&2
-    assert "[T-020] ambient-prompt command is the OS-picked variant" \
-        "grep -qF '\"command\": \"$AMBIENT_PROMPT_COMMAND\"' '$tmp/.claude/settings.json'"
-    assert "[T-020] ambient-reset command is the OS-picked variant" \
-        "grep -qF '\"command\": \"$AMBIENT_RESET_COMMAND\"' '$tmp/.claude/settings.json'"
+    # DEFECT FIX (found while restructuring the fixtures; pre-existing at cb0ed57):
+    # these two conditions used to interpolate the *_COMMAND value straight into the
+    # string that assert() `eval`s. On a unix host that value contains SINGLE QUOTES
+    # (`sh -c 'cd ... && exec bash ... || exit 0'`), so the embedded quotes closed the
+    # eval's own quoting and the driver ran `exec bash .harness/scripts/ambient-prompt.sh`
+    # ON ITSELF — silently replacing the test process mid-run, so every assertion after
+    # this line (including the whole zh block) never executed on Linux/macOS. Invisible
+    # on MSYS, where the OS-picked value is the pwsh form and carries no single quote.
+    # Fix: run grep directly and assert on the resulting flag. WHAT is asserted is
+    # unchanged (the substituted value composed into settings.json byte-for-byte).
+    t20_amb_ok=0
+    grep -qF "\"command\": \"$AMBIENT_PROMPT_COMMAND\"" "$tmp/.claude/settings.json" && t20_amb_ok=1
+    assert "[T-020] ambient-prompt command is the OS-picked variant" "[[ $t20_amb_ok == 1 ]]"
+    t20_amb_ok=0
+    grep -qF "\"command\": \"$AMBIENT_RESET_COMMAND\"" "$tmp/.claude/settings.json" && t20_amb_ok=1
+    assert "[T-020] ambient-reset command is the OS-picked variant" "[[ $t20_amb_ok == 1 ]]"
 
     # === T-020: generated verify_all carries the v0.30-correct rows (FR-D3/FR-D4) ===
     case "$project_type" in
@@ -705,6 +750,311 @@ test_zh_overlay() {
     [[ "$KEEP" == true ]] && echo "Temp dir kept: $tmp" || rm -rf "$tmp"
 }
 
+# === T-13: the hook wiring spec (AC-1..AC-4, FR-1..FR-7, NFR-2) ====================
+# ORACLE (re-anchored by T-16): the FROZEN EXP_* fixture table at the top of this file.
+# Until T-16 the oracle was the LIVE `resilient_cmd` helper extracted from
+# upgrade-project.sh. T-16 retired that helper: the four derivation flows now QUERY
+# hook-spec.sh, so comparing the spec against a flow would compare the spec with itself
+# — green, and measuring nothing. A test must not derive its expectation from the
+# artifact under test, so Group A now compares the spec against the frozen literals,
+# which are the ONLY independent anchor left for all four flows.
+# SCOPE NOTE: the frozen literals in this file and in test-real-project.{sh,ps1} are a
+# DELIBERATE non-retirement, recorded in .harness/rejected-decisions.md
+# (hook-byteform-test-literal-retirement) and in hook-spec.{sh,ps1}'s header. Standing
+# END-TO-END coverage of a flow-EMITTED byte string lives in test-harness-upgrade
+# (sh:421 vs t20_pick) for one (tool, OS, flow) cell; the rest is residual RES-1.
+test_hook_spec() {
+    echo ""
+    echo "=== Testing: hook wiring spec (T-13) ==="
+    local spec="$repo_root/.harness/scripts/hook-spec.sh"
+    local tool os ext a rc ok expected extracted out probe f nhit
+
+    assert "[T-13] hook-spec.sh present at .harness/scripts/" "[[ -f '$spec' ]]"
+
+    # --- MANDATORY anti-vacuity gate on the ORACLE ITSELF: an empty / broken fixture
+    #     must fail THIS named assertion loudly, never silently degrade the 8 below.
+    probe="$(hs_expected guard-rm windows)"
+    ok=0; [[ -n "$probe" && "$probe" == *"guard-rm.ps1"* ]] && ok=1
+    assert "[T-16][oracle] ANTI-VACUITY: the frozen EXP_* fixture (guard-rm, windows) is a non-empty string naming guard-rm.ps1" "[[ $ok == 1 ]]"
+
+    # --- Group A (INDEPENDENT of every flow): spec == the FROZEN fixture, all 8 cells --
+    for os in windows unix; do
+        for tool in harness-sync guard-rm ambient-prompt ambient-reset; do
+            a="$(bash "$spec" command "$tool" "$os" 2>/dev/null)"; rc=$?
+            expected="$(hs_expected "$tool" "$os")"
+            ok=0; [[ $rc -eq 0 && -n "$a" && "$a" == "$expected" ]] && ok=1
+            assert "[T-16][A] command $tool $os is byte-equal to the FROZEN test-init fixture (independent of every flow)" "[[ $ok == 1 ]]"
+        done
+    done
+
+    # --- Group A' (T-16): two STANDING 4-row scans over the four derivation-flow files.
+    #     Scan 1 is the AC-3 regression: no hook-command byte-form idiom may reappear on
+    #     a NON-COMMENT line of a flow. Scan 2 is the &-hazard regression (insight
+    #     2026-06-21): no pattern-substitution operator may touch a spec-derived value —
+    #     ${var//pat/repl} and its ${arr[i]//}, ${!ref//}, ${var/pat/repl} siblings in
+    #     bash (bash 5.2's patsub_replacement expands an unescaped `&` in the REPLACEMENT
+    #     to the matched text, and the byte-forms contain a literal `&`), and -replace in
+    #     PowerShell (whose replacement half interprets $& / $1). Comment lines are
+    #     excluded: a comment can neither emit a command nor perform a substitution, and
+    #     these flows legitimately DOCUMENT both idioms.
+    #     PRE-T-16 BASELINE, measured: scan 1 was RED on all four files (16 non-comment
+    #     hits, inside the resilient_cmd / Get-ResilientCmd bodies T-16 deleted); scan 2
+    #     was already green (2 hits, both comment lines). Green-after-red is the point.
+    #     A MISSING flow file scores "missing", never 0 — otherwise deleting a flow would
+    #     make both of its scan rows vacuously green.
+    for f in upgrade-project.sh upgrade-project.ps1 migrate-scripts-layout.sh migrate-scripts-layout.ps1; do
+        nhit=missing
+        [[ -f "$repo_root/.harness/scripts/$f" ]] && nhit="$(grep -nE 'Set-Location -LiteralPath|CLAUDE_PROJECT_DIR' "$repo_root/.harness/scripts/$f" \
+                | grep -vE '^[0-9]+:[[:space:]]*#' | wc -l | tr -d ' ')"
+        ok=0; [[ "$nhit" == "0" ]] && ok=1
+        assert "[T-16][A'] $f carries no hook-command byte-form idiom outside comments (got $nhit)" "[[ $ok == 1 ]]"
+    done
+    for f in upgrade-project.sh upgrade-project.ps1 migrate-scripts-layout.sh migrate-scripts-layout.ps1; do
+        nhit=missing
+        if [[ -f "$repo_root/.harness/scripts/$f" ]]; then
+            case "$f" in
+                *.sh)  nhit="$(grep -nE '\$\{[!#]?[A-Za-z_][A-Za-z0-9_]*(\[[^]]*\])?/' "$repo_root/.harness/scripts/$f" \
+                               | grep -vE '^[0-9]+:[[:space:]]*#' | wc -l | tr -d ' ')" ;;
+                *)     nhit="$(grep -n -- '-replace' "$repo_root/.harness/scripts/$f" \
+                               | grep -vE '^[0-9]+:[[:space:]]*#' | wc -l | tr -d ' ')" ;;
+            esac
+        fi
+        ok=0; [[ "$nhit" == "0" ]] && ok=1
+        assert "[T-16][A'] $f uses no pattern-substitution operator (& / patsub hazard) (got $nhit)" "[[ $ok == 1 ]]"
+    done
+
+    # --- Group B: failure semantics + the guard is fail-CLOSED on real output ---------
+    for tool in harness-sync guard-rm ambient-prompt ambient-reset; do
+        expected="fail-open"; [[ "$tool" == "guard-rm" ]] && expected="fail-closed"
+        a="$(bash "$spec" semantics "$tool" 2>/dev/null)"
+        ok=0; [[ "$a" == "$expected" ]] && ok=1
+        assert "[T-13][B] semantics $tool == $expected" "[[ $ok == 1 ]]"
+    done
+    for os in windows unix; do
+        a="$(bash "$spec" command guard-rm "$os" 2>/dev/null)"
+        ok=0; [[ -n "$a" && "$a" != *"|| exit 0"* && "$a" != *"exit 0"* ]] && ok=1
+        assert "[T-13][B] guard-rm command ($os) carries NO '|| exit 0' and NO 'exit 0' fallback (fail-CLOSED, NFR-2)" "[[ $ok == 1 ]]"
+    done
+
+    # --- Group C: the existing congruence ERE still extracts the bare script path -----
+    for os in windows unix; do
+        ext="sh"; [[ "$os" == "windows" ]] && ext="ps1"
+        for tool in harness-sync guard-rm ambient-prompt ambient-reset; do
+            a="$(bash "$spec" command "$tool" "$os" 2>/dev/null)"
+            extracted="$(printf '%s\n' "$a" \
+                | grep -oE "(^|[\"' =])(\.harness/)?scripts/[A-Za-z0-9._-]+\.(ps1|sh)" \
+                | sed -E "s|^[\"' =]||" | sort -u)"
+            ok=0; [[ "$extracted" == *".harness/scripts/$tool.$ext"* ]] && ok=1
+            assert "[T-13][C] congruence ERE extracts .harness/scripts/$tool.$ext from the $os command" "[[ $ok == 1 ]]"
+        done
+    done
+
+    # --- Group D: event / matcher / tool list (the installer's contract) --------------
+    for tool in harness-sync guard-rm ambient-prompt ambient-reset; do
+        case "$tool" in
+            harness-sync)   expected="Stop" ;;
+            guard-rm)       expected="PreToolUse" ;;
+            ambient-prompt) expected="UserPromptSubmit" ;;
+            ambient-reset)  expected="SessionStart" ;;
+        esac
+        a="$(bash "$spec" event "$tool" 2>/dev/null)"
+        ok=0; [[ "$a" == "$expected" ]] && ok=1
+        assert "[T-13][D] event $tool == $expected" "[[ $ok == 1 ]]"
+        expected="none"; [[ "$tool" == "guard-rm" ]] && expected="Bash"
+        a="$(bash "$spec" matcher "$tool" 2>/dev/null)"
+        ok=0; [[ "$a" == "$expected" ]] && ok=1
+        assert "[T-13][D] matcher $tool == $expected (non-empty sentinel for 'no matcher')" "[[ $ok == 1 ]]"
+    done
+    a="$(bash "$spec" tools 2>/dev/null | tr '\n' ' ')"
+    ok=0; [[ "$a" == "harness-sync guard-rm ambient-prompt ambient-reset " ]] && ok=1
+    assert "[T-13][D] tools emits the 4 ids in the fixed order" "[[ $ok == 1 ]]"
+    a="$(bash "$spec" hostos 2>/dev/null)"
+    ok=0; [[ "$a" == "windows" || "$a" == "unix" ]] && ok=1
+    assert "[T-13][D] hostos answers windows|unix (no third variant)" "[[ $ok == 1 ]]"
+
+    # --- Group E: totality — bad input yields EMPTY stdout and a non-zero exit --------
+    out="$(bash "$spec" command bogus-tool unix 2>/dev/null)"; rc=$?
+    ok=0; [[ $rc -ne 0 && -z "$out" ]] && ok=1
+    assert "[T-13][E] unknown tool -> non-zero exit with EMPTY stdout (FR-7/B-1)" "[[ $ok == 1 ]]"
+    out="$(bash "$spec" command guard-rm dos 2>/dev/null)"; rc=$?
+    ok=0; [[ $rc -ne 0 && -z "$out" ]] && ok=1
+    assert "[T-13][E] unknown os -> non-zero exit with EMPTY stdout (FR-7/B-1)" "[[ $ok == 1 ]]"
+    out="$(bash "$spec" not-a-query 2>/dev/null)"; rc=$?
+    ok=0; [[ $rc -ne 0 && -z "$out" ]] && ok=1
+    assert "[T-13][E] unknown query -> non-zero exit with EMPTY stdout (FR-7/B-1)" "[[ $ok == 1 ]]"
+}
+
+# === T-13: the installer bootstrap (AC-5, AC-6, AC-7, FR-8..FR-12, B-2/B-3/B-8/B-9) ==
+# Own temp tree; `.git` is a bare mkdir — the installer only tests for the directory,
+# so no git binary is needed. No python3 dependency anywhere in this block.
+test_install_bootstrap() {
+    echo ""
+    echo "=== Testing: install-hooks machine-local bootstrap (T-13) ==="
+    local tmp; tmp=$(mktemp -d -t harness-test-install-XXXXXX)
+    copy_layer "$template_root/common"  "$tmp" "install-test" "generic" "Rust CLI tool"
+    copy_layer "$template_root/generic" "$tmp" "install-test" "generic" "Rust CLI tool"
+    mkdir -p "$tmp/.git"
+
+    local inst="$tmp/.harness/scripts/install-hooks.sh"
+    local localset="$tmp/.claude/settings.local.json"
+    local rc ok n last1 last2 tool cmd
+
+    assert "[T-13][install] installer present after init" "[[ -f '$inst' ]]"
+    assert "[T-13][install] hook-spec.sh distributed into the generated project (FR-6)" \
+        "[[ -f '$tmp/.harness/scripts/hook-spec.sh' && -f '$tmp/.harness/scripts/hook-spec.ps1' ]]"
+
+    # (1) committed settings DECLARES hooks -> no machine-local file is created (AC-7)
+    ( cd "$tmp" && bash "$inst" >/dev/null 2>&1 ); rc=$?
+    ok=0; [[ $rc -eq 0 && ! -f "$localset" ]] && ok=1
+    assert "[T-13][install] project whose committed settings has hooks: exit 0 and NO local file (AC-7/FR-10)" "[[ $ok == 1 ]]"
+    assert "[T-13][install] pre-existing pre-commit hook behavior preserved (FR-13)" "[[ -f '$tmp/.git/hooks/pre-commit' ]]"
+
+    # (2) empty the committed hooks object -> the bootstrap path (AC-5, FR-11, B-13)
+    awk '
+        /^  "hooks": \{$/ { print "  \"hooks\": {}"; skip = 1; next }
+        skip && /^  \},?$/ { skip = 0; next }
+        skip { next }
+        { print }
+    ' "$tmp/.claude/settings.json" > "$tmp/settings.emptied" && mv "$tmp/settings.emptied" "$tmp/.claude/settings.json"
+    ok=0; grep -qF '"hooks": {}' "$tmp/.claude/settings.json" && ok=1
+    assert "[T-13][install] fixture precondition: committed settings now declares an empty hooks object" "[[ $ok == 1 ]]"
+
+    ( cd "$tmp" && bash "$inst" > "$tmp/bootstrap.out" 2>&1 ); rc=$?
+    ok=0; [[ $rc -eq 0 && -f "$localset" ]] && ok=1
+    assert "[T-13][install] bootstrap created .claude/settings.local.json, exit 0 (AC-5/FR-8)" "[[ $ok == 1 ]]"
+
+    assert "[T-13][install] generated file carries the canonical .json \$schema (FR-11)" \
+        "grep -qF '\"\$schema\": \"https://json.schemastore.org/claude-code-settings.json\"' '$localset'"
+    assert "[T-13][install] generated file wires PreToolUse with matcher Bash (FR-11)" \
+        "grep -qF '\"PreToolUse\"' '$localset' && grep -qF '\"matcher\": \"Bash\"' '$localset'"
+    assert "[T-13][install] generated file wires all four real hook event names (FR-11)" \
+        "grep -qF '\"Stop\"' '$localset' && grep -qF '\"UserPromptSubmit\"' '$localset' && grep -qF '\"SessionStart\"' '$localset'"
+    assert "[T-13][install] no underscore doc key inside the hooks object (root only — FR-11)" \
+        "! grep -qE '^ {4}\"_' '$localset'"
+    # Every host-OS command byte-form landed verbatim (proves the spec is the origin).
+    for tool in harness-sync guard-rm ambient-prompt ambient-reset; do
+        cmd="$(bash "$tmp/.harness/scripts/hook-spec.sh" command "$tool" "$(bash "$tmp/.harness/scripts/hook-spec.sh" hostos)")"
+        ok=0; [[ -n "$cmd" ]] && grep -qF -- "$cmd" "$localset" && ok=1
+        assert "[T-13][install] generated file carries the spec's $tool command verbatim (AC-5)" "[[ $ok == 1 ]]"
+    done
+    # Byte hygiene: no BOM, LF only, exactly one trailing newline (B-13/AC-10 half).
+    ok=0; [[ "$(head -c 1 "$localset")" == "{" ]] && ok=1
+    assert "[T-13][install] generated file is BOM-free (first byte is '{')" "[[ $ok == 1 ]]"
+    ok=0; grep -q $'\r' "$localset" || ok=1
+    assert "[T-13][install] generated file has LF endings only (no CR)" "[[ $ok == 1 ]]"
+    last1="$(tail -c 1 "$localset" | od -An -tx1 | tr -d ' \n')"
+    last2="$(tail -c 2 "$localset" | od -An -tx1 | tr -d ' \n')"
+    ok=0; [[ "$last1" == "0a" && "$last2" != "0a0a" ]] && ok=1
+    assert "[T-13][install] generated file ends with EXACTLY one trailing newline" "[[ $ok == 1 ]]"
+    # FR-12 report: created path + removal command + machine-local/gitignore advisory.
+    assert "[T-13][install] report names the created path (FR-12)" "grep -qF 'settings.local.json' '$tmp/bootstrap.out'"
+    assert "[T-13][install] report gives the one-line removal command in this shell's form (FR-12)" \
+        "grep -qF 'Remove: rm ' '$tmp/bootstrap.out'"
+    assert "[T-13][install] report carries the machine-local / .gitignore advisory (FR-12/AC-14)" \
+        "grep -qF 'machine-local' '$tmp/bootstrap.out' && grep -qF '.gitignore' '$tmp/bootstrap.out'"
+    assert "[T-13][install] report calls out the fail-closed guard hook (FR-12)" \
+        "grep -qF 'fail-closed' '$tmp/bootstrap.out'"
+    # B-15: no .gitignore is created or edited on the bootstrap path.
+    assert "[T-13][install] installer created no .gitignore (B-15/NFR-4c)" "[[ ! -f '$tmp/.gitignore' ]]"
+
+    # (3) idempotence: byte-identical, no backup, no temp sibling (AC-6, B-9)
+    cp "$localset" "$tmp/snapshot.json"
+    ( cd "$tmp" && bash "$inst" > "$tmp/second.out" 2>&1 ); rc=$?
+    ok=0; [[ $rc -eq 0 ]] && cmp -s "$tmp/snapshot.json" "$localset" && ok=1
+    assert "[T-13][install] second run leaves the file BYTE-IDENTICAL, exit 0 (AC-6/FR-9/B-9)" "[[ $ok == 1 ]]"
+    assert "[T-13][install] second run reports it took no action (FR-9)" \
+        "grep -qF 'left byte-untouched' '$tmp/second.out'"
+    n=$(find "$tmp/.claude" -maxdepth 1 -name 'settings.local.json.*' | wc -l)
+    ok=0; [[ "$n" == "0" ]] && ok=1
+    assert "[T-13][install] no settings.local.json.* temp/backup sibling survives (AC-6)" "[[ $ok == 1 ]]"
+    n=$(find "$tmp/.claude" -maxdepth 1 -name '*.bak*' | wc -l)
+    ok=0; [[ "$n" == "0" ]] && ok=1
+    assert "[T-13][install] no *.bak* file anywhere under .claude/ (AC-6)" "[[ $ok == 1 ]]"
+
+    # (4) B-7: an empty-hooks local file is the persistent opt-out — never overwritten.
+    printf '{\n  "hooks": {}\n}\n' > "$localset"
+    cp "$localset" "$tmp/optout.json"
+    ( cd "$tmp" && bash "$inst" >/dev/null 2>&1 ); rc=$?
+    ok=0; [[ $rc -eq 0 ]] && cmp -s "$tmp/optout.json" "$localset" && ok=1
+    assert "[T-13][install] empty-hooks local file (B-7 opt-out) is left BYTE-UNTOUCHED" "[[ $ok == 1 ]]"
+
+    # (5) B-5: an unparseable COMMITTED settings file changes nothing at all, exit 3.
+    rm -f "$localset" "$tmp/.git/hooks/pre-commit"
+    cp "$tmp/.claude/settings.json" "$tmp/settings.good"
+    printf 'not json' > "$tmp/.claude/settings.json"
+    ( cd "$tmp" && bash "$inst" >/dev/null 2>&1 ); rc=$?
+    ok=0; [[ $rc -eq 3 && ! -f "$localset" && ! -f "$tmp/.git/hooks/pre-commit" ]] && ok=1
+    assert "[T-13][install] unparseable committed settings -> exit 3, NOTHING written (B-5)" "[[ $ok == 1 ]]"
+    mv "$tmp/settings.good" "$tmp/.claude/settings.json"
+
+    # (6) B-8: an unwritable .claude/ leaves the target ABSENT with a non-zero exit.
+    #     Skipped with a notice where the platform does not honor the mode (e.g. root).
+    chmod a-w "$tmp/.claude" 2>/dev/null
+    if ( : > "$tmp/.claude/.wtest" ) 2>/dev/null; then
+        rm -f "$tmp/.claude/.wtest"
+        echo "  SKIP  [T-13][install] read-only .claude/ probe — platform does not honor the mode here"
+    else
+        ( cd "$tmp" && bash "$inst" >/dev/null 2>&1 ); rc=$?
+        ok=0; [[ $rc -ne 0 && ! -f "$localset" ]] && ok=1
+        assert "[T-13][install] unwritable .claude/ -> non-zero exit, target left ABSENT (B-8)" "[[ $ok == 1 ]]"
+    fi
+    chmod u+w "$tmp/.claude" 2>/dev/null
+
+    # (7) FC-4 all-four-or-nothing: a spec that lists FEWER than four tool ids is a
+    #     partial wiring - possibly one with no destructive-command guard at all - and
+    #     must be refused outright: exit 4, nothing written. The stub delegates every
+    #     query except `tools` to the real spec, so only the arity differs.
+    rm -f "$localset"
+    mv "$tmp/.harness/scripts/hook-spec.sh" "$tmp/hook-spec.good"
+    {
+        echo '#!/usr/bin/env bash'
+        echo "hs_good=\"$tmp/hook-spec.good\""
+        echo 'if [ "${1:-}" = "tools" ]; then bash "$hs_good" tools | head -n 3; exit 0; fi'
+        echo 'exec bash "$hs_good" "$@"'
+    } > "$tmp/.harness/scripts/hook-spec.sh"
+    #     The DIAGNOSTIC is matched too, not just the exit code: exit 4 alone is
+    #     vacuous - a silently broken stub (wrong hs_good path, missing interpreter)
+    #     also exits 4, via spec_fail "tools", without ever reaching the arity branch,
+    #     and the row would stay green while proving nothing. Matching
+    #     "expected 4 ids, got 3" pins the row to that branch by construction.
+    ( cd "$tmp" && bash "$inst" > "$tmp/fc4.out" 2>&1 ); rc=$?
+    ok=0; [[ $rc -eq 4 && ! -f "$localset" ]] && grep -qF -- 'expected 4 ids, got 3' "$tmp/fc4.out" && ok=1
+    assert "[T-13][install] spec listing fewer than 4 tool ids -> exit 4, NOTHING written (FC-4)" "[[ $ok == 1 ]]"
+    mv "$tmp/hook-spec.good" "$tmp/.harness/scripts/hook-spec.sh"
+
+    # (8) FC-4, SECOND axis: four ids that collapse to fewer than four DISTINCT hook
+    #     EVENTS are a partial wiring too - one event on disk instead of four, plus
+    #     duplicate JSON keys - and must be refused BEFORE anything is written:
+    #     exit 4, target ABSENT. This row is the anti-revert coverage for the
+    #     distinct-events gate: delete that gate and this same spec sails through the
+    #     `== 4` arity check, the installer exits 0 with the file PRESENT, and the row
+    #     goes red. The stub answers `tools` with the guard id four times and delegates
+    #     every other query to the real spec, so ONLY the event multiplicity differs.
+    rm -f "$localset"
+    mv "$tmp/.harness/scripts/hook-spec.sh" "$tmp/hook-spec.good"
+    {
+        echo '#!/usr/bin/env bash'
+        echo "hs_good=\"$tmp/hook-spec.good\""
+        echo 'if [ "${1:-}" = "tools" ]; then printf "%s\n" guard-rm guard-rm guard-rm guard-rm; exit 0; fi'
+        echo 'exec bash "$hs_good" "$@"'
+    } > "$tmp/.harness/scripts/hook-spec.sh"
+    #     The DISTINCT-gate diagnostic is matched too, for exactly the reason row (7)
+    #     matches the arity one: any exit 4 would otherwise satisfy this row, so a
+    #     silently broken stub would keep it green while proving nothing.
+    ( cd "$tmp" && bash "$inst" > "$tmp/fc4d.out" 2>&1 ); rc=$?
+    ok=0; [[ $rc -eq 4 && ! -f "$localset" ]] && grep -qF -- 'expected 4 DISTINCT hook events, got 1' "$tmp/fc4d.out" && ok=1
+    assert "[T-13][install] spec answering 4 ids that collapse to 1 event -> exit 4, NOTHING written (FC-4)" "[[ $ok == 1 ]]"
+    mv "$tmp/hook-spec.good" "$tmp/.harness/scripts/hook-spec.sh"
+
+    # (9) B-14: not a git repository -> exit 1, unchanged pre-existing behavior (FR-13).
+    rm -rf "$tmp/.git"
+    ( cd "$tmp" && bash "$inst" >/dev/null 2>&1 ); rc=$?
+    ok=0; [[ $rc -eq 1 ]] && ok=1
+    assert "[T-13][install] not a git repository -> exit 1 (FR-13/B-14, unchanged)" "[[ $ok == 1 ]]"
+
+    [[ "$KEEP" == true ]] && echo "Temp dir kept: $tmp" || rm -rf "$tmp"
+}
+
 echo "=== test-init: simulating /harness-init flow (v0.2) ==="
 echo "Repo: $repo_root"
 
@@ -722,6 +1072,12 @@ if [[ "$TYPE" == "all" || "$TYPE" == "both" ]]; then
 fi
 if [[ "$TYPE" == "all" || "$TYPE" == "both" ]]; then
     test_zh_overlay
+fi
+# T-13: the spec block runs UNCONDITIONALLY (it is a pure CLI probe, no fixture tree);
+# the installer bootstrap block is fixture-backed and gated like test_migrate.
+test_hook_spec
+if [[ "$TYPE" == "all" || "$TYPE" == "both" ]]; then
+    test_install_bootstrap
 fi
 
 # BUG-2 regression (v0.16.0 rollback round 2): verify the broadened D.2/D.3
