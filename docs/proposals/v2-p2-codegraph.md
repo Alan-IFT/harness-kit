@@ -65,6 +65,35 @@ at a cost of one stdio subprocess and no behaviour change here.
 What it does **not** do is help the agents that develop harness-kit itself, which is what
 the migration brief assumed when it put CodeGraph in the "code structure" slot.
 
+## Update 2026-08-07 — the TypeScript migration closes this loop
+
+The shell-to-TypeScript migration (`v2-ts-migration.md`) was adopted for its own reasons —
+deleting the PowerShell twin and its 27 undischarged operator obligations. Indexability was
+a side effect. Measured after stages 1–3:
+
+| | files | nodes | edges |
+|---|---:|---:|---:|
+| Before (shell only) | 6 | 26 | 39 |
+| After 3 ports | 15 | 196 | 617 |
+| After excluding build output | **7** | **102** | **406** |
+
+All six indexed TypeScript files are real source: the three ports, their two test suites,
+and the vitest config. The 6-file "before" figure was entirely `tests/fixtures/` sample apps.
+
+**`codegraph.json` now excludes the emitted `.harness/scripts/*.js`.** Without it every
+ported symbol appeared twice — once in `src/*.ts`, once in its compiled twin — which is
+worse than useless for a blast-radius query. The config schema is undocumented; the working
+shape is a flat array (`{"exclude": ["…"]}`), not the nested `{"exclude": {"patterns": […]}}`
+form tried first, which parsed without error and silently did nothing.
+
+The C-category questions now answer correctly. `codegraph node isDescendant` returns one
+definition at `src/guard-rm.ts:665` with its callers — including the test file, which is
+reachable information the shell version could never expose.
+
+**So P2's acceptance is no longer blocked on naming an external project.** The gate for it
+is now: as more of the repo moves to TypeScript, does the C-category score rise? That is
+measurable here, against this repo, using the existing control set.
+
 ## Decisions needed
 
 1. **Name a target project in an indexed language** to serve as P2's acceptance bed, or

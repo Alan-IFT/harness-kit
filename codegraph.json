@@ -1,0 +1,3 @@
+{
+  "exclude": [".harness/scripts/*.js", "tests/fixtures/**"]
+}

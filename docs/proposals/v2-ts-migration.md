@@ -137,9 +137,42 @@ The differential is proved sensitive across six subsystems: verb set, lexer redi
 sentinel (`-2` → `-1`), depth bound, carrier set, tilde expansion, and containment. Turning
 `isDescendant` into a constant `true` — a total fail-open — diverges 52 of 62 raw cases.
 
+## Why the remaining stages are worth less than the headline
+
+The 947.6 KB figure overstates what is left to gain. Most of the unported shell is
+scaffolding §9.1 of the migration brief intends to delete:
+
+- `verify_all` — ~25 of its 32 checks verify documentary self-consistency that §9.2 removes
+- `test-harness-upgrade` tests `upgrade-project`, which §9.1 deletes
+- `test-language` tests `language-policy`, which §9.1 deletes
+- `test-supervisor` tests `/harness-supervise`, which §9.1 deletes
+- `test-verify-i6` tests a check the slim rewrite removes
+
+The durable set — the scripts §9.2 explicitly keeps — is `guard-rm`, `hook-spec`,
+`install-hooks` and a slim `verify_all`. **Three of those four are done.** Further porting
+is largely work on code the plan already intends to remove, so the remaining value is in
+the cutover, not in more ports.
+
+## The cutover is a single coordinated change, not a per-stage one
+
+Measured surface: **27 files reference `guard-rm.sh`**, and `hook-spec` is called by 16
+scripts including `verify_all` and `sync-self`. Changing the guard's emitted command
+byte-form ripples into the deliberately-frozen test literals (`hook-byteform-test-literal-retirement`),
+`baseline.json`, the template copies, and the derivation flows in `upgrade-project` and
+`migrate-scripts-layout` — neither of which is ported and both of which still reference `.sh`.
+
+One useful distinction found while scoping it: **deleting `hook-spec`'s shell twins does
+not require changing its output.** Only its callers need to invoke the JS. The emitted bytes
+stay identical, so no frozen literal moves. That makes a narrow cutover possible ahead of
+the broad one, at the cost of touching `F.1`'s pair list, `sync-self`'s mapping, and
+`test-init`'s distribution assertions in both shells.
+
+The live hook wiring lives in `.claude/settings.local.json`, which is the operator's to
+apply — CLAUDE.md's red line is that `.claude/` is proposed, not hand-edited.
+
 ## Open
 
-- CodeGraph will index both `src/*.ts` and the emitted `.harness/scripts/*.js`, producing
-  duplicate symbols. Harmless for now; revisit if the noise matters.
+- ~~CodeGraph indexes both source and build output, duplicating symbols~~ — fixed by
+  `codegraph.json`; see `v2-p2-codegraph.md`.
 - `vitest` is deliberately not a dependency yet. It arrives at stage 4, where it is
   actually used, rather than sitting unused with an unapproved `esbuild` postinstall.
