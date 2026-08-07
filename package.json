@@ -1,0 +1,16 @@
+{
+  "name": "harness-kit",
+  "version": "0.46.0",
+  "private": true,
+  "description": "Build tooling for harness-kit's TypeScript scripts. Not published; the plugin ships the compiled output under .harness/scripts/.",
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "diff-hook-spec": "bash tools/diff-hook-spec.sh"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  }
+}

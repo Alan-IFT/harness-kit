@@ -61,3 +61,6 @@ verification_history.log
 
 # CodeGraph local index (v2 migration, P2)
 .codegraph/
+
+# TypeScript build (v2 migration)
+node_modules/
