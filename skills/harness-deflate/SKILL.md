@@ -2,16 +2,13 @@
 name: harness-deflate
 description: Holistic anti-entropy sweep. Scans the WHOLE codebase (not one task) for
   accumulated structural rot — shallow modules, cross-seam leakage, coupling clusters,
-  deepening candidates (the deep-module vocabulary) — via the read-only supervisor entropy
-  lens, presents each finding with WHERE + a Strong/Worth-exploring/Speculative strength
-  badge, and on your explicit authorization hands the chosen deepening to /harness-goal to
-  refactor it to verify_all green. Machine reminds, you authorize, machine executes — it
-  NEVER refactors without authorization. Use when "clean up the codebase entropy", "what's
-  rotting / where's the ball of mud", "do an anti-entropy sweep", "减熵巡检", "做一次反熵巡检",
-  "整体看看哪里在腐化". NOT /harness-supervise (per-task pipeline-anti-pattern audit, not
-  whole-codebase structure), NOT /harness-goal directly (that's the execute engine this skill
-  drives — use this when you want the sweep+findings first), NOT /harness (a defined feature,
-  not an open-ended deepening).
+  deepening candidates — and presents each finding with WHERE and a strength badge. It
+  NEVER refactors without your explicit authorization; once given, it hands the chosen
+  deepening to /harness-goal. Use when "clean up the codebase entropy", "where's the ball
+  of mud", "do an anti-entropy sweep", "减熵巡检", "整体看看哪里在腐化". NOT
+  /harness-supervise (per-task pipeline audit, not whole-codebase structure), NOT
+  /harness-goal directly (that is the engine this skill drives), NOT /harness (a defined
+  feature, not an open-ended deepening).
 allowed-tools: Read, Glob, Grep, Task
 ---
 

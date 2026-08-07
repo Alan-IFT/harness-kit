@@ -1,17 +1,13 @@
 ---
 name: harness-decision-mode
 description: Switch or set a harness project's decision / escalation MODE — Mode 1 (human
-  decides every judgment call, the safe default), Mode 2 (the AI decides per the project's
-  PRESET rubric and escalates only the red lines), or Mode 3 (the AI decides per YOUR OWN
-  custom rubric). Surgically rewrites ONLY the "Active mode" line of
-  .harness/rules/25-decision-policy.md; on a first switch to Mode 3 it collects your custom
-  decision prompts and writes them into the rubric's Custom section. Non-destructive (clean-git
-  gated, .bak per edited file), idempotent (re-picking the current mode is a clean no-op). Use
-  to change HOW MUCH the AI decides on its own versus asks you first — "switch decision mode",
-  "let the AI decide on its own", "make it ask me first / 人工决策", "切换决策模式",
-  "让 AI 自己拿主意", "改成人工决策", "用我自己的决策规则". NOT for editing the rubric's CONTENT
-  only (edit .harness/decision-rubric.md directly), NOT for output-language (/harness-language),
-  NOT for layout/version upgrades (/harness-upgrade).
+  decides every judgment call), Mode 2 (the AI decides per the PRESET rubric, escalating
+  only the red lines), or Mode 3 (the AI decides per your own custom rubric). Use to change
+  HOW MUCH the AI decides on its own versus asks you first — "switch decision mode", "let
+  the AI decide on its own", "make it ask me first", "切换决策模式", "让 AI 自己拿主意",
+  "改成人工决策", "用我自己的决策规则". NOT for editing the rubric's CONTENT only (edit
+  .harness/decision-rubric.md directly), NOT for output-language (/harness-language), NOT
+  for layout upgrades (/harness-upgrade).
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, TodoWrite
 ---
 

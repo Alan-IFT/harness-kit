@@ -1,19 +1,14 @@
 ---
 name: harness-grill
-description: Relentlessly interview the user ONE question at a time to pin down what they
-  actually want BEFORE any pipeline runs — a pre-pipeline alignment session that walks the
-  design tree, gives a recommended answer for every question, explores the codebase to
-  self-answer instead of asking when the repo already decides it, reads CONTEXT.md for
-  canonical terms when present, and emits an aligned brief to docs/features/<slug>/INPUT.md
-  that /harness, /harness-plan, or the /harness-stream pool then consumes. User-invoked
-  only (you start the session deliberately); it does not write design, code, or findings
-  and does not change the 7-stage pipeline. Use when "grill me on this", "interview me
-  about this plan", "pin down what I actually want before we build", "stress-test my
-  requirement first", "拷问我的需求", "逐条对齐需求", "动手前先把需求问清楚", "先把需求拷问
-  清楚再开干". NOT /harness (requirement already clear enough to ship), NOT /harness-plan
-  (vet an existing design, not discover the requirement), NOT /harness-explore (feasibility
-  "can we even do X?" research) — grill is the "I'm not sure I've said what I actually
-  want yet" front-end that PRECEDES all three.
+description: Interview the user ONE question at a time to pin down what they actually want
+  BEFORE any pipeline runs, giving a recommended answer per question and self-answering
+  from the codebase where the repo already decides it. Emits an aligned brief to
+  docs/features/<slug>/INPUT.md that /harness, /harness-plan or /harness-stream consumes.
+  Writes no design, code or findings. Use when "grill me on this", "interview me about
+  this plan", "stress-test my requirement first", "拷问我的需求", "逐条对齐需求",
+  "动手前先把需求问清楚". NOT /harness (requirement already clear enough to ship), NOT
+  /harness-plan (vet an existing design, not discover the requirement), NOT
+  /harness-explore (feasibility research) — grill PRECEDES all three.
 allowed-tools: Read, Write, Edit, Glob, Grep, AskUserQuestion, TodoWrite
 ---
 
