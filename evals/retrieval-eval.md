@@ -238,8 +238,19 @@ no judge model is involved.
 | **A** | read the whole document — today | 12/12 | 81,899 | — |
 | **B1** | repo-wide search that skips dot-directories | **0/12** | 0 | — |
 | **B2** | the same search, dot-directories included | 12/12 | 50,332 | 1.6× |
-| **B3** | scoped to the memory docs, 2 lines of context | 7/12 | 4,551 | **18.0×** |
-| **B4** | scoped, entry-sized context window | 9/12 | 16,615 | 4.9× |
+| **B3** | scoped to the memory docs, 2 lines of context | 8/12 | 4,550 | 18.0× |
+| **B4** | scoped, entry-sized context window | 10/12 | 16,614 | 4.9× |
+| **B5** | `memory-search` — named stores, whole entries | **11/12** | **4,560** | **18.0×** |
+
+B5 was built after the first four arms measured *why* search failed. Its one remaining miss
+is M3, whose answer lives in `verify_all.sh` rather than in any store — unreachable by
+construction, and the eval set's own mis-categorisation. **On the eleven correctly-homed
+items it is perfect, at 18× fewer tokens than reading the documents.**
+
+Two scoring artifacts were fixed before this table was trusted, both in the measure rather
+than the arms: the evidence check was case-sensitive, so an entry writing `BRACKET` in caps
+scored MISS against evidence `bracket`; and two terms were written as grep *regexes*, which
+measured the term format rather than the arm once a substring-matching arm existed.
 
 ### Three findings
 
@@ -277,13 +288,16 @@ fixed only in v0.9.28, and a 0.9.x version line.
 By the brief's own test — *does it remove a decision point or add one?* — it adds several to
 remove roughly 8% of one category's misses.
 
-**Adopt instead, in this order, none of which is a new component:**
+**Adopted instead — `memory-search`, and no new component.** Both fixes landed in one
+30-line tool rather than a service: the stores are named *in the tool* so none can be
+silently missed, and the unit returned is the whole entry so a hit is never a window into a
+fact. It summarises and indexes nothing — the text it prints is the original at its original
+location, because `stage-doc-summary-header` applies to memory as much as to stage documents.
 
-1. **Make scoping the default.** Teach every agent to search the memory documents by name
-   before searching the repo. This is the 18× and it costs nothing.
-2. **Fix the retrieval unit.** One fact per chunk in `insight-index.md`, so a hit returns a
-   whole fact instead of a window into one. This closes the M12 class.
-3. **Re-home M3** into `RULE`, where it belongs.
+Wired into `.harness/rules/05-insight-index.md`, which already fires before every
+non-trivial task, so the discipline is reachable rather than merely stated.
 
-Re-run this baseline before revisiting the question. The bar a backend must clear is **B3**,
-not A and not B2.
+Still outstanding: **re-home M3** into `RULE`, where it belongs.
+
+Re-run this baseline before revisiting the question. The bar a backend must clear is now
+**B5 — 11/12 at 4,560 tokens** — not A, not B2, and no longer B3.

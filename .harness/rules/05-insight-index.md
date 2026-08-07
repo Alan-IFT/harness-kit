@@ -13,6 +13,26 @@ For this repo specifically, valid insight examples are things like:
 
 **Before starting any non-trivial task in this repo.** Skim it; if an entry applies, you save a wrong assumption. Skip for typo fixes / comment cleanup.
 
+## How to search it — do not grep the repo
+
+```bash
+node .harness/scripts/memory-search.js <term>        # add --all for the off-path stores
+```
+
+This searches every memory store by name and returns the **whole entry** containing the
+match. Both properties were measured, not assumed (`evals/run-mem-baseline.sh`, 12 items):
+
+- A repo-wide search scores **0 of 12** and returns **zero bytes**, so it reads as "no
+  results" rather than "wrong search". Every store lives under `.harness/`, and ripgrep —
+  which Claude Code's Grep tool is built on — skips dot-directories by default.
+- A scoped search at ±2 lines scores 8/12 and at ±10 lines 10/12, because one fact is one
+  long wrapped paragraph: a line window either truncates the fact or drags in its neighbour.
+- `memory-search` scores **11/12 at 18× fewer tokens than reading the documents**. The one
+  miss is an item whose answer lives in `verify_all.sh`, not in a store at all.
+
+The corollary for writing: an entry is the retrieval unit, so **keep one fact in one
+entry**. A fact split across two entries is returned halved.
+
 ## When to write to this
 
 After completing a task, if you uncovered a non-obvious truth that the next person (or AI) would hit again, append one line at the bottom:
