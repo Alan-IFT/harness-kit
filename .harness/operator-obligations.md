@@ -318,3 +318,13 @@ origin field records how the two diverged.
 - Security: no
 - Origin: v2 migration P1, branch `v2-migration`. The bash twin was proved by mutating the artifact rather than by reading the pattern: the pre-change 58 KB file WARNs at exit 1, and a 24000-byte file PASSes just under the boundary. The PS twin has had neither run.
 - Last discharged: never
+
+### V2P1-2 — verify_all.ps1 I.1 and I.4 byte arms executed on Windows
+
+- Id: V2P1-2
+- Action: `I.1` (AI-GUIDE.md, cap 20480) and `I.4` (`.harness/insight-index.md`, cap 24576) each gained a byte arm in both shells, for the same reason as `I.5`: a count cap bounds nothing when the unit is unbounded. **Only the bash twins were executed** — this host has no `pwsh`. Three PS-specific points. First, both arms use `(Get-Item …).Length`, the on-disk byte count, so a CRLF working copy measures larger than under bash; AI-GUIDE at 16,831 bytes over 114 lines has a CRLF worst case of 16,945 against a 20480 cap, and the index at 21,054 bytes over ~101 lines worst-cases to 21,155 against 24576 — both retain headroom, but the two shells will not agree on the exact figure. Second, `I.4`'s byte arm is placed **after** the INSIGHT-SCAN's own `return $false` and reads no variable that scan produced, preserving the "one scan, one notion of entry" property the scan's comments require; confirm the arm did not get hoisted above it during any later edit. Third, `I.1`'s byte arm is ordered after the line arm and returns independently, matching the bash twin's `elif`.
+- Artifacts: `.harness/scripts/verify_all.ps1` `I.1` and `I.4` blocks, `.harness/scripts/verify_all.sh` `I.1` and `I.4` blocks, `AI-GUIDE.md`, `.harness/insight-index.md`
+- Pass observable: `pwsh -File .harness/scripts/verify_all.ps1` reports both checks PASS with run totals 32/0/0 exit 0; then the boundary pair the bash twins were proved with reproduces — AI-GUIDE.md padded to **20481** bytes at an unchanged 114 lines reports `I.1` WARN while **20480** bytes PASSes, and `.harness/insight-index.md` padded to **24577** bytes at an unchanged **30** entries reports `I.4` WARN. The unchanged line and entry counts are the load-bearing part: they prove the byte arm fired rather than the count arm.
+- Security: no
+- Origin: v2 migration P1, branch `v2-migration`. Both bash arms were proved at the exact boundary by mutating the artifact, and in each case the count arm was shown not to have fired.
+- Last discharged: never

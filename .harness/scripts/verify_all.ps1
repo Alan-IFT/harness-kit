@@ -407,12 +407,21 @@ Step "G.3" "Version stamps consistent across plugin.json / marketplace.json / RE
 }
 
 # I. Document size caps (v0.14+, WARN-only; see .harness/rules/70-doc-size.md)
-Step "I.1" "AI-GUIDE.md <=200 lines" {
+# The byte arm bounds what the line arm cannot: this file averages ~147 bytes per line,
+# so 200 lines admits ~29 KB. AI-GUIDE is on the unconditional read path, so its size is
+# paid by every session — the count of lines is not what costs anything.
+Step "I.1" "AI-GUIDE.md <=200 lines and <=20 KB" {
     if (-not (Test-Path "AI-GUIDE.md")) { return }
     $n = (Get-Content "AI-GUIDE.md" | Measure-Object -Line).Lines
+    $b = (Get-Item "AI-GUIDE.md").Length
     if ($n -gt 200) {
         Write-Host "" -NoNewline
         Write-Host " ($n lines, cap 200 — see .harness/rules/70-doc-size.md)" -ForegroundColor Yellow -NoNewline
+        return $false
+    }
+    if ($b -gt 20480) {
+        Write-Host "" -NoNewline
+        Write-Host " ($b bytes, cap 20480 — move detail into a rule fragment; this file is an index)" -ForegroundColor Yellow -NoNewline
         return $false
     }
 }
@@ -445,7 +454,7 @@ Step "I.3" "Agent definitions <=300 lines each" {
     }
 }
 
-Step "I.4" "insight-index.md <=30 insight entries" {
+Step "I.4" "insight-index.md <=30 entries and <=24 KB" {
     # ONE INSIGHT-SCAN over ONE file yields BOTH figures — the cap count
     # (entries) and the unaccounted count — so this check and archive-task can
     # never hold two notions of "entry". This is archive-task.ps1's
@@ -513,6 +522,16 @@ Step "I.4" "insight-index.md <=30 insight entries" {
         }
         Write-Host "" -NoNewline
         Write-Host (' ({0} — archive-task auto-rotates entries; an unaccounted line makes archive-task refuse (exit 3))' -f $atDetail) -ForegroundColor Yellow -NoNewline
+        return $false
+    }
+    # Byte arm. Deliberately reads no value the INSIGHT-SCAN above produced, so the
+    # "one scan, one notion of entry" property is untouched: an entry count of 30 admits
+    # unbounded bytes (this file averages ~700 B per entry), and the index is on the
+    # unconditional read path, so bytes are what it costs.
+    $atBytes = (Get-Item ".harness/insight-index.md").Length
+    if ($atBytes -gt 24576) {
+        Write-Host "" -NoNewline
+        Write-Host (' ({0} bytes, cap 24576 — entries rotate at 30 but bytes do not; tighten entries rather than adding another)' -f $atBytes) -ForegroundColor Yellow -NoNewline
         return $false
     }
 }

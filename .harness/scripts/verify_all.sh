@@ -418,16 +418,22 @@ fi
 
 # --- I. Document size caps (v0.14+, WARN-only; see .harness/rules/70-doc-size.md) ---
 
-# I.1 — AI-GUIDE.md ≤200 lines
+# I.1 — AI-GUIDE.md ≤200 lines AND ≤20480 bytes
+# The byte arm bounds what the line arm cannot: this file averages ~147 bytes per line,
+# so 200 lines admits ~29 KB. AI-GUIDE is on the unconditional read path, so its size is
+# paid by every session — the count of lines is not what costs anything.
 if [[ -f AI-GUIDE.md ]]; then
     n=$(wc -l < AI-GUIDE.md)
+    b=$(wc -c < AI-GUIDE.md)
     if (( n > 200 )); then
-        step "I.1" "AI-GUIDE.md ≤200 lines" "WARN" "$n lines (cap 200) — see .harness/rules/70-doc-size.md"
+        step "I.1" "AI-GUIDE.md ≤200 lines and ≤20 KB" "WARN" "$n lines (cap 200) — see .harness/rules/70-doc-size.md"
+    elif (( b > 20480 )); then
+        step "I.1" "AI-GUIDE.md ≤200 lines and ≤20 KB" "WARN" "$b bytes (cap 20480) — move detail into a rule fragment; this file is an index"
     else
-        step "I.1" "AI-GUIDE.md ≤200 lines" "PASS"
+        step "I.1" "AI-GUIDE.md ≤200 lines and ≤20 KB" "PASS"
     fi
 else
-    step "I.1" "AI-GUIDE.md ≤200 lines" "PASS"
+    step "I.1" "AI-GUIDE.md ≤200 lines and ≤20 KB" "PASS"
 fi
 
 # I.2 — Each .harness/rules/*.md ≤200 lines
@@ -532,16 +538,23 @@ if [[ -f .harness/insight-index.md ]]; then
             i4_detail="$i4_detail, first at line $(( i4_first + 1 ))"
         fi
         i4_detail="$i4_detail — archive-task auto-rotates entries; an unaccounted line makes archive-task refuse (exit 3)"
-        step "I.4" "insight-index.md ≤30 insight entries" "WARN" "$i4_detail"
+        step "I.4" "insight-index.md ≤30 entries and ≤24 KB" "WARN" "$i4_detail"
         # step() prints a detail line only for FAIL, so echo it here: B-14/K-26
         # require this WARN to NAME both counts and the 1-based line number of
         # the first unaccounted line, which is the whole point of the condition.
         echo "      $i4_detail"
+    # Byte arm. Deliberately OUTSIDE the INSIGHT-SCAN above and reading no value it
+    # produced, so the "one scan, one notion of entry" property is untouched: an entry
+    # count of 30 admits unbounded bytes (this file averages ~700 B per entry), and the
+    # index is on the unconditional read path, so bytes are what it costs.
+    elif (( $(wc -c < .harness/insight-index.md) > 24576 )); then
+        step "I.4" "insight-index.md ≤30 entries and ≤24 KB" "WARN" \
+            "$(wc -c < .harness/insight-index.md) bytes (cap 24576) — entries rotate at 30 but bytes do not; tighten entries rather than adding another"
     else
-        step "I.4" "insight-index.md ≤30 insight entries" "PASS"
+        step "I.4" "insight-index.md ≤30 entries and ≤24 KB" "PASS"
     fi
 else
-    step "I.4" "insight-index.md ≤30 insight entries" "PASS"
+    step "I.4" "insight-index.md ≤30 entries and ≤24 KB" "PASS"
 fi
 
 # I.5 — docs/tasks.md ≤300 lines AND ≤24576 bytes
