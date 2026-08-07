@@ -676,7 +676,13 @@ resolve_leaf() {
     if [[ "$p" == \'*\' ]]; then p="${p:1:${#p}-2}"; fi
     # Expand ~.
     if [[ "$p" == "~" ]]; then p="${HOME:-/}"
-    elif [[ "$p" == "~/"* ]]; then p="${HOME:-/}/${p#~/}"; fi
+    # The `~` in the removal pattern MUST stay escaped. Unescaped, bash tilde-expands
+    # the PATTERN to $HOME, which never matches a literal `~/…`, so nothing is stripped
+    # and the line yields `$HOME/~/rest`. That extra `~` segment absorbs a later `..`,
+    # so with a repo root at $HOME an outside path can collapse to an inside one —
+    # fail-OPEN. The pwsh twin was always correct here; only this line diverged, and
+    # the corpus could not see it because every row asserts a verdict, not a path.
+    elif [[ "$p" == "~/"* ]]; then p="${HOME:-/}/${p#\~/}"; fi
     local abs="$p"
     # Determine absolute: unix /…, Windows-style /…, or drive-letter X:…
     case "$abs" in
