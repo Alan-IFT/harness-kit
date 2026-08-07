@@ -27,7 +27,7 @@
 
 ## Verify before declaring done
 
-`.harness/scripts/verify_all` checks (33 checks, all must PASS — count grows with releases):
+`.harness/scripts/verify_all` checks (34 checks, all must PASS — count grows with releases):
 
 - No secrets / committed env files
 - `参考/` not tracked

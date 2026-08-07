@@ -210,6 +210,22 @@ Step "D.4" "Agent contracts within granted tools" {
         return $false
     }
 }
+
+# D.5 — the TypeScript unit suite. One check for the whole suite rather than one per tool;
+# see the bash twin. WARN when node_modules is absent so a fresh clone stays meaningful.
+Step "D.5" "TypeScript unit suite" {
+    if (-not ((Test-Path "node_modules") -and (Test-Path "package.json"))) {
+        Write-Host "" -NoNewline
+        Write-Host " (node_modules absent - run 'npm install' to gate the suite)" -ForegroundColor Yellow -NoNewline
+        return $false
+    }
+    $out = @(& npx vitest run --reporter=dot 2>&1 | ForEach-Object { [string]$_ }) -join "`n"
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host ""
+        Write-Host $out -ForegroundColor Red
+        return $false
+    }
+}
 Step "E.1" "Layer 1: .harness/ matches templates/common/.harness/" {
     & (Join-Path $PSScriptRoot "sync-self.ps1") -Check
     if ($LASTEXITCODE -ne 0) { throw "Layer 1 drift — run .harness/scripts/sync-self.ps1 to fix" }

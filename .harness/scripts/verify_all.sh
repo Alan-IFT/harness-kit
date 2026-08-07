@@ -214,6 +214,31 @@ else
     step "D.4" "Agent contracts within granted tools" "WARN" "capability-audit.js or node unavailable"
 fi
 
+# D.5 — the TypeScript unit suite (v2 migration)
+#
+# ONE check for the whole suite rather than one per tool. As logic moves from shell into
+# src/*.ts, the suite is what proves it; adding a verify_all check per tool would grow the
+# check count without growing the coverage, and every addition ripples through G.4's eleven
+# doc claims.
+#
+# It also closes a real gap: 209 tests existed and the declared gate never ran them, so a
+# broken port could reach a green verify_all. That includes the control-set anchor audit —
+# five citations in evals/ pointed past the end of a file for a whole working session.
+#
+# WARN, not FAIL, when node_modules is absent: verify_all must stay meaningful on a fresh
+# clone that has not run `npm install`, and claiming PASS there would be a green light over
+# an unexamined surface.
+if [[ -d node_modules && -f package.json ]] && command -v npx >/dev/null 2>&1; then
+    if d5_out=$(npx vitest run --reporter=dot 2>&1); then
+        d5_n=$(printf '%s' "$d5_out" | grep -oE 'Tests +[0-9]+ passed' | grep -oE '[0-9]+' | head -1)
+        step "D.5" "TypeScript unit suite (${d5_n:-?} tests)" "PASS"
+    else
+        step "D.5" "TypeScript unit suite" "FAIL" "$(printf '%s' "$d5_out" | tail -20)"
+    fi
+else
+    step "D.5" "TypeScript unit suite" "WARN" "node_modules absent — run 'npm install' to gate the suite"
+fi
+
 # E.1 — Layer 1: templates/common/ → repo .harness/ + harness-sync
 if bash "$repo_root/.harness/scripts/sync-self.sh" --check &>/dev/null; then
     step "E.1" "Layer 1: .harness/ matches templates/common/.harness/" "PASS"

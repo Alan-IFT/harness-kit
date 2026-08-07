@@ -98,19 +98,25 @@ to ~25,270.
 
 | ID | Question | Expected answer | Anchor |
 |---|---|---|---|
-| C1 | Which function decides whether a target path lies inside the protected `.git/` ancestor? | `is_descendant()` | `.harness/scripts/guard-rm.sh:711` |
-| C2 | Where does guard-rm split a command string into tokens? | `tokenize()` | `.harness/scripts/guard-rm.sh:191` |
-| C3 | What is the top-level entry point that classifies a whole command string? | `classify_command_string()`, which delegates to `classify_segment()` (`:796`) | `.harness/scripts/guard-rm.sh:903` |
-| C4 | What is `hook-spec.sh`'s complete public surface? | 6 functions: `hs_die`, `hs_is_tool`, `hs_event`, `hs_matcher`, `hs_semantics`, `hs_command` | `.harness/scripts/hook-spec.sh:79–119` |
+| C1 | Which function decides whether a target path lies inside the protected `.git/` ancestor? | `isDescendant` | `src/guard-rm.ts` |
+| C2 | Where does guard-rm split a command string into tokens? | `tokenize` | `src/guard-rm.ts` |
+| C3 | What is the top-level entry point that classifies a whole command string? | `classifyCommandString`, which delegates to `classifySegment` | `src/guard-rm.ts` |
+| C4 | What is hook-spec's complete public surface? | `TOOLS`, `EVENTS`, `isTool`, `matcherOf`, `semanticsOf`, `commandOf`, `hostOs`, `run` | `src/hook-spec.ts` |
 | C5 | How many checks does `verify_all` run, and how is the count derived? | 32. 31 ids of form `X.N` plus `E.4b`, whose letter suffix defeats a naive `[A-J]\.[0-9]+` scan | `verify_all.sh`; pin at `baseline.json:10` |
 | C6 | Which `verify_all` check must be recorded last, and what breaks otherwise? | `G.4` — its count derivation under-counts if any check is added after it; a tripwire FAILs when `G.4` is not last | `.harness/scripts/verify_all.sh:922` |
 | C7 | Which check validates `settings.json` schema integrity? | `J.1` | `.harness/scripts/verify_all.sh` |
 | C8 | Which checks are the doc-size guards? | `I.1`–`I.5` (AI-GUIDE ≤200 lines, rules ≤200 each, agents ≤300 each, insight-index ≤30 entries, tasks.md ≤300 lines); `I.6`/`I.7` are separate guards | `.harness/scripts/verify_all.sh` |
-| C9 | If `is_descendant()` changes, what is the blast radius? | Reached via `_walk_paths()` (`:770`) and `classify_segment()` (`:796`) — every destructive-verb path decision | `guard-rm.sh:711,770,796` |
-| C10 | Which script pairs does `sync-self` hold byte-identical with `templates/common/`? | 8 pairs: `harness-sync`, `install-hooks`, `archive-task`, `guard-rm`, `migrate-scripts-layout`, `upgrade-project`, `language-policy`, `hook-spec`. It does **not** sync `.harness/rules/` or agents. | `.harness/scripts/sync-self.sh`; `AI-GUIDE.md:77` |
+| C9 | If `isDescendant` changes, what is the blast radius? | Reached via `walkPaths` and `classifySegment` — every destructive-verb path decision — plus the unit suite | `src/guard-rm.ts` |
+| C10 | Which script pairs does `sync-self` hold byte-identical with `templates/common/`? | 8 shell pairs — `harness-sync`, `install-hooks`, `archive-task`, `guard-rm`, `migrate-scripts-layout`, `upgrade-project`, `language-policy`, `hook-spec` — plus Mapping 10's four compiled `.js` files. It does **not** sync `.harness/rules/` or agents. | `.harness/scripts/sync-self.sh` |
 
 **C-category note.** These are the questions a Solution Architect or Code Reviewer asks.
-Today they are answered by full-file reads of a 968-line and a 934-line script.
+
+**Anchors here cite a file and a SYMBOL, never a line.** Five of them once cited lines in
+`guard-rm.sh`, and when the TypeScript migration turned that file into a twelve-line
+launcher the citations kept pointing at lines 191, 711 and 903 of a file ending at 12.
+Nothing noticed for a whole working session. A symbol survives a refactor; a line number is
+a claim about a file's current shape, and `evals/` is the last place that should carry one.
+`tests/unit/eval-anchors.test.ts` now fails the build if any citation stops resolving.
 
 > ### ⚠️ CODE cannot gate P2. Measured 2026-08-07.
 >

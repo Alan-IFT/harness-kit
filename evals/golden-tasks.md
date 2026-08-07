@@ -68,7 +68,7 @@ placeholder substitution worked, no `.tmpl`/`.append` leaked.
 ### Golden #3 — verify_all FAILs if root .claude/agents/ drifts from templates (manual)
 
 **Setup**:
-1. Edit `.claude/agents/developer.md` and add a junk line.
+1. Edit `agents/developer.md` and add a junk line.
 2. Run `pwsh -File .harness/scripts/verify_all.ps1`.
 
 **Expected**: `E.4 Self-template consistency` step FAIL with a diff message.
