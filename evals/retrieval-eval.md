@@ -295,7 +295,33 @@ fact. It summarises and indexes nothing — the text it prints is the original a
 location, because `stage-doc-summary-header` applies to memory as much as to stage documents.
 
 Wired into `.harness/rules/05-insight-index.md`, which already fires before every
-non-trivial task, so the discipline is reachable rather than merely stated.
+non-trivial task, so the discipline is reachable rather than merely stated, and into the
+seven agent-contract sites that used to say *read the file*.
+
+### A capability split the fix had to respect
+
+**Only 2 of the 8 agents hold `Bash`** — developer and qa-tester. The six that most need
+memory (requirement-analyst, solution-architect, gate-reviewer, code-reviewer,
+pm-orchestrator, supervisor) cannot run any script at all, which is why the whole-file read
+became habit in the first place. Granting them `Bash` was not an option: it would surrender
+the reviewers' physical read-only isolation that `reviewer-write-grant` exists to protect.
+
+So the rule states two forms. Script-capable agents call `memory-search`. The rest use the
+`Grep` tool with an **explicit `path`** — which is the property that matters, since without
+it the tool is ripgrep-backed and returns nothing from any store under `.harness/`.
+
+### What the rewrite costs and returns
+
+| | per full 7-stage task |
+|---|---:|
+| Before — six agents each read the 20.6 KB index whole | **~35,100 tok** |
+| After — six scoped queries at the measured B5 average of ~380 tok | ~2,280 tok |
+| **Net saving** | **~32,800 tok** |
+| Cost — the eight contracts grew by longer instructions | **+300 tok** on-invoke |
+
+Measured with `claude --plugin-dir . plugin details harness-kit`: the agent contracts moved
+from ~35.4k to ~35.7k on-invoke in total. That is a roughly hundredfold return on the added
+contract bytes, and it is the largest single reduction found anywhere in this migration.
 
 Still outstanding: **re-home M3** into `RULE`, where it belongs.
 

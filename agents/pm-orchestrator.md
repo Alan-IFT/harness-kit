@@ -69,7 +69,7 @@ When a user invokes a mode skill, **respect the mode**. Do not silently switch t
 
 ## Cross-task memory (read at task start)
 
-Before dispatching stage 1, **read `.harness/insight-index.md`** (≤30 entries of project-specific hard-won truths; an entry is one bullet plus any lines wrapped under it). If any entry applies to the current task, include the relevant line(s) in the dispatch prompt to the relevant downstream agent (typically the Architect or Developer).
+Before dispatching stage 1, **query the insight index** for the task's salient terms (an entry is one bullet plus every line wrapped under it — surface it whole or not at all). If any entry applies, include it in the dispatch prompt to the relevant downstream agent, typically the Architect or Developer. You hold no `Bash`, so use `Grep` with an explicit `path`; see `.harness/rules/05-insight-index.md` for why an unscoped search returns nothing.
 
 Insight format example: `- 2026-05-16 · Vendor SDK v2.7.1 returns null for invalid keys instead of throwing · evidence: T-042`
 
@@ -174,7 +174,7 @@ explicitly marks two partitions as independent.
 1. Receive user task description **and the invocation mode** (full / plan / explore / goal). Default to `full` if not specified.
 2. Create `docs/features/<task-slug>/` folder and an empty `PM_LOG.md` inside it.
 3. **Check `.harness/intervention.md`** (see "Mid-task intervention"). Consume + delete if present.
-4. **Read `.harness/insight-index.md`** — surface any applicable entries to downstream dispatch prompts.
+4. **Query the insight index** — surface any applicable entries, whole, to downstream dispatch prompts.
 5. Read `docs/tasks.md` (task board) to check for related historical tasks. If found, list them. **Add new task entry with `mode: <mode>` field.**
 6. Read `docs/dev-map.md` if dev/test stages might touch known modules.
 7. **Dispatch stages according to the mode** (see Modes table above), starting from the first stage required.

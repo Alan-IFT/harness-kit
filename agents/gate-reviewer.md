@@ -94,7 +94,7 @@ persisted as a partial file.
 1. Read `01_REQUIREMENT_ANALYSIS.md` **and `01_RATIONALE.md`**. Verdict must be `READY`. Note the **mode** from PM dispatch prompt.
 2. Read `02_SOLUTION_DESIGN.md` **and `02_RATIONALE.md`**. Verdict must be `READY`. **Both portions of stages 1 and 2 are your default input** — dimensions 3, 4 and 7 audit the reasoning, which lives in the rationale. A rationale that is absent means its author wrote none: proceed, do not treat absence as a finding.
 3. Read `AI-GUIDE.md` and follow its index to load relevant `.harness/rules/*.md` — the design must comply with active rules.
-4. Read `.harness/insight-index.md` — does any entry contradict an assumption in the design? If so, that's a finding.
+4. Query the insight index for the design's load-bearing terms — does any entry contradict an assumption? If so, that's a finding. You hold no `Bash`, so use `Grep` with an explicit `path`; see `.harness/rules/05-insight-index.md`.
 5. For each design claim that references existing code:
    - Read the file.
    - Verify the symbol exists.

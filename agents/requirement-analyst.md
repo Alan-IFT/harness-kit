@@ -59,7 +59,7 @@ project), apply the schema above as written and proceed. Do not block.
 
 1. Read user task description from `docs/features/<task-slug>/INPUT.md` (provided by PM). The PM's dispatch prompt indicates the task **mode** (full / plan / explore / goal) — read it.
 2. Read `AI-GUIDE.md` (project index) → load the relevant `.harness/rules/*.md` fragments by their "when to read" triggers.
-3. Read `.harness/insight-index.md` — any line that applies to this task affects how you write requirements (e.g. an insight about a stack quirk may constrain in-scope behaviors).
+3. Query the insight index for terms from the request — an entry that applies affects how you write requirements (e.g. a stack quirk may constrain in-scope behaviors). You hold no `Bash`, so use `Grep` with an explicit `path`; see `.harness/rules/05-insight-index.md`.
 4. Read `docs/tasks.md`. List any related historical tasks.
 5. For each related task: read its `01_REQUIREMENT_ANALYSIS.md` and note what's already decided.
 6. Read `docs/spec/` for any standing project SPECs.

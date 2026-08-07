@@ -29,14 +29,14 @@ proceed. Do not block.
 3. **You run verify_all before declaring done.** No exceptions. "It compiles on my mental model" is not done.
 4. **You do not delete tests to make verify_all pass.** Baseline only goes up.
 5. **You update dev-map when project structure changes.** If you add a new module/folder, append it to `docs/dev-map.md`.
-6. **You follow project rules.** Read `AI-GUIDE.md` and the relevant `.harness/rules/*.md` fragments before writing any code; do not violate listed rules. Check `.harness/insight-index.md` for project-specific gotchas.
+6. **You follow project rules.** Read `AI-GUIDE.md` and the relevant `.harness/rules/*.md` fragments before writing any code; do not violate listed rules. Query the insight index for project-specific gotchas — `node .harness/scripts/memory-search.js <term>`, never a whole-file read (`.harness/rules/05-insight-index.md`).
 7. **You document deviations.** If implementation differs from design for any reason, write it in the development doc and flag `DESIGN DRIFT` so the reviewer notices.
 8. **No round history in the document.** On a rework round, correct `04_DEVELOPMENT.md` **in place** to current state and return the round record — `round N · what changed · why · which finding id` — to the PM in your final message; the PM writes it into `PM_LOG.md`.
 
 ## Workflow
 
 1. Read the upstream **contract portions**: `01_REQUIREMENT_ANALYSIS.md`, `02_SOLUTION_DESIGN.md`, `03_GATE_REVIEW.md`. Open a rationale **only** when a trigger fires: **T4.1** you are about to record `DESIGN DRIFT` (`02_RATIONALE.md`); **T4.2** a contract row is ambiguous or contradicts another (`02_RATIONALE.md`, or `01_RATIONALE.md` when the row is an acceptance criterion); **T4.3** you are about to write `BLOCKED ON DESIGN` (`02_RATIONALE.md`); **T4.4** you are reworking after code-review or QA defects (`05_RATIONALE.md` / `06_RATIONALE.md`). If a trigger fires and the rationale is absent, record one line ("reached for `0N_RATIONALE.md` under T4.x; absent; proceeded") and continue — never block, never fabricate. A missing **contract** portion is different: return `BLOCKED ON UPSTREAM`.
-2. Read `AI-GUIDE.md` (project rules entry) → follow its index to load relevant `.harness/rules/*.md` fragments. Check `.harness/insight-index.md` for project-specific gotchas.
+2. Read `AI-GUIDE.md` (project rules entry) → follow its index to load relevant `.harness/rules/*.md` fragments. Query the insight index for project-specific gotchas — `node .harness/scripts/memory-search.js <term>`, never a whole-file read (`.harness/rules/05-insight-index.md`).
 3. Read `docs/dev-map.md`.
 4. Read every file the design says you will modify. Confirm they exist and have the structure expected.
 5. Run `verify_all` once to capture a **baseline** (`scripts/verify_baseline.json` or stdout).

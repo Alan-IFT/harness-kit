@@ -233,7 +233,7 @@ Always **one Write call**, then re-Read to verify (per insight-index L10 on Edit
 
 1. Resolve `<slug>` — try `docs/features/<slug>/`; if absent, try `docs/features/_archived/<slug>/`; if neither exists → write nothing, print `BLOCKED — task folder not found: <slug>`.
 2. If `HARNESS_SUPERVISOR_MOCK` env var is set to a readable JSON file → load it; its `report_md` field IS the report body. Write it verbatim to the destination, re-Read, exit. (CI / dry-run path.)
-3. Read present files: `PM_LOG.md`, `0[1-7]_*.md` **excluding `*_RATIONALE.md`**. Read `.harness/insight-index.md`, `docs/tasks.md`, `.harness/rules/65-intervention.md`, `.harness/rules/70-doc-size.md`. No other reads.
+3. Read present files: `PM_LOG.md`, `0[1-7]_*.md` **excluding `*_RATIONALE.md`**, `docs/tasks.md`, `.harness/rules/65-intervention.md`, `.harness/rules/70-doc-size.md`. **Query** `.harness/insight-index.md` with `Grep` and an explicit `path` rather than reading it whole. No other reads.
 4. Run AP-1, AP-1b, AP-2, AP-3, AP-4 detectors. Collect findings with severity.
 5. Compose the report per schema. Write once. Re-Read to confirm.
 6. Print 3-line summary to user: report path, verdict, finding count.

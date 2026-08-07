@@ -13,14 +13,27 @@ For this repo specifically, valid insight examples are things like:
 
 **Before starting any non-trivial task in this repo.** Skim it; if an entry applies, you save a wrong assumption. Skip for typo fixes / comment cleanup.
 
-## How to search it — do not grep the repo
+## How to search it — never a whole-file read, never an unscoped search
+
+**If you hold `Bash`** (developer, qa-tester):
 
 ```bash
 node .harness/scripts/memory-search.js <term>        # add --all for the off-path stores
 ```
 
-This searches every memory store by name and returns the **whole entry** containing the
-match. Both properties were measured, not assumed (`evals/run-mem-baseline.sh`, 12 items):
+**If you do not** (requirement-analyst, solution-architect, gate-reviewer, code-reviewer,
+pm-orchestrator, supervisor) — five of the eight agents cannot run any script, which is why
+the whole-file read became habit. Use the `Grep` tool with an **explicit `path`**:
+
+```
+Grep(pattern: <term>, path: ".harness/insight-index.md", output_mode: "content", -C: 10)
+```
+
+The explicit `path` is what matters. Without it the tool is ripgrep-backed and skips
+dot-directories, so it returns **nothing** from any store in this project.
+
+Both forms return the match in context instead of the file. The properties were measured,
+not assumed (`evals/run-mem-baseline.sh`, 12 items):
 
 - A repo-wide search scores **0 of 12** and returns **zero bytes**, so it reads as "no
   results" rather than "wrong search". Every store lives under `.harness/`, and ripgrep —
