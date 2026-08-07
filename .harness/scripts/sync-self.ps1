@@ -63,6 +63,13 @@ $mappings = @(
     @{ from = ".harness/scripts/language-policy.sh"; to = ".harness/scripts/language-policy.sh"; type = "file" }
     @{ from = ".harness/scripts/hook-spec.ps1"; to = ".harness/scripts/hook-spec.ps1"; type = "file" }
     @{ from = ".harness/scripts/hook-spec.sh"; to = ".harness/scripts/hook-spec.sh"; type = "file" }
+    # Mapping 10: the compiled TypeScript implementations (v2 migration). The .sh / .ps1
+    # above are now two-line launchers; ALL the logic lives in these. Build output from
+    # src/*.ts, committed because the plugin ships files rather than a build step, and
+    # mirrored so a template copy can never drift from the dogfood one.
+    @{ from = ".harness/scripts/hook-spec.js"; to = ".harness/scripts/hook-spec.js"; type = "file" }
+    @{ from = ".harness/scripts/guard-rm.js"; to = ".harness/scripts/guard-rm.js"; type = "file" }
+    @{ from = ".harness/scripts/install-hooks.js"; to = ".harness/scripts/install-hooks.js"; type = "file" }
 )
 
 $drift = @()

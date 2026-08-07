@@ -1231,18 +1231,19 @@ function Test-InstallBootstrap {
         #     and must be refused outright: exit 4, nothing written. The stub delegates
         #     every query except `tools` to the real spec, so only the arity differs.
         Remove-Item -LiteralPath $localSet -Force -ErrorAction SilentlyContinue
-        $goodSpec = Join-Path $tmp "hook-spec.good.ps1"
-        Move-Item -LiteralPath $projSpec -Destination $goodSpec -Force
+        #     RE-ANCHORED (v2 TS migration): the installer no longer SHELLS OUT to the
+        #     spec, it imports the compiled module, so mutating hook-spec.ps1 proves
+        #     nothing - the stub would never be read and the row would go green against
+        #     an unreachable branch. The mutation surface is now hook-spec.js, which
+        #     install-hooks.js resolves by require("./hook-spec") from its own directory.
+        $projSpecJs = Join-Path $tmp ".harness/scripts/hook-spec.js"
+        $goodSpec = Join-Path $tmp "hook-spec.good.js"
+        Move-Item -LiteralPath $projSpecJs -Destination $goodSpec -Force
         $stubLines = @(
-            '$hsGood = ' + "'" + $goodSpec + "'"
-            'if ($args.Count -ge 1 -and $args[0] -eq "tools") {'
-            '    (& pwsh -NoProfile -File $hsGood tools) | Select-Object -First 3'
-            '    exit 0'
-            '}'
-            '& pwsh -NoProfile -File $hsGood @args'
-            'exit $LASTEXITCODE'
+            "const good = require('" + ($goodSpec -replace '\\', '/') + "');"
+            'module.exports = { ...good, TOOLS: good.TOOLS.slice(0, 3) };'
         )
-        [System.IO.File]::WriteAllText($projSpec, (($stubLines -join "`n") + "`n"))
+        [System.IO.File]::WriteAllText($projSpecJs, (($stubLines -join "`n") + "`n"))
         #     The DIAGNOSTIC is matched too, not just the exit code: exit 4 alone is
         #     vacuous - a silently broken stub (wrong hsGood path, pwsh unavailable, a
         #     parse error in the generated stub) also exits 4, via Stop-OnSpecFailure
@@ -1257,7 +1258,7 @@ function Test-InstallBootstrap {
             ($rc -eq 4) -and (-not (Test-Path $localSet)) -and
             ($fc4Out.IndexOf('expected 4 ids, got 3', [System.StringComparison]::Ordinal) -ge 0)
         }
-        Move-Item -LiteralPath $goodSpec -Destination $projSpec -Force
+        Move-Item -LiteralPath $goodSpec -Destination $projSpecJs -Force
 
         # (8) FC-4, SECOND axis: four ids that collapse to fewer than four DISTINCT
         #     hook EVENTS are a partial wiring too - one event on disk instead of four,
@@ -1268,17 +1269,14 @@ function Test-InstallBootstrap {
         #     goes red. The stub answers `tools` with the guard id four times and
         #     delegates every other query, so ONLY the event multiplicity differs.
         Remove-Item -LiteralPath $localSet -Force -ErrorAction SilentlyContinue
-        Move-Item -LiteralPath $projSpec -Destination $goodSpec -Force
+        #     RE-ANCHORED (v2 TS migration): see row (7) - the mutation surface is the
+        #     compiled module the installer imports, not the shell launcher.
+        Move-Item -LiteralPath $projSpecJs -Destination $goodSpec -Force
         $dupLines = @(
-            '$hsGood = ' + "'" + $goodSpec + "'"
-            'if ($args.Count -ge 1 -and $args[0] -eq "tools") {'
-            '    "guard-rm"; "guard-rm"; "guard-rm"; "guard-rm"'
-            '    exit 0'
-            '}'
-            '& pwsh -NoProfile -File $hsGood @args'
-            'exit $LASTEXITCODE'
+            "const good = require('" + ($goodSpec -replace '\\', '/') + "');"
+            "module.exports = { ...good, TOOLS: ['guard-rm', 'guard-rm', 'guard-rm', 'guard-rm'] };"
         )
-        [System.IO.File]::WriteAllText($projSpec, (($dupLines -join "`n") + "`n"))
+        [System.IO.File]::WriteAllText($projSpecJs, (($dupLines -join "`n") + "`n"))
         #     The DISTINCT-gate diagnostic is matched too, for exactly the reason row
         #     (7) matches the arity one, and captured the same way: an array joined by
         #     hand, never `| Out-String`, which re-wraps at the host buffer width.
@@ -1288,7 +1286,7 @@ function Test-InstallBootstrap {
             ($rc -eq 4) -and (-not (Test-Path $localSet)) -and
             ($fc4dOut.IndexOf('expected 4 DISTINCT hook events, got 1', [System.StringComparison]::Ordinal) -ge 0)
         }
-        Move-Item -LiteralPath $goodSpec -Destination $projSpec -Force
+        Move-Item -LiteralPath $goodSpec -Destination $projSpecJs -Force
 
         # (9) B-14: not a git repository -> exit 1, unchanged behavior (FR-13).
         Remove-Item -Recurse -Force (Join-Path $tmp ".git") -ErrorAction SilentlyContinue

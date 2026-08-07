@@ -8,9 +8,7 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "diff-hook-spec": "bash tools/diff-hook-spec.sh",
-    "diff-guard-rm": "bash tools/diff-guard-rm.sh",
-    "diff-install-hooks": "bash tools/diff-install-hooks.sh"
+    "shim": "bash tools/make-shims.sh"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

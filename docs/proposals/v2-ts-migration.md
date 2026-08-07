@@ -48,18 +48,24 @@ forces a cross-shell decision, and 27 decisions are queued awaiting a Windows ho
 ```
 src/<name>.ts                     source of truth
 .harness/scripts/<name>.js        compiled, committed, ships to projects
-tools/diff-<name>.sh              differential gate for that port
+.harness/scripts/<name>.{sh,ps1}  two-line launchers; no logic, nothing to diverge
+tests/unit/<name>.test.ts         native tests — these outlive the migration
+tools/make-shims.sh               generates the launcher pair for a ported name
 tsconfig.json                     strict, outDir .harness/scripts, newLine lf
 ```
+
+Constraints 3 and 4 describe the differential discipline as it was practised through
+stages 1–3. All three differentials were deleted once their components were cut over —
+see "The cutover" below for why keeping them would have been worse than useless.
 
 ## Stages
 
 | # | Target | Size | Status |
 |---|---|---:|---|
-| 1 | `hook-spec` | 8.2 KB | **done** — 40/40 byte-identical, twin still in place |
-| 2 | `guard-rm` | 36.9 KB | **done** — 87/87 corpus + 62/62 raw, twin still wired |
-| 4a | vitest + native tests for `guard-rm` | — | **done** — 93 tests |
-| 3 | `install-hooks` | 16.3 KB | **done** — 12/12 scenarios, 33 native tests |
+| 1 | `hook-spec` | 8.2 KB | **done + cut over** — launcher is 699 B; 24 native tests |
+| 2 | `guard-rm` | 36.9 KB | **done + cut over** — launcher is 694 B; 93 native tests; live hook runs it |
+| 4a | vitest + native tests | — | **done** — 150 tests across the three ports |
+| 3 | `install-hooks` | 16.3 KB | **done + cut over** — launcher is 719 B; 33 native tests |
 | 6 | `verify_all`, **rewritten slim** | 47.5 KB | pending |
 | 4b | remaining 7 shell test drivers | ~228 KB | pending |
 | 5 | remaining tooling scripts | 120.9 KB | pending |
@@ -153,7 +159,52 @@ The durable set — the scripts §9.2 explicitly keeps — is `guard-rm`, `hook-
 is largely work on code the plan already intends to remove, so the remaining value is in
 the cutover, not in more ports.
 
-## The cutover is a single coordinated change, not a per-stage one
+## The cutover: launchers, not replacements
+
+The broad cutover described below was scoped and then **not done that way**. Measured
+surface: 27 files reference `guard-rm.sh`, and `hook-spec` is called by 16 scripts
+including `verify_all` and `sync-self`. Rewriting all of them would also mean patching
+`upgrade-project` and `migrate-scripts-layout`, both of which §9.1 deletes — doomed work
+again — and touching the 64 KB `test-init.sh`.
+
+**What was done instead: each ported script's `.sh` and `.ps1` became a two-line launcher
+over the compiled `.js`.** `exec node "$(dirname -- "$0")/<name>.js" "$@"` replaces the
+shell, so stdin, stdout, stderr and the exit status pass through untouched.
+
+That buys the actual goal at a fraction of the risk. The logic is single-sourced in
+TypeScript, so there is nothing left in the shell files to diverge — the cross-shell
+divergence class and the PowerShell-only maintenance burden are gone. And because the
+launcher keeps the same path and the same name, **nothing else had to change**: not the 27
+referencing files, not the deliberately-frozen byte-form literals, not the live hook
+wiring in `.claude/settings.local.json`.
+
+Sizes after: `guard-rm.sh` 36.9 KB → 694 B, `hook-spec.sh` 8.2 KB → 699 B,
+`install-hooks.sh` 16.3 KB → 719 B, and the same for all three `.ps1`.
+
+`guard-rm`'s launcher stays fail-CLOSED by construction: a missing `node` makes `exec`
+fail non-zero, which is a BLOCK. Never add a fallback.
+
+### Two consequences, both handled
+
+**The differentials became vacuous and were deleted.** With `.sh` a launcher over `.js`,
+`tools/diff-*.sh` compared node against node and could only ever report success. A gate
+that cannot fail is worse than no gate — the repo records that failure mode repeatedly —
+so all three were removed. Constraint 5 is what made this safe: all three components had
+native tests first.
+
+**`test-init`'s two FC-4 rows had their oracle retired without being touched.** They prove
+the installer refuses a partial wiring by writing a fake `hook-spec.sh` and expecting exit
+4. The installer now *imports* the compiled module, so the fake was never read and the rows
+were passing against an unreachable branch. This is exactly the T-16 insight — a refactor
+can retire a test's oracle silently — and it was caught only because the rows match their
+own diagnostic text rather than the bare exit code. Both were re-anchored to mutate
+`hook-spec.js`, in both shells.
+
+`sync-self` gained Mapping 10 so the three committed `.js` files cannot drift between the
+dogfood tree and `templates/common`; proved non-vacuous by planting one byte and watching
+`--check` name the file.
+
+## Scoping notes from the abandoned broad cutover
 
 Measured surface: **27 files reference `guard-rm.sh`**, and `hook-spec` is called by 16
 scripts including `verify_all` and `sync-self`. Changing the guard's emitted command

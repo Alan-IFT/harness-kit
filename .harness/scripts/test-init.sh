@@ -1004,14 +1004,17 @@ test_install_bootstrap() {
     #     partial wiring - possibly one with no destructive-command guard at all - and
     #     must be refused outright: exit 4, nothing written. The stub delegates every
     #     query except `tools` to the real spec, so only the arity differs.
+    #     RE-ANCHORED (v2 TS migration): the installer no longer SHELLS OUT to the spec,
+    #     it imports the compiled module, so mutating hook-spec.sh proves nothing — the
+    #     stub would simply never be read and the row would go green against an
+    #     unreachable branch. The mutation surface is now hook-spec.js, which
+    #     install-hooks.js resolves by `require("./hook-spec")` from its own directory.
     rm -f "$localset"
-    mv "$tmp/.harness/scripts/hook-spec.sh" "$tmp/hook-spec.good"
+    mv "$tmp/.harness/scripts/hook-spec.js" "$tmp/hook-spec.good.js"
     {
-        echo '#!/usr/bin/env bash'
-        echo "hs_good=\"$tmp/hook-spec.good\""
-        echo 'if [ "${1:-}" = "tools" ]; then bash "$hs_good" tools | head -n 3; exit 0; fi'
-        echo 'exec bash "$hs_good" "$@"'
-    } > "$tmp/.harness/scripts/hook-spec.sh"
+        echo "const good = require('$tmp/hook-spec.good.js');"
+        echo 'module.exports = { ...good, TOOLS: good.TOOLS.slice(0, 3) };'
+    } > "$tmp/.harness/scripts/hook-spec.js"
     #     The DIAGNOSTIC is matched too, not just the exit code: exit 4 alone is
     #     vacuous - a silently broken stub (wrong hs_good path, missing interpreter)
     #     also exits 4, via spec_fail "tools", without ever reaching the arity branch,
@@ -1020,7 +1023,7 @@ test_install_bootstrap() {
     ( cd "$tmp" && bash "$inst" > "$tmp/fc4.out" 2>&1 ); rc=$?
     ok=0; [[ $rc -eq 4 && ! -f "$localset" ]] && grep -qF -- 'expected 4 ids, got 3' "$tmp/fc4.out" && ok=1
     assert "[T-13][install] spec listing fewer than 4 tool ids -> exit 4, NOTHING written (FC-4)" "[[ $ok == 1 ]]"
-    mv "$tmp/hook-spec.good" "$tmp/.harness/scripts/hook-spec.sh"
+    mv "$tmp/hook-spec.good.js" "$tmp/.harness/scripts/hook-spec.js"
 
     # (8) FC-4, SECOND axis: four ids that collapse to fewer than four DISTINCT hook
     #     EVENTS are a partial wiring too - one event on disk instead of four, plus
@@ -1030,21 +1033,21 @@ test_install_bootstrap() {
     #     `== 4` arity check, the installer exits 0 with the file PRESENT, and the row
     #     goes red. The stub answers `tools` with the guard id four times and delegates
     #     every other query to the real spec, so ONLY the event multiplicity differs.
+    #     RE-ANCHORED (v2 TS migration): see row (7) — the mutation surface is the
+    #     compiled module the installer imports, not the shell launcher.
     rm -f "$localset"
-    mv "$tmp/.harness/scripts/hook-spec.sh" "$tmp/hook-spec.good"
+    mv "$tmp/.harness/scripts/hook-spec.js" "$tmp/hook-spec.good.js"
     {
-        echo '#!/usr/bin/env bash'
-        echo "hs_good=\"$tmp/hook-spec.good\""
-        echo 'if [ "${1:-}" = "tools" ]; then printf "%s\n" guard-rm guard-rm guard-rm guard-rm; exit 0; fi'
-        echo 'exec bash "$hs_good" "$@"'
-    } > "$tmp/.harness/scripts/hook-spec.sh"
+        echo "const good = require('$tmp/hook-spec.good.js');"
+        echo "module.exports = { ...good, TOOLS: ['guard-rm', 'guard-rm', 'guard-rm', 'guard-rm'] };"
+    } > "$tmp/.harness/scripts/hook-spec.js"
     #     The DISTINCT-gate diagnostic is matched too, for exactly the reason row (7)
     #     matches the arity one: any exit 4 would otherwise satisfy this row, so a
     #     silently broken stub would keep it green while proving nothing.
     ( cd "$tmp" && bash "$inst" > "$tmp/fc4d.out" 2>&1 ); rc=$?
     ok=0; [[ $rc -eq 4 && ! -f "$localset" ]] && grep -qF -- 'expected 4 DISTINCT hook events, got 1' "$tmp/fc4d.out" && ok=1
     assert "[T-13][install] spec answering 4 ids that collapse to 1 event -> exit 4, NOTHING written (FC-4)" "[[ $ok == 1 ]]"
-    mv "$tmp/hook-spec.good" "$tmp/.harness/scripts/hook-spec.sh"
+    mv "$tmp/hook-spec.good.js" "$tmp/.harness/scripts/hook-spec.js"
 
     # (9) B-14: not a git repository -> exit 1, unchanged pre-existing behavior (FR-13).
     rm -rf "$tmp/.git"

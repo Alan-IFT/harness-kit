@@ -92,6 +92,15 @@ sync_file "$template_common/.harness/scripts/language-policy.sh"  "$repo_root/.h
 sync_file "$template_common/.harness/scripts/hook-spec.ps1" "$repo_root/.harness/scripts/hook-spec.ps1" ".harness/scripts/hook-spec.ps1"
 sync_file "$template_common/.harness/scripts/hook-spec.sh"  "$repo_root/.harness/scripts/hook-spec.sh"  ".harness/scripts/hook-spec.sh"
 
+# Mapping 10: the compiled TypeScript implementations (v2 migration).
+# The .sh / .ps1 above are now two-line launchers; ALL the logic lives in these. They are
+# build output from src/*.ts, committed because the plugin ships files rather than a build
+# step, and mirrored here so a template copy can never drift from the dogfood one — the
+# same guarantee the launchers have always had.
+sync_file "$template_common/.harness/scripts/hook-spec.js"     "$repo_root/.harness/scripts/hook-spec.js"     ".harness/scripts/hook-spec.js"
+sync_file "$template_common/.harness/scripts/guard-rm.js"      "$repo_root/.harness/scripts/guard-rm.js"      ".harness/scripts/guard-rm.js"
+sync_file "$template_common/.harness/scripts/install-hooks.js" "$repo_root/.harness/scripts/install-hooks.js" ".harness/scripts/install-hooks.js"
+
 if [[ "$CHECK" == true ]]; then
     if (( ${#drift[@]} > 0 )); then
         echo "Drift detected:" >&2
