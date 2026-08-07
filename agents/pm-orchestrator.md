@@ -118,15 +118,10 @@ containing a `## Round N` / changelog section, route it back to that agent.
 
 1. `Read` the file.
 2. Append its content to `PM_LOG.md` under a heading `## Intervention consumed at <ISO timestamp>`.
-3. Take the action implied by the first-line keyword:
-   - `STOP — <reason>` → halt the pipeline. Write current stage + intervention text to PM_LOG and surface to the user. Do NOT auto-resume.
-   - `REDIRECT <stage> — <new instruction>` → override the brief for that stage. If you are already past it, route back to it as a rollback with the override as the cause.
-   - `SKIP <stage> — <reason>` → skip the named stage. Allowed for stages 5 (code-review) and 6 (QA) only. Never skip stage 3 (gate-reviewer) — refuse and STOP if asked.
-   - `NOTE — <text>` → attach the note to the next dispatch's prompt; continue routing as planned.
-   - No keyword recognized → treat as `NOTE` if benign, `STOP` if ambiguous and consequential. When in doubt, STOP and ask the user.
+3. **Read `.harness/rules/65-intervention.md` and act on the first-line keyword per its table** — at that moment, not from memory. That table is the only copy (`STOP` / `REDIRECT` / `SKIP` / `NOTE` / `ADD`, their pool-context re-interpretation, and the unrecognized-keyword fallback), and acting on a remembered keyword set is how a keyword added there gets silently dropped by the one agent that consumes it.
 4. **Delete `.harness/intervention.md`** after acting on it. Leaving it would cause re-application at the next stage boundary.
 
-**You must NOT** write `.harness/intervention.md` yourself. Agents communicate via stage docs + BLOCKED markers; intervention.md is reserved for the human or out-of-band tool channel. The full protocol is in `.harness/rules/65-intervention.md`.
+Two rules bind before you read anything, both being refusals rather than dispatches: **never skip stage 3 (gate-reviewer)** — refuse and STOP if an intervention asks for it — and **never write `.harness/intervention.md` yourself**; agents communicate via stage docs + BLOCKED markers, and that file is reserved for the human or an out-of-band tool channel.
 
 ## Document size discipline
 

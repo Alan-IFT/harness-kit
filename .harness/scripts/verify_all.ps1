@@ -474,12 +474,18 @@ Step "I.2" "Rule fragments <=200 lines each" {
     }
 }
 
-Step "I.3" "Agent definitions <=300 lines each" {
+Step "I.3" "Agent definitions <=300 lines and <=24 KB each" {
+    # A subagent's system prompt IS this file's body, so the cost is paid on every
+    # dispatch and it is paid in BYTES. A line cap cannot see line length: a 150-line
+    # contract of 200-char paragraphs passes it while costing more than a 300-line one.
+    # Same wrong-unit hole the byte arms on I.1/I.4/I.5 close. Bash twin: verify_all.sh I.3.
     if (-not (Test-Path "agents")) { return }
     $over = @()
     Get-ChildItem -Path "agents" -Filter "*.md" -File | ForEach-Object {
         $n = (Get-Content $_.FullName | Measure-Object -Line).Lines
         if ($n -gt 300) { $over += "$($_.Name):${n}L" }
+        $b = (Get-Item $_.FullName).Length
+        if ($b -gt 24576) { $over += "$($_.Name):${b}B" }
     }
     if ($over.Count -gt 0) {
         Write-Host "" -NoNewline

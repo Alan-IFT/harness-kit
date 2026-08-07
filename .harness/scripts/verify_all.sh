@@ -499,18 +499,24 @@ else
     step "I.2" "Rule fragments ≤200 lines each" "PASS"
 fi
 
-# I.3 — Each plugin agents/*.md ≤300 lines
+# I.3 — Each plugin agents/*.md ≤300 lines AND ≤24576 bytes.
+# A subagent's system prompt IS this file's body, so the cost is paid on every dispatch
+# and it is paid in BYTES. A line cap cannot see line length: a 150-line contract of
+# 200-char paragraphs passes it while costing more than a 300-line one. Same wrong-unit
+# hole the byte arms on I.1/I.4/I.5 close. PS twin: verify_all.ps1 I.3.
 i3_over=""
 if [[ -d agents ]]; then
     while IFS= read -r f; do
         n=$(wc -l < "$f")
         (( n > 300 )) && i3_over="$i3_over $f:${n}L"
+        b=$(wc -c < "$f")
+        (( b > 24576 )) && i3_over="$i3_over $f:${b}B"
     done < <(find agents -maxdepth 1 -name '*.md' -type f)
 fi
 if [[ -n "$i3_over" ]]; then
-    step "I.3" "Agent definitions ≤300 lines each" "WARN" "over cap:$i3_over"
+    step "I.3" "Agent definitions ≤300 lines and ≤24 KB each" "WARN" "over cap:$i3_over"
 else
-    step "I.3" "Agent definitions ≤300 lines each" "PASS"
+    step "I.3" "Agent definitions ≤300 lines and ≤24 KB each" "PASS"
 fi
 
 # I.4 — insight-index ≤30 insight ENTRIES (defense-in-depth; archive-task normally rotates)
