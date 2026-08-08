@@ -15,7 +15,6 @@ git clone <repo-url>
 cd harness-kit
 
 # Run verify_all to confirm a clean baseline
-pwsh -File .harness/scripts/verify_all.ps1     # Windows
 bash .harness/scripts/verify_all.sh            # Unix
 ```
 
@@ -33,8 +32,8 @@ templates/common/  ─────────────►   .harness/  ─�
 ```
 
 - **Layer 1 (sync-self)** keeps `templates/common/.harness/agents/` and
-  `templates/common/.harness/scripts/harness-sync.{ps1,sh}` byte-identical with the repo's
-  `.harness/agents/` and `.harness/scripts/harness-sync.{ps1,sh}` copies. Verifies that what
+  `templates/common/.harness/scripts/harness-sync.sh` byte-identical with the repo's
+  `.harness/agents/` and `.harness/scripts/harness-sync.sh` copies. Verifies that what
   we ship to users matches what we use ourselves.
 - **Layer 2 (harness-sync)** syncs `.claude/agents/` and `.claude/skills/` from
   `.harness/agents/` and `.harness/skills/`. The same script ships to user projects
@@ -52,16 +51,7 @@ templates/common/  ─────────────►   .harness/  ─�
 
 After editing Layer 1:
 
-```powershell
-.\.harness\scripts\sync-self.ps1      # Layer 1 → Layer 2
-.\.harness\scripts\harness-sync.ps1   # Layer 2 → bindings
-```
-
 After editing Layer 2 only (just changing repo behavior, not the distributed template):
-
-```powershell
-.\.harness\scripts\harness-sync.ps1
-```
 
 `verify_all` calls both `sync-self --check` and `harness-sync --check` internally, so
 forgetting either will get caught.
@@ -81,14 +71,13 @@ Rules for skills:
 1. **Frontmatter is mandatory.** Must have `name:` and `description:`. verify_all checks this.
 2. **`description` is what Claude Code uses to decide when to invoke.** Be specific about *when to use* and *when not to use*. First sentence is the most important.
 3. **`allowed-tools` is the strictest necessary subset.** Don't grant Bash if Read is enough.
-4. **Test it** by running it in Claude Code at least once before committing. For init/template flows, also extend `.harness/scripts/test-init.{ps1,sh}`.
+4. **Test it** by running it in Claude Code at least once before committing. For init/template flows, also extend `.harness/scripts/test-init.sh`.
 5. **Meet the quality bar.** Beyond these mechanics, follow [`.harness/rules/15-skill-authoring.md`](.harness/rules/15-skill-authoring.md) — model-facing descriptions, a Gotchas/anti-patterns surface, progressive disclosure for large skills, helper logic in scripts, and the principles we deliberately don't adopt.
 
 After adding a skill:
 
 - Update `README.md` "Quick start" section.
 - Update `CHANGELOG.md` under `[Unreleased]`.
-- Update `install.ps1` and `install.sh` skills array.
 - verify_all checks all of the above; will FAIL on missing.
 
 ## Adding a project type template
@@ -97,16 +86,16 @@ Project types live under `skills/harness-init/templates/<type>/`:
 
 - `.harness/rules/50-<type>.md` — project-type overlay rules, indexed by `AI-GUIDE.md`.
 - `.harness/skills/{build,test,verify}/SKILL.md.tmpl` — stack-specific procedures.
-- `.harness/scripts/verify_all.{ps1,sh}.tmpl` — type-specific verification.
+- `.harness/scripts/verify_all.sh.tmpl` — type-specific verification.
 
 Rules:
 
 1. **Only the 7 documented placeholders are allowed**:
    `{{PROJECT_NAME}}`, `{{PROJECT_TYPE}}`, `{{STACK}}`, `{{TODAY}}`, `{{ENABLE_HOOK}}`,
    `{{SYNC_COMMAND}}`, `{{GUARD_COMMAND}}`. verify_all step `D.2` enforces this
-   whitelist — and any new placeholder MUST be added to BOTH `verify_all.ps1` AND
+   whitelist — and any new placeholder MUST be added to
    `verify_all.sh` whitelists or the check fails.
-2. **Extend `.harness/scripts/test-init.{ps1,sh}`** with a `test_type` call for the new type.
+2. **Extend `.harness/scripts/test-init.sh`** with a `test_type` call for the new type.
 3. **Add a section** in `docs/dev-map.md` under the templates layout.
 4. **Update CHANGELOG** under `[Unreleased]`.
 5. **Rule fragment naming**: use `NN-name.md` with 50–79 for project-type overlays. The numeric prefix is a sort convention only — since v0.10, fragments are not composed into CLAUDE.md; `AI-GUIDE.md` indexes them and AI tools lazy-load on demand.
@@ -121,7 +110,7 @@ Edit `skills/harness-init/templates/common/.harness/agents/<agent>.md`. Then:
 ./.harness/scripts/verify_all.sh       # confirm E.1 and E.2 pass
 ```
 
-Re-run `test-init.{ps1,sh}` if you changed the agent's declared frontmatter or core
+Re-run `test-init.sh` if you changed the agent's declared frontmatter or core
 contract — the regression captures the role of each agent in the generated project.
 
 ## Commit messages
@@ -150,10 +139,6 @@ Reference relevant issues / tasks. Group related changes; don't bundle.
 ## Running verify_all before commit
 
 Every commit should leave `verify_all` green. Run it locally:
-
-```powershell
-pwsh -File .harness/scripts/verify_all.ps1
-```
 
 Exit 0 = ready to commit. Exit 1 (warnings) = your call. Exit 2 (failures) = fix first.
 

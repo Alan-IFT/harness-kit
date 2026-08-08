@@ -12,7 +12,7 @@
  *     long as both contracts existed; the orchestrator transcribes on their behalf.
  *   - `pm-orchestrator` is told twice, emphatically, to run `.harness/scripts/archive-task`
  *     — "skipping it is the #1 cause of long-term bloat" — and to call `entropy-cadence`,
- *     while holding neither `Bash` nor `PowerShell`.
+ *     while holding no `Bash` at all.
  *   - The v2 migration's first pass told six agents to run a query script; five of them
  *     cannot run any script at all.
  *
@@ -44,15 +44,16 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 /** A capability an instruction can demand. Named exactly as a `tools:` line spells it. */
-export type Capability = 'Bash' | 'PowerShell' | 'Write' | 'Edit' | 'Task';
+export type Capability = 'Bash' | 'Write' | 'Edit' | 'Task';
 
 export interface Demand {
   /**
    * Capabilities that would satisfy this demand — ANY one of them suffices.
    *
-   * Running a script is the case that forced this shape: the repo ships a `.sh` and a
-   * `.ps1` for every tool, so `Bash` or `PowerShell` each satisfy an invocation. Modelling
-   * it as two separate demands reported the same line twice.
+   * Kept as a list after the Windows removal collapsed its original motivating case (a
+   * script invocation used to be satisfiable by `Bash` OR `PowerShell`, since every tool
+   * shipped both). A demand with more than one satisfier is a real shape, not an artefact
+   * of that pair, and modelling it as separate demands reported the same line twice.
    */
   capability: Capability[];
   /** 1-based line in the contract. */
@@ -95,11 +96,10 @@ export interface McpFinding {
  * the wrong thing is worse than one that fires on less, because the first gets disabled.
  */
 const DEMANDS: ReadonlyArray<{ capability: Capability[]; re: RegExp }> = [
-  // "Run `.harness/scripts/x`", "call `.harness/scripts/x`", "Run `verify_all`", or an
-  // explicit `pwsh` form. Either shell satisfies it — the repo ships both twins.
+  // "Run `.harness/scripts/x`", "call `.harness/scripts/x`", "Run `verify_all`".
   {
-    capability: ['Bash', 'PowerShell'],
-    re: /\b(run|call|invoke|execute)\b[^.\n]{0,40}`[^`\n]*(\.harness\/scripts\/|verify_all|pwsh)[^`\n]*`/i,
+    capability: ['Bash'],
+    re: /\b(run|call|invoke|execute)\b[^.\n]{0,40}`[^`\n]*(\.harness\/scripts\/|verify_all)[^`\n]*`/i,
   },
   // "Write your decision into `X.md`".
   { capability: ['Write'], re: /\bwrite\b[^.\n]{0,40}(into|to)\b[^.\n]{0,40}`[^`\n]+\.md`/i },

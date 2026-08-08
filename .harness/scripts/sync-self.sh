@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # sync-self.sh — Repo-specific dogfood sync (templates/common/ → repo root)
-# Mirror of sync-self.ps1. See that file for full doc.
 #
 # Usage:
 #   ./.harness/scripts/sync-self.sh          # copy
@@ -60,40 +59,32 @@ sync_dir_of_md() {
 #  Partition dev-* agents ship via the type overlays, not through sync-self.)
 
 # Mapping 2: harness-sync scripts
-sync_file "$template_common/.harness/scripts/harness-sync.ps1" "$repo_root/.harness/scripts/harness-sync.ps1" ".harness/scripts/harness-sync.ps1"
 sync_file "$template_common/.harness/scripts/harness-sync.sh"  "$repo_root/.harness/scripts/harness-sync.sh"  ".harness/scripts/harness-sync.sh"
 
 # Mapping 3: install-hooks scripts
-sync_file "$template_common/.harness/scripts/install-hooks.ps1" "$repo_root/.harness/scripts/install-hooks.ps1" ".harness/scripts/install-hooks.ps1"
 sync_file "$template_common/.harness/scripts/install-hooks.sh"  "$repo_root/.harness/scripts/install-hooks.sh"  ".harness/scripts/install-hooks.sh"
 
 # Mapping 4: archive-task scripts
-sync_file "$template_common/.harness/scripts/archive-task.ps1" "$repo_root/.harness/scripts/archive-task.ps1" ".harness/scripts/archive-task.ps1"
 sync_file "$template_common/.harness/scripts/archive-task.sh"  "$repo_root/.harness/scripts/archive-task.sh"  ".harness/scripts/archive-task.sh"
 
 # Mapping 5: guard-rm scripts (PreToolUse safety hook)
-sync_file "$template_common/.harness/scripts/guard-rm.ps1" "$repo_root/.harness/scripts/guard-rm.ps1" ".harness/scripts/guard-rm.ps1"
 sync_file "$template_common/.harness/scripts/guard-rm.sh"  "$repo_root/.harness/scripts/guard-rm.sh"  ".harness/scripts/guard-rm.sh"
 
 # Mapping 6: migrate-scripts-layout helper (T-007 one-shot upgrade)
-sync_file "$template_common/.harness/scripts/migrate-scripts-layout.ps1" "$repo_root/.harness/scripts/migrate-scripts-layout.ps1" ".harness/scripts/migrate-scripts-layout.ps1"
 sync_file "$template_common/.harness/scripts/migrate-scripts-layout.sh"  "$repo_root/.harness/scripts/migrate-scripts-layout.sh"  ".harness/scripts/migrate-scripts-layout.sh"
 
 # Mapping 7: upgrade-project helper (T-012 /harness-upgrade mechanical layer)
-sync_file "$template_common/.harness/scripts/upgrade-project.ps1" "$repo_root/.harness/scripts/upgrade-project.ps1" ".harness/scripts/upgrade-project.ps1"
 sync_file "$template_common/.harness/scripts/upgrade-project.sh"  "$repo_root/.harness/scripts/upgrade-project.sh"  ".harness/scripts/upgrade-project.sh"
 
 # Mapping 8: language-policy helper (T-014 /harness-language mechanical layer)
-sync_file "$template_common/.harness/scripts/language-policy.ps1" "$repo_root/.harness/scripts/language-policy.ps1" ".harness/scripts/language-policy.ps1"
 sync_file "$template_common/.harness/scripts/language-policy.sh"  "$repo_root/.harness/scripts/language-policy.sh"  ".harness/scripts/language-policy.sh"
 
-# Mapping 9: hook-spec (T-13 hook wiring spec — the single source for the
-# (hook tool x target OS) command byte-forms + failure semantics)
-sync_file "$template_common/.harness/scripts/hook-spec.ps1" "$repo_root/.harness/scripts/hook-spec.ps1" ".harness/scripts/hook-spec.ps1"
+# Mapping 9: hook-spec (T-13 hook wiring spec — the single source for the per-tool
+# command byte-forms + failure semantics)
 sync_file "$template_common/.harness/scripts/hook-spec.sh"  "$repo_root/.harness/scripts/hook-spec.sh"  ".harness/scripts/hook-spec.sh"
 
 # Mapping 10: the compiled TypeScript implementations (v2 migration).
-# The .sh / .ps1 above are now two-line launchers; ALL the logic lives in these. They are
+# The .sh files above are now two-line launchers; ALL the logic lives in these. They are
 # build output from src/*.ts, committed because the plugin ships files rather than a build
 # step, and mirrored here so a template copy can never drift from the dogfood one — the
 # same guarantee the launchers have always had.

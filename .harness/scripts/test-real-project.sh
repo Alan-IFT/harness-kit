@@ -47,7 +47,7 @@ assert() {
 # settings, so it must STATE the expected bytes rather than ask the artifact it is
 # testing; deriving them from hook-spec here would make the fixture agree with the spec
 # by construction and test nothing. Recorded in .harness/rejected-decisions.md
-# (hook-byteform-test-literal-retirement) and named in hook-spec.{sh,ps1}'s header, which
+# (hook-byteform-test-literal-retirement) and named in hook-spec.sh's header, which
 # T-13's hand-off list omitted.
 case "${OSTYPE:-}" in
     msys*|cygwin*|win32)

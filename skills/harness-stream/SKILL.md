@@ -1,7 +1,7 @@
 ---
 name: harness-stream
 description: Streaming / living-pool mode. Drains a continuously-growable task pool one task at a time through pm-orchestrator, re-reading the pool every iteration so tasks you add mid-run are picked up without re-invoking. Best-effort — a failed task is marked and skipped, and a task needing human input is deferred and surfaced at stream end rather than halting the stream. Includes an ambient mode (invoke with no pool-id) where every chat message folds new requirements into the default pool and drains it. Use when you want to fire requirements at the AI as they occur to you and only watch results — "keep draining a pool I keep adding to", "边开发边不断加任务", "想到啥需求就丢进去，只看结果". NOT /harness-batch (a fixed list that cannot grow mid-run).
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, TodoWrite, Task
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, TodoWrite, Task
 ---
 
 # /harness-stream
@@ -61,15 +61,15 @@ Ambient mode is the **minimal "start once, then just keep typing" experience**: 
 
 ### How it works
 
-- **The flag.** Ambient mode is gated by a single transient flag file `.harness/ambient.flag` (gitignored, like `.harness/intervention.md`). **Presence = ambient ON; absence = ambient OFF.** It is **session-scoped**: a `SessionStart` hook (`.harness/scripts/ambient-reset.{ps1,sh}`) deletes the flag at the start of every new session, so ambient never silently carries over and there is no "off" keyword to remember.
-- **The heartbeat hook.** A `UserPromptSubmit` hook (`.harness/scripts/ambient-prompt.{ps1,sh}`, wired in `.claude/settings.json`) runs on every user turn. When `.harness/ambient.flag` is present it prints an instruction block that Claude Code injects into the turn as added context — telling the agent to ingest+drain (below). When the flag is absent the hook prints **nothing** (no-op), so normal chat is unaffected. The hook never does the work itself and never blocks a turn (it always exits 0); Claude is the worker.
+- **The flag.** Ambient mode is gated by a single transient flag file `.harness/ambient.flag` (gitignored, like `.harness/intervention.md`). **Presence = ambient ON; absence = ambient OFF.** It is **session-scoped**: a `SessionStart` hook (`.harness/scripts/ambient-reset.sh`) deletes the flag at the start of every new session, so ambient never silently carries over and there is no "off" keyword to remember.
+- **The heartbeat hook.** A `UserPromptSubmit` hook (`.harness/scripts/ambient-prompt.sh`, wired in `.claude/settings.json`) runs on every user turn. When `.harness/ambient.flag` is present it prints an instruction block that Claude Code injects into the turn as added context — telling the agent to ingest+drain (below). When the flag is absent the hook prints **nothing** (no-op), so normal chat is unaffected. The hook never does the work itself and never blocks a turn (it always exits 0); Claude is the worker.
 - **Serial only.** One task at a time — same as the rest of this skill. No parallel dispatch.
 - **Resume is free.** The default pool file is the persistent state; a partially-drained pool resumes on the next message via the existing resume semantics (skip rows whose `07_DELIVERY.md` is DELIVERED).
 
 ### Enter / exit
 
 - **Enter:** just invoke **`/harness-stream` with no pool-id** — that single action *is* "ambient on" (no keyword to remember). On enter the skill: (1) writes `.harness/ambient.flag`; (2) ensures `docs/batches/default/BATCH_PLAN.md` exists (auto-create from `_template`, empty table); (3) tells you: "Ambient mode on for this session. Type requirements; I'll fold each into the default pool and drain it."
-- **Exit:** **automatic** — ambient mode is **session-scoped**. A `SessionStart` hook (`.harness/scripts/ambient-reset.{ps1,sh}`) clears `.harness/ambient.flag` at the start of every new session, so a fresh session is never silently in ambient mode; re-invoke `/harness-stream` to resume. To stop mid-session, delete `.harness/ambient.flag` (or just tell the AI to stop). There is no "off" keyword to remember.
+- **Exit:** **automatic** — ambient mode is **session-scoped**. A `SessionStart` hook (`.harness/scripts/ambient-reset.sh`) clears `.harness/ambient.flag` at the start of every new session, so a fresh session is never silently in ambient mode; re-invoke `/harness-stream` to resume. To stop mid-session, delete `.harness/ambient.flag` (or just tell the AI to stop). There is no "off" keyword to remember.
 
 ### Each ambient turn (what the agent does when the flag is set)
 

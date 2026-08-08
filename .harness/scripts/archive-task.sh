@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # archive-task.sh — Archive a completed task: harvest insights, move stage docs.
-# Mirror of archive-task.ps1.
 #
 # Usage:
 #   bash .harness/scripts/archive-task.sh --task <task-slug>

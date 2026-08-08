@@ -1,6 +1,6 @@
 /**
  * guard-rm — destructive-command PreToolUse guard for Claude Code.
- * TypeScript port of guard-rm.{sh,ps1} (v2 migration, stage 2).
+ * TypeScript port of guard-rm.sh (v2 migration, stage 2).
  *
  * Invoked by settings hooks.PreToolUse before every Bash tool call. Reads the tool
  * input as JSON on stdin; exits 0 to allow, 2 to BLOCK with a stderr message.

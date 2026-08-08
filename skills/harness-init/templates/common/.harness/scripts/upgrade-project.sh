@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # upgrade-project.sh — Deterministic mechanical layer for /harness-upgrade (T-012).
-# Mirror of upgrade-project.ps1. See that file for the full doc + stdout contract.
 #
 # Brings an already-initialized but STALE harness project up to the current plugin
 # layout: relocate scripts to .harness/scripts/, content-refresh the depth-sensitive
@@ -23,6 +22,10 @@
 #               carries an unresolved placeholder token. Exit 4 overrides 2/3 — the
 #               co-occurring CONFLICT records are still all on stdout.
 
+# v0.49.0: this flow still RECOGNISES legacy `.ps1` files — an old project may hold them,
+# and relocating or flagging one is not the same as supporting the platform. What it no
+# longer does is GENERATE a PowerShell command: the hook wiring spec has one byte-form
+# per tool and it names a `.sh` target.
 set -uo pipefail
 
 DRY_RUN=false
@@ -92,7 +95,7 @@ verb_prefix() { if [[ "$DRY_RUN" == true ]]; then echo "PLAN"; else echo "RESULT
 
 # --- hook-spec adapter (T-16) ---------------------------------------------------
 # This flow no longer CARRIES any hook command byte-form: it ASKS the hook wiring
-# spec (hook-spec.sh), the single source of truth for `(tool, target OS) -> command`.
+# spec (hook-spec.sh), the single source of truth for `tool -> command`.
 # resilient_cmd is RETIRED — after delegation it would be a pass-through mapping a
 # boolean to windows/unix, and every call site needs a failure branch anyway.
 #
@@ -161,8 +164,7 @@ hsa_query() {                           # $1 = cache key, $2.. = spec argv
     return "$rc"
 }
 
-hsa_command() { hsa_query "cmd/$1/$2" command "$1" "$2"; }
-hsa_hostos()  { hsa_query "hostos"    hostos; }
+hsa_command() { hsa_query "cmd/$1" command "$1"; }
 
 # str_replace_all <haystack> <needle> <replacement> — literal replace-all that is
 # IMMUNE to bash 5.2's `&`-means-matched-text rule in ${var//pat/repl} (the resilient
@@ -181,7 +183,7 @@ str_replace_all() {
 emit "TYPE|$TYPE"
 
 # --- S1 relocation --------------------------------------------------------------
-# INVARIANT: refresh_set (S2 below) == (known minus verify_all.{ps1,sh}, baseline.json)
+# INVARIANT: refresh_set (S2 below) == (known minus verify_all.sh, baseline.json)
 # plus the ambient hook pair (ambient-prompt/-reset never lived at top-level scripts/ —
 # they shipped post-relocation in T-011, so they are NOT in `known`).
 # These two literal arrays are hand-maintained — if you edit one, update the other.
@@ -227,18 +229,22 @@ for name in "${known[@]}"; do
 done
 
 # --- S2 content-refresh of depth-sensitive scripts (the L31 / DO-1 fix) ---------
-# INVARIANT: refresh_set == (known (S1 above) minus verify_all.{ps1,sh}, baseline.json)
+# INVARIANT: refresh_set == (known (S1 above) minus verify_all.sh, baseline.json)
 # plus the ambient hook pair (ambient-prompt/-reset are hook targets — repair, FR-R1,
 # must be able to re-land them; they are not in `known` because they never lived at
 # top-level scripts/). Hand-maintained literal arrays — edit one, update the other.
+# v0.49.0: the `.ps1` rows are gone. `known` (S1) still lists them because RELOCATING a
+# legacy file out of `scripts/` is this flow's job; REFRESHING one is not — there is no
+# current template to refresh it from, and emitting a template-missing GAP for a file the
+# toolkit deliberately stopped shipping would fail the run on a successful upgrade.
 refresh_set=(
-    harness-sync.ps1 harness-sync.sh
-    install-hooks.ps1 install-hooks.sh
-    archive-task.ps1 archive-task.sh
-    guard-rm.ps1 guard-rm.sh
-    migrate-scripts-layout.ps1 migrate-scripts-layout.sh
-    ambient-prompt.ps1 ambient-prompt.sh
-    ambient-reset.ps1 ambient-reset.sh
+    harness-sync.sh
+    install-hooks.sh
+    archive-task.sh
+    guard-rm.sh
+    migrate-scripts-layout.sh
+    ambient-prompt.sh
+    ambient-reset.sh
 )
 for name in "${refresh_set[@]}"; do
     tmpl_file="$template_common_scripts/$name"
@@ -298,7 +304,7 @@ settings_new=""
 # Token opener/closer, assembled from pieces so this shipped helper never contains a
 # literal double-brace token (insight 2026-06-08; test-init's blanket placeholder scan).
 # Declared at S3 scope — OUTSIDE S3.0 — because the terminal congruence scan below reads
-# ph_o even when the S3.0 placeholder loop is skipped (hook-spec `hostos` unavailable,
+# ph_o even when the S3.0 placeholder loop is skipped (hook-spec unavailable,
 # T-16 §3.6); leaving it inside S3.0 would make that branch exit 1 on an unbound variable
 # under `set -uo pipefail` instead of the contracted exit 4. This mirrors the PowerShell
 # twin, where $phOpen/$phClose already sit at S3 scope.
@@ -317,37 +323,31 @@ else
     # terminal scan flags an un-repairable token instead -> exit 4). ph_o/ph_c are
     # declared at S3 scope above (T-16 §3.6). Replacement values contain no token
     # opener, so a second run is a no-op (B10).
-    # T-16: the emitted command and the host-OS token both come from the hook wiring
-    # spec (hsa_command / hsa_hostos) — this flow carries no byte-form copy. The value
+    # T-16: the emitted command comes from the hook wiring spec (hsa_command) — this
+    # flow carries no byte-form copy. The value
     # lands inside a JSON string and the spec already emits the JSON-escaped bytes
     # (inner " as \"), byte-identical to settings.json.tmpl after substitution.
     # Spec unavailable => the placeholder is LEFT IN PLACE (never emptied, never
     # improvised) and one GAP| record is emitted; the terminal congruence scan then
     # flags the unresolved token and owns the exit code (4), exactly as before.
-    if hsa_hostos; then hsa_os="$hsa_out"; else hsa_os=""; fi
-    if [[ -z "$hsa_os" ]]; then
-        emit "GAP|hook-spec|absent|.claude/settings.json (host OS undeterminable — SYNC_COMMAND, GUARD_COMMAND, AMBIENT_PROMPT_COMMAND, AMBIENT_RESET_COMMAND left unresolved)"
-    else
-        ph_names=(SYNC_COMMAND GUARD_COMMAND AMBIENT_PROMPT_COMMAND AMBIENT_RESET_COMMAND)
-        ph_tools=(harness-sync guard-rm ambient-prompt ambient-reset)
-        for ph_i in "${!ph_names[@]}"; do
-            ph_tok="${ph_o}${ph_names[$ph_i]}${ph_c}"
-            if [[ "$hsa_os" == "windows" ]]; then
-                ph_target="${ph_tools[$ph_i]}.ps1"
+    # v0.49.0: the host-OS branch is gone with Windows support. `hook-spec command` takes
+    # one argument now, and there is one byte-form per tool, so nothing here has to decide
+    # which platform it is on before it can resolve a placeholder.
+    ph_names=(SYNC_COMMAND GUARD_COMMAND AMBIENT_PROMPT_COMMAND AMBIENT_RESET_COMMAND)
+    ph_tools=(harness-sync guard-rm ambient-prompt ambient-reset)
+    for ph_i in "${!ph_names[@]}"; do
+        ph_tok="${ph_o}${ph_names[$ph_i]}${ph_c}"
+        ph_target="${ph_tools[$ph_i]}.sh"
+        if printf '%s' "$settings_new" | grep -qF -- "$ph_tok" && target_present "$ph_target"; then
+            if hsa_command "${ph_tools[$ph_i]}"; then
+                ph_cmd="$hsa_out"
+                settings_new="$(str_replace_all "$settings_new" "$ph_tok" "$ph_cmd")"
+                emit "$(verb_prefix)|REWIRE-PLACEHOLDER|.claude/settings.json (${ph_names[$ph_i]} -> $ph_cmd)"
             else
-                ph_target="${ph_tools[$ph_i]}.sh"
+                emit "GAP|hook-spec|absent|.claude/settings.json (${ph_names[$ph_i]}: hook wiring spec unavailable at $(hsa_path) — placeholder left unresolved)"
             fi
-            if printf '%s' "$settings_new" | grep -qF -- "$ph_tok" && target_present "$ph_target"; then
-                if hsa_command "${ph_tools[$ph_i]}" "$hsa_os"; then
-                    ph_cmd="$hsa_out"
-                    settings_new="$(str_replace_all "$settings_new" "$ph_tok" "$ph_cmd")"
-                    emit "$(verb_prefix)|REWIRE-PLACEHOLDER|.claude/settings.json (${ph_names[$ph_i]} -> $ph_cmd)"
-                else
-                    emit "GAP|hook-spec|absent|.claude/settings.json (${ph_names[$ph_i]}: hook wiring spec unavailable at $(hsa_path) — placeholder left unresolved)"
-                fi
-            fi
-        done
-    fi
+        fi
+    done
 
     # S3.1 — per-variant presence-gated prefix rewire (T-020 / RC-4 fix). In the
     # normal flow S2 just landed every variant, so the gate is transparently true and
@@ -433,12 +433,10 @@ read -r -d '' current_hook_body <<'EOF'
 # Tool-agnostic: catches edits from Claude Code, Copilot, Cursor, or hand-typed.
 set -e
 _drift=0
-if command -v pwsh >/dev/null 2>&1 && [ -f .harness/scripts/harness-sync.ps1 ]; then
-    pwsh -File .harness/scripts/harness-sync.ps1 -Check >/dev/null 2>&1 || _drift=1
-elif command -v bash >/dev/null 2>&1 && [ -f .harness/scripts/harness-sync.sh ]; then
+if command -v bash >/dev/null 2>&1 && [ -f .harness/scripts/harness-sync.sh ]; then
     bash .harness/scripts/harness-sync.sh --check >/dev/null 2>&1 || _drift=1
 else
-    echo "harness-kit pre-commit: neither pwsh nor bash found; skipping drift check." >&2
+    echo "harness-kit pre-commit: bash not found; skipping drift check." >&2
     exit 0
 fi
 if [ "$_drift" = "1" ]; then
@@ -446,8 +444,7 @@ if [ "$_drift" = "1" ]; then
     echo "harness-kit: drift between .harness/ and .claude/." >&2
     echo "  .claude/agents/ and/or .claude/skills/ are stale relative to .harness/." >&2
     echo "" >&2
-    echo "  Fix: pwsh -File .harness/scripts/harness-sync.ps1   (Windows)" >&2
-    echo "       bash .harness/scripts/harness-sync.sh          (macOS / Linux)" >&2
+    echo "  Fix: bash .harness/scripts/harness-sync.sh" >&2
     echo "  Then: git add .claude/ && git commit ..." >&2
     echo "" >&2
     echo "  Note: edits to .harness/rules/ do NOT need sync (referenced by AI-GUIDE.md, not composed)." >&2
@@ -580,7 +577,9 @@ old_b_customized() {
     return 1
 }
 
-for shell in ps1 sh; do
+# v0.49.0: one shell. The loop stays a loop so the body is unchanged, but `ps1` is no
+# longer a member — there is no verify_all.ps1.tmpl to regenerate from.
+for shell in sh; do
     proj_file="$dst_dir/verify_all.$shell"
     tmpl_file="$template_type_scripts/verify_all.$shell.tmpl"
     if [[ ! -f "$tmpl_file" ]]; then

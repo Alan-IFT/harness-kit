@@ -45,12 +45,10 @@ const PRE_COMMIT_BODY = `#!/bin/sh
 # Tool-agnostic: catches edits from Claude Code, Copilot, Cursor, or hand-typed.
 set -e
 _drift=0
-if command -v pwsh >/dev/null 2>&1 && [ -f .harness/scripts/harness-sync.ps1 ]; then
-    pwsh -File .harness/scripts/harness-sync.ps1 -Check >/dev/null 2>&1 || _drift=1
-elif command -v bash >/dev/null 2>&1 && [ -f .harness/scripts/harness-sync.sh ]; then
+if command -v bash >/dev/null 2>&1 && [ -f .harness/scripts/harness-sync.sh ]; then
     bash .harness/scripts/harness-sync.sh --check >/dev/null 2>&1 || _drift=1
 else
-    echo "harness-kit pre-commit: neither pwsh nor bash found; skipping drift check." >&2
+    echo "harness-kit pre-commit: bash not found; skipping drift check." >&2
     exit 0
 fi
 if [ "$_drift" = "1" ]; then
@@ -58,8 +56,7 @@ if [ "$_drift" = "1" ]; then
     echo "harness-kit: drift between .harness/ and .claude/." >&2
     echo "  .claude/agents/ and/or .claude/skills/ are stale relative to .harness/." >&2
     echo "" >&2
-    echo "  Fix: pwsh -File .harness/scripts/harness-sync.ps1   (Windows)" >&2
-    echo "       bash .harness/scripts/harness-sync.sh          (macOS / Linux)" >&2
+    echo "  Fix: bash .harness/scripts/harness-sync.sh" >&2
     echo "  Then: git add .claude/ && git commit ..." >&2
     echo "" >&2
     echo "  Note: edits to .harness/rules/ do NOT need sync (referenced by AI-GUIDE.md, not composed)." >&2
@@ -147,15 +144,12 @@ const fail = (code, ...lines) => {
  * terminal confirmation (derived from those same answers) and exits 0 with a green report.
  */
 function readWiring() {
-    const os = (0, hook_spec_1.hostOs)();
-    if (!os)
-        fail(4, 'Hook wiring spec did not answer: hostos (empty answer)');
     const wiring = hook_spec_1.TOOLS.map((tool) => ({
         tool,
         event: hook_spec_1.EVENTS[tool],
         matcher: (0, hook_spec_1.matcherOf)(tool),
         semantics: (0, hook_spec_1.semanticsOf)(tool),
-        command: (0, hook_spec_1.commandOf)(tool, os),
+        command: (0, hook_spec_1.commandOf)(tool),
     }));
     for (const w of wiring) {
         if (!w.event)
@@ -165,7 +159,7 @@ function readWiring() {
         if (!w.semantics)
             fail(4, `Hook wiring spec did not answer: semantics ${w.tool} (empty answer)`);
         if (!w.command)
-            fail(4, `Hook wiring spec did not answer: command ${w.tool} ${os} (empty answer)`);
+            fail(4, `Hook wiring spec did not answer: command ${w.tool} (empty answer)`);
     }
     if (wiring.length !== 4) {
         fail(4, `Hook wiring spec did not answer: tools (expected 4 ids, got ${wiring.length})`);
@@ -175,7 +169,7 @@ function readWiring() {
         fail(4, `Hook wiring spec did not answer: tools (expected 4 DISTINCT hook events, got ${distinct.size}: ` +
             `${wiring.map((w) => w.event).join(' ')})`);
     }
-    return { wiring, os };
+    return { wiring };
 }
 /** Build the settings body. Spec values are interpolated verbatim, never re-quoted. */
 function buildSettingsBody(wiring) {
@@ -248,7 +242,7 @@ function run(repoRoot, out, err) {
             return 0;
         }
         // --- Step 5: read the hook wiring spec ---
-        const { wiring, os } = readWiring();
+        const { wiring } = readWiring();
         // --- Step 6: build the body and write it atomically ---
         const tmp = `${localSettings}.tmp-${process.pid}`;
         try {
@@ -303,7 +297,7 @@ function run(repoRoot, out, err) {
         }
         // --- Step 8: the report (visible, reversible, correctly classified) ---
         out(`Created machine-local Claude settings at ${localSettings}`);
-        out(`  Wired ${wiring.length} lifecycle hooks from the hook wiring spec (${os} byte-forms):`);
+        out(`  Wired ${wiring.length} lifecycle hooks from the hook wiring spec:`);
         for (const w of wiring) {
             out(`    ${w.event.padEnd(16)} -> ${w.tool.padEnd(14)} (${w.semantics})`);
         }

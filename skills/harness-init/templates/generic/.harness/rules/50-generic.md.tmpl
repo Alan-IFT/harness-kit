@@ -9,7 +9,7 @@ Carry this in mind when touching code in this project. Skip for typo fixes / com
 
 ## Build / test / verify
 
-The project's actual build / test / lint commands live in `.harness/scripts/verify_all.{ps1,sh}`. The init template ships a generic skeleton — **customize it for your stack on the first real task**.
+The project's actual build / test / lint commands live in `.harness/scripts/verify_all.sh`. The init template ships a generic skeleton — **customize it for your stack on the first real task**.
 
 For {{STACK}}, typical commands might include:
 - Build: `<your build command>` (e.g. `cargo build` for Rust, `pnpm build` for Node, `pip install -e .` for Python)
@@ -55,7 +55,7 @@ The Solution Architect, when partition agents exist, must produce a partition-as
 
 ## Stack-specific verify_all checks (optional)
 
-If your stack has properties worth verifying beyond build / test / lint, add steps to `.harness/scripts/verify_all.{ps1,sh}`. Examples:
+If your stack has properties worth verifying beyond build / test / lint, add steps to `.harness/scripts/verify_all.sh`. Examples:
 
 - Rust: `cargo audit` for security
 - Python: `pip-audit` or `safety check`

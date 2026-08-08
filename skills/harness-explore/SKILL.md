@@ -1,7 +1,7 @@
 ---
 name: harness-explore
 description: Research / feasibility mode. Light-weight requirement analysis + a free-form findings document. No design, no Gate Review, no code. Use when "can we even do X?" is the question and you need evidence, not a vetted plan. Skips most of the 7-agent pipeline by design.
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, AskUserQuestion, WebFetch, TodoWrite, Task
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, WebFetch, TodoWrite, Task
 ---
 
 # /harness-explore

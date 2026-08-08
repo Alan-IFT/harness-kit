@@ -49,7 +49,7 @@ done
 [[ -z "$missing" ]] && step "B.1" "README / LICENSE / CHANGELOG present" "PASS" || step "B.1" "README / LICENSE / CHANGELOG present" "FAIL" "missing:$missing"
 
 # B.2 — install scripts
-[[ -f install.ps1 && -f install.sh ]] && step "B.2" "Install scripts present" "PASS" || step "B.2" "Install scripts present" "FAIL"
+[[ -f install.sh ]] && step "B.2" "Install script present" "PASS" || step "B.2" "Install script present" "FAIL"
 
 # C.1 — skills
 missing_skills=""
@@ -348,13 +348,19 @@ else
     step "E.7" "No stale .harness/intervention.md tracked" "PASS"
 fi
 
-# F.1 — script symmetry
+# F.1 — the harness-owned scripts are present, and no PowerShell twin came back
+#
+# This check used to assert SYMMETRY: a .ps1 beside every .sh. Windows support was removed,
+# so the assertion inverts — a .ps1 anywhere under a scripts directory is a twin returning,
+# and a returning twin re-opens the divergence class the removal closed (nine of thirty
+# insight entries were cross-shell divergence tax).
 missing_sym=""
-for pair in verify_all sync-self harness-sync test-init test-real-project ambient-prompt ambient-reset upgrade-project language-policy entropy-cadence hook-spec; do
-    [[ -f ".harness/scripts/$pair.ps1" ]] || missing_sym="$missing_sym .harness/scripts/$pair.ps1"
-    [[ -f ".harness/scripts/$pair.sh" ]] || missing_sym="$missing_sym .harness/scripts/$pair.sh"
+for one in verify_all sync-self harness-sync test-init test-real-project ambient-prompt ambient-reset upgrade-project language-policy entropy-cadence hook-spec; do
+    [[ -f ".harness/scripts/$one.sh" ]] || missing_sym="$missing_sym .harness/scripts/$one.sh"
 done
-[[ -z "$missing_sym" ]] && step "F.1" "Script pairs (.ps1 + .sh) present" "PASS" || step "F.1" "Script pairs present" "FAIL" "missing:$missing_sym"
+resurrected=$(find .harness/scripts skills/harness-init/templates -name '*.ps1' 2>/dev/null | head -5)
+[[ -n "$resurrected" ]] && missing_sym="$missing_sym powershell-twin-returned:$(echo "$resurrected" | tr '\n' ' ')"
+[[ -z "$missing_sym" ]] && step "F.1" "Harness scripts present, no PowerShell twin" "PASS" || step "F.1" "Harness scripts present, no PowerShell twin" "FAIL" "$missing_sym"
 
 # F.2 — Guard-rm scripts and settings-template guard wiring present (v0.15+; narrowed T-15)
 # TRACKED CONTENT ONLY. This check reads NO settings file — not the committed
@@ -366,10 +372,9 @@ done
 # even a presence-conditional assertion would fail a legitimate state. That dimension is
 # owned and reported by /harness-status §0 "Effective hook source" (T-14). Guard BEHAVIOUR
 # was never this check's job and is not affected: it is covered by
-# .harness/scripts/test-guard-rm.{ps1,sh} over evals/guard-rm-cases.md.
+# .harness/scripts/test-guard-rm.sh over evals/guard-rm-cases.md.
 f2_problems=""
-for f in .harness/scripts/guard-rm.ps1 .harness/scripts/guard-rm.sh \
-         skills/harness-init/templates/common/.harness/scripts/guard-rm.ps1 \
+for f in .harness/scripts/guard-rm.sh \
          skills/harness-init/templates/common/.harness/scripts/guard-rm.sh; do
     [[ -f "$f" ]] || f2_problems="$f2_problems missing:$f"
 done
@@ -423,8 +428,7 @@ if [[ -f "$tmpl" ]]; then
         # [[:space:]] here, NOT `[ \t]` — and this is deliberately NOT harmonized with
         # the awk above. awk turns `\t` inside an ERE into a TAB; grep does not: GNU grep
         # 3.11 reads `[ \t]` as the class {space, backslash, t}, so it MISSES a real tab
-        # and MATCHES `"command"t:`. Measured, T-16 round 2. The PowerShell twin's
-        # `[ \t]` is exact there because .NET does interpret the escape.
+        # and MATCHES `"command"t:`. Measured, T-16 round 2.
         grep -qE '"command"[[:space:]]*:' <<< "$f2_window" \
             || f2_problems="$f2_problems $tmpl:PreToolUse_no_command_entry"
     fi
@@ -523,7 +527,7 @@ fi
 # A subagent's system prompt IS this file's body, so the cost is paid on every dispatch
 # and it is paid in BYTES. A line cap cannot see line length: a 150-line contract of
 # 200-char paragraphs passes it while costing more than a 300-line one. Same wrong-unit
-# hole the byte arms on I.1/I.4/I.5 close. PS twin: verify_all.ps1 I.3.
+# hole the byte arms on I.1/I.4/I.5 close.
 i3_over=""
 if [[ -d agents ]]; then
     while IFS= read -r f; do
@@ -689,7 +693,7 @@ if [[ -d docs/features ]]; then
                 fi
             # BUG-2 fix (v0.17.1): column-anchored match — require the slug as a
             # full pipe-delimited cell, not a bare substring, so `foo` is not
-            # matched by a `foo-extra` row. PS twin: verify_all.ps1 I.7.
+            # matched by a `foo-extra` row.
             done < <(grep -E -- "\|[[:space:]]*${slug}[[:space:]]*\|" docs/tasks.md || true)
         fi
         (( is_active == 1 )) || continue
@@ -763,9 +767,7 @@ i6_exempt_files=(
     "architecture.html"
     "docs/walkthrough.html"
     "docs/project-overview.html"
-    ".harness/scripts/verify_all.ps1"
     ".harness/scripts/verify_all.sh"
-    ".harness/scripts/test-verify-i6.ps1"
     ".harness/scripts/test-verify-i6.sh"
 )
 i6_exempt_dirs=(
@@ -776,7 +778,7 @@ i6_exempt_dirs=(
 # depends only on its entry, but i6_build_regex forks `sed` per anchor token, so the
 # previous per-(file × entry) rebuild (~330 × 14 ≈ 4.6k builds → ~30k forks) dominated
 # I.6 wall-clock on MSYS far more than the scan itself did. Hoisting it makes I.6 run in
-# seconds, not minutes. (The PS twin already builds each regex once per entry — this aligns.)
+# seconds, not minutes.
 i6_anchors_a=(); i6_reason_a=(); i6_exclude_a=(); i6_rx_a=()
 for entry in "${i6_banned[@]}"; do
     IFS='|' read -r e_anchors e_reason e_exclude e_gap <<< "$entry"

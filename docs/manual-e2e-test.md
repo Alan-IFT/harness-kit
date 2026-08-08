@@ -1,6 +1,9 @@
 # Manual End-to-End Test Checklist
 
-Automated regression (`.harness/scripts/test-init.ps1` at 287 assertions; `.harness/scripts/test-init.sh` at 249 when python3 is unavailable (e.g. Windows Microsoft Store stub) / 287 when present; `.harness/scripts/verify_all` at 35 checks; `.harness/scripts/test-supervisor.ps1` at 49 assertions / `.harness/scripts/test-supervisor.sh` at 45 (no-python3) covering the supervisor agent contract + AC-4..AC-7 + BUG-1 fixed-case Q-1 + BUG-2 column-anchored-slug negative fixtures; `.harness/scripts/test-verify-i6.{ps1,sh}` at 58/58 covering the I.6 gap-tolerant matcher + 2×2 structural lockstep + AC-8 permanent fixture; live counts in `.harness/scripts/baseline.json`) covers everything
+Automated regression (`.harness/scripts/verify_all.sh` at 35 checks; `npm test` at 287 unit
+tests; `.harness/scripts/test-init.sh`, `test-supervisor.sh`, `test-verify-i6.sh`,
+`test-guard-rm.sh`, `test-archive-task.sh`, `test-harness-upgrade.sh`, `test-language.sh` and
+`test-real-project.sh` at the counts pinned in `.harness/scripts/baseline.json`) covers everything
 that runs from a shell. But two things must be exercised in a real Claude Code
 session to confirm the experience:
 
@@ -23,10 +26,6 @@ upgrading / before announcing a release.
 
 ### A.1 Dry-run install
 
-```powershell
-& ~/harness-kit/install.ps1 -DryRun
-```
-
 ```bash
 ~/harness-kit/install.sh --dry-run
 ```
@@ -38,21 +37,11 @@ harness-goal, harness-batch, harness-stream, harness-intervene, harness-supervis
 
 ### A.2 Real install
 
-```powershell
-& ~/harness-kit/install.ps1
-```
-
 ```bash
 ~/harness-kit/install.sh
 ```
 
 **Expected**: prints "Installed" for all 17 skills. After completion, list them:
-
-```powershell
-Get-ChildItem ~/.claude/skills/ -Directory | Select-Object Name
-# Should show: harness, harness-adopt, harness-batch, harness-decision-mode, harness-deflate, harness-explore, harness-goal,
-# harness-grill, harness-init, harness-intervene, harness-language, harness-plan, harness-status, harness-stream, harness-supervise, harness-upgrade, harness-verify
-```
 
 ### A.3 Claude Code sees them
 
@@ -68,13 +57,6 @@ If they don't appear: restart Claude Code; if still missing, check that
 ## B. /harness-init in a new project
 
 ### B.1 Set up a scratch folder
-
-```powershell
-$scratch = "$env:TEMP\harness-e2e-$(Get-Random)"
-New-Item -ItemType Directory -Path $scratch -Force
-cd $scratch
-claude
-```
 
 ```bash
 scratch="/tmp/harness-e2e-$$"

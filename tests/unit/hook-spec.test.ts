@@ -1,28 +1,18 @@
 /**
  * Native test suite for the hook-spec TypeScript port.
  *
- * Per constraint 5 of docs/proposals/v2-ts-migration.md: tools/diff-hook-spec.sh compares
- * the port against hook-spec.sh and dies with that file. These tests assert the CONTRACT
- * and are what remains after the shell twins are deleted.
+ * Per constraint 5 of docs/proposals/v2-ts-migration.md: tools/diff-hook-spec.sh compared
+ * the port against hook-spec.sh and died with that file. These tests assert the CONTRACT
+ * and are what remains after the shell twins were deleted.
  *
  * The spec is a pure function over a tiny input space, so the coverage here is
- * EXHAUSTIVE rather than sampled: every tool, every OS, every query.
+ * EXHAUSTIVE rather than sampled: every tool, every query. The target-OS axis is gone with
+ * Windows support — `commandOf` takes one argument, and a `pwsh` byte-form reappearing is
+ * now a defect these tests assert against rather than a branch they cover.
  */
 
 import { describe, expect, it } from 'vitest';
-import {
-  TOOLS,
-  EVENTS,
-  isTool,
-  matcherOf,
-  semanticsOf,
-  commandOf,
-  hostOs,
-  type Tool,
-  type TargetOs,
-} from '../../src/hook-spec';
-
-const OSES: readonly TargetOs[] = ['windows', 'unix'];
+import { TOOLS, EVENTS, isTool, matcherOf, semanticsOf, commandOf, type Tool } from '../../src/hook-spec';
 
 describe('the tool set', () => {
   it('has exactly four ids in a fixed order', () => {
@@ -67,20 +57,20 @@ describe('matcher and semantics', () => {
 });
 
 describe('command byte-forms', () => {
-  it('answers for every (tool, os) pair', () => {
-    for (const t of TOOLS) {
-      for (const os of OSES) {
-        expect(commandOf(t, os), `${t}/${os}`).not.toBe('');
-      }
-    }
+  it('answers for every tool', () => {
+    for (const t of TOOLS) expect(commandOf(t), t).not.toBe('');
   });
 
   it('interpolates the tool id into a space-preceded bare path', () => {
-    // The verify gate extracts ` .harness/scripts/<tool>.<ext>` by that shape; losing the
+    // The verify gate extracts ` .harness/scripts/<tool>.sh` by that shape; losing the
     // leading space or the bare form would silently break its congruence check.
+    for (const t of TOOLS) expect(commandOf(t)).toContain(` .harness/scripts/${t}.sh`);
+  });
+
+  it('names no PowerShell — a returning twin is a defect, not a platform', () => {
     for (const t of TOOLS) {
-      expect(commandOf(t, 'unix')).toContain(` .harness/scripts/${t}.sh`);
-      expect(commandOf(t, 'windows')).toContain(` .harness/scripts/${t}.ps1`);
+      expect(commandOf(t), t).not.toContain('pwsh');
+      expect(commandOf(t), t).not.toContain('.ps1');
     }
   });
 
@@ -88,60 +78,34 @@ describe('command byte-forms', () => {
     // The command lands in a JSON value unmodified, so its inner quotes must already be
     // backslash-escaped. Getting this wrong is invisible until a hook fails to fire.
     for (const t of TOOLS) {
-      for (const os of OSES) {
-        const cmd = commandOf(t, os);
-        const bare = cmd.replace(/\\"/g, '');
-        expect(bare, `${t}/${os} has an unescaped quote`).not.toContain('"');
-      }
+      const bare = commandOf(t).replace(/\\"/g, '');
+      expect(bare, `${t} has an unescaped quote`).not.toContain('"');
     }
   });
 
-  it('gives the guard NO fallback on either OS — it is fail-closed by design', () => {
+  it('gives the guard NO fallback — it is fail-closed by design', () => {
     // A missing or unreachable guard must yield a non-zero exit so the Bash tool call is
     // BLOCKED. Adding `|| exit 0` here would silently disarm the guardrail.
-    for (const os of OSES) {
-      const cmd = commandOf('guard-rm', os);
-      expect(cmd, `${os} guard must not swallow failure`).not.toContain('exit 0');
-      expect(cmd).not.toContain('Test-Path');
-      expect(cmd).not.toContain('[ -f ');
-    }
+    const cmd = commandOf('guard-rm');
+    expect(cmd, 'guard must not swallow failure').not.toContain('exit 0');
+    expect(cmd).not.toContain('[ -f ');
   });
 
   it('gives every NON-guard tool a fallback so a missing script exits 0', () => {
-    for (const t of TOOLS.filter((x) => x !== 'guard-rm')) {
-      expect(commandOf(t, 'unix'), `${t} unix`).toContain('exit 0');
-      expect(commandOf(t, 'windows'), `${t} windows`).toContain('exit 0');
-    }
+    for (const t of TOOLS.filter((x) => x !== 'guard-rm')) expect(commandOf(t), t).toContain('exit 0');
   });
 
   it('anchors to the project directory before running anything', () => {
-    for (const t of TOOLS) {
-      expect(commandOf(t, 'unix')).toContain('$CLAUDE_PROJECT_DIR');
-      expect(commandOf(t, 'windows')).toContain('$env:CLAUDE_PROJECT_DIR');
-    }
+    for (const t of TOOLS) expect(commandOf(t)).toContain('$CLAUDE_PROJECT_DIR');
   });
 
-  it('is pure — the same arguments give the same bytes', () => {
-    for (const t of TOOLS) {
-      for (const os of OSES) {
-        expect(commandOf(t, os)).toBe(commandOf(t, os));
-      }
-    }
+  it('is pure — the same argument gives the same bytes', () => {
+    for (const t of TOOLS) expect(commandOf(t)).toBe(commandOf(t));
   });
 
-  it('gives every (tool, os) pair a distinct command', () => {
-    const all = TOOLS.flatMap((t) => OSES.map((os) => commandOf(t, os)));
+  it('gives every tool a distinct command', () => {
+    const all = TOOLS.map((t) => commandOf(t));
     expect(new Set(all).size).toBe(all.length);
-  });
-});
-
-describe('hostOs', () => {
-  it('answers windows or unix and nothing else', () => {
-    expect(['windows', 'unix']).toContain(hostOs());
-  });
-
-  it('agrees with the running platform', () => {
-    expect(hostOs()).toBe(process.platform === 'win32' ? 'windows' : 'unix');
   });
 });
 
@@ -151,30 +115,14 @@ describe('frozen byte-forms', () => {
   // retained (rejected-decisions: hook-byteform-test-literal-retirement): a test must not
   // take its expectation from the artifact under test. If a change here is intended, the
   // change is to BOTH this literal and the implementation, never to one alone.
-  const EXPECTED: Record<Tool, Record<TargetOs, string>> = {
-    'harness-sync': {
-      unix: `sh -c 'cd \\"$CLAUDE_PROJECT_DIR\\" 2>/dev/null && [ -f .harness/scripts/harness-sync.sh ] && exec bash .harness/scripts/harness-sync.sh || exit 0'`,
-      windows: `pwsh -NoProfile -Command \\"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/harness-sync.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/harness-sync.ps1 }; exit 0\\"`,
-    },
-    'guard-rm': {
-      unix: `sh -c 'cd \\"$CLAUDE_PROJECT_DIR\\" 2>/dev/null && bash .harness/scripts/guard-rm.sh'`,
-      windows: `pwsh -NoProfile -Command \\"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR; & pwsh -NoProfile -File .harness/scripts/guard-rm.ps1\\"`,
-    },
-    'ambient-prompt': {
-      unix: `sh -c 'cd \\"$CLAUDE_PROJECT_DIR\\" 2>/dev/null && [ -f .harness/scripts/ambient-prompt.sh ] && exec bash .harness/scripts/ambient-prompt.sh || exit 0'`,
-      windows: `pwsh -NoProfile -Command \\"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/ambient-prompt.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/ambient-prompt.ps1 }; exit 0\\"`,
-    },
-    'ambient-reset': {
-      unix: `sh -c 'cd \\"$CLAUDE_PROJECT_DIR\\" 2>/dev/null && [ -f .harness/scripts/ambient-reset.sh ] && exec bash .harness/scripts/ambient-reset.sh || exit 0'`,
-      windows: `pwsh -NoProfile -Command \\"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/ambient-reset.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/ambient-reset.ps1 }; exit 0\\"`,
-    },
+  const EXPECTED: Record<Tool, string> = {
+    'harness-sync': `sh -c 'cd \\"$CLAUDE_PROJECT_DIR\\" 2>/dev/null && [ -f .harness/scripts/harness-sync.sh ] && exec bash .harness/scripts/harness-sync.sh || exit 0'`,
+    'guard-rm': `sh -c 'cd \\"$CLAUDE_PROJECT_DIR\\" 2>/dev/null && bash .harness/scripts/guard-rm.sh'`,
+    'ambient-prompt': `sh -c 'cd \\"$CLAUDE_PROJECT_DIR\\" 2>/dev/null && [ -f .harness/scripts/ambient-prompt.sh ] && exec bash .harness/scripts/ambient-prompt.sh || exit 0'`,
+    'ambient-reset': `sh -c 'cd \\"$CLAUDE_PROJECT_DIR\\" 2>/dev/null && [ -f .harness/scripts/ambient-reset.sh ] && exec bash .harness/scripts/ambient-reset.sh || exit 0'`,
   };
 
-  it.each(TOOLS)('%s matches its frozen unix byte-form', (tool) => {
-    expect(commandOf(tool, 'unix')).toBe(EXPECTED[tool].unix);
-  });
-
-  it.each(TOOLS)('%s matches its frozen windows byte-form', (tool) => {
-    expect(commandOf(tool, 'windows')).toBe(EXPECTED[tool].windows);
+  it.each(TOOLS)('%s matches its frozen byte-form', (tool) => {
+    expect(commandOf(tool)).toBe(EXPECTED[tool]);
   });
 });

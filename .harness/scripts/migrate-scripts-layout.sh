@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # migrate-scripts-layout.sh — One-shot upgrade: scripts/ -> .harness/scripts/ (T-007)
-# Mirror of migrate-scripts-layout.ps1. See that file for full doc.
 #
 # For an already-initialized Harness project that placed its harness-owned scripts
 # under scripts/. Moves the known harness-owned scripts to .harness/scripts/ and
@@ -21,6 +20,10 @@
 #      dry-run, would reference) a missing script, or a move did not land.
 #      Remediation: run /harness-upgrade to re-land current scripts + rewire hooks.
 
+# v0.49.0: this flow still RECOGNISES legacy `.ps1` files — an old project may hold them,
+# and relocating or flagging one is not the same as supporting the platform. What it no
+# longer does is GENERATE a PowerShell command: the hook wiring spec has one byte-form
+# per tool and it names a `.sh` target.
 set -uo pipefail
 
 DRY_RUN=false
@@ -111,7 +114,7 @@ target_present() {
 
 # --- hook-spec adapter (T-16) ---------------------------------------------------
 # This flow no longer CARRIES any hook command byte-form: it ASKS the hook wiring
-# spec (hook-spec.sh), the single source of truth for `(tool, target OS) -> command`.
+# spec (hook-spec.sh), the single source of truth for `tool -> command`.
 # resilient_cmd is RETIRED. This flow runs from a project root with NO template-root
 # argument and may execute in a project that predates the spec entirely, so "spec
 # absent" is a normal, expected state — see the SPEC-GAP branch below.
@@ -178,8 +181,7 @@ hsa_query() {                           # $1 = cache key, $2.. = spec argv
     return "$rc"
 }
 
-hsa_command() { hsa_query "cmd/$1/$2" command "$1" "$2"; }
-hsa_hostos()  { hsa_query "hostos"    hostos; }
+hsa_command() { hsa_query "cmd/$1" command "$1"; }
 
 # str_replace_all <haystack> <needle> <replacement> — literal replace-all immune to
 # bash 5.2's `&`-means-matched-text rule in ${var//pat/repl} (the resilient command
@@ -198,7 +200,7 @@ str_replace_all() {
 # that would reorder keys and strip _comment / _doc_sync_hook doc keys). Replaces
 # ALL occurrences of the harness command path prefixes (Stop command, PreToolUse
 # command, permissions.allow entry, _doc_sync_hook doc string).
-# T-020 (RC-1 fix): each of the four {harness-sync,guard-rm} x {ps1,sh} variants is
+# T-020 (RC-1 fix): each of the four {harness-sync,guard-rm} x sh variants is
 # rewired ONLY when its target is (projected) present at .harness/scripts/ — a rewire
 # can no longer point a hook at a file that never landed. The unconditional double-
 # prefix collapse stays last, so the transform remains a fixed point: already-migrated
@@ -227,32 +229,30 @@ settings_new="$(printf '%s\n' "$settings_new" | sed -e 's|\.harness/\.harness/sc
 # run sees the resilient value, not the bare brittle "command", so no .bak churn — B10)
 # and gated on target_present so a brittle command pointing at a missing script is left
 # for the terminal scan to flag. R4: only the harness tool names are eligible.
+# v0.49.0: the `.ps1` half of this loop is gone with Windows support. A legacy project may
+# still carry a `pwsh -NoProfile -File …ps1` command value, and this flow deliberately does
+# NOT rewrite it: the spec has one byte-form per tool and it names a `.sh` target, so
+# "repairing" a pwsh hook here would point it at a script the project may not have. The
+# terminal congruence scan flags such a value, which is the honest outcome — a hook wired to
+# a platform this toolkit no longer supports needs a human, not a silent substitution.
 for s32_tool in harness-sync guard-rm ambient-prompt ambient-reset; do
-    for s32_ext in ps1 sh; do
-        s32_target="$s32_tool.$s32_ext"
-        target_present "$s32_target" || continue
-        if [[ "$s32_ext" == "ps1" ]]; then
-            s32_brittle="pwsh -NoProfile -File .harness/scripts/$s32_target"
-            s32_os=windows
+    s32_target="$s32_tool.sh"
+    target_present "$s32_target" || continue
+    s32_brittle="bash .harness/scripts/$s32_target"
+    s32_needle="\"$s32_brittle\""
+    if [[ "$settings_new" == *"$s32_needle"* ]]; then
+        # T-16: the byte-form comes from the hook wiring spec. Spec unavailable =>
+        # the EXISTING command value is left byte-untouched (never emptied, never
+        # improvised) and a SPEC-GAP record enters the plan. Exit stays 0: the value
+        # is the pre-existing one and its target was already proven present, so a
+        # partially repairable project does not become unrepairable.
+        if hsa_command "$s32_tool"; then
+            s32_cmd="$hsa_out"
+            settings_new="$(str_replace_all "$settings_new" "$s32_needle" "\"$s32_cmd\"")"
         else
-            s32_brittle="bash .harness/scripts/$s32_target"
-            s32_os=unix
+            plan+=("SPEC-GAP  .claude/settings.json ($s32_tool.sh: hook wiring spec unavailable at $(hsa_path) — command left unchanged; run /harness-upgrade)")
         fi
-        s32_needle="\"$s32_brittle\""
-        if [[ "$settings_new" == *"$s32_needle"* ]]; then
-            # T-16: the byte-form comes from the hook wiring spec. Spec unavailable =>
-            # the EXISTING command value is left byte-untouched (never emptied, never
-            # improvised) and a SPEC-GAP record enters the plan. Exit stays 0: the value
-            # is the pre-existing one and its target was already proven present, so a
-            # partially repairable project does not become unrepairable.
-            if hsa_command "$s32_tool" "$s32_os"; then
-                s32_cmd="$hsa_out"
-                settings_new="$(str_replace_all "$settings_new" "$s32_needle" "\"$s32_cmd\"")"
-            else
-                plan+=("SPEC-GAP  .claude/settings.json ($s32_tool.$s32_ext: hook wiring spec unavailable at $(hsa_path) — command left unchanged; run /harness-upgrade)")
-            fi
-        fi
-    done
+    fi
 done
 
 needs_settings=false

@@ -68,7 +68,7 @@ queried_whole=0
 for f in "${queried_files[@]}"; do queried_whole=$((queried_whole + $(sz "$f"))); done
 if command -v node >/dev/null 2>&1 && [ -f .harness/scripts/doc-query.js ]; then
   qtmp=$(mktemp)
-  for term in verify_all placeholder hook template insight PowerShell; do
+  for term in verify_all placeholder hook template insight archive; do
     node .harness/scripts/doc-query.js --in memory --doc insight-index "$term" 2>/dev/null | wc -c >> "$qtmp"
   done
   sort -n "$qtmp" -o "$qtmp"

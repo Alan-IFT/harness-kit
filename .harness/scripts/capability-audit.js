@@ -13,7 +13,7 @@
  *     long as both contracts existed; the orchestrator transcribes on their behalf.
  *   - `pm-orchestrator` is told twice, emphatically, to run `.harness/scripts/archive-task`
  *     — "skipping it is the #1 cause of long-term bloat" — and to call `entropy-cadence`,
- *     while holding neither `Bash` nor `PowerShell`.
+ *     while holding no `Bash` at all.
  *   - The v2 migration's first pass told six agents to run a query script; five of them
  *     cannot run any script at all.
  *
@@ -59,11 +59,10 @@ const path = require("node:path");
  * the wrong thing is worse than one that fires on less, because the first gets disabled.
  */
 const DEMANDS = [
-    // "Run `.harness/scripts/x`", "call `.harness/scripts/x`", "Run `verify_all`", or an
-    // explicit `pwsh` form. Either shell satisfies it — the repo ships both twins.
+    // "Run `.harness/scripts/x`", "call `.harness/scripts/x`", "Run `verify_all`".
     {
-        capability: ['Bash', 'PowerShell'],
-        re: /\b(run|call|invoke|execute)\b[^.\n]{0,40}`[^`\n]*(\.harness\/scripts\/|verify_all|pwsh)[^`\n]*`/i,
+        capability: ['Bash'],
+        re: /\b(run|call|invoke|execute)\b[^.\n]{0,40}`[^`\n]*(\.harness\/scripts\/|verify_all)[^`\n]*`/i,
     },
     // "Write your decision into `X.md`".
     { capability: ['Write'], re: /\bwrite\b[^.\n]{0,40}(into|to)\b[^.\n]{0,40}`[^`\n]+\.md`/i },

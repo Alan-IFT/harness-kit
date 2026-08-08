@@ -20,7 +20,7 @@ This is **purely informational** — the PM never auto-acts on findings. Supervi
 
 ## Tools
 
-`allowed-tools: Read, Write, Glob, Grep` — `Edit`, `Bash`, `PowerShell`, `Task`, `AskUserQuestion` are physically excluded (NFR-4). The skill physically cannot edit upstream docs, run scripts, dispatch other agents, or prompt the user.
+`allowed-tools: Read, Write, Glob, Grep` — `Edit`, `Bash`, `Task`, `AskUserQuestion` are physically excluded (NFR-4). The skill physically cannot edit upstream docs, run scripts, dispatch other agents, or prompt the user.
 
 ## Procedure
 

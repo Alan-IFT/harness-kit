@@ -1,7 +1,7 @@
 ---
 name: harness-batch
 description: Run a fixed list of tasks (T-01...T-NN) through the 7-stage pipeline in sequence, one isolated context per task, stopping only on strong signals. Use when you have several known tasks — from /harness-plan decomposition, a backlog, or an external list — and want fire-and-forget execution instead of /harness run N times. NOT /harness-stream (a pool you keep adding to mid-run).
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, AskUserQuestion, TodoWrite, Task
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, TodoWrite, Task
 ---
 
 # /harness-batch

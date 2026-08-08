@@ -83,15 +83,13 @@ i6_exempt_dirs=(
     "参考/"
 )
 # The canonical list for I.6 exempt FILES at this driver's version. Element-wise
-# equality against verify_all.{ps1,sh} is asserted by Assertion 3c (T-005 §3.5).
+# equality against verify_all.sh is asserted by Assertion 3c (T-005 §3.5).
 i6_exempt_files=(
     "CHANGELOG.md"
     "architecture.html"
     "docs/walkthrough.html"
     "docs/project-overview.html"
-    ".harness/scripts/verify_all.ps1"
     ".harness/scripts/verify_all.sh"
-    ".harness/scripts/test-verify-i6.ps1"
     ".harness/scripts/test-verify-i6.sh"
 )
 # Single source of truth for the banned-list entry count. Bumping to 14 = edit here
@@ -341,40 +339,6 @@ extract_i6_banned() {
 # `@('a','b',...)` are tokenized and `~`-joined to match the bash record shape.
 # Fails closed: any line whose extraction returns < 4 fields produces a record
 # the count assertion (A3b-1) catches.
-extract_ps_banned_records() {
-    local ps_path="$1" line anchors reason exclude gap parse_list
-    # parse_list `'a','b','c'` -> `a~b~c` (strip surrounding ', join on ~)
-    parse_list() {
-        local body="$1" t s out=""
-        body="${body## }"; body="${body%% }"
-        [[ -z "$body" ]] && { printf ''; return 0; }
-        local IFS=','
-        for t in $body; do
-            s="$t"
-            s="${s##[[:space:]]}"; s="${s%%[[:space:]]}"
-            # strip one leading ' and one trailing ' (PS single-quoted token)
-            [[ "$s" == \'*\' ]] && s="${s#\'}" && s="${s%\'}"
-            if [[ -z "$out" ]]; then out="$s"; else out="${out}~${s}"; fi
-        done
-        printf '%s' "$out"
-    }
-    while IFS= read -r line; do
-        # Match only lines that open an entry (literal-keyword anchored).
-        [[ "$line" =~ ^[[:space:]]*@\{[[:space:]]*anchors[[:space:]]*=[[:space:]]*@\( ]] || continue
-        # Anchors body — between `anchors = @(` and the next `)`
-        anchors=$(printf '%s' "$line" | sed -n 's/.*anchors[[:space:]]*=[[:space:]]*@(\([^)]*\)).*/\1/p')
-        # Reason — between `reason = "` and the next `"`
-        reason=$(printf '%s' "$line"  | sed -n 's/.*reason[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p')
-        # Exclude body — between `exclude = @(` and the next `)`
-        exclude=$(printf '%s' "$line" | sed -n 's/.*exclude[[:space:]]*=[[:space:]]*@(\([^)]*\)).*/\1/p')
-        # Gap — integer or the literal `$null` token; `$null` -> empty
-        gap=$(printf '%s' "$line"     | sed -n 's/.*gap[[:space:]]*=[[:space:]]*\(\$null\|[0-9][0-9]*\).*/\1/p')
-        [[ "$gap" == "\$null" ]] && gap=""
-        anchors=$(parse_list "$anchors")
-        exclude=$(parse_list "$exclude")
-        printf '%s|%s|%s|%s\n' "$anchors" "$reason" "$exclude" "$gap"
-    done < "$ps_path"
-}
 
 # ----- 3a — verify_all.sh i6_banned vs driver -----
 live_banned=()
@@ -429,41 +393,10 @@ else
 fi
 assert "structural lockstep: verify_all.sh i6_banned matches driver verbatim (per-entry x 4 fields)" "$lockstep_sh"
 
-# ----- 3b — verify_all.ps1 $banned vs driver -----
-ps1_recs=()
-while IFS= read -r ln; do ps1_recs+=("$ln"); done < <(extract_ps_banned_records .harness/scripts/verify_all.ps1)
-lockstep_ps_count=1
-if [[ "${#ps1_recs[@]}" -ne "$i6_expected_entry_count" ]]; then
-    lockstep_ps_count=0
-    echo "    verify_all.ps1 \$banned entry count = ${#ps1_recs[@]}, expected $i6_expected_entry_count"
-fi
-assert "structural lockstep: verify_all.ps1 \$banned entry count equals I6ExpectedEntryCount" "$lockstep_ps_count"
-
-lockstep_ps=1
-if [[ "${#ps1_recs[@]}" -ne "${#self_banned[@]}" ]]; then
-    lockstep_ps=0
-    echo "    count mismatch: verify_all.ps1=${#ps1_recs[@]} driver=${#self_banned[@]}"
-else
-    for i in "${!ps1_recs[@]}"; do
-        live_rec="${ps1_recs[$i]}"
-        self_rec=$(strip_wrap "${self_banned[$i]}")
-        IFS='|' read -r live_a live_r live_e live_g <<< "$live_rec"
-        IFS='|' read -r self_a self_r self_e self_g <<< "$self_rec"
-        for f in anchors reason exclude gap; do
-            case "$f" in
-                anchors) lv="$live_a"; sv="$self_a" ;;
-                reason)  lv="$live_r"; sv="$self_r" ;;
-                exclude) lv="$live_e"; sv="$self_e" ;;
-                gap)     lv="$live_g"; sv="$self_g" ;;
-            esac
-            if ! i6_field_eq "$lv" "$sv"; then
-                lockstep_ps=0
-                echo "    entry #$((i+1)) field $f mismatch: live=$(i6_format_field "$lv") driver=$(i6_format_field "$sv")"
-            fi
-        done
-    done
-fi
-assert "structural lockstep: verify_all.ps1 \$banned matches driver verbatim (per-entry x 4 fields)" "$lockstep_ps"
+# ----- 3b — RETIRED (v0.49.0) -----
+# This asserted that verify_all.ps1's $banned array matched verify_all.sh's entry for
+# entry, field for field. Windows support was removed, so there is one list and nothing
+# to hold in lockstep — the defect class this covered no longer has two places to differ.
 
 # ----- 3c — exempt-file + exempt-dir lockstep, element-wise -----
 extract_array_block() {                  # $1 = file, $2 = bash array name like i6_exempt_files
@@ -473,41 +406,11 @@ extract_array_block() {                  # $1 = file, $2 = bash array name like 
         f { print }
     ' "$1" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/^"//' -e 's/"$//'
 }
-extract_ps_exempt_list() {               # $1 = verify_all.ps1, $2 = PS variable name (exempt | exemptDirs)
-    # Capture the body between `$<name> = @(` and the next `)`. The block may be
-    # single-line (e.g. `$exemptDirs = @("docs/features/", "参考/")`) OR multi-line
-    # (e.g. `$exempt = @( ... )`); both cases are handled. Character classes
-    # `[$]` and `[(]` avoid awk's regex-escape pitfalls (literal `$` would be the
-    # end-of-line anchor; literal `(` would open a group).
-    awk -v name="$2" '
-        BEGIN { open = "[$]" name "[[:space:]]*=[[:space:]]*@[(]" }
-        !f && $0 ~ open {
-            sub(open, "", $0)
-            f = 1
-        }
-        f {
-            if (match($0, /[)]/)) {
-                print substr($0, 1, RSTART - 1)
-                f = 0
-                next
-            }
-            print
-        }
-    ' "$1" \
-        | tr ',' '\n' \
-        | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' \
-        | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//" \
-        | grep -v '^$'
-}
 
 sh_exempt_files=()
 while IFS= read -r ln; do sh_exempt_files+=("$ln"); done < <(extract_array_block .harness/scripts/verify_all.sh i6_exempt_files)
 sh_exempt_dirs=()
 while IFS= read -r ln; do sh_exempt_dirs+=("$ln"); done < <(extract_array_block .harness/scripts/verify_all.sh i6_exempt_dirs)
-ps1_exempt_files=()
-while IFS= read -r ln; do ps1_exempt_files+=("$ln"); done < <(extract_ps_exempt_list .harness/scripts/verify_all.ps1 exempt)
-ps1_exempt_dirs=()
-while IFS= read -r ln; do ps1_exempt_dirs+=("$ln"); done < <(extract_ps_exempt_list .harness/scripts/verify_all.ps1 exemptDirs)
 
 # i6_compare_lists LABEL LIVE_ARRAY_NAME CANONICAL_ARRAY_NAME — element-wise equality.
 # Sets the global $list_cmp_ok to 1/0 (we cannot return arrays from bash).
@@ -530,12 +433,8 @@ i6_compare_lists() {
     done
 }
 
-i6_compare_lists "verify_all.ps1 \$exempt" ps1_exempt_files i6_exempt_files
-assert "exempt-file lockstep: verify_all.ps1 \$exempt equals canonical (element-wise)" "$list_cmp_ok"
 i6_compare_lists "verify_all.sh i6_exempt_files" sh_exempt_files i6_exempt_files
 assert "exempt-file lockstep: verify_all.sh i6_exempt_files equals canonical (element-wise)" "$list_cmp_ok"
-i6_compare_lists "verify_all.ps1 \$exemptDirs" ps1_exempt_dirs i6_exempt_dirs
-assert "exempt-dir lockstep: verify_all.ps1 \$exemptDirs equals canonical (element-wise)" "$list_cmp_ok"
 i6_compare_lists "verify_all.sh i6_exempt_dirs" sh_exempt_dirs i6_exempt_dirs
 assert "exempt-dir lockstep: verify_all.sh i6_exempt_dirs equals canonical (element-wise)" "$list_cmp_ok"
 

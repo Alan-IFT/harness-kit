@@ -46,7 +46,6 @@ describe('it fires on a real mismatch', () => {
     ['a script invocation', 'Run `.harness/scripts/archive-task --task <slug>` on completion.', 'Bash'],
     ['a verify_all invocation', 'You run `verify_all` before declaring done.', 'Bash'],
     ['a call form', 'Call `.harness/scripts/entropy-cadence delivered` once per task.', 'Bash'],
-    ['an explicit pwsh form', 'Run `pwsh -File .harness/scripts/x.ps1`.', 'PowerShell'],
     ['a file write', 'Write your decision into `PM_LOG.md`.', 'Write'],
     ['a dispatch', 'Dispatch each stage via the Task tool.', 'Task'],
   ])('reports %s', (_label, body, capability) => {
@@ -106,11 +105,12 @@ describe('in-band exemptions', () => {
     expect(exemptions(body)).toEqual(new Set(['Write']));
   });
 
-  it('either shell satisfies a script invocation', () => {
-    // The repo ships a .sh and a .ps1 for every tool, so holding one is enough.
+  it('Bash satisfies a script invocation, and nothing else does', () => {
+    // This used to read "either shell satisfies it" — the repo shipped a .sh and a .ps1 for
+    // every tool. Windows support was removed, so `Bash` is now the only satisfier and a
+    // contract that names a script without holding it is a finding, not a portability note.
     const body = 'Run `.harness/scripts/archive-task`.';
     expect(auditContract('x', contract('Read, Bash', body))).toEqual([]);
-    expect(auditContract('x', contract('Read, PowerShell', body))).toEqual([]);
     expect(auditContract('x', contract('Read', body))).toHaveLength(1);
   });
 

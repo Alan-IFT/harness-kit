@@ -59,7 +59,7 @@ forces a cross-shell decision, and 27 decisions are queued awaiting a Windows ho
 ```
 src/<name>.ts                     source of truth
 .harness/scripts/<name>.js        compiled, committed, ships to projects
-.harness/scripts/<name>.{sh,ps1}  two-line launchers; no logic, nothing to diverge
+.harness/scripts/<name>.sh  two-line launchers; no logic, nothing to diverge
 tests/unit/<name>.test.ts         native tests — these outlive the migration
 tools/make-shims.sh               generates the launcher pair for a ported name
 tsconfig.json                     strict, outDir .harness/scripts, newLine lf
@@ -113,7 +113,7 @@ well-formed payload, so only a test written against the contract rather than aga
 twin could reach it.
 
 Stage 1 deliberately does **not** cut consumers over. The port exists and is proven
-equivalent; `hook-spec.{sh,ps1}` remain live. Cutover happens when the consumers that call
+equivalent; `hook-spec.sh` remain live. Cutover happens when the consumers that call
 it are themselves migrated, so no stage leaves a half-wired caller.
 
 ### Stage 2 note — `guard-rm` is the dangerous one

@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # harness-sync.sh - v0.10
 # Binding sync: .harness/ (tool-agnostic SOT) -> .claude/ (Claude Code path requirement).
-# Mirror of harness-sync.ps1. See that file for full doc.
 #
 # v0.10 scope: only agents + skills. Rules are no longer composed into
 # CLAUDE.md or copilot-instructions.md; those are static stubs.

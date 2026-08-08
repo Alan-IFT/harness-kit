@@ -1,7 +1,7 @@
 ---
 name: harness
 description: Full 7-stage Harness pipeline. Routes a real feature / bug / refactor task through Requirement Analyst → Solution Architect → Gate Reviewer → Developer → Code Reviewer → QA Tester → Delivery, with verify_all as the gate. Use when the task has a clear acceptance criterion and needs to ship. Symmetric with /harness-plan, /harness-explore, /harness-goal (the three lighter modes).
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, AskUserQuestion, TodoWrite, Task
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, TodoWrite, Task
 ---
 
 # /harness

@@ -12,7 +12,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { run, settingsHookState, buildSettingsBody } from '../../src/install-hooks';
-import { TOOLS, EVENTS, matcherOf, semanticsOf, commandOf, hostOs } from '../../src/hook-spec';
+import { TOOLS, EVENTS, matcherOf, semanticsOf, commandOf } from '../../src/hook-spec';
 
 let sandbox = '';
 
@@ -142,7 +142,7 @@ describe('bootstrap output', () => {
     invoke();
     const body = read('.git/hooks/pre-commit');
     expect(body).toContain('harness-sync.sh --check');
-    expect(body).toContain('harness-sync.ps1 -Check');
+    expect(body).not.toContain('pwsh');
     expect(fs.statSync(path.join(sandbox, '.git/hooks/pre-commit')).mode & 0o111).toBeTruthy();
   });
 
@@ -157,7 +157,7 @@ describe('bootstrap output', () => {
     const body = read('.claude/settings.local.json');
     for (const tool of TOOLS) {
       expect(body, `event for ${tool}`).toContain(`"${EVENTS[tool]}": [`);
-      expect(body, `command for ${tool}`).toContain(commandOf(tool, hostOs()));
+      expect(body, `command for ${tool}`).toContain(commandOf(tool));
     }
     expect(fs.readdirSync(path.join(sandbox, '.claude')).filter((f) => f.includes('.tmp-'))).toEqual([]);
   });
@@ -235,7 +235,7 @@ describe('buildSettingsBody', () => {
     event: EVENTS[tool],
     matcher: matcherOf(tool),
     semantics: semanticsOf(tool),
-    command: commandOf(tool, 'unix' as const),
+    command: commandOf(tool),
   }));
 
   it('ends with exactly one trailing newline', () => {
@@ -247,7 +247,7 @@ describe('buildSettingsBody', () => {
   it('interpolates commands verbatim, without re-quoting', () => {
     const body = buildSettingsBody(wiring);
     // The guard command carries a literal `\"` pair; it must survive untouched.
-    expect(body).toContain(commandOf('guard-rm', 'unix'));
+    expect(body).toContain(commandOf('guard-rm'));
   });
 
   it('separates events with commas except the last', () => {

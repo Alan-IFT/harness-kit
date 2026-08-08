@@ -1,6 +1,6 @@
 # Test Fixtures
 
-Minimal real-shape projects used by `.harness/scripts/test-real-project.{ps1,sh}` to verify
+Minimal real-shape projects used by `.harness/scripts/test-real-project.sh` to verify
 that Harness assets (templates, harness-sync, verify_all) work correctly when
 overlaid onto a project that already has code.
 

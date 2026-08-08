@@ -112,17 +112,17 @@
 ## hook-byteform-test-literal-retirement
 - **Decision:** declined (the test-side literals are deliberately RETAINED).
 - **Why:** T-16 retired every hook-command byte-form copy from the four *derivation flows*
-  (`upgrade-project.{sh,ps1}`, `migrate-scripts-layout.{sh,ps1}`, and the two `SKILL.md`
-  placeholder tables), which now query `hook-spec.{sh,ps1}`. Retiring the *test* copies as well
+  (`upgrade-project.sh`, `migrate-scripts-layout.sh`, and the two `SKILL.md`
+  placeholder tables), which now query `hook-spec.sh`. Retiring the *test* copies as well
   was considered and declined: a test must not derive its expectation from the artifact under
   test. Once the flows delegate, a spec-vs-flow oracle compares the spec with itself — green, and
-  measuring nothing — so `test-init.{sh,ps1}`'s `EXP_*` / `$exp*` fixtures were re-anchored as THE
-  oracle instead. `test-real-project.{sh,ps1}` is a fixture-AUTHORING site (it builds the
+  measuring nothing — so `test-init.sh`'s `EXP_*` / `$exp*` fixtures were re-anchored as THE
+  oracle instead. `test-real-project.sh` is a fixture-AUTHORING site (it builds the
   fixture's final settings) and has the same reason plus a stronger one. `test-harness-upgrade`'s
   `t20_pick` is the one standing flow-emitted-vs-independent-literal anchor and must stay
   independent. The raw-shell / raw-pwsh / post-`ConvertFrom-Json` literals are DIFFERENT escaping
   levels the spec deliberately does not emit. All five sites are enumerated with their reasons in
-  `hook-spec.{sh,ps1}`'s header.
+  `hook-spec.sh`'s header.
 - **Origin:** T-16 `hook-truth-derivation` (OQ-1(b), OQ-6(b)).
 
 ## stage-doc-summary-header
@@ -191,7 +191,7 @@
 ## hook-spec-raw-query
 - **Decision:** deferred (declined for T-16; recorded as a follow-up, not dropped).
 - **Why:** the shell-level / raw-pwsh consumers (`test-harness-upgrade`'s raw probes,
-  `test-guard-rm.{sh,ps1}`, `evals/guard-rm-cases.md`) carry a DIFFERENT escaping level from the
+  `test-guard-rm.sh`, `evals/guard-rm-cases.md`) carry a DIFFERENT escaping level from the
   one `hook-spec` emits, and the guard cases are guard *input data*, not a wiring copy. Retiring
   them needs a new `raw` query — i.e. a change to the source of truth's contract and to its
   arity / anti-vacuity gates — inside a task whose whole point was that consumers change and the
@@ -234,7 +234,7 @@
 ## insight-prose-i6-banned-phrase
 - **Decision:** declined (T-20, 2026-08-01) — no `verify_all` `I.6` banned-phrase entry is added to
   enforce the corrected "wrapped bullets are dropped" prose.
-- **Why:** `test-verify-i6.{sh,ps1}` hold a verbatim copy of the banned list at
+- **Why:** `test-verify-i6.sh` hold a verbatim copy of the banned list at
   `verify_all.sh:566-581`, so one added entry moves the frozen `test_verify_i6_*_assertions` pair in
   both shells — and the PowerShell half cannot be re-measured on this host. The phrase itself is
   ordinary English ("silently dropped"), so an anchor for it would be a false-positive engine over
@@ -245,7 +245,7 @@
 ## shared-insight-parse-module
 - **Decision:** declined (T-20, 2026-08-01) — `INSIGHT-SCAN` is written four times (both
   `archive-task` twins, both `verify_all` `I.4` arms) rather than extracted into a shared
-  `insight-parse.{sh,ps1}`.
+  `insight-parse.sh`.
 - **Why:** `verify_all` would then depend, at gate time, on a mirrored script that `verify_all`'s own
   `E.1` is what checks — a cycle — and the missing-module fallback would itself be a second
   predicate, which is the defect class the task closes. The cost is stated rather than hidden: the
@@ -330,7 +330,7 @@
      `step "I.6"` is called once, so an added record costs no `step` call and the check count does
      not move — grounds 1-3 all quantify over adding a check id and none of them reaches it.
      Declined on two of its own. **(a)** `verify_all.sh:636-638` and `:673-674` record that
-     `test-verify-i6.{sh,ps1}` hold a **verbatim copy** of the list, so one added record moves both
+     `test-verify-i6.sh` hold a **verbatim copy** of the list, so one added record moves both
      `test_verify_i6_bash_assertions` and `test_verify_i6_ps_assertions`, and the PowerShell half
      cannot be re-measured on this host — it would manufacture a new PowerShell operator obligation
      inside the very change whose subject is that such obligations cannot be discharged here, and
@@ -343,7 +343,7 @@
   output — names the ledger as the destination and the append rule.
 - **Re-surface condition:** an obligation landing in `.harness/scripts/baseline.json` again after
   this change. That is observable, not hypothetical: the anti-entropy sweep that produced **EP-002**
-  (`skills/harness-deflate/`, cadence `.harness/scripts/entropy-cadence.{ps1,sh}`) runs on a cadence
+  (`skills/harness-deflate/`, cadence `.harness/scripts/entropy-cadence.sh`) runs on a cadence
   and reads the pin file. One recurrence measures the design lever as having failed and makes a
   check justified.
 - **Origin:** T-24 `operator-obligation-home` (architect, OQ-8; developer stage 4).

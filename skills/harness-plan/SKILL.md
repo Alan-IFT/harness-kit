@@ -1,7 +1,7 @@
 ---
 name: harness-plan
 description: Design-only mode of the Harness pipeline — runs Requirement Analyst → Solution Architect → Gate Reviewer and stops. Produces 01_REQUIREMENT_ANALYSIS.md, 02_SOLUTION_DESIGN.md, 03_GATE_REVIEW.md with a verdict, but does NOT enter Developer. Use when you want a vetted design before committing engineering time.
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, AskUserQuestion, TodoWrite, Task
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, TodoWrite, Task
 ---
 
 # /harness-plan

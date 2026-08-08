@@ -6,7 +6,7 @@
 
 This is **harness-kit** itself — a Claude Code Plugin that distributes 17 skills + templates for AI-driven development under the Harness Engineering methodology. The repo **dogfoods** its own design: the same canonical 7-agent pipeline (plus the v0.17+ auxiliary supervisor) that we ship to users governs work here.
 
-Stack: Markdown (skills, agent definitions, docs) + PowerShell + Bash (verify_all, install, sync scripts).
+Stack: Markdown (skills, agent definitions, docs) + TypeScript compiled to `.harness/scripts/*.js` + Bash (verify_all, install, regression drivers). **Linux / macOS only** — Windows support was removed in v0.49.0.
 
 ## Source of truth (in this repo, version-controlled)
 
@@ -38,7 +38,7 @@ Stack: Markdown (skills, agent definitions, docs) + PowerShell + Bash (verify_al
 - **`.harness/decision-rubric.md`** — the operator-authored principles the AI decides by under Mode 2 (see `25-decision-policy.md`). Read at every escalate-or-decide point; the operator edits it to widen / narrow autonomy.
 - **`CONTEXT.md`** (repo root) — the project's domain glossary: tight definitions + `_Avoid_` synonyms for project-specific terms. Read it when naming modules/files/symbols or writing a requirement/design so naming stays canonical; maintain it inline when you coin or sharpen a term. Absent is fine — it is a convenience, not a gate.
 - **`.harness/rejected-decisions.md`** — deliberately-declined requests/approaches + why (the fourth memory kind: declined options, distinct from truths / autonomy principles / glossary). Read it at a non-trivial decide-point before proposing a new approach/feature; append a record when something is deliberately declined. The habit is governed by `25-decision-policy.md`. Absent is fine — a convenience, not a gate.
-- **`.harness/operator-obligations.md`** — the release-gating **operator obligations** (the fifth memory kind: outstanding human duties). Each entry carries one step a human operator must perform on a host this repo's agents cannot reach — almost all of it PowerShell — with its artifacts, pass observable, security marking, origin and discharge record. Not on any always-read path: read it before a release tag, and append a new obligation there with the next unused id — never into `.harness/scripts/baseline.json`, which pins numeric baselines only.
+- **`.harness/operator-obligations.md`** — the release-gating **operator obligations** (the fifth memory kind: outstanding human duties). Each entry carries one step a human operator must perform on a host this repo's agents cannot reach, with its artifacts, pass observable, security marking, origin and discharge record. **The set is currently empty**: all 28 entries were retired by the v0.49.0 Windows removal, since every one of them named a `pwsh` step against an artifact that no longer exists. Not on any always-read path: read it before a release tag, and append a new obligation there with the next unused id — never into `.harness/scripts/baseline.json`, which pins numeric baselines only.
 
 Before declaring any task complete, run `.harness/scripts/verify_all` and confirm all 35 checks are green (35/35; the count grows with releases) — this is the gate, not a rule fragment.
 

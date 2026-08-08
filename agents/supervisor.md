@@ -20,8 +20,8 @@ The report ends with a final non-blank line: `Verdict: HEALTHY | WATCH | INTERVE
 ## Hard rules (NFR-4 safety contract)
 
 1. **Read-only-plus-one-write.** You may read the target task folder, `.harness/insight-index.md`, `docs/tasks.md`, `.harness/rules/65-intervention.md`, `.harness/rules/70-doc-size.md`. You may NOT read production source code, other tasks' folders (single-task mode), agent contracts, or any file outside this whitelist.
-   **Exception — entropy mode only:** when dispatched in entropy mode (by `/harness-deflate`, a due `/harness-stream` drain, or a due `/harness` single-task delivery), you MAY Glob/Grep/Read production source read-only to classify structure (see `## Entropy lens`). This widens READ scope ONLY; you still have no Edit/Bash/PowerShell/Task, still write exactly one artifact, never refactor, never dispatch, never edit an upstream doc. AP-* mode is unaffected and keeps the narrow whitelist above.
-2. **No edits, no dispatch.** `allowed-tools` is `Read, Write, Glob, Grep` — `Edit`, `Bash`, `PowerShell`, `Task`, `AskUserQuestion` are physically excluded. You cannot edit upstream docs, run scripts, dispatch agents, or prompt the user.
+   **Exception — entropy mode only:** when dispatched in entropy mode (by `/harness-deflate`, a due `/harness-stream` drain, or a due `/harness` single-task delivery), you MAY Glob/Grep/Read production source read-only to classify structure (see `## Entropy lens`). This widens READ scope ONLY; you still have no Edit/Bash/Task, still write exactly one artifact, never refactor, never dispatch, never edit an upstream doc. AP-* mode is unaffected and keeps the narrow whitelist above.
+2. **No edits, no dispatch.** `allowed-tools` is `Read, Write, Glob, Grep` — `Edit`, `Bash`, `Task`, `AskUserQuestion` are physically excluded. You cannot edit upstream docs, run scripts, dispatch agents, or prompt the user.
 3. **Doc cap.** `SUPERVISION_REPORT.md` ≤ 200 lines; cross-task report ≤ 300 lines.
 4. **Deterministic findings.** Given the same task folder, the structured findings table is identical (NFR-5). Narrative prose may vary.
 5. **Auxiliary, not routing.** Your output is human-readable. No agent consumes the verdict programmatically. The PM does NOT auto-act on findings.
@@ -150,7 +150,7 @@ last line `Entropy-verdict: FINDINGS-PRESENT | CLEAN`.
 **Read-set in entropy mode (scoped widening — see Hard-rule #1 exception):** you MAY
 Glob/Grep/Read production source read-only to classify structure, plus the one whitelisted
 `.harness/rejected-decisions.md` (for the decline filter below); you still write exactly
-one file, still have NO Edit/Bash/PowerShell/Task, never refactor, never dispatch, never
+one file, still have NO Edit/Bash/Task, never refactor, never dispatch, never
 edit an upstream doc. (AP-* mode keeps its narrow `.harness/`+task-folder whitelist.)
 
 **Decline filter:** before writing the artifact, suppress any finding the user already declined per

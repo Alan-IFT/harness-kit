@@ -5,6 +5,71 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.49.0] - 2026-08-08
+
+### Removed — Windows support
+
+harness-kit runs on Linux and macOS. Every PowerShell implementation is deleted: **32 `.ps1`
+files, 544 KB**, plus `install.ps1` and three `verify_all.ps1.tmpl`. What remains is one
+implementation per script — TypeScript compiled to `.harness/scripts/*.js`, with a `.sh`
+launcher where one is needed.
+
+#### The 28 operator obligations are gone, and that is the headline
+
+`.harness/operator-obligations.md` held 28 release-gating steps a human had to run on a
+Windows host. Every one read `Last discharged: never`, and had since the day it was written.
+They were not a backlog — they were **the price of a second implementation**: a `.ps1` twin,
+green by symmetry only, on a host with no `pwsh` to run it. Each entry existed because no
+reviewer could tell "symmetric by construction" from "symmetric in fact" without a run nobody
+here could perform.
+
+Deleting the twin does not discharge an obligation; it deletes the artifact the obligation was
+about. By the migration brief's own test — does a change remove a decision point or add one —
+**28 decision points that no one on this host could ever reach went away at once**, and nothing
+replaced them. The ledger keeps its structure, its counting rule, and a record of what was
+retired and why; the next unused id is 18.
+
+#### What the removal simplified, not just deleted
+
+- **`hook-spec` lost its target-OS axis.** `commandOf(tool, os)` became `commandOf(tool)` and
+  the `hostos` query is gone — a process asking which OS it runs on is only meaningful when the
+  answer changes another answer. The two derivation flows that consumed it lost their OS branch
+  with it.
+- **`verify_all` F.1 inverted.** It asserted a `.ps1` beside every `.sh`; it now FAILs if one
+  reappears under a scripts directory. A returning twin re-opens the divergence class this
+  removal closed — nine of thirty insight entries were cross-shell divergence tax.
+- **`30-engineering.md` rule 20** was "PowerShell and Bash scripts are symmetric — if you change
+  one, change the other". It is now "one implementation per script", and F.1 enforces it.
+- **`test-verify-i6` lost 8 rows** that compared two lists for equality. With one list they
+  measured nothing, so they were removed rather than disabled.
+- **`baseline.json`** dropped every `*_ps_assertions` key and the four `_qa_note_*` essays whose
+  subject was PowerShell provenance. What survives is numbers plus a `_constraints` object where
+  each constraint sits beside the key it constrains. 14.8 KB → 1.7 KB.
+
+#### What deliberately stayed
+
+**`guard-rm` still recognises PowerShell.** `pwsh` installs on Linux, and a nested
+`pwsh -c "Remove-Item -Recurse /etc"` is exactly the indirection the guard exists to catch. A
+command string is not constrained by the platform we ship on: removing a platform narrows
+nothing, removing a verb would. The same reasoning keeps `.ps1` in the congruence scan's regex
+and in `migrate-scripts-layout`'s relocation list — **recognising a legacy artifact is not
+supporting a platform.** What those flows no longer do is *generate* a PowerShell command, or
+"repair" a pwsh hook by repointing it at a `.sh` target the project may not have; a hook wired
+to an unsupported platform now needs a human, which is the honest outcome.
+
+#### A false-positive the removal exposed
+
+`test-harness-upgrade`'s fixture Z copied `guard-rm.sh` without `guard-rm.js`. The `.sh` is a
+launcher, so `exec node` failed — and Z1 ("the guard BLOCKS a destructive command") passed on a
+non-zero exit that came from a missing file, not from the guard. Latent since the TypeScript
+port. Both halves are copied now, and Z1 measures what it claims.
+
+#### Gate and suites
+
+35 checks, 287 unit tests, and all eight regression drivers green: test-init 373,
+test-real-project 90, test-harness-upgrade 89, test-guard-rm 87, test-verify-i6 50,
+test-supervisor 46, test-language 39, test-archive-task 186.
+
 ## [0.48.0] - 2026-08-08
 
 ### Changed — v2 migration, second landing: the schema binds, retrieval has a budget, and the rented layer reaches the roles

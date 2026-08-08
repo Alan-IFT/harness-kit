@@ -408,7 +408,7 @@
 │   └── settings.json
 ├── CLAUDE.md            ← 生成（不编辑）
 ├── scripts/
-│   └── harness-sync.{ps1,sh}
+│   └── harness-sync.sh
 └── docs/...</pre>
     <p class="muted">收益：内容工具无关；切 IDE 无影响。</p>
   </div>
@@ -475,13 +475,13 @@
 │   │       │   ├── <span class="new">.harness/agents/</span>        <span class="cmt"># SOT（7 agents）</span>
 │   │       │   ├── <span class="new">.harness/rules/00-core.md.tmpl</span>
 │   │       │   ├── <span class="file">.claude/settings.json.tmpl</span>  <span class="cmt"># Claude Code 绑定 glue</span>
-│   │       │   ├── <span class="new">scripts/harness-sync.{ps1,sh}</span> <span class="cmt"># 分发的 binding 脚本</span>
+│   │       │   ├── <span class="new">scripts/harness-sync.sh</span> <span class="cmt"># 分发的 binding 脚本</span>
 │   │       │   ├── <span class="file">docs/ + evals/</span>
 │   │       │   └── <span class="cmt">(no more CLAUDE.md.tmpl)</span>
 │   │       ├── <span class="dir">fullstack/</span>
 │   │       │   ├── <span class="new">.harness/rules/50-fullstack.md</span>
 │   │       │   ├── <span class="new">.harness/skills/{build,test,verify}/SKILL.md.tmpl</span>
-│   │       │   └── <span class="file">scripts/verify_all.{ps1,sh}.tmpl</span>
+│   │       │   └── <span class="file">scripts/verify_all.sh.tmpl</span>
 │   │       └── <span class="dir">backend/</span>            <span class="cmt"># 同样的结构</span>
 │   ├── <span class="dir">harness-adopt/</span>SKILL.md
 │   ├── <span class="dir">harness-verify/</span>SKILL.md
@@ -499,11 +499,11 @@
 │   └── <span class="file">getting-started.md / concepts.md / workflow.md / dev-map.md / tasks.md / spec/ / features/</span>
 │
 ├── <span class="dir">scripts/</span>
-│   ├── <span class="file">verify_all.{ps1,sh}</span>           <span class="cmt"># 19 项检查（v0.1 是 15）</span>
-│   ├── <span class="new file">harness-sync.{ps1,sh}</span>      <span class="cmt"># Layer 2：.harness/{agents,skills} → .claude/（v0.10 起 CLAUDE.md 是 stub，不再合成）</span>
-│   ├── <span class="file">sync-self.{ps1,sh}</span>             <span class="cmt"># Layer 1：templates/ → repo SOT</span>
-│   ├── <span class="file">test-init.{ps1,sh}</span>             <span class="cmt"># 98 断言（含 v0.4 分区）</span>
-│   └── <span class="new file">test-real-project.{ps1,sh}</span> <span class="cmt"># 70 断言（fixture overlay）</span>
+│   ├── <span class="file">verify_all.sh</span>           <span class="cmt"># 19 项检查（v0.1 是 15）</span>
+│   ├── <span class="new file">harness-sync.sh</span>      <span class="cmt"># Layer 2：.harness/{agents,skills} → .claude/（v0.10 起 CLAUDE.md 是 stub，不再合成）</span>
+│   ├── <span class="file">sync-self.sh</span>             <span class="cmt"># Layer 1：templates/ → repo SOT</span>
+│   ├── <span class="file">test-init.sh</span>             <span class="cmt"># 98 断言（含 v0.4 分区）</span>
+│   └── <span class="new file">test-real-project.sh</span> <span class="cmt"># 70 断言（fixture overlay）</span>
 │
 └── <span class="dir">evals/golden-tasks.md</span>
 </div>
@@ -854,7 +854,7 @@
   <tr><th>层</th><th>位置（v0.2）</th><th>性质</th><th>用法</th></tr>
   <tr><td>Rule</td><td><code>.harness/rules/NN-*.md</code></td><td>软约束（自然语言）</td><td>原则 / 红线 / 多文件合成 CLAUDE.md</td></tr>
   <tr><td>Skill</td><td><code>.harness/skills/*/SKILL.md</code></td><td>标准操作手册</td><td>编译/测试/验证等固定动作</td></tr>
-  <tr><td>Script</td><td><code>scripts/verify_all.{ps1,sh}</code></td><td>硬门禁</td><td>可机器判定的全下沉</td></tr>
+  <tr><td>Script</td><td><code>scripts/verify_all.sh</code></td><td>硬门禁</td><td>可机器判定的全下沉</td></tr>
 </table>
 
 <h2>剔除模块</h2>

@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # test-init.sh — Automated regression for /harness-init (v0.2)
-# Mirror of .harness/scripts/test-init.ps1. See that file for full doc.
 
 set -uo pipefail
 
@@ -49,30 +48,25 @@ assert() {
 # before — so every pre-existing exact-string assertion is unaffected. The unconditional
 # definitions exist so the T-13 spec block can lockstep-compare all 8 cells from one run.
 # T-16: these fixtures are now THE ORACLE, not a lockstep hand copy. The four derivation
-# flows query hook-spec.{sh,ps1} instead of carrying byte-forms, so a spec-vs-flow
+# flows query hook-spec.sh instead of carrying byte-forms, so a spec-vs-flow
 # comparison would be circular; the frozen literals below are the only anchor that is
 # independent of every artifact under test. Deliberate non-retirement — see
 # .harness/rejected-decisions.md (hook-byteform-test-literal-retirement).
-EXP_WIN_SYNC='pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/harness-sync.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/harness-sync.ps1 }; exit 0\"'
-EXP_WIN_GUARD='pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR; & pwsh -NoProfile -File .harness/scripts/guard-rm.ps1\"'
-EXP_WIN_AMBIENT_PROMPT='pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/ambient-prompt.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/ambient-prompt.ps1 }; exit 0\"'
-EXP_WIN_AMBIENT_RESET='pwsh -NoProfile -Command \"Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; if (Test-Path -LiteralPath .harness/scripts/ambient-reset.ps1 -PathType Leaf) { & pwsh -NoProfile -File .harness/scripts/ambient-reset.ps1 }; exit 0\"'
 EXP_UNIX_SYNC="sh -c 'cd \\\"\$CLAUDE_PROJECT_DIR\\\" 2>/dev/null && [ -f .harness/scripts/harness-sync.sh ] && exec bash .harness/scripts/harness-sync.sh || exit 0'"
 EXP_UNIX_GUARD="sh -c 'cd \\\"\$CLAUDE_PROJECT_DIR\\\" 2>/dev/null && bash .harness/scripts/guard-rm.sh'"
 EXP_UNIX_AMBIENT_PROMPT="sh -c 'cd \\\"\$CLAUDE_PROJECT_DIR\\\" 2>/dev/null && [ -f .harness/scripts/ambient-prompt.sh ] && exec bash .harness/scripts/ambient-prompt.sh || exit 0'"
 EXP_UNIX_AMBIENT_RESET="sh -c 'cd \\\"\$CLAUDE_PROJECT_DIR\\\" 2>/dev/null && [ -f .harness/scripts/ambient-reset.sh ] && exec bash .harness/scripts/ambient-reset.sh || exit 0'"
 
 # hs_expected <tool> <os> — the hand-copied fixture for one (tool, OS) cell.
+# hs_expected TOOL -> the frozen byte-form for that tool. One per tool since v0.49.0;
+# the (tool, OS) pair collapsed when Windows support was removed.
 hs_expected() {
-    case "$2/$1" in
-        windows/harness-sync)   printf '%s' "$EXP_WIN_SYNC" ;;
-        windows/guard-rm)       printf '%s' "$EXP_WIN_GUARD" ;;
-        windows/ambient-prompt) printf '%s' "$EXP_WIN_AMBIENT_PROMPT" ;;
-        windows/ambient-reset)  printf '%s' "$EXP_WIN_AMBIENT_RESET" ;;
-        unix/harness-sync)      printf '%s' "$EXP_UNIX_SYNC" ;;
-        unix/guard-rm)          printf '%s' "$EXP_UNIX_GUARD" ;;
-        unix/ambient-prompt)    printf '%s' "$EXP_UNIX_AMBIENT_PROMPT" ;;
-        unix/ambient-reset)     printf '%s' "$EXP_UNIX_AMBIENT_RESET" ;;
+    case "$1" in
+        harness-sync)    printf '%s' "$EXP_UNIX_SYNC" ;;
+        guard-rm)        printf '%s' "$EXP_UNIX_GUARD" ;;
+        ambient-prompt)  printf '%s' "$EXP_UNIX_AMBIENT_PROMPT" ;;
+        ambient-reset)   printf '%s' "$EXP_UNIX_AMBIENT_RESET" ;;
+        *)               printf '' ;;
     esac
 }
 
@@ -254,7 +248,7 @@ test_type() {
     assert "PROJECT_NAME substituted into CLAUDE.md stub" "grep -q 'test-project' '$tmp/CLAUDE.md'"
 
     # Docs / scripts / evals
-    for f in docs/workflow.md docs/dev-map.md docs/tasks.md docs/spec/README.md evals/golden-tasks.md .harness/scripts/verify_all.ps1 .harness/scripts/verify_all.sh .harness/scripts/harness-sync.ps1; do
+    for f in docs/workflow.md docs/dev-map.md docs/tasks.md docs/spec/README.md evals/golden-tasks.md .harness/scripts/verify_all.sh .harness/scripts/harness-sync.sh; do
         assert "$f present" "[[ -f '$tmp/$f' ]]"
     done
 
@@ -262,10 +256,10 @@ test_type() {
     # The generated tree must have no scripts/ dir and no harness file leaked there.
     assert "[AC-1] generated tree has no scripts/ directory" "[[ ! -d '$tmp/scripts' ]]"
     assert "[AC-1] no harness script leaked under scripts/" \
-        "[[ ! -f '$tmp/scripts/verify_all.ps1' && ! -f '$tmp/scripts/verify_all.sh' && ! -f '$tmp/scripts/harness-sync.ps1' && ! -f '$tmp/scripts/harness-sync.sh' && ! -f '$tmp/scripts/guard-rm.ps1' && ! -f '$tmp/scripts/guard-rm.sh' && ! -f '$tmp/scripts/baseline.json' ]]"
+        "[[ ! -f '$tmp/scripts/verify_all.sh' && ! -f '$tmp/scripts/harness-sync.sh' && ! -f '$tmp/scripts/guard-rm.sh' && ! -f '$tmp/scripts/baseline.json' ]]"
 
     # Cleanliness
-    if grep -rE '\{\{[A-Z_]+\}\}' "$tmp" --include="*.md" --include="*.json" --include="*.sh" --include="*.ps1" &>/dev/null; then
+    if grep -rE '\{\{[A-Z_]+\}\}' "$tmp" --include="*.md" --include="*.json" --include="*.sh" &>/dev/null; then
         echo "  FAIL  no unresolved placeholders anywhere" >&2
         ((fail++)); failures+=("unresolved placeholders")
     else
@@ -279,7 +273,6 @@ test_type() {
     # Guard-rm + PreToolUse hook wired (v0.15+).
     # Five assertions per project type to match test-init.ps1's granularity
     # (177 total across the 3 project types).
-    assert ".harness/scripts/guard-rm.ps1 present after init" "[[ -f '$tmp/.harness/scripts/guard-rm.ps1' ]]"
     assert ".harness/scripts/guard-rm.sh present after init" "[[ -f '$tmp/.harness/scripts/guard-rm.sh' ]]"
     # Probe python3 with a real invocation — Windows can have a Microsoft Store
     # stub that satisfies `command -v` but exits non-zero on real run.
@@ -379,8 +372,6 @@ assert 'guard-rm' in d['hooks']['PreToolUse'][0]['hooks'][0]['command']
         "grep -qF 'partition dev-* only' '$tmp/.harness/scripts/verify_all.sh' && ! grep -qF 'All 7 agents' '$tmp/.harness/scripts/verify_all.sh'"
     assert "[T-020] generated verify_all.sh has the $t20_cong_row hook-congruence row" \
         "grep -qF '\"$t20_cong_row\"' '$tmp/.harness/scripts/verify_all.sh'"
-    assert "[T-020] generated verify_all.ps1 has the agents-layout wording + $t20_cong_row row" \
-        "grep -qF 'partition dev-* only' '$tmp/.harness/scripts/verify_all.ps1' && grep -qF '\"$t20_cong_row\"' '$tmp/.harness/scripts/verify_all.ps1' && ! grep -qF 'All 7 agent definitions' '$tmp/.harness/scripts/verify_all.ps1'"
 
     # Binding consistency right after init
     if bash "$tmp/.harness/scripts/harness-sync.sh" --check &>/dev/null; then
@@ -561,7 +552,7 @@ PYEOF
     # === T-020 mutation probe (AC-5 mutation half): delete the wired sync script,
     # re-run the step-10b deterministic core — it MUST now report a violation.
     # Runs LAST in this fixture (the tree is discarded right after). ===
-    rm -f "$tmp/.harness/scripts/harness-sync.sh" "$tmp/.harness/scripts/harness-sync.ps1"
+    rm -f "$tmp/.harness/scripts/harness-sync.sh"
     t20_mut=""
     while IFS= read -r t20_path; do
         [[ -z "$t20_path" ]] && continue
@@ -594,7 +585,7 @@ test_migrate() {
 
         # Synthetic downgrade: move .harness/scripts/* back to scripts/*
         mkdir -p scripts
-        for n in verify_all.ps1 verify_all.sh harness-sync.ps1 harness-sync.sh guard-rm.ps1 guard-rm.sh; do
+        for n in verify_all.sh harness-sync.sh guard-rm.sh; do
             [[ -f ".harness/scripts/$n" ]] && mv ".harness/scripts/$n" "scripts/$n"
         done
         # baseline.json isn't a template file (generated post-init); synthesize one at
@@ -609,8 +600,8 @@ test_migrate() {
   "_doc_sync_hook": "On macOS/Linux change the Stop hook command to: bash scripts/harness-sync.sh",
   "permissions": { "allow": [ "Bash(bash scripts/harness-sync.sh:*)" ] },
   "hooks": {
-    "Stop": [ { "hooks": [ { "type": "command", "command": "pwsh -NoProfile -File scripts/harness-sync.ps1" } ] } ],
-    "PreToolUse": [ { "matcher": "Bash", "hooks": [ { "type": "command", "command": "pwsh -NoProfile -File scripts/guard-rm.ps1" } ] } ]
+    "Stop": [ { "hooks": [ { "type": "command", "command": "bash scripts/harness-sync.sh" } ] } ],
+    "PreToolUse": [ { "matcher": "Bash", "hooks": [ { "type": "command", "command": "bash scripts/guard-rm.sh" } ] } ]
   }
 }
 SETTINGS
@@ -627,32 +618,33 @@ SETTINGS
     assert "[migrate] .harness/scripts/harness-sync.sh present" "[[ -f '$tmp/.harness/scripts/harness-sync.sh' ]]"
     assert "[migrate] .harness/scripts/baseline.json present" "[[ -f '$tmp/.harness/scripts/baseline.json' ]]"
     assert "[migrate] OLD scripts/harness-sync.sh vacated" "[[ ! -f '$tmp/scripts/harness-sync.sh' ]]"
-    assert "[migrate] OLD scripts/guard-rm.ps1 vacated" "[[ ! -f '$tmp/scripts/guard-rm.ps1' ]]"
+    assert "[migrate] OLD scripts/guard-rm.sh vacated" "[[ ! -f '$tmp/scripts/guard-rm.sh' ]]"
     assert "[migrate] OLD scripts/baseline.json vacated" "[[ ! -f '$tmp/scripts/baseline.json' ]]"
     assert "[migrate] user-authored scripts/deploy.sh NOT moved" "[[ -f '$tmp/scripts/deploy.sh' ]]"
-    # T-12: migrate now ALSO resilient-ifies (A8) — the rewired command embeds the inner
-    # `& pwsh -NoProfile -File .harness/scripts/<tool>.ps1` so this substring still matches,
-    # and additionally carries the $CLAUDE_PROJECT_DIR anchor (asserted explicitly below).
-    assert "[migrate] settings Stop command -> .harness/scripts/harness-sync.ps1" \
-        "grep -qF 'pwsh -NoProfile -File .harness/scripts/harness-sync.ps1' '$tmp/.claude/settings.json'"
-    assert "[migrate] settings PreToolUse command -> .harness/scripts/guard-rm.ps1" \
-        "grep -qF 'pwsh -NoProfile -File .harness/scripts/guard-rm.ps1' '$tmp/.claude/settings.json'"
+    # T-12: migrate ALSO resilient-ifies (A8) — the rewired command embeds the inner
+    # `bash .harness/scripts/<tool>.sh` so this substring still matches, and additionally
+    # carries the $CLAUDE_PROJECT_DIR anchor (asserted explicitly below).
+    assert "[migrate] settings Stop command -> .harness/scripts/harness-sync.sh" \
+        "grep -qF 'bash .harness/scripts/harness-sync.sh' '$tmp/.claude/settings.json'"
+    assert "[migrate] settings PreToolUse command -> .harness/scripts/guard-rm.sh" \
+        "grep -qF 'bash .harness/scripts/guard-rm.sh' '$tmp/.claude/settings.json'"
     # T-12 / A8 proof: the migrated commands are the RESILIENT form ($CLAUDE_PROJECT_DIR-
     # anchored), and guard-rm stays fail-CLOSED (no `exit 0` on its command line).
     assert "[migrate] commands are the resilient form (CLAUDE_PROJECT_DIR-anchored, A8)" \
         "grep -qF 'CLAUDE_PROJECT_DIR' '$tmp/.claude/settings.json'"
     assert "[migrate] guard-rm resilient form is fail-CLOSED (no exit 0 on its command)" \
-        "! { grep -F 'guard-rm.ps1' '$tmp/.claude/settings.json' | grep -qF 'exit 0'; }"
+        "! { grep -F 'guard-rm.sh' '$tmp/.claude/settings.json' | grep -qF 'exit 0'; }"
     # The _doc_sync_hook doc string ('...bash scripts/harness-sync.sh') is prefix-rewired by
     # S3.1 to '.harness/scripts/harness-sync.sh' but is NOT a "command" line, so S3.2 leaves
     # it as the bare path (doc strings are never made resilient). Mask the migrated path and
     # confirm no stale BARE scripts/harness-sync. survives anywhere (doc key or command).
     assert "[migrate] _doc_sync_hook doc string rewired (no stale bare scripts/harness-sync.)" \
         "grep -qF '.harness/scripts/harness-sync.sh' '$tmp/.claude/settings.json' && ! sed 's|\.harness/scripts/harness-sync\.|XX|g' '$tmp/.claude/settings.json' | grep -qE 'scripts/harness-sync\.'"
-    # -NoProfile count: each resilient PS command carries TWO (-Command outer + -File inner),
-    # so Stop + PreToolUse give >=4; the old brittle form gave exactly 2. >=2 stays the floor.
-    assert "[migrate] -NoProfile retained (>=2 hits)" \
-        "(( \$(grep -c -- '-NoProfile' '$tmp/.claude/settings.json') >= 2 ))"
+    # v0.49.0: the `-NoProfile` count assertion went with the PowerShell byte-forms. What
+    # replaces it is the property that actually matters after the removal — a legacy pwsh
+    # value is LEFT ALONE rather than rewritten at a `.sh` target the project may not have.
+    assert "[migrate] a legacy pwsh command value is left byte-untouched, not repointed" \
+        "! grep -qF 'pwsh' '$tmp/.claude/settings.json' || grep -qF '.ps1' '$tmp/.claude/settings.json'"
     assert "[migrate] \$schema unchanged" \
         "grep -qF 'json.schemastore.org/claude-code-settings.json' '$tmp/.claude/settings.json'"
     assert "[migrate] a .bak backup was written" \
@@ -758,9 +750,9 @@ test_zh_overlay() {
 # — green, and measuring nothing. A test must not derive its expectation from the
 # artifact under test, so Group A now compares the spec against the frozen literals,
 # which are the ONLY independent anchor left for all four flows.
-# SCOPE NOTE: the frozen literals in this file and in test-real-project.{sh,ps1} are a
+# SCOPE NOTE: the frozen literals in this file and in test-real-project.sh are a
 # DELIBERATE non-retirement, recorded in .harness/rejected-decisions.md
-# (hook-byteform-test-literal-retirement) and in hook-spec.{sh,ps1}'s header. Standing
+# (hook-byteform-test-literal-retirement) and in hook-spec.sh's header. Standing
 # END-TO-END coverage of a flow-EMITTED byte string lives in test-harness-upgrade
 # (sh:421 vs t20_pick) for one (tool, OS, flow) cell; the rest is residual RES-1.
 test_hook_spec() {
@@ -773,18 +765,24 @@ test_hook_spec() {
 
     # --- MANDATORY anti-vacuity gate on the ORACLE ITSELF: an empty / broken fixture
     #     must fail THIS named assertion loudly, never silently degrade the 8 below.
-    probe="$(hs_expected guard-rm windows)"
-    ok=0; [[ -n "$probe" && "$probe" == *"guard-rm.ps1"* ]] && ok=1
-    assert "[T-16][oracle] ANTI-VACUITY: the frozen EXP_* fixture (guard-rm, windows) is a non-empty string naming guard-rm.ps1" "[[ $ok == 1 ]]"
+    probe="$(hs_expected guard-rm)"
+    ok=0; [[ -n "$probe" && "$probe" == *"guard-rm.sh"* ]] && ok=1
+    assert "[T-16][oracle] ANTI-VACUITY: the frozen EXP_* fixture (guard-rm) is a non-empty string naming guard-rm.sh" "[[ $ok == 1 ]]"
 
-    # --- Group A (INDEPENDENT of every flow): spec == the FROZEN fixture, all 8 cells --
-    for os in windows unix; do
-        for tool in harness-sync guard-rm ambient-prompt ambient-reset; do
-            a="$(bash "$spec" command "$tool" "$os" 2>/dev/null)"; rc=$?
-            expected="$(hs_expected "$tool" "$os")"
-            ok=0; [[ $rc -eq 0 && -n "$a" && "$a" == "$expected" ]] && ok=1
-            assert "[T-16][A] command $tool $os is byte-equal to the FROZEN test-init fixture (independent of every flow)" "[[ $ok == 1 ]]"
-        done
+    # A PowerShell byte-form must not come back: v0.49.0 removed Windows support, and the
+    # spec answering one would mean a twin returned somewhere upstream of here.
+    for tool in harness-sync guard-rm ambient-prompt ambient-reset; do
+        a="$(bash "$spec" command "$tool" 2>/dev/null)"
+        ok=1; [[ "$a" == *pwsh* || "$a" == *.ps1* ]] && ok=0
+        assert "[T-16][A] command $tool names no PowerShell" "[[ $ok == 1 ]]"
+    done
+
+    # --- Group A (INDEPENDENT of every flow): spec == the FROZEN fixture, all 4 cells --
+    for tool in harness-sync guard-rm ambient-prompt ambient-reset; do
+        a="$(bash "$spec" command "$tool" 2>/dev/null)"; rc=$?
+        expected="$(hs_expected "$tool")"
+        ok=0; [[ $rc -eq 0 && -n "$a" && "$a" == "$expected" ]] && ok=1
+        assert "[T-16][A] command $tool is byte-equal to the FROZEN test-init fixture (independent of every flow)" "[[ $ok == 1 ]]"
     done
 
     # --- Group A' (T-16): two STANDING 4-row scans over the four derivation-flow files.
@@ -802,22 +800,18 @@ test_hook_spec() {
     #     was already green (2 hits, both comment lines). Green-after-red is the point.
     #     A MISSING flow file scores "missing", never 0 — otherwise deleting a flow would
     #     make both of its scan rows vacuously green.
-    for f in upgrade-project.sh upgrade-project.ps1 migrate-scripts-layout.sh migrate-scripts-layout.ps1; do
+    for f in upgrade-project.sh migrate-scripts-layout.sh; do
         nhit=missing
         [[ -f "$repo_root/.harness/scripts/$f" ]] && nhit="$(grep -nE 'Set-Location -LiteralPath|CLAUDE_PROJECT_DIR' "$repo_root/.harness/scripts/$f" \
                 | grep -vE '^[0-9]+:[[:space:]]*#' | wc -l | tr -d ' ')"
         ok=0; [[ "$nhit" == "0" ]] && ok=1
         assert "[T-16][A'] $f carries no hook-command byte-form idiom outside comments (got $nhit)" "[[ $ok == 1 ]]"
     done
-    for f in upgrade-project.sh upgrade-project.ps1 migrate-scripts-layout.sh migrate-scripts-layout.ps1; do
+    for f in upgrade-project.sh migrate-scripts-layout.sh; do
         nhit=missing
         if [[ -f "$repo_root/.harness/scripts/$f" ]]; then
-            case "$f" in
-                *.sh)  nhit="$(grep -nE '\$\{[!#]?[A-Za-z_][A-Za-z0-9_]*(\[[^]]*\])?/' "$repo_root/.harness/scripts/$f" \
-                               | grep -vE '^[0-9]+:[[:space:]]*#' | wc -l | tr -d ' ')" ;;
-                *)     nhit="$(grep -n -- '-replace' "$repo_root/.harness/scripts/$f" \
-                               | grep -vE '^[0-9]+:[[:space:]]*#' | wc -l | tr -d ' ')" ;;
-            esac
+            nhit="$(grep -nE '\$\{[!#]?[A-Za-z_][A-Za-z0-9_]*(\[[^]]*\])?/' "$repo_root/.harness/scripts/$f" \
+                    | grep -vE '^[0-9]+:[[:space:]]*#' | wc -l | tr -d ' ')"
         fi
         ok=0; [[ "$nhit" == "0" ]] && ok=1
         assert "[T-16][A'] $f uses no pattern-substitution operator (& / patsub hazard) (got $nhit)" "[[ $ok == 1 ]]"
@@ -830,23 +824,22 @@ test_hook_spec() {
         ok=0; [[ "$a" == "$expected" ]] && ok=1
         assert "[T-13][B] semantics $tool == $expected" "[[ $ok == 1 ]]"
     done
-    for os in windows unix; do
-        a="$(bash "$spec" command guard-rm "$os" 2>/dev/null)"
+    for _ in 1; do
+        a="$(bash "$spec" command guard-rm 2>/dev/null)"
         ok=0; [[ -n "$a" && "$a" != *"|| exit 0"* && "$a" != *"exit 0"* ]] && ok=1
-        assert "[T-13][B] guard-rm command ($os) carries NO '|| exit 0' and NO 'exit 0' fallback (fail-CLOSED, NFR-2)" "[[ $ok == 1 ]]"
+        assert "[T-13][B] guard-rm command carries NO '|| exit 0' and NO 'exit 0' fallback (fail-CLOSED, NFR-2)" "[[ $ok == 1 ]]"
     done
 
     # --- Group C: the existing congruence ERE still extracts the bare script path -----
-    for os in windows unix; do
-        ext="sh"; [[ "$os" == "windows" ]] && ext="ps1"
-        for tool in harness-sync guard-rm ambient-prompt ambient-reset; do
-            a="$(bash "$spec" command "$tool" "$os" 2>/dev/null)"
-            extracted="$(printf '%s\n' "$a" \
-                | grep -oE "(^|[\"' =])(\.harness/)?scripts/[A-Za-z0-9._-]+\.(ps1|sh)" \
-                | sed -E "s|^[\"' =]||" | sort -u)"
-            ok=0; [[ "$extracted" == *".harness/scripts/$tool.$ext"* ]] && ok=1
-            assert "[T-13][C] congruence ERE extracts .harness/scripts/$tool.$ext from the $os command" "[[ $ok == 1 ]]"
-        done
+    # The ERE still accepts `.ps1` on purpose: a legacy project can carry a PowerShell hook
+    # value that the congruence scan must be able to FLAG, even though nothing emits one.
+    for tool in harness-sync guard-rm ambient-prompt ambient-reset; do
+        a="$(bash "$spec" command "$tool" 2>/dev/null)"
+        extracted="$(printf '%s\n' "$a" \
+            | grep -oE "(^|[\"' =])(\.harness/)?scripts/[A-Za-z0-9._-]+\.(ps1|sh)" \
+            | sed -E "s|^[\"' =]||" | sort -u)"
+        ok=0; [[ "$extracted" == *".harness/scripts/$tool.sh"* ]] && ok=1
+        assert "[T-13][C] congruence ERE extracts .harness/scripts/$tool.sh from the command" "[[ $ok == 1 ]]"
     done
 
     # --- Group D: event / matcher / tool list (the installer's contract) --------------
@@ -868,9 +861,11 @@ test_hook_spec() {
     a="$(bash "$spec" tools 2>/dev/null | tr '\n' ' ')"
     ok=0; [[ "$a" == "harness-sync guard-rm ambient-prompt ambient-reset " ]] && ok=1
     assert "[T-13][D] tools emits the 4 ids in the fixed order" "[[ $ok == 1 ]]"
-    a="$(bash "$spec" hostos 2>/dev/null)"
-    ok=0; [[ "$a" == "windows" || "$a" == "unix" ]] && ok=1
-    assert "[T-13][D] hostos answers windows|unix (no third variant)" "[[ $ok == 1 ]]"
+    a="$(bash "$spec" hostos 2>/dev/null)"; rc=$?
+    # v0.49.0: `hostos` was retired with the target-OS axis. It must now be REJECTED, not
+    # answered — a spec that still answers it means an OS branch survived somewhere.
+    ok=0; [[ $rc -ne 0 && -z "$a" ]] && ok=1
+    assert "[T-13][D] hostos is rejected (the OS axis went with Windows support)" "[[ $ok == 1 ]]"
 
     # --- Group E: totality — bad input yields EMPTY stdout and a non-zero exit --------
     out="$(bash "$spec" command bogus-tool unix 2>/dev/null)"; rc=$?
@@ -901,7 +896,7 @@ test_install_bootstrap() {
 
     assert "[T-13][install] installer present after init" "[[ -f '$inst' ]]"
     assert "[T-13][install] hook-spec.sh distributed into the generated project (FR-6)" \
-        "[[ -f '$tmp/.harness/scripts/hook-spec.sh' && -f '$tmp/.harness/scripts/hook-spec.ps1' ]]"
+        "[[ -f '$tmp/.harness/scripts/hook-spec.sh' ]]"
 
     # (1) committed settings DECLARES hooks -> no machine-local file is created (AC-7)
     ( cd "$tmp" && bash "$inst" >/dev/null 2>&1 ); rc=$?
@@ -931,9 +926,9 @@ test_install_bootstrap() {
         "grep -qF '\"Stop\"' '$localset' && grep -qF '\"UserPromptSubmit\"' '$localset' && grep -qF '\"SessionStart\"' '$localset'"
     assert "[T-13][install] no underscore doc key inside the hooks object (root only — FR-11)" \
         "! grep -qE '^ {4}\"_' '$localset'"
-    # Every host-OS command byte-form landed verbatim (proves the spec is the origin).
+    # Every command byte-form landed verbatim (proves the spec is the origin).
     for tool in harness-sync guard-rm ambient-prompt ambient-reset; do
-        cmd="$(bash "$tmp/.harness/scripts/hook-spec.sh" command "$tool" "$(bash "$tmp/.harness/scripts/hook-spec.sh" hostos)")"
+        cmd="$(bash "$tmp/.harness/scripts/hook-spec.sh" command "$tool")"
         ok=0; [[ -n "$cmd" ]] && grep -qF -- "$cmd" "$localset" && ok=1
         assert "[T-13][install] generated file carries the spec's $tool command verbatim (AC-5)" "[[ $ok == 1 ]]"
     done

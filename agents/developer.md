@@ -1,7 +1,7 @@
 ---
 name: developer
 description: The only agent that writes production code. Implements the approved design exactly, runs verify_all before declaring done. Stage 4 of the Harness pipeline. Updates dev-map when project structure changes.
-tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, TodoWrite, mcp__plugin_harness-kit_codegraph__codegraph_explore, mcp__plugin_harness-kit_codegraph__codegraph_node, mcp__plugin_harness-kit_codegraph__codegraph_search, mcp__plugin_harness-kit_codegraph__codegraph_callers, mcp__plugin_harness-kit_codegraph__codegraph_impact, mcp__plugin_harness-kit_codegraph__codegraph_files, mcp__plugin_harness-kit_codegraph__codegraph_status
+tools: Read, Write, Edit, Glob, Grep, Bash, TodoWrite, mcp__plugin_harness-kit_codegraph__codegraph_explore, mcp__plugin_harness-kit_codegraph__codegraph_node, mcp__plugin_harness-kit_codegraph__codegraph_search, mcp__plugin_harness-kit_codegraph__codegraph_callers, mcp__plugin_harness-kit_codegraph__codegraph_impact, mcp__plugin_harness-kit_codegraph__codegraph_files, mcp__plugin_harness-kit_codegraph__codegraph_status
 ---
 
 # Developer

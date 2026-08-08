@@ -3,21 +3,20 @@
 > Manual regression checks. Re-run these after any change to:
 > - `skills/*/SKILL.md`
 > - `skills/harness-init/templates/`
-> - `.claude/agents/*.md`
+> - `agents/*.md`
 > - `docs/workflow.md`
-> - `.harness/scripts/verify_all.*`
+> - `.harness/scripts/verify_all.sh`
 
 Personal-project scale — keep this list short and focused. If you need more, you're scaling up.
+
+**Linux / macOS only.** Windows support was removed: there is no `.ps1` twin of any script and
+no `install.ps1`. A golden that existed only to compare the two shells' output went with them.
 
 ## Tasks
 
 ### Golden #0 — Integration on real project shape (`test-real-project`)
 
-**Automated** — run [`.harness/scripts/test-real-project.ps1`](../.harness/scripts/test-real-project.ps1) or `.sh`.
-
-```powershell
-.\scripts\test-real-project.ps1
-```
+**Automated** — run [`.harness/scripts/test-real-project.sh`](../.harness/scripts/test-real-project.sh).
 
 ```bash
 ./.harness/scripts/test-real-project.sh
@@ -27,31 +26,19 @@ Overlays templates onto `tests/fixtures/todo-fullstack/` and `tests/fixtures/tod
 (real project shapes with `package.json`/`pyproject.toml`, source, tests, .gitignore) and
 asserts the overlay doesn't damage existing files and produces a working Harness layout.
 
-**Expected**: `PASS: 64 / FAIL: 0`. This complements Golden #1/#2 (which run on empty dirs)
-by catching integration bugs that only show up on non-empty projects.
+**Expected**: `PASS: 90 / FAIL: 0` (live count in `.harness/scripts/baseline.json`). This
+complements Golden #1/#2 (which run on empty dirs) by catching integration bugs that only show
+up on non-empty projects.
 
 ### Golden #1 & #2 — harness-init creates clean fullstack & backend skeletons
 
-**Automated** — run [`.harness/scripts/test-init.ps1`](../.harness/scripts/test-init.ps1) (Windows) or
-[`.harness/scripts/test-init.sh`](../.harness/scripts/test-init.sh) (Unix). The script:
+**Automated** — run [`.harness/scripts/test-init.sh`](../.harness/scripts/test-init.sh). The script:
 
 - Creates a temp dir.
 - Simulates `/harness-init`: copies common + project-type templates, substitutes
   the 5 placeholders, applies `.append` overlay to CLAUDE.md, removes `.tmpl`/`.append` suffixes.
-- Runs ~32 assertions per project type (64 total).
+- Runs the per-type assertion set for both project types.
 - Cleans up.
-
-```powershell
-# Run both project types (default)
-.\scripts\test-init.ps1
-
-# Or a single type
-.\scripts\test-init.ps1 -Type fullstack
-.\scripts\test-init.ps1 -Type backend
-
-# Keep the temp dir for manual inspection
-.\scripts\test-init.ps1 -KeepTemp
-```
 
 ```bash
 ./.harness/scripts/test-init.sh
@@ -59,37 +46,36 @@ by catching integration bugs that only show up on non-empty projects.
 ./.harness/scripts/test-init.sh --keep
 ```
 
-**Expected**: `PASS: 64 / FAIL: 0`. Exits non-zero on any failure.
+**Expected**: the `PASS: N / FAIL: 0` line, with `N` matching the pinned count in
+`.harness/scripts/baseline.json`. Exits non-zero on any failure. The count is python3-sensitive
+— the AI-native block is gated on it — so compare against the key that names your case.
 
 Verifies (per type): all 7 agents copied, 3 stack skills (build/test/verify), settings.json,
-CLAUDE.md with overlay, docs (workflow/dev-map/tasks/spec), evals, verify_all cross-platform,
-placeholder substitution worked, no `.tmpl`/`.append` leaked.
+CLAUDE.md with overlay, docs (workflow/dev-map/tasks/spec), evals, placeholder substitution
+worked, no `.tmpl`/`.append` leaked.
 
-### Golden #3 — verify_all FAILs if root .claude/agents/ drifts from templates (manual)
+### Golden #3 — verify_all FAILs if agents/ drifts from templates (manual)
 
 **Setup**:
 1. Edit `agents/developer.md` and add a junk line.
-2. Run `pwsh -File .harness/scripts/verify_all.ps1`.
+2. Run `bash .harness/scripts/verify_all.sh`.
 
-**Expected**: `E.4 Self-template consistency` step FAIL with a diff message.
+**Expected**: the `E.*` self-template consistency step FAILs with a diff message.
 
 **Cleanup**:
-```powershell
-.\scripts\sync-self.ps1
+```bash
+bash .harness/scripts/sync-self.sh
 ```
 
-### Golden #4 — install.ps1 dry-run shows the plan without writing (manual)
+### Golden #4 — install.sh dry-run shows the plan without writing (manual)
 
 **How to run**:
-```powershell
-.\install.ps1 -DryRun
+```bash
+./install.sh --dry-run
 ```
 
-**Expected**: lists 9 skills, prints `[dry-run] Would copy ...` lines, exits cleanly. No file is created at `~/.claude/skills/`.
-
-### Golden #5 — install.ps1 and install.sh produce identical layouts (manual)
-
-Run each on a fresh `--dry-run` and diff their reported plans. Differences should be only OS-specific (path separators, etc.), not skill names or behaviors.
+**Expected**: lists the shipped skills, prints `[dry-run] Would copy ...` lines, exits cleanly.
+No file is created at `~/.claude/skills/`.
 
 ---
 
@@ -97,5 +83,6 @@ Run each on a fresh `--dry-run` and diff their reported plans. Differences shoul
 
 | Date | What changed | Goldens re-run | Result |
 |---|---|---|---|
-| 2026-05-15 | Initial release (v0.1.0) | #1, #2 via test-init.ps1 | 64/64 PASS |
+| 2026-05-15 | Initial release (v0.1.0) | #1, #2 via test-init | 64/64 PASS |
 | 2026-05-15 | v0.2.0 + v0.3.0 + integration tests | #0 via test-real-project; #1, #2 via test-init | 64+86 PASS |
+| 2026-08-08 | Windows support removed (v0.49.0) | goldens rewritten to the single shell; #5 retired | — |

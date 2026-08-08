@@ -125,7 +125,9 @@ a claim about a file's current shape, and `evals/` is the last place that should
 > `lib.sh` and `lib2.ps1` indexes to 1 file / 4 nodes — the Python one. Indexing harness-kit
 > itself yields **6 files, 26 nodes, 39 edges out of 612 tracked files**, and all six are
 > throwaway `tests/fixtures/` sample apps plus one JSON mock. Not one of the repo's 33 `.sh`
-> or 32 `.ps1` files — its entire moving-parts surface, 1.28 MB — is visible.
+> files — its entire moving-parts surface at the time, 1.28 MB — was visible. The shell half of
+> that gap closed by being ported to TypeScript; the PowerShell half closed by being deleted in
+> v0.49.0, so what remains unindexed is bash only.
 >
 > `tree-sitter-bash.wasm` does ship inside the package, but it arrives via the generic
 > `tree-sitter-wasms` dependency and is not wired into the language map. Grammar presence is

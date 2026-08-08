@@ -56,8 +56,8 @@ checklist** (frontmatter, `allowed-tools`, README/CHANGELOG/install fan-out). Re
    call just to record something is a standing tax — see "Deliberately not adopted".
 
 7. **Store scripts; compose, don't reconstruct.** When a skill needs real logic (file rewrites,
-   cross-shell parity, byte-identity) put it in a `.{ps1,sh}` pair under `.harness/scripts/` and have
-   the skill *call* it. Keep the PowerShell and Bash halves symmetric (`30-engineering.md` #20).
+   cross-shell parity, byte-identity) put it in a `.sh` pair under `.harness/scripts/` and have
+   the skill *call* it. One implementation per script (`30-engineering.md` #20).
 
 8. **Skills compose by name.** Reference a sibling skill / agent by name and let the dispatcher
    resolve it — the whole 7-stage pipeline is exactly this (`pm-orchestrator` names the downstream

@@ -2,17 +2,18 @@
 /**
  * hook-spec — the hook wiring spec (T-13), TypeScript port (v2 migration, stage 1).
  *
- * THE single source of truth for `(hook tool, target OS) -> command byte-form`
- * plus each tool's failure semantics, lifecycle event name and matcher.
+ * THE single source of truth for `hook tool -> command byte-form` plus each tool's
+ * failure semantics, lifecycle event name and matcher.
  *
- * Pure and side-effect-free: no file I/O, no parsing, no substitution. Only the
- * `hostos` query reads the environment. Changing a byte here changes every
- * consumer, and there is nowhere else to change it.
+ * Pure and side-effect-free: no file I/O, no parsing, no substitution, and nothing
+ * read from the environment. Changing a byte here changes every consumer, and there
+ * is nowhere else to change it.
  *
- * This port replaces the `hook-spec.{sh,ps1}` twin pair. One implementation runs
- * on both host operating systems, so the cross-shell divergence class that the
- * twins carried — and the operator obligations that existed only because the
- * PowerShell side could not be executed here — do not apply to it.
+ * THE TARGET-OS AXIS IS GONE. It existed to choose between a `pwsh` byte-form and an
+ * `sh` one; Windows support was removed, so the choice has one branch and a function
+ * of one argument replaced a function of two. With it went the `hostos` query — a
+ * process asking which OS it runs on is only meaningful when the answer changes the
+ * answer to something else.
  *
  * CONTRACT (byte-identical to the retired shell twins; proven by
  * `tools/diff-hook-spec.sh`, which enumerates the entire input space)
@@ -20,8 +21,7 @@
  *   hook-spec event <tool>         -> Stop | PreToolUse | UserPromptSubmit | SessionStart
  *   hook-spec matcher <tool>       -> Bash (guard-rm) | none (the other three)
  *   hook-spec semantics <tool>     -> fail-open | fail-closed
- *   hook-spec command <tool> <os>  -> the JSON-string-body command (inner " already \")
- *   hook-spec hostos               -> windows | unix  (the host this process runs on)
+ *   hook-spec command <tool>       -> the JSON-string-body command (inner " already \")
  *   anything else / bad arity      -> NOTHING on stdout, diagnostic on stderr, exit 2
  *
  * Invariants a consumer may rely on: purity (fixed arguments -> fixed bytes) and
@@ -35,7 +35,7 @@
  * See .harness/rules/75-safety-hook.md.
  *
  * Usage:
- *   node .harness/scripts/hook-spec.js command guard-rm unix
+ *   node .harness/scripts/hook-spec.js command guard-rm
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EVENTS = exports.TOOLS = void 0;
@@ -43,12 +43,10 @@ exports.isTool = isTool;
 exports.matcherOf = matcherOf;
 exports.semanticsOf = semanticsOf;
 exports.commandOf = commandOf;
-exports.hostOs = hostOs;
 exports.run = run;
 /** The four recognized tool ids, in the fixed order `tools` emits them. */
 exports.TOOLS = ['harness-sync', 'guard-rm', 'ambient-prompt', 'ambient-reset'];
-const OSES = ['windows', 'unix'];
-const QUERIES = 'tools|event|matcher|semantics|command|hostos';
+const QUERIES = 'tools|event|matcher|semantics|command';
 /**
  * A backslash-escaped double quote. The emitted command is destined for a JSON
  * string body, so its inner quotes arrive already escaped. Held as a named
@@ -64,9 +62,6 @@ exports.EVENTS = {
 function isTool(value) {
     return exports.TOOLS.includes(value);
 }
-function isTargetOs(value) {
-    return OSES.includes(value);
-}
 function matcherOf(tool) {
     return tool === 'guard-rm' ? 'Bash' : 'none';
 }
@@ -74,31 +69,18 @@ function semanticsOf(tool) {
     return tool === 'guard-rm' ? 'fail-closed' : 'fail-open';
 }
 /**
- * The four literal command shapes. This is their only home — do not retype them,
+ * The two literal command shapes. This is their only home — do not retype them,
  * and do not post-process the result anywhere.
  *
- * The tool id is interpolated into a space-preceded bare ` .harness/scripts/<tool>.<ext>`
+ * The tool id is interpolated into a space-preceded bare ` .harness/scripts/<tool>.sh`
  * path so the existing congruence extraction in the verify gate keeps working.
  */
-function commandOf(tool, os) {
-    if (os === 'windows') {
-        if (tool === 'guard-rm') {
-            return (`pwsh -NoProfile -Command ${ESCQ}Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR; ` +
-                `& pwsh -NoProfile -File .harness/scripts/${tool}.ps1${ESCQ}`);
-        }
-        return (`pwsh -NoProfile -Command ${ESCQ}Set-Location -LiteralPath $env:CLAUDE_PROJECT_DIR -EA SilentlyContinue; ` +
-            `if (Test-Path -LiteralPath .harness/scripts/${tool}.ps1 -PathType Leaf) ` +
-            `{ & pwsh -NoProfile -File .harness/scripts/${tool}.ps1 }; exit 0${ESCQ}`);
-    }
+function commandOf(tool) {
     if (tool === 'guard-rm') {
         return `sh -c 'cd ${ESCQ}$CLAUDE_PROJECT_DIR${ESCQ} 2>/dev/null && bash .harness/scripts/${tool}.sh'`;
     }
     return (`sh -c 'cd ${ESCQ}$CLAUDE_PROJECT_DIR${ESCQ} 2>/dev/null && ` +
         `[ -f .harness/scripts/${tool}.sh ] && exec bash .harness/scripts/${tool}.sh || exit 0'`);
-}
-/** The host this process runs on. The only query that reads the environment. */
-function hostOs() {
-    return process.platform === 'win32' ? 'windows' : 'unix';
 }
 function die(message) {
     process.stderr.write(`hook-spec: ${message}\n`);
@@ -138,23 +120,13 @@ function run(argv) {
             return;
         }
         case 'command': {
-            if (arity !== 2) {
-                die(`unrecognized arity for query 'command': expected 2 arguments, got ${arity}`);
+            if (arity !== 1) {
+                die(`unrecognized arity for query 'command': expected 1 argument, got ${arity}`);
             }
             const tool = argv[1] ?? '';
             if (!isTool(tool))
                 die(`unrecognized tool: ${tool}`);
-            const os = argv[2] ?? '';
-            if (!isTargetOs(os))
-                die(`unrecognized os: ${os} (expected 'windows' or 'unix')`);
-            emit(commandOf(tool, os));
-            return;
-        }
-        case 'hostos': {
-            if (arity !== 0) {
-                die(`unrecognized arity for query 'hostos': expected 0 arguments, got ${arity}`);
-            }
-            emit(hostOs());
+            emit(commandOf(tool));
             return;
         }
         case '':

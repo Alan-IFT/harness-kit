@@ -12,7 +12,7 @@
 Claude Code skills and project templates. Build / test characteristics:
 
 - Primary "code" is Markdown (Skill definitions, agent definitions, docs).
-- Secondary code is PowerShell + Bash scripts (verify_all, install scripts).
+- Secondary code is TypeScript compiled to `.harness/scripts/*.js`, plus Bash (verify_all, install, the regression drivers). Linux / macOS only.
 - Templates under `skills/harness-init/templates/` are the **source of truth** for distributed assets.
 
 ## How development flows

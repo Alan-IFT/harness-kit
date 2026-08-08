@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # test-harness-upgrade.sh — Regression for the /harness-upgrade mechanical layer (T-012).
-# Mirror of test-harness-upgrade.ps1. See that file for full doc.
 #
 # Drives upgrade-project.sh against synthetic "old-layout" fixtures (each its OWN temp
 # dir — insight L22), then asserts the end state. --template-root = this repo root.
@@ -91,8 +90,8 @@ step "B.1" "Build" "SKIP"'
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "hooks": {
-    "Stop": [ { "hooks": [ { "type": "command", "command": "pwsh -NoProfile -File scripts/harness-sync.ps1" } ] } ],
-    "PreToolUse": [ { "matcher": "Bash", "hooks": [ { "type": "command", "command": "pwsh -NoProfile -File scripts/guard-rm.ps1" } ] } ]
+    "Stop": [ { "hooks": [ { "type": "command", "command": "bash scripts/harness-sync.sh" } ] } ],
+    "PreToolUse": [ { "matcher": "Bash", "hooks": [ { "type": "command", "command": "bash scripts/guard-rm.sh" } ] } ]
   }
 }
 EOF
@@ -108,12 +107,10 @@ EOF
 # Tool-agnostic: catches edits from Claude Code, Copilot, Cursor, or hand-typed.
 set -e
 _drift=0
-if command -v pwsh >/dev/null 2>&1 && [ -f scripts/harness-sync.ps1 ]; then
-    pwsh -File scripts/harness-sync.ps1 -Check >/dev/null 2>&1 || _drift=1
-elif command -v bash >/dev/null 2>&1 && [ -f scripts/harness-sync.sh ]; then
+if command -v bash >/dev/null 2>&1 && [ -f scripts/harness-sync.sh ]; then
     bash scripts/harness-sync.sh --check >/dev/null 2>&1 || _drift=1
 else
-    echo "harness-kit pre-commit: neither pwsh nor bash found; skipping drift check." >&2
+    echo "harness-kit pre-commit: bash not found; skipping drift check." >&2
     exit 0
 fi
 if [ "$_drift" = "1" ]; then
@@ -121,8 +118,7 @@ if [ "$_drift" = "1" ]; then
     echo "harness-kit: drift between .harness/ and .claude/." >&2
     echo "  .claude/agents/ and/or .claude/skills/ are stale relative to .harness/." >&2
     echo "" >&2
-    echo "  Fix: pwsh -File .harness/scripts/harness-sync.ps1   (Windows)" >&2
-    echo "       bash .harness/scripts/harness-sync.sh          (macOS / Linux)" >&2
+    echo "  Fix: bash .harness/scripts/harness-sync.sh" >&2
     echo "  Then: git add .claude/ && git commit ..." >&2
     echo "" >&2
     echo "  Note: edits to .harness/rules/ do NOT need sync (referenced by AI-GUIDE.md, not composed)." >&2
@@ -170,9 +166,13 @@ assert "A: helper exits 0" "$([[ "$RUN_CODE" -eq 0 ]] && echo 0 || echo 1)"
 assert "A: harness-sync.ps1 relocated to .harness/scripts/" "$([[ -f "$a/.harness/scripts/harness-sync.ps1" ]] && echo 0 || echo 1)"
 assert "A: harness-sync.ps1 removed from scripts/" "$([[ ! -f "$a/scripts/harness-sync.ps1" ]] && echo 0 || echo 1)"
 assert "A: custom scripts/my-custom.ps1 untouched (AC-1)" "$([[ -f "$a/scripts/my-custom.ps1" ]] && echo 0 || echo 1)"
+# v0.49.0: a legacy .ps1 is RELOCATED but never content-refreshed — there is no current
+# template to refresh it from, so its body must arrive byte-untouched. Refreshing a file
+# the toolkit stopped shipping would be inventing content for a platform it dropped.
 relocated="$(cat "$a/.harness/scripts/harness-sync.ps1")"
-assert "A: relocated harness-sync.ps1 is two-up (content-refreshed, AC-5)" "$(contains 'two levels up' "$relocated" && echo 0 || echo 1)"
-assert "A: relocated harness-sync.ps1 no longer carries one-up WRONG marker" "$(contains 'wrong root' "$relocated" && echo 1 || echo 0)"
+assert "A: relocated harness-sync.ps1 keeps its original body (relocate != refresh)" "$(contains 'wrong root' "$relocated" && echo 0 || echo 1)"
+relocated_sh="$(cat "$a/.harness/scripts/harness-sync.sh")"
+assert "A: relocated harness-sync.sh IS content-refreshed from the template (AC-5)" "$(contains 'harness-sync' "$relocated_sh" && echo 0 || echo 1)"
 # AC-5 runtime — invoke the relocated bash harness-sync from project root, must find root.
 ( cd "$a" && bash "$a/.harness/scripts/harness-sync.sh" --check >/dev/null 2>&1 ); sync_code=$?
 assert "A: relocated harness-sync runs from project root and finds repo root (AC-5 runtime)" "$([[ "$sync_code" -eq 0 ]] && echo 0 || echo 1)"
@@ -187,7 +187,7 @@ assert "A: settings rewritten to the resilient form (CLAUDE_PROJECT_DIR-anchored
 # T-12 / A5 proof: guard-rm (PreToolUse) is resilient-anchored too but fail-CLOSED —
 # its resilient form has NO `exit 0` fallback (the convenience Stop form does).
 assert "A: guard-rm resilient form is fail-CLOSED (no exit 0 in its command)" \
-    "$(printf '%s\n' "$set_content" | grep -F 'guard-rm.ps1' | grep -qF 'exit 0' && echo 1 || echo 0)"
+    "$(printf '%s\n' "$set_content" | grep -F 'guard-rm.sh' | grep -qF 'exit 0' && echo 1 || echo 0)"
 # JSON parse: prefer real python3 (NOT the Windows Store stub, which prints a "Python
 # was not found" notice and exits non-zero — insight L27 family); else node; else skip.
 real_python=""
@@ -390,7 +390,7 @@ i_fix="$(mktemp -d -t "harness-upgrade-incongruent-XXXXXX")"; tmp_dirs+=("$i_fix
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "hooks": {
-    "Stop": [ { "hooks": [ { "type": "command", "command": "pwsh -NoProfile -File scripts/harness-sync.ps1" } ] } ]
+    "Stop": [ { "hooks": [ { "type": "command", "command": "bash scripts/harness-sync.sh" } ] } ]
   }
 }
 EOF
@@ -400,11 +400,11 @@ EOF
 RUN_OUT="$(cd "$i_fix" && bash "$helper" --type generic --stack "Rust CLI" --template-root "$crafted" --today 2026-06-08 2>&1)"
 RUN_CODE=$?
 assert "I: GAP|template-missing emitted for harness-sync (FR-P3)" "$(contains 'GAP|template-missing|absent|.harness/scripts/harness-sync.' "$RUN_OUT" && echo 0 || echo 1)"
-assert "I: CONFLICT|congruence names the missing path (FR-P3)" "$(contains 'CONFLICT|congruence' "$RUN_OUT" && contains 'missing scripts/harness-sync.ps1' "$RUN_OUT" && echo 0 || echo 1)"
+assert "I: CONFLICT|congruence names the missing path (FR-P3)" "$(contains 'CONFLICT|congruence' "$RUN_OUT" && contains 'missing scripts/harness-sync.sh' "$RUN_OUT" && echo 0 || echo 1)"
 assert "I: helper exits 4 (congruence failure wins)" "$([[ "$RUN_CODE" -eq 4 ]] && echo 0 || echo 1)"
 i_set="$(cat "$i_fix/.claude/settings.json")"
-assert "I: settings still references the LEGACY path (no dangling rewire)" "$(contains '-File scripts/harness-sync.ps1' "$i_set" && echo 0 || echo 1)"
-assert "I: settings NOT rewired to .harness/scripts/harness-sync.ps1" "$(contains '-File .harness/scripts/harness-sync.ps1' "$i_set" && echo 1 || echo 0)"
+assert "I: settings still references the LEGACY path (no dangling rewire)" "$(contains 'bash scripts/harness-sync.sh' "$i_set" && echo 0 || echo 1)"
+assert "I: settings NOT rewired to .harness/scripts/harness-sync.sh" "$(contains 'bash .harness/scripts/harness-sync.sh' "$i_set" && echo 1 || echo 0)"
 
 # --- Fixture P: B7 literal-placeholder repair (gate C3 / AC-9) --------------------
 echo ""
@@ -481,8 +481,8 @@ new_prereloc_fixture() {
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "hooks": {
-    "Stop": [ { "hooks": [ { "type": "command", "command": "pwsh -NoProfile -File scripts/harness-sync.ps1" } ] } ],
-    "PreToolUse": [ { "matcher": "Bash", "hooks": [ { "type": "command", "command": "pwsh -NoProfile -File scripts/guard-rm.ps1" } ] } ]
+    "Stop": [ { "hooks": [ { "type": "command", "command": "bash scripts/harness-sync.sh" } ] } ],
+    "PreToolUse": [ { "matcher": "Bash", "hooks": [ { "type": "command", "command": "bash scripts/guard-rm.sh" } ] } ]
   }
 }
 EOF
@@ -494,10 +494,10 @@ EOF
 m1="$(new_prereloc_fixture rc1 0)"; tmp_dirs+=("$m1")
 m1_out="$(cd "$m1" && bash "$migrate_helper" 2>&1)"; m1_code=$?
 assert "M1: migrate exits 4 (RC-1 made loud, AC-1)" "$([[ "$m1_code" -eq 4 ]] && echo 0 || echo 1)"
-assert "M1: CONGRUENCE-FAIL names the missing path (AC-1)" "$(contains 'CONGRUENCE-FAIL' "$m1_out" && contains 'missing scripts/harness-sync.ps1' "$m1_out" && echo 0 || echo 1)"
+assert "M1: CONGRUENCE-FAIL names the missing path (AC-1)" "$(contains 'CONGRUENCE-FAIL' "$m1_out" && contains 'missing scripts/harness-sync.sh' "$m1_out" && echo 0 || echo 1)"
 m1_set="$(cat "$m1/.claude/settings.json")"
-assert "M1: settings NOT rewired to a dangling .harness path (AC-1)" "$(contains '-File .harness/scripts/harness-sync.ps1' "$m1_set" && echo 1 || echo 0)"
-assert "M1: present variant guard-rm still rewired (gated per variant)" "$(contains '-File .harness/scripts/guard-rm.ps1' "$m1_set" && echo 0 || echo 1)"
+assert "M1: settings NOT rewired to a dangling .harness path (AC-1)" "$(contains 'bash .harness/scripts/harness-sync.sh' "$m1_set" && echo 1 || echo 0)"
+assert "M1: present variant guard-rm still rewired (gated per variant)" "$(contains 'bash .harness/scripts/guard-rm.sh' "$m1_set" && echo 0 || echo 1)"
 
 echo ""
 echo "--- Fixture M2: healthy migrate unchanged (B10) ---"
@@ -505,7 +505,7 @@ m2="$(new_prereloc_fixture healthy 1)"; tmp_dirs+=("$m2")
 m2_out="$(cd "$m2" && bash "$migrate_helper" 2>&1)"; m2_code=$?
 assert "M2: healthy migrate exits 0" "$([[ "$m2_code" -eq 0 ]] && echo 0 || echo 1)"
 m2_set="$(cat "$m2/.claude/settings.json")"
-assert "M2: settings rewired to .harness/scripts/harness-sync.ps1" "$(contains '-File .harness/scripts/harness-sync.ps1' "$m2_set" && echo 0 || echo 1)"
+assert "M2: settings rewired to .harness/scripts/harness-sync.sh" "$(contains 'bash .harness/scripts/harness-sync.sh' "$m2_set" && echo 0 || echo 1)"
 # T-12 / A8: migrate also resilient-ifies the brittle command (CLAUDE_PROJECT_DIR anchor).
 assert "M2: migrated command is the resilient form (CLAUDE_PROJECT_DIR-anchored, A8)" "$(contains 'CLAUDE_PROJECT_DIR' "$m2_set" && echo 0 || echo 1)"
 m2_bak_before=$(ls "$m2/.claude/"settings.json.bak-* 2>/dev/null | wc -l)
@@ -529,8 +529,8 @@ if (printf '' >> "$m3/.claude/settings.json") 2>/dev/null; then
 else
     m3_out="$(cd "$m3" && bash "$migrate_helper" 2>&1)"; m3_code=$?
     assert "M3: failed settings write exits 4, not silent 0 (B8)" "$([[ "$m3_code" -eq 4 ]] && echo 0 || echo 1)"
-    assert "M3: CONGRUENCE-FAIL names the still-legacy on-disk path (B8)" "$(contains 'CONGRUENCE-FAIL' "$m3_out" && contains 'missing scripts/harness-sync.ps1' "$m3_out" && echo 0 || echo 1)"
-    assert "M3: failed write left settings untouched on disk" "$(contains '-File scripts/harness-sync.ps1' "$(cat "$m3/.claude/settings.json")" && echo 0 || echo 1)"
+    assert "M3: CONGRUENCE-FAIL names the still-legacy on-disk path (B8)" "$(contains 'CONGRUENCE-FAIL' "$m3_out" && contains 'missing scripts/harness-sync.sh' "$m3_out" && echo 0 || echo 1)"
+    assert "M3: failed write left settings untouched on disk" "$(contains 'bash scripts/harness-sync.sh' "$(cat "$m3/.claude/settings.json")" && echo 0 || echo 1)"
 fi
 chmod u+w "$m3/.claude/settings.json" 2>/dev/null || true
 
@@ -551,6 +551,11 @@ else
     mkdir -p "$z/.harness/scripts"
     ( cd "$z" && git init -q )   # guard needs a .git ancestor to be active
     cp "$z_guard_src" "$z/.harness/scripts/guard-rm.sh"
+    # The .sh is a two-line launcher over guard-rm.js — copying only the launcher made Z1
+    # pass for the WRONG reason (exec node failing is also non-zero) and made Z1b, the
+    # benign-allow sanity row, impossible to satisfy. Both halves must be present for the
+    # probe to be measuring the guard rather than a missing file.
+    cp "$repo_root/.harness/scripts/guard-rm.js" "$z/.harness/scripts/guard-rm.js"
     # The resilient bash guard command, transcribed from design §3.4 (fail-CLOSED: no exit 0).
     z_guard_cmd='sh -c '\''cd "$CLAUDE_PROJECT_DIR" 2>/dev/null && bash .harness/scripts/guard-rm.sh'\'''
     z_destructive='{"tool_input":{"command":"rm -rf /etc/harness-ac5-outside-target"}}'

@@ -105,7 +105,7 @@ a later task does not re-learn it; each carries its supporting evidence referenc
 _Avoid_: lesson, learning, note, takeaway
 
 **Entry-start line**:
-A line matching `^[[:space:]]*-[[:space:]]` (`^\s*-\s+` in PowerShell) — the one predicate shared by
+A line matching `^[[:space:]]*-[[:space:]]` — the one predicate shared by
 all four readers of the insight index: the harvest, the stored-index read, the index header
 derivation and the `I.4` cap check.
 _Avoid_: bullet line, marker line, insight line, data line
@@ -213,7 +213,7 @@ _Avoid_: hook block scope, PreToolUse region, bounded search area
 
 **Operator obligation**:
 A release-gating verification step no agent in this repo can perform — it needs a capability the
-development host lacks (today: a Windows host running PowerShell) — so it is recorded for a human
+development host lacks — so it is recorded for a human
 operator to execute before a release is safe. It carries a stable id that is never reissued.
 _Avoid_: manual check, TODO, pending item, operator task
 

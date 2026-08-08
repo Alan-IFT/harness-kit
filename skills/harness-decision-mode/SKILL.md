@@ -38,7 +38,7 @@ no-op — no write, no `.bak`).
 > This skill is the **judgment layer**, and the edit is small enough to do directly: a single-line
 > replace via the `Edit` tool plus (Mode-3 only) a section-body replace. There is **no helper
 > script** — unlike `/harness-language`, no heading-anchored section slicing or byte-identical
-> cross-shell round-trip is needed here, so adding a `.{ps1,sh}` pair would be machinery that does
+> cross-shell round-trip is needed here, so adding a `.sh` pair would be machinery that does
 > not earn its place (`.harness/rules/15-skill-authoring.md` P6).
 
 ## When to invoke
@@ -154,7 +154,7 @@ next time an agent hits a decision point.
 - Don't write into a hand-mangled `25-decision-policy.md` with no recognizable single Active-mode
   line — surface the conflict and stop.
 - Don't clobber a non-empty Custom rubric on a Mode-3 switch — only seed it when empty.
-- Don't add a `.{ps1,sh}` helper for this — the edit is a one-line replace; a cross-shell pair would
+- Don't add a `.sh` helper for this — the edit is a one-line replace; a cross-shell pair would
   be unearned machinery (rule 15 P6).
 - Don't use this to edit the rubric's CONTENT — that's a direct edit of `.harness/decision-rubric.md`.
 - Don't confuse this with `/harness-language` (output language) or `/harness-upgrade` (layout).

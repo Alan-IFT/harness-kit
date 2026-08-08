@@ -5,7 +5,7 @@ description: Set, switch (English <-> Chinese), or refresh a harness project's
   change a project's working language or to refresh a stale policy — "switch to Chinese
   output", "make this project English", "切到中文输出". NOT /harness-upgrade (layout and
   version), NOT /harness-decision-mode (how much the AI decides on its own).
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, AskUserQuestion, TodoWrite
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, TodoWrite
 ---
 
 # /harness-language
@@ -33,7 +33,7 @@ restores the exact original bytes, because all text is pulled from the plugin te
 > This skill is the **judgment layer**. All mechanical work — locating the policy section
 > by its canonical heading, slicing it, substituting the canonical block, swapping the
 > one-line policy, writing the `.bak`, the byte-identity NOOP — is done by one
-> deterministic helper, `language-policy.{ps1,sh}`, which the skill bootstraps from the
+> deterministic helper, `language-policy.sh`, which the skill bootstraps from the
 > plugin template cache and drives with explicit flags. The skill does NO markdown
 > string-replacement and embeds NO policy text itself.
 
@@ -119,8 +119,6 @@ confident hit wins.
 1. Invoke the helper with `--dry-run`:
 
    ```
-   pwsh -File <root>/.harness/scripts/language-policy.ps1 -TemplateRoot <abs> -Lang <en|zh> -DryRun
-   # or
    bash <root>/.harness/scripts/language-policy.sh --template-root <abs> --lang <en|zh> --dry-run
    ```
 

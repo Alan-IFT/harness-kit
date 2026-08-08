@@ -26,7 +26,7 @@
 | T-16 | hook-truth-derivation | Delivered v0.46.0 (2 rollbacks) — all four derivation flows obtain hook byte-forms from `hook-spec` | 2026-08-01 | `docs/features/_archived/hook-truth-derivation/` |
 | T-15 | hook-truth-verify-scope | Delivered v0.46.0 (1 rollback + 4 doc-only rounds) — the gate stopped asserting a fact about the maintainer's machine | 2026-08-01 | `docs/features/_archived/hook-truth-verify-scope/` |
 | T-14 | hook-truth-status | Delivered v0.45.0 (3 rollbacks) — `/harness-status` no longer misreports the destructive-command guard | 2026-07-31 | `docs/features/_archived/hook-truth-status/` |
-| T-13 | hook-truth-spec | Delivered v0.45.0 (4 rollbacks) — new `hook-spec.{ps1,sh}`, single source of truth for lifecycle-hook wiring | 2026-07-31 | `docs/features/_archived/hook-truth-spec/` |
+| T-13 | hook-truth-spec | Delivered v0.45.0 (4 rollbacks) — new `hook-spec.sh`, single source of truth for lifecycle-hook wiring | 2026-07-31 | `docs/features/_archived/hook-truth-spec/` |
 | T-12 | resilient-hooks | Delivered v0.44.0 (0 rollbacks) — per-turn `Stop hook error` on a fresh clone eliminated by design | 2026-06-21 | `docs/features/_archived/resilient-hooks/` |
 | T-11c | entropy-watch-persist | Delivered v0.43.0 (0 rollbacks) — anti-entropy watch slice 3/3, findings persistence via a DECLINE filter | 2026-06-20 | `docs/features/_archived/entropy-watch-persist/` |
 | T-11b | entropy-watch-harness | Delivered v0.42.0 (0 rollbacks) — anti-entropy watch slice 2/3, wired into the `/harness` stage-7 boundary | 2026-06-20 | `docs/features/_archived/entropy-watch-harness/` |

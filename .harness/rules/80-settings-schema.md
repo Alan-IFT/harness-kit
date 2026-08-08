@@ -28,13 +28,13 @@ Both bugs share the same shape: a small textual change passes JSON-parse but bre
 
 - File exists but does not parse as JSON.
 - `$schema` is present but is not exactly `https://json.schemastore.org/claude-code-settings.json`.
-- A key inside the top-level `hooks` object is not in the upstream schema's hook event enum (see the `$validHookEvents` list in `.harness/scripts/verify_all.ps1` J.1 — kept in lockstep with the bash twin).
+- A key inside the top-level `hooks` object is not in the upstream schema's hook event enum (see `j1_valid_hook_events` in `.harness/scripts/verify_all.sh` J.1).
 
 The check is pure shell + grep — no `jq`/`python3` dependency, since the Git-for-Windows MSYS shell lacks both.
 
 ## Maintenance
 
-- When Anthropic adds a new hook event upstream, update **both** the PS list (`$validHookEvents` in `.harness/scripts/verify_all.ps1`) and the bash list (`j1_valid_hook_events` in `.harness/scripts/verify_all.sh`) in the same commit. Lockstep is enforced visually (no test asserts it); a drift will FAIL J.1 in whichever twin is stale on a project that uses the new event.
+- When Anthropic adds a new hook event upstream, update `j1_valid_hook_events` in `.harness/scripts/verify_all.sh`. There is one list; the two-list lockstep this rule used to demand went with Windows support in v0.49.0.
 - When the upstream `$schema` URL changes, update the `$canonicalSchema` / `j1_canonical` constants in both twins **and** the `$schema` field in `.claude/settings.json` + the `.tmpl` in the same commit.
 - Underscore-prefixed doc keys (`_comment`, `_doc_sync_hook`, `_guard_hook`) are allowed at root (root is `additionalProperties: true`) but **never** inside `hooks` (which is `additionalProperties: false`). If you want to annotate a hook entry, put the comment at the root object — not nested in the hook config.
 

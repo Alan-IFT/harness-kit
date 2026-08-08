@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
-# make-shims.sh — replace a ported script's shell twins with launchers.
+# make-shims.sh — replace a ported script's shell entry point with a launcher.
 #
-# Once a component is ported to TypeScript, its .sh and .ps1 stop being implementations
-# and become two-line launchers. That is the whole win: there is no logic left in them to
-# diverge, so the cross-shell divergence class and the PowerShell-only operator
-# obligations both go away, WITHOUT touching any of the ~27 files that reference the
-# script by name, the deliberately-frozen byte-form literals, or the live hook wiring.
+# Once a component is ported to TypeScript, its .sh stops being an implementation and
+# becomes a two-line launcher. That is the whole win: there is no logic left in it to
+# diverge, WITHOUT touching any of the ~27 files that reference the script by name, the
+# deliberately-frozen byte-form literals, or the live hook wiring.
+#
+# It used to write a .ps1 beside each .sh. Windows support was removed, so it writes one
+# file per component; `verify_all` F.1 fails if a .ps1 reappears under a scripts directory.
 #
 # guard-rm is fail-CLOSED and its launcher must stay that way: `exec node …` fails with a
 # non-zero status when node is missing, which is a BLOCK. Never add a fallback.
@@ -41,20 +43,6 @@ for name in "$@"; do
 exec node "\$(dirname -- "\$0")/$name.js" "\$@"
 SHEOF
         chmod +x "$dir/$name.sh"
-
-        cat > "$dir/$name.ps1" <<PSEOF
-# $name.ps1 — launcher. The implementation is src/$name.ts, compiled to
-# .harness/scripts/$name.js and committed alongside this file.
-#
-# This file holds no logic on purpose. It exists so every site that invokes
-# \`pwsh -File .harness/scripts/$name.ps1\` keeps working unchanged.
-#
-# One implementation now runs on both host operating systems, so nothing here can
-# diverge from the bash launcher. A missing node leaves \$LASTEXITCODE non-zero, which
-# is the correct fail-CLOSED direction for the guard. Do not add a fallback.
-& node (Join-Path \$PSScriptRoot "$name.js") @args
-exit \$LASTEXITCODE
-PSEOF
     done
-    echo "  shimmed: $name (.sh + .ps1, dogfood + template)"
+    echo "  shimmed: $name (dogfood + template)"
 done

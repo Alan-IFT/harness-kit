@@ -21,30 +21,30 @@ harness-kit/
 │   │       │   ├── docs/dev-map.md.tmpl
 │   │       │   ├── docs/tasks.md.tmpl
 │   │       │   ├── docs/spec/README.md
-│   │       │   ├── .harness/scripts/harness-sync.{ps1,sh}    ← Binding sync (distributed)
-│   │       │   ├── .harness/scripts/migrate-scripts-layout.{ps1,sh} ← One-shot scripts/ → .harness/scripts/ upgrade (T-007; presence-gated rewire + terminal hook-congruence scan, exit 4 — T-020; hook commands derived from hook-spec via the spec adapter — T-16)
-│   │       │   ├── .harness/scripts/upgrade-project.{ps1,sh}    ← /harness-upgrade mechanical layer (T-012; gated rewire + placeholder repair + terminal hook-congruence scan, exit 4 — T-020; hook commands + host OS derived from hook-spec via the spec adapter — T-16)
-│   │       │   ├── .harness/scripts/language-policy.{ps1,sh}    ← /harness-language mechanical layer (T-014): heading-anchored policy-section + line rewrite; zh source = i18n/zh/_policy snippet (T-016), en source = common/ inline; also drives zh-init composition (init step 4.4)
-│   │       │   ├── .harness/scripts/hook-spec.{ps1,sh}          ← HOOK WIRING SPEC (T-13): the single source for (hook tool x target OS) -> command byte-form + failure semantics + event + matcher; pure CLI (tools/event/matcher/semantics/command/hostos), exit 2 on unrecognized input
+│   │       │   ├── .harness/scripts/harness-sync.sh    ← Binding sync (distributed)
+│   │       │   ├── .harness/scripts/migrate-scripts-layout.sh ← One-shot scripts/ → .harness/scripts/ upgrade (T-007; presence-gated rewire + terminal hook-congruence scan, exit 4 — T-020; hook commands derived from hook-spec via the spec adapter — T-16)
+│   │       │   ├── .harness/scripts/upgrade-project.sh    ← /harness-upgrade mechanical layer (T-012; gated rewire + placeholder repair + terminal hook-congruence scan, exit 4 — T-020; hook commands + host OS derived from hook-spec via the spec adapter — T-16)
+│   │       │   ├── .harness/scripts/language-policy.sh    ← /harness-language mechanical layer (T-014): heading-anchored policy-section + line rewrite; zh source = i18n/zh/_policy snippet (T-016), en source = common/ inline; also drives zh-init composition (init step 4.4)
+│   │       │   ├── .harness/scripts/hook-spec.sh          ← HOOK WIRING SPEC (T-13): the single source for (hook tool x target OS) -> command byte-form + failure semantics + event + matcher; pure CLI (tools/event/matcher/semantics/command/hostos), exit 2 on unrecognized input
 │   │       │   ├── .harness/scripts/ai-native-mock.json     ← Mock AI response for HARNESS_AI_NATIVE_MOCK (v0.16+; test & dry-run)
 │   │       │   └── evals/golden-tasks.md.tmpl
 │   │       ├── fullstack/              ← Fullstack-only overlays
 │   │       │   ├── .harness/agents/dev-{frontend,backend,db}.md.tmpl  ← partition agents (project-local; {{STACK}}-injected)
 │   │       │   ├── .harness/rules/50-fullstack.md
 │   │       │   ├── .harness/skills/{build,test,verify}/SKILL.md.tmpl
-│   │       │   └── .harness/scripts/verify_all.{ps1,sh}.tmpl
+│   │       │   └── .harness/scripts/verify_all.sh.tmpl
 │   │       ├── backend/                ← Backend-only overlays
 │   │       │   ├── .harness/agents/dev-{api,services,db}.md.tmpl      ← partition agents (project-local; {{STACK}}-injected)
 │   │       │   ├── .harness/rules/50-backend.md
 │   │       │   ├── .harness/skills/{build,test,verify}/SKILL.md.tmpl
-│   │       │   └── .harness/scripts/verify_all.{ps1,sh}.tmpl
+│   │       │   └── .harness/scripts/verify_all.sh.tmpl
 │   │       └── i18n/zh/                 ← Chinese language overlay
 │   │           ├── common/docs/spec/README.md          ← human-facing (KEEP-ZH)
 │   │           ├── common/evals/golden-tasks.md.tmpl   ← human-facing (KEEP-ZH)
-│   │           └── _policy/output-language.zh.md.tmpl  ← single-source zh policy (T-016); NOT overlaid — read by language-policy.{ps1,sh}; zh init COMPOSES (lay English common/ + inject this policy)
+│   │           └── _policy/output-language.zh.md.tmpl  ← single-source zh policy (T-016); NOT overlaid — read by language-policy.sh; zh init COMPOSES (lay English common/ + inject this policy)
 │   ├── harness-adopt/SKILL.md          ← Existing-project adoption (automated apply since v0.3)
-│   ├── harness-upgrade/SKILL.md        ← Upgrade an already-initialized but stale project to the current layout (v0.23+); judgment layer, drives upgrade-project.{ps1,sh}
-│   ├── harness-language/SKILL.md       ← Set / switch (en<->zh) / refresh a project's output-language policy (v0.25+); judgment layer, drives language-policy.{ps1,sh}
+│   ├── harness-upgrade/SKILL.md        ← Upgrade an already-initialized but stale project to the current layout (v0.23+); judgment layer, drives upgrade-project.sh
+│   ├── harness-language/SKILL.md       ← Set / switch (en<->zh) / refresh a project's output-language policy (v0.25+); judgment layer, drives language-policy.sh
 │   ├── harness-decision-mode/SKILL.md  ← Switch the decision/escalation MODE 1/2/3 (v0.28+); surgical single-line Active-mode rewrite of .harness/rules/25-decision-policy.md + Mode-3 custom-rubric capture; no helper script (direct Edit)
 │   ├── harness-verify/SKILL.md         ← Run verify_all
 │   ├── harness-status/SKILL.md         ← Show Harness health
@@ -85,27 +85,27 @@ harness-kit/
 │   ├── rejected-decisions.md           ← Memory layer (4th kind): deliberately-declined options + why; read/append at decide-points (v0.40+; dual-purpose dogfood + template seed)
 │   ├── operator-obligations.md         ← Memory layer (5th kind): the release-gating operator obligations — one entry per human-run step (id/action/artifacts/pass observable/security/origin/last discharged); dogfood-only, no template twin, no sync-self mapping, no gated size cap (v0.46+/T-24)
 │   └── scripts/                        ← All harness-owned scripts (relocated from scripts/ in T-007)
-│       ├── verify_all.{ps1,sh}         ← Total verification (35 checks)
-│       ├── harness-sync.{ps1,sh}       ← Layer 2: .harness/agents + .harness/skills → .claude/
-│       ├── sync-self.{ps1,sh}          ← Layer 1: templates/common/ → repo SOT
-│       ├── migrate-scripts-layout.{ps1,sh} ← One-shot scripts/ → .harness/scripts/ upgrade (T-007; v0.31: presence-gated rewire + terminal hook-congruence scan, exit 4; v0.46/T-16: hook commands derived from hook-spec, SPEC-GAP plan line when the spec is absent)
-│       ├── upgrade-project.{ps1,sh}    ← /harness-upgrade mechanical layer (v0.23+): relocate + content-refresh + gated settings rewire + placeholder repair + hook + verify_all regenerate + terminal hook-congruence scan (exit 4, v0.31); v0.46/T-16: hook commands + host OS derived from hook-spec, GAP| record when the spec is absent
-│       ├── language-policy.{ps1,sh}    ← /harness-language mechanical layer (v0.25+): heading-anchored policy-section + one-line policy rewrite, .bak, NOOP on byte-identity, en<->zh byte-identical round-trip
-│       ├── test-init.{ps1,sh}          ← Init+sync regression on EMPTY dir
-│       ├── test-harness-upgrade.{ps1,sh} ← /harness-upgrade regression (v0.23+): synthetic old-fixtures, root-derivation, B.* splice/halt, hook conflict, idempotence; v0.31: dangling-hook repair, placeholder repair, congruence exit-4, migrate RC-1 fixtures
-│       ├── test-language.{ps1,sh}      ← /harness-language regression (v0.25+): en<->zh switch, idempotent refresh, dry-run, byte-identical zh->en->zh round-trip, missing-copilot, hand-mangled-heading conflict
-│       ├── test-supervisor.{ps1,sh}    ← Supervisor agent + /harness-supervise skill regression
-│       ├── test-verify-i6.{ps1,sh}     ← verify_all I.6 gap-tolerant matcher regression (v0.18+)
-│       ├── test-real-project.{ps1,sh}  ← Integration regression on REAL fixture
-│       ├── hook-spec.{ps1,sh}          ← Hook wiring spec (T-13 v0.45): single source for the (hook tool x target OS) command byte-forms + fail-open/fail-closed semantics; consumed by install-hooks AND (since T-16 v0.46) by all four derivation flows through their spec adapter — no flow carries a byte-form copy any more
-│       ├── install-hooks.{ps1,sh}      ← One-shot git pre-commit installer; ALSO bootstraps a missing .claude/settings.local.json from hook-spec when the committed settings declares no hooks (T-13 v0.45)
-│       ├── archive-task.{ps1,sh}       ← Insight-harvest + stage-doc archive; since T-20 (v0.46) harvest/rotation/`I.4` share one entry boundary (INSIGHT-SCAN): an ENTRY is a bullet plus every line wrapped under it, and an unclassifiable line refuses at exit 3 before any write. EVERY `## Insight` section of the delivery doc is harvested (not just the first), and a heading inside a fenced code block is not a heading — a fence left open at EOF refuses too
-│       ├── guard-rm.{ps1,sh}           ← Destructive-command PreToolUse guard (v0.15+); judges EVERY command position since v0.46
-│       ├── ambient-prompt.{ps1,sh}     ← Ambient-stream UserPromptSubmit heartbeat hook (flag-gated by .harness/ambient.flag)
-│       ├── ambient-reset.{ps1,sh}      ← Ambient-stream SessionStart hook: clears .harness/ambient.flag each new session (session-scoped)
-│       ├── entropy-cadence.{ps1,sh}    ← Entropy-watch shared remind-if-due cadence (v0.41+): check/delivered/swept; threshold N=5 in one place; fail-open → NOT-DUE; reads/writes gitignored .harness/entropy-watch.state; F.1 member
-│       ├── test-guard-rm.{ps1,sh}      ← Driver for evals/guard-rm-cases.md (on-demand); takes an optional guard path ([guard-path] / -Guard) so a staged copy can be driven without touching the live hook
-│       ├── test-archive-task.{ps1,sh}  ← archive-task INSIGHT-SCAN regression (T-20 v0.46, on-demand): wrapped harvest, refusal diagnostics, terminal footer, shipped-template header block, cap/clamp boundaries, multi-section + fenced-heading harvest (QA-1, backtick AND tilde fences), and the AC-4 byte-identity floor against the git-extracted pre-change script; takes an optional path ([archive-task-path] / -ArchiveTask) so a staged or extracted copy can be driven. NOT in sync-self's mirror set and NOT in verify_all F.1 — dogfood-only, like every other test-* driver
+│       ├── verify_all.sh         ← Total verification (35 checks)
+│       ├── harness-sync.sh       ← Layer 2: .harness/agents + .harness/skills → .claude/
+│       ├── sync-self.sh          ← Layer 1: templates/common/ → repo SOT
+│       ├── migrate-scripts-layout.sh ← One-shot scripts/ → .harness/scripts/ upgrade (T-007; v0.31: presence-gated rewire + terminal hook-congruence scan, exit 4; v0.46/T-16: hook commands derived from hook-spec, SPEC-GAP plan line when the spec is absent)
+│       ├── upgrade-project.sh    ← /harness-upgrade mechanical layer (v0.23+): relocate + content-refresh + gated settings rewire + placeholder repair + hook + verify_all regenerate + terminal hook-congruence scan (exit 4, v0.31); v0.46/T-16: hook commands + host OS derived from hook-spec, GAP| record when the spec is absent
+│       ├── language-policy.sh    ← /harness-language mechanical layer (v0.25+): heading-anchored policy-section + one-line policy rewrite, .bak, NOOP on byte-identity, en<->zh byte-identical round-trip
+│       ├── test-init.sh          ← Init+sync regression on EMPTY dir
+│       ├── test-harness-upgrade.sh ← /harness-upgrade regression (v0.23+): synthetic old-fixtures, root-derivation, B.* splice/halt, hook conflict, idempotence; v0.31: dangling-hook repair, placeholder repair, congruence exit-4, migrate RC-1 fixtures
+│       ├── test-language.sh      ← /harness-language regression (v0.25+): en<->zh switch, idempotent refresh, dry-run, byte-identical zh->en->zh round-trip, missing-copilot, hand-mangled-heading conflict
+│       ├── test-supervisor.sh    ← Supervisor agent + /harness-supervise skill regression
+│       ├── test-verify-i6.sh     ← verify_all I.6 gap-tolerant matcher regression (v0.18+)
+│       ├── test-real-project.sh  ← Integration regression on REAL fixture
+│       ├── hook-spec.sh          ← Hook wiring spec (T-13 v0.45): single source for the (hook tool x target OS) command byte-forms + fail-open/fail-closed semantics; consumed by install-hooks AND (since T-16 v0.46) by all four derivation flows through their spec adapter — no flow carries a byte-form copy any more
+│       ├── install-hooks.sh      ← One-shot git pre-commit installer; ALSO bootstraps a missing .claude/settings.local.json from hook-spec when the committed settings declares no hooks (T-13 v0.45)
+│       ├── archive-task.sh       ← Insight-harvest + stage-doc archive; since T-20 (v0.46) harvest/rotation/`I.4` share one entry boundary (INSIGHT-SCAN): an ENTRY is a bullet plus every line wrapped under it, and an unclassifiable line refuses at exit 3 before any write. EVERY `## Insight` section of the delivery doc is harvested (not just the first), and a heading inside a fenced code block is not a heading — a fence left open at EOF refuses too
+│       ├── guard-rm.sh           ← Destructive-command PreToolUse guard (v0.15+); judges EVERY command position since v0.46
+│       ├── ambient-prompt.sh     ← Ambient-stream UserPromptSubmit heartbeat hook (flag-gated by .harness/ambient.flag)
+│       ├── ambient-reset.sh      ← Ambient-stream SessionStart hook: clears .harness/ambient.flag each new session (session-scoped)
+│       ├── entropy-cadence.sh    ← Entropy-watch shared remind-if-due cadence (v0.41+): check/delivered/swept; threshold N=5 in one place; fail-open → NOT-DUE; reads/writes gitignored .harness/entropy-watch.state; F.1 member
+│       ├── test-guard-rm.sh      ← Driver for evals/guard-rm-cases.md (on-demand); takes an optional guard path ([guard-path] / -Guard) so a staged copy can be driven without touching the live hook
+│       ├── test-archive-task.sh  ← archive-task INSIGHT-SCAN regression (T-20 v0.46, on-demand): wrapped harvest, refusal diagnostics, terminal footer, shipped-template header block, cap/clamp boundaries, multi-section + fenced-heading harvest (QA-1, backtick AND tilde fences), and the AC-4 byte-identity floor against the git-extracted pre-change script; takes an optional path ([archive-task-path] / -ArchiveTask) so a staged or extracted copy can be driven. NOT in sync-self's mirror set and NOT in verify_all F.1 — dogfood-only, like every other test-* driver
 │       └── baseline.json               ← Test/asset baseline
 │
 ├── .claude/                             ← Claude Code binding (regenerated by harness-sync)
@@ -156,7 +156,7 @@ harness-kit/
 │       └── todo-backend/               ← Python + pytest
 │
 ├── architecture.html                    ← Visual architecture overview
-├── install.ps1 / install.sh             ← One-command installer
+├── install.sh                           ← One-command installer
 ├── README.md / LICENSE / CHANGELOG.md / CONTRIBUTING.md
 ├── .gitattributes / .gitignore
 └── 参考/                                  ← (gitignored) reference articles
@@ -181,39 +181,37 @@ Both layers are checked by `.harness/scripts/verify_all` and FAIL on drift.
 | Skill: harness-adopt | `skills/harness-adopt/SKILL.md` | Fully automated repo adoption since v0.3 |
 | Skill: harness-verify | `skills/harness-verify/SKILL.md` | Invokes .harness/scripts/verify_all |
 | Skill: harness-status | `skills/harness-status/SKILL.md` | Read-only inspection |
-| Skill: harness-language | `skills/harness-language/SKILL.md` + `language-policy.{ps1,sh}` | Set / switch / refresh output-language policy (v0.25+); judgment in SKILL, mechanical in the helper pair |
+| Skill: harness-language | `skills/harness-language/SKILL.md` + `language-policy.sh` | Set / switch / refresh output-language policy (v0.25+); judgment in SKILL, mechanical in the helper pair |
 | Skill: harness-grill | `skills/harness-grill/SKILL.md` | Pre-pipeline alignment interview (v0.35+); user-invoked, one-question-at-a-time, emits an aligned brief to `docs/features/<slug>/INPUT.md` and stops; no helper script (interview, not a file-rewrite engine) |
-| Skill: harness-deflate (entropy watch) | `skills/harness-deflate/SKILL.md` + `references/entropy-scan.md` + `.harness/scripts/entropy-cadence.{ps1,sh}` | Holistic anti-entropy sweep (v0.41+; T-11a). Delegator skill: dispatches the read-only supervisor entropy lens (EP-*), presents findings, and on explicit authorization hands the chosen deepening to `/harness-goal`. The scan methodology + artifact schema are single-sourced in `references/entropy-scan.md` (read by both the `supervisor.md` stub and this skill). `/harness-stream` surfaces the same scan on a due cadence boundary via the shared `entropy-cadence` pair (state in gitignored `.harness/entropy-watch.state`). No new `verify_all` check (count stays 32). |
+| Skill: harness-deflate (entropy watch) | `skills/harness-deflate/SKILL.md` + `references/entropy-scan.md` + `.harness/scripts/entropy-cadence.sh` | Holistic anti-entropy sweep (v0.41+; T-11a). Delegator skill: dispatches the read-only supervisor entropy lens (EP-*), presents findings, and on explicit authorization hands the chosen deepening to `/harness-goal`. The scan methodology + artifact schema are single-sourced in `references/entropy-scan.md` (read by both the `supervisor.md` stub and this skill). `/harness-stream` surfaces the same scan on a due cadence boundary via the shared `entropy-cadence` pair (state in gitignored `.harness/entropy-watch.state`). No new `verify_all` check (count stays 32). |
 | Project templates | `skills/harness-init/templates/` | `common/` + `fullstack/` + `backend/` |
 | Domain glossary (`CONTEXT.md`) | repo-root `CONTEXT.md` (dogfood, real terms) + `skills/harness-init/templates/common/CONTEXT.md` (generic seed) | Dual-purpose like `decision-rubric.md`: generic in the template, real in the dogfood; NOT byte-synced (sync-self touches only the 8 script pairs). SOFT dependency referenced by RA/SA. Single context; multi-context via a future root `CONTEXT-MAP.md`. |
 | Rejected-decisions memory (`.harness/rejected-decisions.md`) | repo `.harness/rejected-decisions.md` (dogfood, real declines) + `skills/harness-init/templates/common/.harness/rejected-decisions.md` (generic seed) | Fourth memory kind (declined options + why). Dual-purpose like `CONTEXT.md` / `decision-rubric.md`: generic seed in the template, real in the dogfood; NOT byte-synced (sync-self touches only the 8 script pairs). Read/append habit single-sourced in `.harness/rules/25-decision-policy.md`; SOFT pointers from RA/SA. No gate. |
 | Framework agent contracts | top-level `agents/*.md` | 7 canonical + 1 auxiliary (supervisor), plugin-native (v0.30+); dispatched `harness-kit:<name>`; single source — edit directly, no sync |
 | Partition agent contracts | `templates/<type>/.harness/agents/dev-*.md.tmpl` | project-local `dev-*`, `{{STACK}}`-injected at init |
-| Distributed binding sync | `templates/common/.harness/scripts/harness-sync.{ps1,sh}` | Byte-copied to repo `.harness/scripts/` via sync-self |
+| Distributed binding sync | `templates/common/.harness/scripts/harness-sync.sh` | Byte-copied to repo `.harness/scripts/` via sync-self |
 | Repo rules (multi-file) | `.harness/rules/*.md` | Referenced (not composed) — AI-GUIDE.md indexes them, AI lazy-loads on demand |
 | Documentation | `docs/`, `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md` | Keep tone consistent |
-| Installation | `install.ps1`, `install.sh` | Symmetric; if you change one, change the other |
 
 ## Reusable utilities
 
 | Need | Existing | File |
 |---|---|---|
 | Layer 1 sync (templates → repo SOT) | `sync-self` | Run before commit if you edited one of the 8 mirrored script pairs (`harness-sync`, `install-hooks`, `archive-task`, `guard-rm`, `migrate-scripts-layout`, `upgrade-project`, `language-policy`, `hook-spec`). Framework agents are NOT mirrored since v0.30 — edit the plugin-native top-level `agents/` directly. |
-| Hook wiring spec (the ONE place the hook command byte-forms live) | `hook-spec` | `.harness/scripts/hook-spec.{ps1,sh}` — answers `(hook tool x target OS) -> command byte-form` plus `event` / `matcher` / `semantics` / `hostos`. Pure, side-effect-free CLI; exit 0 ⟺ non-empty stdout, exit 2 ⟺ empty stdout + a diagnostic. `guard-rm` is fail-CLOSED (no `\|\| exit 0`); the other three are fail-open. Consumed by `install-hooks` and, since T-16 (v0.46), by all four derivation flows (`upgrade-project.{ps1,sh}`, `migrate-scripts-layout.{ps1,sh}`) through a per-flow **spec adapter** — lazy resolution, memoised per `(tool, OS)`, and a single failure return that writes nothing rather than fabricating a command. The two `SKILL.md` placeholder tables instruct the agent to invoke the spec and paste the answer verbatim. No derivation flow holds a byte-form copy; the spec's file header enumerates the deliberately-retained test-side literals and why each stays. Call the twin of your own shell (crossing shells corrupts the value). |
+| Hook wiring spec (the ONE place the hook command byte-forms live) | `hook-spec` | `.harness/scripts/hook-spec.sh` — answers `(hook tool x target OS) -> command byte-form` plus `event` / `matcher` / `semantics` / `hostos`. Pure, side-effect-free CLI; exit 0 ⟺ non-empty stdout, exit 2 ⟺ empty stdout + a diagnostic. `guard-rm` is fail-CLOSED (no `\|\| exit 0`); the other three are fail-open. Consumed by `install-hooks` and, since T-16 (v0.46), by all four derivation flows (`upgrade-project.sh`, `migrate-scripts-layout.sh`) through a per-flow **spec adapter** — lazy resolution, memoised per `(tool, OS)`, and a single failure return that writes nothing rather than fabricating a command. The two `SKILL.md` placeholder tables instruct the agent to invoke the spec and paste the answer verbatim. No derivation flow holds a byte-form copy; the spec's file header enumerates the deliberately-retained test-side literals and why each stays. Call the twin of your own shell (crossing shells corrupts the value). |
 | Layer 2 sync (repo SOT → binding) | `harness-sync` | Run before commit if you edited a partition `.harness/agents/dev-*` or `.harness/skills/`. Rule edits do NOT require sync — they're referenced, not copied. Framework-agent edits go to the plugin `agents/`, no sync. |
 | Total verification | `verify_all` | Single source of truth for "is the repo healthy" — runs all 35 checks including both `--check` modes |
-| Entropy-watch cadence (shared remind-if-due) | `entropy-cadence` | `.harness/scripts/entropy-cadence.{ps1,sh}` — the ONE place the entropy-sweep due-logic + threshold (`N=5`) live; called by `/harness-stream` AND `/harness` so neither restates the threshold. `check [--first-of-session]` / `delivered` / `swept`; fail-open → NOT-DUE, always exit 0; F.1 member (PS array+label, SH array). |
+| Entropy-watch cadence (shared remind-if-due) | `entropy-cadence` | `.harness/scripts/entropy-cadence.sh` — the ONE place the entropy-sweep due-logic + threshold (`N=5`) live; called by `/harness-stream` AND `/harness` so neither restates the threshold. `check [--first-of-session]` / `delivered` / `swept`; fail-open → NOT-DUE, always exit 0; F.1 member (PS array+label, SH array). |
 | Init regression | `test-init` | Simulates full init + sync in temp dir (counts moved at the v0.30 agent cutover — operator reconciles `.harness/scripts/baseline.json` from a captured run; covers AI-native opt-in/opt-out bidirectional cases × 3 project types, the AC-10 byte-compare pass, the v0.30 generic-agents-absent assertions, and the BUG-2 placeholder-regex regression) |
 
 ## Patterns to follow
 
 - **Source of truth principle**: edit `.harness/`, never the generated `.claude/`. `CLAUDE.md` is a stub written once at init; leave the AI-GUIDE.md pointer intact.
 - **Templates are SOT for distribution**: edit `skills/harness-init/templates/common/.harness/`, run `sync-self`, then `harness-sync` for the dogfooded copy. (verify_all enforces both.)
-- **Symmetric scripts**: every `.ps1` has a matching `.sh`. Behavior must match.
 - **Template placeholders**: only the seven documented in `skills/harness-init/SKILL.md`:
   `{{PROJECT_NAME}}`, `{{PROJECT_TYPE}}`, `{{STACK}}`, `{{TODAY}}`, `{{ENABLE_HOOK}}`,
   `{{SYNC_COMMAND}}`, `{{GUARD_COMMAND}}`. Any new placeholder MUST also be added to
-  the D.2 whitelist in BOTH `.harness/scripts/verify_all.ps1` AND `.harness/scripts/verify_all.sh`.
+  the D.2 whitelist in `.harness/scripts/verify_all.sh`.
 - **Markdown style**: ATX headings, ordered lists for sequences, tables for matrices, fenced code with language tag.
 - **Rule fragments**: name them `NN-topic.md` where NN is a 2-digit sort prefix; the prefix only governs lexical sort order in directory listings (AI tools lazy-load fragments individually, not by composition). Use 00-19 for core, 20-49 for cross-cutting topics, 50-79 for project-type overlays, 80+ for project-specific.
 
@@ -222,5 +220,4 @@ Both layers are checked by `.harness/scripts/verify_all` and FAIL on drift.
 - Editing `.claude/agents/*.md` or `.claude/skills/*` directly. They're regenerated by `harness-sync`; your changes get blown away on the next sync. Edit `.harness/` (partition agents / skills) or the plugin `agents/` (framework agents) and run sync where applicable.
 - Editing a framework agent anywhere OTHER than the top-level `agents/` (the single plugin-native source since v0.30). There is no longer a `templates/common/.harness/agents/` copy to keep in lockstep.
 - Adding a new template placeholder without documenting it in `harness-init/SKILL.md`.
-- Letting `install.ps1` and `install.sh` (or any other paired scripts) drift in behavior. F.1 FAILs.
 - Committing files from `参考/`. They're third-party content; `.gitignore` excludes them.

@@ -65,8 +65,8 @@ This repo uses the **Harness 7-agent pipeline**. Read `docs/workflow.md` before 
 | Build/test/verify procedures (SOURCE OF TRUTH) | `.harness/skills/` |
 | Claude Code agent/skill binding (synced; do not hand-edit) | `.claude/agents/` + `.claude/skills/` |
 | Claude Code bootstrap stub + live config | `CLAUDE.md` + `.claude/settings.json` |
-| Tool binding sync (partition `dev-*` agents + `.harness/skills/` → `.claude/`) | `.harness/scripts/harness-sync.{ps1,sh}` |
-| Total verification | `.harness/scripts/verify_all.{ps1,sh}` |
+| Tool binding sync (partition `dev-*` agents + `.harness/skills/` → `.claude/`) | `.harness/scripts/harness-sync.sh` |
+| Total verification | `.harness/scripts/verify_all.sh` |
 | Test count baseline | `.harness/scripts/baseline.json` |
 | Regression task set | `evals/golden-tasks.md` |
 

@@ -5,7 +5,7 @@ description: Upgrade an already-initialized but stale harness project to the cur
   it with a green verify_all. Use when a project HAS harness but is OLD. NOT
   /harness-adopt (a project with no harness at all), NOT /harness-language (output
   language only).
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, AskUserQuestion, TodoWrite
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, TodoWrite
 ---
 
 # /harness-upgrade
@@ -17,7 +17,7 @@ at the new path, settings hook paths rewired, and a freshly-regenerated per-type
 a green `verify_all`.
 
 > This skill is the **judgment layer**. All mechanical work is done by one deterministic
-> helper, `upgrade-project.{ps1,sh}`, which the skill bootstraps from the plugin template
+> helper, `upgrade-project.sh`, which the skill bootstraps from the plugin template
 > cache and drives with explicit flags. The skill does NO path string-replacement, NO
 > `git mv`, NO settings byte-editing, NO template substitution itself.
 
@@ -95,7 +95,7 @@ Then **always** confirm with `AskUserQuestion`, pre-filled:
 
 ### 4. Self-bootstrap the helper from the cache
 
-Copy `upgrade-project.{ps1,sh}` (and `migrate-scripts-layout.{ps1,sh}` for parity, so
+Copy `upgrade-project.sh` (and `migrate-scripts-layout.sh` for parity, so
 the project ends with the current helpers present) from the resolved
 `<template-root>/skills/harness-init/templates/common/.harness/scripts/` into the
 project's `.harness/scripts/`. **Do not assume** these pre-exist (the chicken-and-egg
@@ -111,8 +111,6 @@ if needed.
    (and `--project-name` / `--today` if you want reproducible output):
 
    ```
-   pwsh -File .harness/scripts/upgrade-project.ps1 -TemplateRoot <abs> -Type <t> -Stack "<s>" -DryRun
-   # or
    bash .harness/scripts/upgrade-project.sh --template-root <abs> --type <t> --stack "<s>" --dry-run
    ```
 
@@ -190,7 +188,7 @@ from the type `.tmpl` (it is cwd-derived, so it is regenerated, not flat-copied)
 
 ## verify_all refresh (preserve user B.* customizations)
 
-The helper FULL-REGENERATES `verify_all.{ps1,sh}` from the current type `.tmpl` (the only
+The helper FULL-REGENERATES `verify_all.sh` from the current type `.tmpl` (the only
 deterministic / idempotent / parity-testable path), but **never silently loses** a user's
 B.* build/test/lint checks:
 

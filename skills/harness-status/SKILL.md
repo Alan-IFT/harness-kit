@@ -1,7 +1,7 @@
 ---
 name: harness-status
 description: Show the current Harness health of this project - which assets are present, the baseline state, the last verify result, and recent task progress. Use to get a quick snapshot.
-allowed-tools: Read, Glob, Bash, PowerShell
+allowed-tools: Read, Glob, Bash
 ---
 
 # /harness-status
@@ -92,10 +92,8 @@ at most two file reads, no repository scan, no writes.
 | Build skill | `.claude/skills/build/SKILL.md` | ? |
 | Test skill | `.claude/skills/test/SKILL.md` | ? |
 | Verify skill | `.claude/skills/verify/SKILL.md` | ? |
-| verify_all script | `.harness/scripts/verify_all.ps1` or `.sh` | ? |
 | Baseline | `.harness/scripts/baseline.json` | ? |
 | Golden tasks | `evals/golden-tasks.md` | ? |
-| Guard-rm script (ps1) | `.harness/scripts/guard-rm.ps1` | ? |
 | Guard-rm script (sh) | `.harness/scripts/guard-rm.sh` | ? |
 | PreToolUse hook | effective hook source (§0), `hooks.PreToolUse` entry referencing `guard-rm` | ? |
 
@@ -153,12 +151,12 @@ programmatic dispatch (`Task` tool). Other tools always show `n/a`. The
 
 - **Detection.** A *guard entry* is an entry under `SOURCE`'s
   `hooks.PreToolUse[*].hooks[*]` whose `command` contains the literal substring
-  `guard-rm.ps1` or `guard-rm.sh`, **regardless of its matcher**. `K` = how many such
+  `guard-rm.sh`, **regardless of its matcher**. `K` = how many such
   entries exist; when `K ≥ 2`, `GUARD_ENTRY` is the **first in document order**.
 - **Extraction.** From `GUARD_ENTRY.command` alone: `PATHS` = every path the §3c
   left-bounded pattern extracts (that pattern is name-agnostic, so a chained command
   yields one member per referenced script); `GUARD_PATHS` = the subset of `PATHS` whose
-  name is exactly `guard-rm`, i.e. ending `scripts/guard-rm.ps1` or `scripts/guard-rm.sh`.
+  name is exactly `guard-rm`, i.e. ending `scripts/guard-rm.sh`.
 
 **Verdict — first match wins:**
 
@@ -169,7 +167,7 @@ programmatic dispatch (`Task` tool). Other tools always show `n/a`. The
 | 3 | `SOURCE = none` and `MACHINE_STATE = opt-out` | `HOOKS OFF (machine-local opt-out) — .claude/settings.local.json is present with <shape>; the documented persistent opt-out` | no |
 | 4 | `K = 0` | `WIRING ABSENT — <SOURCE> declares no PreToolUse entry referencing guard-rm` | no |
 | 5 | `GUARD_ENTRY.command` carries an unresolved `{{…}}` token | `WIRING DANGLING — MALFORMED: <SOURCE> wires "<command>" -> unresolved placeholder <token>` | no |
-| 6 | `GUARD_PATHS = ∅` | `WIRING DANGLING — <SOURCE> wires "<command>" -> no extractable scripts/guard-rm.{sh,ps1} path in this command` | no |
+| 6 | `GUARD_PATHS = ∅` | `WIRING DANGLING — <SOURCE> wires "<command>" -> no extractable scripts/guard-rm.sh path in this command` | no |
 | 7 | `GUARD_PATHS ≠ ∅` and **any** member of `PATHS` is missing on disk | `WIRING DANGLING — <SOURCE> wires "<command>" -> missing <path>`, or with more than one missing `… -> missing <path1>, <path2> (<k> of <n> extracted paths missing)` | no |
 | 8 | `GUARD_PATHS ≠ ∅` and **every** member of `PATHS` exists on disk | `installed and wired (guard-rm in PreToolUse of <SOURCE>; matcher "<m>")`, and when `|PATHS| > 1` the form `installed and wired (guard-rm in PreToolUse of <SOURCE>; matcher "<m>"; all <n> extracted paths exist)` | **+1** |
 
@@ -209,7 +207,6 @@ they print no adjunct at all:
   when that block has no `matcher` key. Flag it non-canonical when it is not exactly
   the spec's answer (`hook-spec matcher guard-rm` → `Bash`). A guard-referencing entry
   is **never** downgraded to `WIRING ABSENT` because of its matcher.
-- `<tok>` is the command's literal first token (`sh` / `bash` / `pwsh`). Interpreter
   availability is an adjunct, never a row selector — it never changes which row fired.
   Never propose rewriting a runnable, user-chosen command variant.
 - `<semantics>` is `hook-spec semantics guard-rm` (§3c query `N+3`) — `fail-closed`.
@@ -229,10 +226,8 @@ cannot reach the file you just named is worse than none.
 
 ### 3c. Hook ↔ script congruence (all events — T-020 / FR-D1, FR-D2)
 
-The rows come from the **hook wiring spec**, not from this document. Invoke the twin of
-the shell you are yourself using (`Bash` → `.harness/scripts/hook-spec.sh`,
-`PowerShell` → `.harness/scripts/hook-spec.ps1`) and never capture one shell's stdout
-from the other:
+The rows come from the **hook wiring spec**, not from this document. Invoke
+`.harness/scripts/hook-spec.sh`:
 
 | # | Query | Consumer |
 |---|---|---|
@@ -293,7 +288,7 @@ How to compute each state:
   Same §7 fix line; for committed wiring `/harness-upgrade` is an actual repair here
   (it rewrites a wired literal token to the OS-picked command), not just a re-land.
 - **Interpreter availability (WARN, not a failure):** if the command's first token
-  (`pwsh` / `bash`) is not on PATH, add: `wired to <tok> but <tok> is unavailable on
+  (`sh` / `bash`) is not on PATH, add: `wired to <tok> but <tok> is unavailable on
   this OS — swap the command variant (see the _doc_sync_hook / _ambient_hook notes in
   settings.json)`. Never auto-rewrite a runnable, user-chosen variant.
 
@@ -347,7 +342,6 @@ report never prints a repair that cannot reach the file it named:
 | §0 result | Fix line to print |
 |---|---|
 | `MACHINE_STATE = unknown` | `inspect <file> — it is loaded by Claude Code but this report could not parse it` |
-| `MACHINE_STATE = never-installed` | `.harness/scripts/install-hooks` **when** `.harness/scripts/install-hooks.sh` or `.ps1` exists in this project; otherwise the ordinary missing-asset instruction, `run /harness-adopt or /harness-upgrade` |
 | `MACHINE_STATE = opt-out` | none — print `documented persistent opt-out; no action` |
 | `SOURCE_KIND = committed` | `run /harness-upgrade — it re-lands current scripts and rewires .claude/settings.json` |
 | `SOURCE_KIND = machine-local` and `OTHER_DECLARES = false` | `rm .claude/settings.local.json && .harness/scripts/install-hooks — the upgrade helper rewrites only the committed file, and the installer never overwrites an existing machine-local file` |

@@ -22,7 +22,7 @@ an explicit authorization.
 
 This skill is thin orchestration: it owns NO scan engine and NO refactor loop. The scan is
 the read-only `supervisor` entropy lens; the execute is `/harness-goal`. `allowed-tools`
-deliberately excludes `Edit`/`Bash`/`PowerShell` — this skill cannot itself edit a file or
+deliberately excludes `Edit`/`Bash` — this skill cannot itself edit a file or
 run a script; it only dispatches via `Task`.
 
 ## When to invoke

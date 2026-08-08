@@ -3,7 +3,7 @@
 ## What this is
 
 A `PreToolUse` hook in `.claude/settings.json` that runs
-`.harness/scripts/guard-rm.{ps1,sh}` before every Claude Code Bash tool call. The guard
+`.harness/scripts/guard-rm.sh` before every Claude Code Bash tool call. The guard
 blocks the call when any destructive verb targets a path that resolves outside
 the nearest `.git/` ancestor of the current working directory.
 
@@ -15,11 +15,10 @@ the nearest `.git/` ancestor of the current working directory.
 > now the resilient `$CLAUDE_PROJECT_DIR`-anchored, **fail-CLOSED** form (a missing
 > guard blocks the call; never made fail-open).
 >
-> **Regenerating it (T-13, v0.45.0):** that file is gitignored, so a fresh clone does not
-> have it. Run `.harness/scripts/install-hooks` — because the committed settings ships
-> `"hooks": {}`, the installer rebuilds `.claude/settings.local.json` from the hook wiring
-> spec (`.harness/scripts/hook-spec`) with this host's byte-forms. It is idempotent: with
-> the file already present it reports "left byte-untouched" and writes nothing.
+> **Regenerating it (T-13, v0.45.0):** that file is gitignored, so a fresh clone does not have
+> it. Run `.harness/scripts/install-hooks` — because the committed settings ships `"hooks": {}`,
+> the installer rebuilds `.claude/settings.local.json` from the hook wiring spec
+> (`.harness/scripts/hook-spec`). Idempotent: with the file present it writes nothing.
 
 The hook is auto-installed by `/harness-init` and `/harness-adopt` (with a
 merge prompt). It is **always on** by default; the documented disable path is
@@ -33,10 +32,12 @@ one line (see below).
 
 ## Trigger verbs
 
-POSIX `rm` family: `rm`, `rmdir`, `unlink`, `shred`, `srm`. Windows / pwsh:
-`Remove-Item`, `del`, `erase`, `Clear-RecycleBin`. Plus `find … -delete`
-(`-delete` anywhere among the args). Everything else (`mv`, `cp`, `>`
-redirection, `git`, build tools, …) is **not** guarded by this hook.
+POSIX `rm` family: `rm`, `rmdir`, `unlink`, `shred`, `srm`. PowerShell: `Remove-Item`, `del`,
+`erase`, `Clear-RecycleBin` — still recognised after v0.49.0 removed Windows support, because
+`pwsh` installs on Linux and a nested `pwsh -c "Remove-Item -Recurse /etc"` is exactly the
+indirection this guard exists to catch; removing a platform narrows nothing, removing a verb
+would. Plus `find … -delete` (`-delete` anywhere among the args). Everything else (`mv`, `cp`,
+`>` redirection, `git`, build tools, …) is **not** guarded by this hook.
 
 ## Where the verbs are looked for — the coverage claim (v0.46.0)
 
@@ -84,8 +85,7 @@ A guard that overstates its coverage is worse than one that names its edges.
    not chain-aware, so the authorization stays visible at the head of the line.
 8. **Non-Claude-Code writers** — `PreToolUse` governs only Claude Code's Bash
    tool; Write/Edit, other agents and other IDEs are unaffected (that is also
-   the repair path if the guard is ever left unrunnable). **The PowerShell twin
-   is verified by symmetry only** until an operator runs it on Windows.
+   the repair path if the guard is ever left unrunnable).
 
 ## Accepted over-blocks (fail-closed by design — use the override)
 

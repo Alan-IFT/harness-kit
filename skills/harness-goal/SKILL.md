@@ -1,7 +1,7 @@
 ---
 name: harness-goal
 description: Open-ended goal mode. Runs Developer + QA in a loop within a stated budget (time or iteration count) until a success criterion is met or the budget is exhausted. Use for "keep refactoring until verify_all passes", "improve test coverage to 80%", "reduce build time below 30s" — tasks without a clean single-shot definition.
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, AskUserQuestion, TodoWrite, Task
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, TodoWrite, Task
 ---
 
 # /harness-goal

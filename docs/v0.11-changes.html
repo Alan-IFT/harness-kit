@@ -240,7 +240,7 @@ CHANGES REQUIRED (1 BLOCKER)</pre>
 
 <h3>3.4 verify_all 怎么强制这件事</h3>
 
-<p>用户项目的 <code>scripts/verify_all.{ps1,sh}</code> 加了一条新 check：</p>
+<p>用户项目的 <code>scripts/verify_all.sh</code> 加了一条新 check：</p>
 
 <pre>// E.5 (fullstack) / D.5 (backend) — Adversarial tests section enforcement
 扫描 docs/features/**/06_TEST_REPORT.md
@@ -263,7 +263,7 @@ CHANGES REQUIRED (1 BLOCKER)</pre>
 <div class="after">
 <strong>新文件：</strong> <code>.harness/insight-index.md</code> —— <strong>最多 30 行</strong> 的项目特有事实清单。每行一个事实 + 日期 + 证据指针。<br><br>
 <strong>新规则：</strong> <code>.harness/rules/05-insight-index.md</code> 定义契约 ——什么算 insight、什么时候读、什么时候写。<br><br>
-<strong>新脚本：</strong> <code>scripts/archive-task.{ps1,sh}</code> ——任务结束时自动从 07_DELIVERY.md 的 <code>## Insight</code> 段收割 insight，移老的、归档任务文档。
+<strong>新脚本：</strong> <code>scripts/archive-task.sh</code> ——任务结束时自动从 07_DELIVERY.md 的 <code>## Insight</code> 段收割 insight，移老的、归档任务文档。
 </div>
 
 <h3>4.3 insight-index.md 实际长什么样</h3>
@@ -442,7 +442,7 @@ QA 阶段 contractually enforced 三铁律 ────────────�
 <tbody>
 <tr><td>新增 skill</td><td>+3（plan / explore / goal）</td><td>3 个 SKILL.md ~700 行 markdown</td></tr>
 <tr><td>删除 skill</td><td>-1（migrate，dead code）</td><td>-200 行</td></tr>
-<tr><td>新增脚本</td><td>+1 对（archive-task.{ps1,sh}）</td><td>~250 行 + 250 行（PS/Bash 对称）</td></tr>
+<tr><td>新增脚本</td><td>+1 对（archive-task.sh）</td><td>~250 行 + 250 行（PS/Bash 对称）</td></tr>
 <tr><td>新增规则文件</td><td>+1（05-insight-index.md，en+zh+dogfood = 3 份）</td><td>~120 行 × 3</td></tr>
 <tr><td>新增数据文件</td><td>+1（insight-index.md，en+zh+dogfood = 3 份）</td><td>~10 行 × 3</td></tr>
 <tr><td>修改 qa-tester agent</td><td>+~50 行（对抗契约 + 报告模板）</td><td>核心改动</td></tr>

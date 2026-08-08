@@ -1,6 +1,6 @@
 # guard-rm cases — acceptance B2 fixture
 
-> Driven by `.harness/scripts/test-guard-rm.{ps1,sh}` (added v0.15.0). Each row is one
+> Driven by `.harness/scripts/test-guard-rm.sh` (added v0.15.0). Each row is one
 > simulated PreToolUse invocation: the input command is sent on stdin as the
 > minimal `{"tool_input":{"command":"…"}}` JSON shape Claude Code emits, and
 > the guard's exit code (0 = ALLOW, 2 = BLOCK) is compared against the
@@ -8,7 +8,7 @@
 >
 > Since v0.46.0 both drivers take an optional guard path
 > (`bash .harness/scripts/test-guard-rm.sh [guard-path]`,
-> `pwsh -File .harness/scripts/test-guard-rm.ps1 -Guard <path>`) so a staged
+> `bash .harness/scripts/test-guard-rm.sh <path>`) so a staged
 > template copy or a scratch mutant can be driven **without** touching the live
 > PreToolUse hook. This fixture and both drivers are maintained in lockstep:
 > every driver case has a row here and vice versa (87 ↔ 87).

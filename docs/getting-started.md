@@ -7,7 +7,7 @@ This guide walks you from "I just installed Harness Kit" to "I'm shipping featur
 - [Claude Code](https://docs.claude.com/claude-code) installed and authenticated
 - Git
 - A project (or an empty folder if starting fresh)
-- PowerShell 7+ (Windows) or Bash (macOS / Linux)
+- Bash (Linux / macOS — Windows is not supported)
 
 ## 1. Install the skills
 
@@ -20,12 +20,6 @@ as `/harness-kit:harness-init`, etc.):
 ```
 
 Or, for a global user-skill install (callable as `/harness-init` without the namespace):
-
-```powershell
-# Windows
-git clone https://github.com/Alan-IFT/harness-kit ~/harness-kit
-& ~/harness-kit/install.ps1
-```
 
 ```bash
 # macOS / Linux
@@ -149,7 +143,7 @@ vim .harness/rules/00-core.md
 # (verify_all step E.4b enforces this).
 
 # Verify
-pwsh -File .harness/scripts/verify_all.ps1
+bash .harness/scripts/verify_all.sh
 ```
 
 No `harness-sync` needed for rule edits — rules are referenced by AI-GUIDE.md, not copied.
@@ -158,8 +152,8 @@ No `harness-sync` needed for rule edits — rules are referenced by AI-GUIDE.md,
 
 ```bash
 vim .harness/agents/developer.md
-pwsh -File .harness/scripts/harness-sync.ps1     # syncs .harness/agents/ → .claude/agents/
-pwsh -File .harness/scripts/verify_all.ps1
+bash .harness/scripts/harness-sync.sh     # syncs .harness/agents/ → .claude/agents/
+bash .harness/scripts/verify_all.sh
 ```
 
 ### To add a project-specific skill
@@ -167,7 +161,7 @@ pwsh -File .harness/scripts/verify_all.ps1
 ```bash
 mkdir -p .harness/skills/<name>
 # Write .harness/skills/<name>/SKILL.md with proper Claude Code frontmatter
-pwsh -File .harness/scripts/harness-sync.ps1     # syncs .harness/skills/ → .claude/skills/
+bash .harness/scripts/harness-sync.sh     # syncs .harness/skills/ → .claude/skills/
 ```
 
 After sync, the skill appears in `.claude/skills/<name>/SKILL.md` and is usable
@@ -230,12 +224,9 @@ of repeating.
 **Skill not found in Claude Code.**
 Check `~/.claude/skills/harness-init/SKILL.md` exists. Restart Claude Code if you installed it mid-session.
 
-**verify_all says PowerShell can't run scripts.**
-On Windows you may need `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
-
 **verify_all step E.2 fails: ".claude/agents and .claude/skills synced from .harness/".**
 You edited `.harness/agents/` or `.harness/skills/` but forgot to sync. Run
-`.harness/scripts/harness-sync.{ps1,sh}` and re-verify.
+`.harness/scripts/harness-sync.sh` and re-verify.
 
 **The PM keeps rolling back to the analyst.**
 Probably an ambiguous requirement. Read the analyst's questions and answer them — the loop ends when nothing is ambiguous.

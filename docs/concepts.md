@@ -94,7 +94,7 @@ is to route back via PM — the cost of one rollback is tiny compared to lost ac
 |---|---|---|---|
 | Rule | Soft constraints, natural language | `.harness/rules/*.md` | AI reads it but may forget under long context. Good for principles. |
 | Skill | Standard operating procedure | `.harness/skills/<name>/SKILL.md` | Codifies repeated actions so AI doesn't improvise. |
-| Script | Hard gate | `.harness/scripts/verify_all.{ps1,sh}` | Machine-checkable. AI cannot "interpret it away". |
+| Script | Hard gate | `.harness/scripts/verify_all.sh` | Machine-checkable. AI cannot "interpret it away". |
 
 The progression is: write a rule, see if AI follows it; if not, encode it as a check.
 
@@ -209,7 +209,7 @@ completion / e2e), in CI, with judges and metrics. For personal projects that's
 massively over-engineered.
 
 The minimum viable version: 2-5 small representative tasks in `evals/golden-tasks.md`.
-After any change to `.harness/` or `templates/`, re-run them via `.harness/scripts/test-init.{ps1,sh}`
+After any change to `.harness/` or `templates/`, re-run them via `.harness/scripts/test-init.sh`
 for init regression, or by manually invoking PM on a representative task.
 
 ## What's deliberately not in this design

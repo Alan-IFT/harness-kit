@@ -13,27 +13,27 @@
 | Supervisor agent (auxiliary, v0.17+; not part of 7-stage routing) | plugin-native — `agents/supervisor.md` (`harness-kit:supervisor`) |
 | Supervisor skill (manual invocation, v0.17+) | `skills/harness-supervise/SKILL.md` |
 | Anti-entropy sweep skill (v0.41+) + its scan reference | `skills/harness-deflate/SKILL.md` + `skills/harness-deflate/references/entropy-scan.md` |
-| Entropy-watch cadence pair (shared remind-if-due, F.1 member) | `.harness/scripts/entropy-cadence.{ps1,sh}` (state: gitignored `.harness/entropy-watch.state`) |
+| Entropy-watch cadence pair (shared remind-if-due, F.1 member) | `.harness/scripts/entropy-cadence.sh` (state: gitignored `.harness/entropy-watch.state`) |
 | Release-gating operator obligations (the standing list of steps a human must run on a host the agents cannot reach; append here, never into the pin file) | `.harness/operator-obligations.md` |
 | Project repo navigation | `docs/dev-map.md` |
-| Total verification | `.harness/scripts/verify_all.{ps1,sh}` |
-| Binding sync (`.harness/agents/` partition `dev-*` + `.harness/skills/` → `.claude/`) | `.harness/scripts/harness-sync.{ps1,sh}` |
-| Repo-self sync (`templates/` script pairs → `.harness/scripts/`; no agent mirror since v0.30) | `.harness/scripts/sync-self.{ps1,sh}` |
-| Hook wiring spec — `(hook tool × target OS) → command byte-form` + fail-open/fail-closed semantics + event + matcher (v0.45+, F.1 member) | `.harness/scripts/hook-spec.{ps1,sh}` (distributed from `templates/common/`; consumed by `install-hooks`) |
-| Init regression | `.harness/scripts/test-init.{ps1,sh}` |
-| Supervisor regression (v0.17+) | `.harness/scripts/test-supervisor.{ps1,sh}` |
+| Total verification | `.harness/scripts/verify_all.sh` |
+| Binding sync (`.harness/agents/` partition `dev-*` + `.harness/skills/` → `.claude/`) | `.harness/scripts/harness-sync.sh` |
+| Repo-self sync (`templates/` script pairs → `.harness/scripts/`; no agent mirror since v0.30) | `.harness/scripts/sync-self.sh` |
+| Hook wiring spec — `(hook tool × target OS) → command byte-form` + fail-open/fail-closed semantics + event + matcher (v0.45+, F.1 member) | `.harness/scripts/hook-spec.sh` (distributed from `templates/common/`; consumed by `install-hooks`) |
+| Init regression | `.harness/scripts/test-init.sh` |
+| Supervisor regression (v0.17+) | `.harness/scripts/test-supervisor.sh` |
 | Architecture overview (HTML) | `architecture.html` |
 | Project history | `CHANGELOG.md` |
 | Why each piece exists / contributor onboarding / user-flow demo | `docs/concepts.md`, `docs/getting-started.md`, `docs/walkthrough.html` |
-| Destructive-command `PreToolUse` guard (**fail-CLOSED**) | `.harness/scripts/guard-rm.{ps1,sh}` — see `.harness/rules/75-safety-hook.md` |
-| Git pre-commit installer + `settings.local.json` bootstrap from `hook-spec` | `.harness/scripts/install-hooks.{ps1,sh}` — never overwrites an existing file |
-| Task archive + insight harvest / rotation | `.harness/scripts/archive-task.{ps1,sh}` |
+| Destructive-command `PreToolUse` guard (**fail-CLOSED**) | `.harness/scripts/guard-rm.sh` — see `.harness/rules/75-safety-hook.md` |
+| Git pre-commit installer + `settings.local.json` bootstrap from `hook-spec` | `.harness/scripts/install-hooks.sh` — never overwrites an existing file |
+| Task archive + insight harvest / rotation | `.harness/scripts/archive-task.sh` |
 | Return the UNITS of a document that answer a question, never the document | `.harness/scripts/doc-query.js` — `--in memory\|stage\|rules [--doc <path>] <term>` for a term, `--for <role> --task <slug>` for the stage-contract sections addressed to a role. A term search spends ≤32 KB and reports what it did not print; a finished task is searchable by its `07_DELIVERY.md` until `--task` / `--archived` opens the rest |
 | Which role reads which section of which stage contract | `.harness/scripts/stage-schema.js` — `--map`, `--lint --task <slug>` (PM runs it at every stage boundary), `--check` (verify_all D.6) |
 | Per-task ledger: stage, rollback counts, verdicts | `.harness/scripts/task-state.js` → `.harness/state/<slug>.json`. PM writes; everyone else reads |
 | Contract instructions vs granted tools | `.harness/scripts/capability-audit.js` (verify_all D.4) |
-| Skill mechanical layers (`entropy-cadence`, `ambient-prompt`, `ambient-reset`, `language-policy`, `upgrade-project`, `migrate-scripts-layout`) | `.harness/scripts/<name>.{ps1,sh}`, one per like-named skill |
-| Regression drivers, one per subject (out of scope for verify_all) | `.harness/scripts/test-<name>.{ps1,sh}` |
+| Skill mechanical layers (`entropy-cadence`, `ambient-prompt`, `ambient-reset`, `language-policy`, `upgrade-project`, `migrate-scripts-layout`) | `.harness/scripts/<name>.sh`, one per like-named skill |
+| Regression drivers, one per subject (out of scope for verify_all) | `.harness/scripts/test-<name>.sh` |
 
 Every script's header states its own contract. The table is the index, not a restatement.
 
@@ -48,7 +48,7 @@ holds `Read` / `Glob` / `Grep` and degrades to them. `verify_all` D.4 rejects a 
 name that no configured server provides — see `capability-audit.js`.
 
 **TypeScript.** Every `.harness/scripts/*.js` is implemented in `src/*.ts`, compiled to
-`.harness/scripts/` and committed; where a `.sh` / `.ps1` stands beside one it is a two-line
+`.harness/scripts/` and committed; where a `.sh` stands beside one it is a two-line
 launcher holding no logic. After editing `src/`: `npm run build`, then `npm test`, then copy any
 changed `.js` into `skills/harness-init/templates/common/.harness/scripts/` for the ones that
 ship. Rationale and the latency measurement that chose Node: `docs/proposals/v2-ts-migration.md`.
@@ -67,7 +67,7 @@ ship. Rationale and the latency measurement that chose Node: `docs/proposals/v2-
 - `.claude/agents/` + `.claude/skills/` match `.harness/` (Layer 2 binding)
 - AI-GUIDE.md ↔ `.harness/rules/*.md` indexed both directions (no drift)
 - Project rules / docs / evals present
-- Script pairs (.ps1 + .sh) for verify_all / harness-sync / sync-self / test-init / test-real-project
+- The harness-owned scripts are present and no `.ps1` twin has reappeared (F.1)
 - Guard-rm script pair (repo + distributed template) + the settings template's guard wiring (F.2, v0.15+; FAIL if missing; reads no settings file — machine hook state is reported by `/harness-status`)
 - README and CHANGELOG reference all skills
 - Version stamps consistent across `plugin.json` / `marketplace.json` / both README badges (G.3, v0.14.x+; FAIL on drift)

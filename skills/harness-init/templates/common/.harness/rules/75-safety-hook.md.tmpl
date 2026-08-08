@@ -3,7 +3,7 @@
 ## What this is
 
 A `PreToolUse` hook in `.claude/settings.json` that runs
-`.harness/scripts/guard-rm.{ps1,sh}` before every Claude Code Bash tool call. The guard
+`.harness/scripts/guard-rm.sh` before every Claude Code Bash tool call. The guard
 blocks the call when any destructive verb targets a path that resolves outside
 the nearest `.git/` ancestor of the current working directory.
 
@@ -19,7 +19,11 @@ one line (see below).
 
 ## Trigger verbs
 
-POSIX `rm` family: `rm`, `rmdir`, `unlink`, `shred`, `srm`. Windows / pwsh:
+PowerShell verbs are recognised even though harness-kit runs on Linux / macOS only: `pwsh`
+installs on Linux, and a nested `pwsh -c "Remove-Item -Recurse /etc"` is exactly the
+indirection this guard exists to catch.
+
+POSIX `rm` family: `rm`, `rmdir`, `unlink`, `shred`, `srm`. PowerShell:
 `Remove-Item`, `del`, `erase`, `Clear-RecycleBin`. Plus `find … -delete`
 (`-delete` anywhere among the args). Everything else (`mv`, `cp`, `>`
 redirection, `git`, build tools, …) is **not** guarded by this hook.
@@ -70,8 +74,7 @@ A guard that overstates its coverage is worse than one that names its edges.
    not chain-aware, so the authorization stays visible at the head of the line.
 8. **Non-Claude-Code writers** — `PreToolUse` governs only Claude Code's Bash
    tool; Write/Edit, other agents and other IDEs are unaffected (that is also
-   the repair path if the guard is ever left unrunnable). **The PowerShell twin
-   is verified by symmetry only** until an operator runs it on Windows.
+   the repair path if the guard is ever left unrunnable).
 
 ## Accepted over-blocks (fail-closed by design — use the override)
 
@@ -165,7 +168,7 @@ weaken it, it prints the path it created plus a one-line undo command, and it ch
 
 | Failure | What happens | Fix |
 |---|---|---|
-| Guard script missing on disk | PreToolUse hook itself fails → Claude Code blocks the call with the hook error in the transcript | Reinstall: `/harness-adopt`, or copy `.harness/scripts/guard-rm.{ps1,sh}` from the harness-kit templates |
+| Guard script missing on disk | PreToolUse hook itself fails → Claude Code blocks the call with the hook error in the transcript | Reinstall: `/harness-adopt`, or copy `.harness/scripts/guard-rm.sh` from the harness-kit templates |
 | Unbalanced quotes anywhere in the line (including inside a here-doc body or a comment) | BLOCK with the "could not parse …" message | Re-issue with balanced quoting, or use the override |
 | Nesting past depth 2, or an unterminated here-document | Same BLOCK | Split the line, or use the override |
 | A destructive command passed as *data* (see accepted over-blocks) | BLOCK | Use the override for that call |

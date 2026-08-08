@@ -7,7 +7,7 @@
 For this repo specifically, valid insight examples are things like:
 - "Edit tool occasionally reports SUCCESS but doesn't apply the change — re-Read to verify (seen 2026-05-16 during v0.9.1 verify_all whitelist edit)"
 - "`{{...}}` placeholders in any new .tmpl file MUST be added to verify_all's whitelist (D.2) OR the test fails — easy to miss for new template files"
-- "PowerShell `Get-FileHash` differs from Bash `cmp -s` on line endings; tests/fixtures behave differently on Windows vs Linux"
+- "`archive-task` refuses at exit 3 on an unclassifiable line BEFORE any write, so a malformed `## Insight` section fails loudly instead of harvesting half of itself"
 
 ## When to read this
 
@@ -21,10 +21,9 @@ For this repo specifically, valid insight examples are things like:
 node .harness/scripts/doc-query.js --in memory --doc insight-index <term>
 ```
 
-`--doc` is not optional politeness. `--in memory` names five stores, two of which are
-`operator-obligations.md` (49 KB) and `rejected-decisions.md` (25 KB), so without it a common
-term returns more than reading this index whole — measured at 42.6 KB for `hook` against 3.8 KB
-scoped. Drop `--doc` deliberately when the question is "has this been decided anywhere", not
+`--doc` is not optional politeness. `--in memory` names five stores, so without it a common term
+can return more than reading this index whole — measured at 42.6 KB for `hook` against 3.8 KB
+scoped, when `operator-obligations.md` was still 49 KB. Drop `--doc` deliberately when the question is "has this been decided anywhere", not
 "what do I need to know before touching this".
 
 **If you do not** (requirement-analyst, solution-architect, gate-reviewer, code-reviewer,

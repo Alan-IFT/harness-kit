@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # language-policy.sh — Deterministic mechanical layer for /harness-language (T-014).
-# Mirror of language-policy.ps1. See that file for the full doc + stdout contract.
 #
 # Sets / switches / refreshes a generated project's output-language policy by surgically
 # rewriting only the three policy-bearing surfaces to the TARGET language's current

@@ -95,7 +95,7 @@ going stale:
    `bash .harness/scripts/harness-sync.sh` (macOS / Linux) immediately after the edit.
    Then stage the regenerated `.claude/agents/` / `.claude/skills/`
    alongside your `.harness/` change.
-2. **Let the git pre-commit hook catch it.** If `.harness/scripts/install-hooks.{ps1,sh}`
+2. **Let the git pre-commit hook catch it.** If `.harness/scripts/install-hooks.sh`
    was run during init, `.git/hooks/pre-commit` runs `harness-sync --check`
    and blocks any commit with drift. You'll see a clear error telling you
    to run sync.

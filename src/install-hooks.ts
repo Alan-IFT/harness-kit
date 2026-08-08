@@ -33,7 +33,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { TOOLS, EVENTS, matcherOf, semanticsOf, commandOf, hostOs, type Tool } from './hook-spec';
+import { TOOLS, EVENTS, matcherOf, semanticsOf, commandOf, type Tool } from './hook-spec';
 
 /** The pre-commit hook body. Byte-identical to the shell twin's heredoc. */
 const PRE_COMMIT_BODY = `#!/bin/sh
@@ -42,12 +42,10 @@ const PRE_COMMIT_BODY = `#!/bin/sh
 # Tool-agnostic: catches edits from Claude Code, Copilot, Cursor, or hand-typed.
 set -e
 _drift=0
-if command -v pwsh >/dev/null 2>&1 && [ -f .harness/scripts/harness-sync.ps1 ]; then
-    pwsh -File .harness/scripts/harness-sync.ps1 -Check >/dev/null 2>&1 || _drift=1
-elif command -v bash >/dev/null 2>&1 && [ -f .harness/scripts/harness-sync.sh ]; then
+if command -v bash >/dev/null 2>&1 && [ -f .harness/scripts/harness-sync.sh ]; then
     bash .harness/scripts/harness-sync.sh --check >/dev/null 2>&1 || _drift=1
 else
-    echo "harness-kit pre-commit: neither pwsh nor bash found; skipping drift check." >&2
+    echo "harness-kit pre-commit: bash not found; skipping drift check." >&2
     exit 0
 fi
 if [ "$_drift" = "1" ]; then
@@ -55,8 +53,7 @@ if [ "$_drift" = "1" ]; then
     echo "harness-kit: drift between .harness/ and .claude/." >&2
     echo "  .claude/agents/ and/or .claude/skills/ are stale relative to .harness/." >&2
     echo "" >&2
-    echo "  Fix: pwsh -File .harness/scripts/harness-sync.ps1   (Windows)" >&2
-    echo "       bash .harness/scripts/harness-sync.sh          (macOS / Linux)" >&2
+    echo "  Fix: bash .harness/scripts/harness-sync.sh" >&2
     echo "  Then: git add .claude/ && git commit ..." >&2
     echo "" >&2
     echo "  Note: edits to .harness/rules/ do NOT need sync (referenced by AI-GUIDE.md, not composed)." >&2
@@ -151,23 +148,20 @@ const fail = (code: number, ...lines: string[]): never => {
  * or duplicated an event, would otherwise produce a PARTIAL wiring that still passes the
  * terminal confirmation (derived from those same answers) and exits 0 with a green report.
  */
-function readWiring(): { wiring: Wiring[]; os: string } {
-  const os = hostOs();
-  if (!os) fail(4, 'Hook wiring spec did not answer: hostos (empty answer)');
-
+function readWiring(): { wiring: Wiring[] } {
   const wiring: Wiring[] = TOOLS.map((tool) => ({
     tool,
     event: EVENTS[tool],
     matcher: matcherOf(tool),
     semantics: semanticsOf(tool),
-    command: commandOf(tool, os),
+    command: commandOf(tool),
   }));
 
   for (const w of wiring) {
     if (!w.event) fail(4, `Hook wiring spec did not answer: event ${w.tool} (empty answer)`);
     if (!w.matcher) fail(4, `Hook wiring spec did not answer: matcher ${w.tool} (empty answer)`);
     if (!w.semantics) fail(4, `Hook wiring spec did not answer: semantics ${w.tool} (empty answer)`);
-    if (!w.command) fail(4, `Hook wiring spec did not answer: command ${w.tool} ${os} (empty answer)`);
+    if (!w.command) fail(4, `Hook wiring spec did not answer: command ${w.tool} (empty answer)`);
   }
 
   if (wiring.length !== 4) {
@@ -181,7 +175,7 @@ function readWiring(): { wiring: Wiring[]; os: string } {
         `${wiring.map((w) => w.event).join(' ')})`,
     );
   }
-  return { wiring, os };
+  return { wiring };
 }
 
 /** Build the settings body. Spec values are interpolated verbatim, never re-quoted. */
@@ -259,7 +253,7 @@ export function run(repoRoot: string, out: (s: string) => void, err: (s: string)
     }
 
     // --- Step 5: read the hook wiring spec ---
-    const { wiring, os } = readWiring();
+    const { wiring } = readWiring();
 
     // --- Step 6: build the body and write it atomically ---
     const tmp = `${localSettings}.tmp-${process.pid}`;
@@ -310,7 +304,7 @@ export function run(repoRoot: string, out: (s: string) => void, err: (s: string)
 
     // --- Step 8: the report (visible, reversible, correctly classified) ---
     out(`Created machine-local Claude settings at ${localSettings}`);
-    out(`  Wired ${wiring.length} lifecycle hooks from the hook wiring spec (${os} byte-forms):`);
+    out(`  Wired ${wiring.length} lifecycle hooks from the hook wiring spec:`);
     for (const w of wiring) {
       out(`    ${w.event.padEnd(16)} -> ${w.tool.padEnd(14)} (${w.semantics})`);
     }

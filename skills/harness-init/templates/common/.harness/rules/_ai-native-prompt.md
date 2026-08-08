@@ -150,7 +150,7 @@ strictly better than a wrong-but-confident section.
 name: dev-<slug>
 description: Partition developer for the <slug> area of <PROJECT_NAME>. Owns
   paths under <owned-path-glob>. Reports to PM Orchestrator.
-tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, TodoWrite
+tools: Read, Write, Edit, Glob, Grep, Bash, TodoWrite
 ---
 
 # dev-<slug>

@@ -18,7 +18,7 @@
 # resolves `check` to NOT-DUE and NEVER exits non-zero — a drain or delivery must never be
 # blocked by cadence I/O. Mirrors the ambient-hook fail-open (always exit 0).
 #
-# Byte-symmetric with entropy-cadence.ps1 (NFR-3): UTF-8 / LF, the N=5 literal once per half.
+# UTF-8 / LF; the N=5 threshold appears exactly once (NFR-3).
 # See skills/harness-stream/SKILL.md "On stream completion" and the design §2.
 
 set -uo pipefail

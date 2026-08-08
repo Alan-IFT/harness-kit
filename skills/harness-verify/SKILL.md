@@ -1,7 +1,7 @@
 ---
 name: harness-verify
 description: Run the project's total verification (.harness/scripts/verify_all). Use when any agent claims a task is done. Returns PASS / WARN / FAIL with structured report.
-allowed-tools: Bash, PowerShell, Read, Write
+allowed-tools: Bash, Read, Write
 ---
 
 # /harness-verify
@@ -10,10 +10,8 @@ Single command to invoke `.harness/scripts/verify_all` and capture the result.
 
 ## Procedure
 
-1. Detect OS:
-   - Windows → `pwsh -File .harness/scripts/verify_all.ps1`
-   - Unix-like → `bash .harness/scripts/verify_all.sh`
-2. If neither script exists → tell user the project isn't Harness-initialized; suggest `/harness-init` or `/harness-adopt`.
+1. Run `bash .harness/scripts/verify_all.sh`.
+2. If that script does not exist → tell the user the project isn't Harness-initialized; suggest `/harness-init` or `/harness-adopt`.
 3. Capture stdout + stderr.
 4. Parse exit code:
    - `0` → PASS

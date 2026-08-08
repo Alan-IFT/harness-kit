@@ -1,7 +1,7 @@
 ---
 name: harness-intervene
 description: Drop a redirect / pause / note / add-task signal into a running 7-stage Harness pipeline (or a /harness-stream pool). Use when an autonomous task needs course correction, or a new task queued, without killing the session. Writes .harness/intervention.md which the PM Orchestrator (or the stream loop) picks up at the next stage / task boundary.
-allowed-tools: Read, Write, Bash, PowerShell
+allowed-tools: Read, Write, Bash
 ---
 
 # /harness-intervene

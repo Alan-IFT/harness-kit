@@ -16,7 +16,7 @@ bash .harness/scripts/migrate-scripts-layout.sh
 ```
 
 (Don't have the helper yet? It ships under `.harness/scripts/` in this release; if
-your tree predates it, copy `migrate-scripts-layout.{ps1,sh}` from the harness-kit
+your tree predates it, copy `migrate-scripts-layout.sh` from the harness-kit
 templates' `common/.harness/scripts/` first.)
 
 The helper:
@@ -79,7 +79,7 @@ v0.2 layout:
   settings.json
 CLAUDE.md         ← generated; do not edit
 scripts/
-  harness-sync.{ps1,sh}   ← new
+  harness-sync.sh   ← new
 ```
 
 ## Step 1: Bring in the new scripts
@@ -210,7 +210,7 @@ new template:
 ```
 
 Or just inspect the new template at
-`~/harness-kit/skills/harness-init/templates/<type>/scripts/verify_all.{ps1,sh}.tmpl`
+`~/harness-kit/skills/harness-init/templates/<type>/scripts/verify_all.sh.tmpl`
 and merge the new check section into your existing script.
 
 ## Step 7: Commit

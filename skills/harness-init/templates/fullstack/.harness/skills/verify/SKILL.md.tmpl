@@ -1,7 +1,7 @@
 ---
 name: verify
 description: Run the project's total verification script (.harness/scripts/verify_all). Use this when an agent claims a task is done - this is the hard gate. Returns PASS / WARN / FAIL.
-allowed-tools: Bash, PowerShell, Read
+allowed-tools: Bash, Read
 ---
 
 # Verify skill — {{PROJECT_NAME}} ({{STACK}})
@@ -11,7 +11,6 @@ Single entry point: `.harness/scripts/verify_all.*`. Runs the full check suite
 
 ## Steps
 
-1. On Windows: `pwsh -File .harness/scripts/verify_all.ps1`
 2. On Unix: `bash .harness/scripts/verify_all.sh`
 3. Read the exit code:
    - `0` PASS — task may be marked done

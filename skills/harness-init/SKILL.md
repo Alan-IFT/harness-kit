@@ -1,7 +1,7 @@
 ---
 name: harness-init
 description: Bootstrap a NEW project with the full Harness Engineering skeleton — rules, skills, scripts and the Claude Code binding. Use when starting a fresh fullstack or backend project that wants AI-driven development from day one. NOT /harness-adopt (an existing codebase), NOT /harness-upgrade (a harness project that is merely stale).
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, AskUserQuestion, TodoWrite
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, TodoWrite
 ---
 
 # /harness-init
@@ -55,7 +55,7 @@ Ask **six questions** in a single `AskUserQuestion` call:
    - `Generic (CLI / library / mobile / ML / embedded / etc.)` — `PROJECT_TYPE=generic`; copies generic overlay (`50-generic.md` stub for project-specific rules + a generic `verify_all` you customize for your actual build/test commands). No partition agents by default. The AI fills in `50-generic.md` based on your Q2 stack description and any existing code in the target directory.
 2. **Primary language / framework stack** — free text via "Other" option (e.g. "Next.js + NestJS + Postgres", "FastAPI + Postgres", "Rust CLI tool", "PyTorch training pipeline").
 3. **Install auto-sync hooks?** — options:
-   - `Yes (recommended)` — installs **both** the Claude Code Stop hook (in `.claude/settings.json`) **and** the git pre-commit hook (via `.harness/scripts/install-hooks.{ps1,sh}`). Stop hook keeps `CLAUDE.md` + `.github/copilot-instructions.md` fresh while you work in Claude Code. Pre-commit hook is the tool-agnostic backstop — blocks any commit (Claude Code, Copilot, Cursor, hand-edits) that includes drifted generated artifacts.
+   - `Yes (recommended)` — installs **both** the Claude Code Stop hook (in `.claude/settings.json`) **and** the git pre-commit hook (via `.harness/scripts/install-hooks.sh`). Stop hook keeps `CLAUDE.md` + `.github/copilot-instructions.md` fresh while you work in Claude Code. Pre-commit hook is the tool-agnostic backstop — blocks any commit (Claude Code, Copilot, Cursor, hand-edits) that includes drifted generated artifacts.
    - `No, manual only` — you run `.harness/scripts/harness-sync` yourself after `.harness/` edits. `verify_all` will still catch drift after the fact, but you lose the auto-fresh guarantee.
 4. **Developer partitioning** — options depend on Q1:
 
@@ -102,7 +102,7 @@ Copy in this order (later layer overwrites earlier):
 
 1. Everything under `templates/common/` → target root.
 2. Everything under `templates/<project-type>/` → target root.
-   - Fullstack overlay adds `.harness/rules/50-fullstack.md`, `.harness/skills/{build,test,verify}/SKILL.md.tmpl`, `.harness/scripts/verify_all.{ps1,sh}.tmpl`, **and** `.harness/agents/dev-{frontend,backend,db}.md.tmpl` (partition agents).
+   - Fullstack overlay adds `.harness/rules/50-fullstack.md`, `.harness/skills/{build,test,verify}/SKILL.md.tmpl`, `.harness/scripts/verify_all.sh.tmpl`, **and** `.harness/agents/dev-{frontend,backend,db}.md.tmpl` (partition agents).
    - Backend overlay adds `.harness/rules/50-backend.md` etc.
    - **Generic** overlay adds `.harness/rules/50-generic.md` (a near-empty stub the user/AI fills in based on the actual stack). No partition agents. No project-type-specific `verify_all` template — the project gets the generic `verify_all` from `common/` (TODO: ship a `verify_all.tmpl` in `generic/` once the common one has stack-agnostic skeleton).
 3. **If Q5 ≠ English**, apply the language overlay:
@@ -117,12 +117,6 @@ For a `zh` project, the English `common/` `.harness/rules/00-core.md`, `CLAUDE.m
 `.github/copilot-instructions.md` were laid down by step 4.1 and are still English. Convert their
 policy region to the canonical Chinese policy by running the **already-distributed** helper against the
 project root (it was copied into `.harness/scripts/` by step 4.1):
-
-```powershell
-pwsh -NoProfile -File .harness/scripts/language-policy.ps1 -TemplateRoot <template-root> -Lang zh   # Windows
-# or
-bash .harness/scripts/language-policy.sh --template-root <template-root> --lang zh                  # macOS/Linux
-```
 
 `<template-root>` is the resolved plugin/skill root discovered in step 3 — the directory that **contains**
 `skills/harness-init/templates` (i.e. the same value `/harness-language` passes; NOT the `templates`
@@ -191,15 +185,14 @@ Replace these placeholders in any `.tmpl` file:
 
 **Obtaining a hook command value — invoke the spec, paste the answer.** For each of the four
 `*_COMMAND` placeholders, run the hook wiring spec twin **for the shell you are running in**, from
-the target project root (the template copy landed at `.harness/scripts/hook-spec.{sh,ps1}` in the
+the target project root (the template copy landed at `.harness/scripts/hook-spec.sh` in the
 earlier copy step; if you are substituting before that copy, use
-`<template-root>/skills/harness-init/templates/common/.harness/scripts/hook-spec.{sh,ps1}`):
+`<template-root>/skills/harness-init/templates/common/.harness/scripts/hook-spec.sh`):
 
 - macOS / Linux / MSYS bash — `bash .harness/scripts/hook-spec.sh command <tool> "$(bash .harness/scripts/hook-spec.sh hostos)"`
-- Windows PowerShell — `pwsh -NoProfile -File .harness/scripts/hook-spec.ps1 command <tool> (pwsh -NoProfile -File .harness/scripts/hook-spec.ps1 hostos)`
 
 where `<tool>` is the tool id named in the placeholder's row. **Never call the other shell's twin**:
-an MSYS bash capturing pwsh output through `$( … )` strips the trailing newline but leaves the `\r`,
+a shell capturing output through `$( … )` strips the trailing newline,
 which corrupts the value. Paste the captured line **verbatim** into the placeholder's position — do
 not re-escape it, re-wrap it, reformat it, or add or remove a single character; it is already at the
 JSON-string escaping level the settings file needs (the value lands inside a JSON string, so its
@@ -263,7 +256,7 @@ single JSON object `{ "rule_md": "...", "partition_agents": [{ "name": ..., "bod
 
 If the environment variable `HARNESS_AI_NATIVE_MOCK` is set and points at a
 readable file, use that file's content as the AI response **instead of calling
-the model**. Used by `.harness/scripts/test-init.{ps1,sh}` to exercise this flow without
+the model**. Used by `.harness/scripts/test-init.sh` to exercise this flow without
 a live LLM call. A shipped fixture lives at
 `.harness/scripts/ai-native-mock.json` (copied from `templates/common/scripts/`) for
 users who want to dry-run the AI-native path locally.
@@ -360,11 +353,6 @@ After all files are in place, run the binding sync to copy any project-local
 `.harness/agents/` (partition `dev-*` only — the framework agents are plugin-provided)
 and `.harness/skills/` into the Claude-Code-required `.claude/` paths:
 
-```powershell
-pwsh -File .harness/scripts/harness-sync.ps1     # Windows
-bash .harness/scripts/harness-sync.sh            # Unix
-```
-
 **v0.10 scope (much narrower than v0.9.x)**: `harness-sync` only copies
 `.harness/agents/` → `.claude/agents/` and `.harness/skills/` → `.claude/skills/`.
 After the v0.30 cutover, a single-developer project has **no** `.harness/agents/` to
@@ -390,11 +378,6 @@ If the target is not a git repo (`.git/` does not exist), `git init -b main`.
 If the user answered Q3 = `Yes (recommended)`, run the hook installer
 right after `git init`:
 
-```powershell
-pwsh -File .harness/scripts/install-hooks.ps1   # Windows
-bash .harness/scripts/install-hooks.sh          # macOS / Linux
-```
-
 This writes `.git/hooks/pre-commit` which runs `harness-sync --check`
 before every commit. Drift between `.harness/` and the generated files
 (`CLAUDE.md`, `.github/copilot-instructions.md`) becomes a hard block,
@@ -407,7 +390,7 @@ If Q3 = `No, manual only`, skip this step. The Stop hook in
 (it does no harm if Claude Code is never used); only the pre-commit hook
 is conditional on Q3.
 
-**Note on the safety guard (v0.15+)**: `.harness/scripts/guard-rm.{ps1,sh}` is shipped
+**Note on the safety guard (v0.15+)**: `.harness/scripts/guard-rm.sh` is shipped
 via the `templates/common/.harness/scripts/` copy in step 4, and the PreToolUse hook in
 `.claude/settings.json` is wired with `{{GUARD_COMMAND}}` substituted in step 5.
 No separate installer step is needed — the guard is always on after init. The
@@ -489,9 +472,9 @@ Project documentation (tool-agnostic, edit freely):
 
 Scripts:
   .harness/scripts/
-    verify_all.{ps1,sh}    — total verification gate
-    harness-sync.{ps1,sh}  — binding sync (.harness/agents + .harness/skills → .claude/)
-    guard-rm.{ps1,sh}      — destructive-command safety hook (PreToolUse; v0.15+)
+    verify_all.sh    — total verification gate
+    harness-sync.sh  — binding sync (.harness/agents + .harness/skills → .claude/)
+    guard-rm.sh      — destructive-command safety hook (PreToolUse; v0.15+)
     baseline.json
   evals/golden-tasks.md    — regression task set
 
