@@ -68,8 +68,13 @@ exports.DOC_CLASSES = [
         dir: '',
         matches: (p) => MEMORY_FILES.has(p),
         // The insight index stores one fact per bullet plus its wrapped continuation lines.
+        // A glossary stores one term per bold lead-in: `CONTEXT.md` carries 42 of them under a
+        // SINGLE `## Language` heading, so delimiting it by heading made the entire 13.1 KB
+        // glossary one unit — and any query whose term appeared anywhere in it returned all
+        // 13.1 KB, which is more than reading `.harness/insight-index.md` whole. A heading still
+        // opens a unit there, for a project whose glossary is written as `### Term` instead.
         // Every other store delimits by heading and uses bullets INSIDE a unit.
-        opens: (p) => (p === '.harness/insight-index.md' ? /^- / : /^#{2,6} /),
+        opens: (p) => p === '.harness/insight-index.md' ? /^- / : p === 'CONTEXT.md' ? /^(\*\*|#{2,6} )/ : /^#{2,6} /,
         recursive: true,
     },
     {
@@ -150,6 +155,8 @@ function query(term, root, opts) {
     for (const cls of classes) {
         for (const rel of filesOf(cls, root)) {
             if (cls.scope === 'stage' && opts.task !== undefined && !rel.includes(`/${opts.task}/`))
+                continue;
+            if (opts.doc !== undefined && !rel.includes(opts.doc))
                 continue;
             let content;
             try {
@@ -266,7 +273,7 @@ function run(argv, root, out) {
     const consumed = new Set();
     for (let i = 0; i < argv.length; i++) {
         const a = argv[i];
-        if (a === '--in' || a === '--task' || a === '--for') {
+        if (a === '--in' || a === '--task' || a === '--for' || a === '--doc') {
             consumed.add(i);
             consumed.add(i + 1);
         }
@@ -283,8 +290,8 @@ function run(argv, root, out) {
         return 0;
     }
     if (term === '') {
-        out('usage: doc-query <term> [--in memory|stage|rules|all] [--task <slug>]');
-        out('                         [--heading] [--files] [--list]');
+        out('usage: doc-query <term> [--in memory|stage|rules|all] [--doc <path-substring>]');
+        out('                         [--task <slug>] [--heading] [--files] [--list]');
         out('       doc-query --for <role> --task <slug>');
         out('');
         out('Returns whole UNITS — an insight entry, a decision record, a stage-doc section —');
@@ -293,21 +300,28 @@ function run(argv, root, out) {
         out('--heading matches the unit\'s opening line only. Use it to ask WHICH SECTION IS X;');
         out('omit it to ask WHERE IS X MENTIONED. On stage documents the first is 6x cheaper.');
         out('');
+        out('--doc narrows to one store: "query the insight index" is `--in memory --doc');
+        out('insight-index`, which does not also search the 49 KB obligations ledger.');
+        out('');
         out('--for returns the sections of a task\'s stage contracts addressed to that role, in');
         out('document order. A section is dropped only when the schema addresses it elsewhere;');
         out('an unrecognised heading is returned. See `stage-schema.js --map`.');
         return 2;
     }
-    const hits = query(term, root, { scope, task, heading: flags.has('--heading') });
+    const docIdx = argv.indexOf('--doc');
+    const doc = docIdx >= 0 ? argv[docIdx + 1] : undefined;
+    const hits = query(term, root, { scope, task, doc, heading: flags.has('--heading') });
     if (hits.length === 0) {
         // Naming what was searched is the point. A bare "no results" is indistinguishable from
         // having searched the wrong place, which is exactly how an unscoped search scores 0/12
         // while looking like it worked.
         const classes = exports.DOC_CLASSES.filter((c) => scope === 'all' || c.scope === scope);
-        const count = classes.reduce((n, c) => n + filesOf(c, root).length, 0);
+        const count = classes.reduce((n, c) => n + filesOf(c, root).filter((f) => doc === undefined || f.includes(doc)).length, 0);
         out(`No unit matches ${JSON.stringify(term)}.`);
-        out(`Searched ${count} document(s) in scope ${JSON.stringify(scope)}${task ? ` for task ${task}` : ''}.`);
-        if (scope !== 'all')
+        out(`Searched ${count} document(s) in scope ${JSON.stringify(scope)}${doc ? ` matching ${JSON.stringify(doc)}` : ''}${task ? ` for task ${task}` : ''}.`);
+        if (doc !== undefined)
+            out('Widen by dropping --doc.');
+        else if (scope !== 'all')
             out('Widen with --in all.');
         return 1;
     }

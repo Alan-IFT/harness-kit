@@ -75,7 +75,7 @@ the current one; **exit 3 means escalate — stop routing and ask the human.** O
 `task-state init <slug> --mode <mode>`, and after every stage run `task-state verdict <slug>
 --stage <n> --verdict "<verdict word>"`. Counters only — the reasoning goes in the task folder.
 
-Before dispatching stage 1, **query the insight index** for the task's salient terms (an entry is one bullet plus every line wrapped under it — surface it whole or not at all). If any entry applies, include it in the dispatch prompt to the relevant downstream agent, typically the Architect or Developer. You hold no `Bash`, so use `Grep` with an explicit `path`; see `.harness/rules/05-insight-index.md` for why an unscoped search returns nothing.
+Before dispatching stage 1, **query the insight index** for the task's salient terms (an entry is one bullet plus every line wrapped under it — surface it whole or not at all). If any entry applies, include it in the dispatch prompt to the relevant downstream agent, typically the Architect or Developer — they cannot run a script and you can. `node .harness/scripts/doc-query.js --in memory --doc insight-index <term>`; see `.harness/rules/05-insight-index.md` for why the scope matters.
 
 Insight format example: `- 2026-05-16 · Vendor SDK v2.7.1 returns null for invalid keys instead of throwing · evidence: T-042`
 

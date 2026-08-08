@@ -15,15 +15,21 @@ For this repo specifically, valid insight examples are things like:
 
 ## How to search it — never a whole-file read, never an unscoped search
 
-**If you hold `Bash`** (developer, qa-tester):
+**If you hold `Bash`** (pm-orchestrator, developer, qa-tester):
 
 ```bash
-node .harness/scripts/doc-query.js --in memory <term>
+node .harness/scripts/doc-query.js --in memory --doc insight-index <term>
 ```
 
+`--doc` is not optional politeness. `--in memory` names five stores, two of which are
+`operator-obligations.md` (49 KB) and `rejected-decisions.md` (25 KB), so without it a common
+term returns more than reading this index whole — measured at 42.6 KB for `hook` against 3.8 KB
+scoped. Drop `--doc` deliberately when the question is "has this been decided anywhere", not
+"what do I need to know before touching this".
+
 **If you do not** (requirement-analyst, solution-architect, gate-reviewer, code-reviewer,
-pm-orchestrator, supervisor) — five of the eight agents cannot run any script, which is why
-the whole-file read became habit. Use the `Grep` tool with an **explicit `path`**:
+supervisor) — five of the eight agents cannot run any script, which is why the whole-file read
+became habit. Use the `Grep` tool with an **explicit `path`**:
 
 ```
 Grep(pattern: <term>, path: ".harness/insight-index.md", output_mode: "content", -C: 10)

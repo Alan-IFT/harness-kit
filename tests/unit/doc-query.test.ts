@@ -209,6 +209,63 @@ describe('cli', () => {
   });
 });
 
+describe('the glossary unit boundary', () => {
+  // CONTEXT.md carries 42 terms under a SINGLE `## Language` heading. Delimiting it by
+  // heading made the whole 13.1 KB glossary one unit, so any query matching any term in it
+  // returned all 13.1 KB — more than reading the insight index whole. The 12-item MEM
+  // control set never fired on it, which is why this is a unit test and not an eval row.
+  const glossary = [
+    '# Project',
+    '',
+    '## Language',
+    '',
+    '**Frontier**:',
+    'The runnable set.',
+    '_Avoid_: ready set',
+    '',
+    '**Pool**:',
+    'The mutable list.',
+  ].join('\n');
+
+  it('returns one term, not the whole glossary', () => {
+    write('CONTEXT.md', glossary);
+    const r = invoke('--in', 'memory', 'mutable');
+    expect(r.out).toContain('**Pool**');
+    expect(r.out).not.toContain('Frontier');
+  });
+
+  it('still opens a unit at a heading, for a glossary written as ### Term', () => {
+    write('CONTEXT.md', ['# P', '', '### Widget', 'a thing', '', '### Gadget', 'another'].join('\n'));
+    const r = invoke('--in', 'memory', 'another');
+    expect(r.out).toContain('### Gadget');
+    expect(r.out).not.toContain('a thing');
+  });
+});
+
+describe('--doc: narrowing to one store', () => {
+  it('searches only the named document', () => {
+    write('.harness/insight-index.md', '- the hook fires twice');
+    write('.harness/operator-obligations.md', '## OB-1\nthe hook is installed by hand');
+    const all = invoke('--in', 'memory', 'hook');
+    const one = invoke('--in', 'memory', '--doc', 'insight-index', 'hook');
+    expect(all.out).toContain('operator-obligations');
+    expect(one.out).not.toContain('operator-obligations');
+    expect(one.out).toContain('fires twice');
+  });
+
+  it('does not take the filter value as part of the term', () => {
+    write('.harness/insight-index.md', '- a fact');
+    expect(invoke('--in', 'memory', '--doc', 'insight-index', 'fact').code).toBe(0);
+  });
+
+  it('names the filter when nothing matches, so the scope is visible', () => {
+    write('.harness/insight-index.md', '- a fact');
+    const r = invoke('--in', 'memory', '--doc', 'rejected', 'fact');
+    expect(r.code).toBe(1);
+    expect(r.out).toContain('Widen by dropping --doc');
+  });
+});
+
 describe('--for: the addressed read', () => {
   const gateReview = [
     '> Contract portion. Rationale: 03_RATIONALE.md (absent = none written).',

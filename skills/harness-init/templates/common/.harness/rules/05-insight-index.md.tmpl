@@ -13,9 +13,36 @@ These aren't rules (no "thou shalt"). They aren't bug reports either (which sit 
 
 ## When to read this
 
-**At the start of any task that involves design or implementation decisions.** Skim it before reading other rule fragments — if an entry applies, you save yourself a wrong assumption.
+**At the start of any task that involves design or implementation decisions.** Query it before reading other rule fragments — if an entry applies, you save yourself a wrong assumption.
 
 Skip for: pure typo fixes, comment cleanup, dependency version bumps with no other change.
+
+## How to search it — never a whole-file read, never an unscoped search
+
+**If you hold `Bash`** (pm-orchestrator, developer, qa-tester):
+
+```bash
+node .harness/scripts/doc-query.js --in memory --doc insight-index <term>
+```
+
+It returns the whole **entry** containing the match — one fact plus its wrapped lines — not a
+line window and not the file. Keep `--doc`: `--in memory` also names the other memory stores,
+and on a mature project a common term then returns more than this index costs to read whole.
+
+**If you do not** (requirement-analyst, solution-architect, gate-reviewer, code-reviewer,
+supervisor) — five of the eight agents can run no script at all, which is why the whole-file
+read became habit. Use the `Grep` tool with an **explicit `path`**:
+
+```
+Grep(pattern: <term>, path: ".harness/insight-index.md", output_mode: "content", -C: 10)
+```
+
+The explicit `path` is what matters. Without it the tool is ripgrep-backed and skips
+dot-directories, so it returns **nothing** from any store under `.harness/` — a result that
+reads as "no such fact" rather than "wrong search".
+
+The corollary for writing: an entry is the retrieval unit, so **keep one fact in one entry**.
+A fact split across two entries is returned halved.
 
 ## When to write to this
 
