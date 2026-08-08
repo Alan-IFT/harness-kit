@@ -259,6 +259,32 @@ else
     step "D.6" "Stage-section routing matches the authoring contracts" "WARN" "stage-schema.js or node unavailable"
 fi
 
+# D.7 — the P0 control set's expected ANSWERS are still true
+#
+# `eval-anchors` (D.5's suite) fails the build when a CITATION stops resolving. That check
+# passed clean while four of ten CODE items were false: C4 named `hostOs` in hook-spec's
+# public surface after v0.49.0 deleted it, C5 said 32 checks, C8 quoted the pre-P4 agent cap,
+# C10 undercounted the sync mappings. Every one had a resolving anchor. A resolving anchor
+# says the FILE is still there and nothing about whether the ANSWER still is.
+#
+# The rule is mechanical: every backticked token in an Expected-answer cell must occur in
+# that row's anchor file. It does not catch a wrong number written as prose — a bare integer
+# cannot be resolved against a file without knowing what counts it — and `src/eval-set.ts`
+# states that limit rather than leaving a reader to find it.
+#
+# FAIL, not WARN: the control set is the instrument every acceptance decision in the v2
+# migration is argued from. A stale one scores a correct answer as a MISS and a rotted one as
+# a HIT, which is worse than having no instrument, because a wrong number gets believed.
+if [[ -f .harness/scripts/eval-set.js ]] && command -v node >/dev/null 2>&1; then
+    if d7_out=$(node .harness/scripts/eval-set.js --check 2>&1); then
+        step "D.7" "P0 control-set claims resolve in their anchors" "PASS"
+    else
+        step "D.7" "P0 control-set claims resolve in their anchors" "FAIL" "$d7_out"
+    fi
+else
+    step "D.7" "P0 control-set claims resolve in their anchors" "WARN" "eval-set.js or node unavailable"
+fi
+
 # E.1 — Layer 1: templates/common/ → repo .harness/ + harness-sync
 if bash "$repo_root/.harness/scripts/sync-self.sh" --check &>/dev/null; then
     step "E.1" "Layer 1: .harness/ matches templates/common/.harness/" "PASS"

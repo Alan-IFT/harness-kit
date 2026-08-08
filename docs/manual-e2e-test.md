@@ -1,6 +1,6 @@
 # Manual End-to-End Test Checklist
 
-Automated regression (`.harness/scripts/verify_all.sh` at 35 checks; `npm test` at 287 unit
+Automated regression (`.harness/scripts/verify_all.sh` at 36 checks; `npm test` at 287 unit
 tests; `.harness/scripts/test-init.sh`, `test-supervisor.sh`, `test-verify-i6.sh`,
 `test-guard-rm.sh`, `test-archive-task.sh`, `test-harness-upgrade.sh`, `test-language.sh` and
 `test-real-project.sh` at the counts pinned in `.harness/scripts/baseline.json`) covers everything

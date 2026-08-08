@@ -2,7 +2,7 @@
 
 [English](README.md) · **简体中文**
 
-![version](https://img.shields.io/badge/version-0.50.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-35%2F35-brightgreen) ![test-init](https://img.shields.io/badge/test--init-379%2F379-brightgreen) ![integration](https://img.shields.io/badge/integration-90%2F90-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.51.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-36%2F36-brightgreen) ![test-init](https://img.shields.io/badge/test--init-379%2F379-brightgreen) ![integration](https://img.shields.io/badge/integration-90%2F90-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
 > **Claude Code 的 Harness Engineering 工具包** — 一个 Claude Code Plugin（17 个 skills + 8 个框架 agent + 项目模板），把"有纪律的 AI 驱动开发"带到全栈和后端项目里。**Claude 原生**（框架 agent 以 plugin agent 形式分发，不再逐项目拷贝）。
 >
@@ -198,7 +198,7 @@ Claude Code 5 小时额度用完？切到 VS Code + GitHub Copilot 继续，额�
 
 ### 三层回归测试
 
-- `verify_all`（35 项检查）— 仓库本身健康度
+- `verify_all`（36 项检查）— 仓库本身健康度
 - `test-init` — init 模板逻辑（空目录；覆盖 3 种项目类型，外加 migrate-layout 块、zh-overlay 消费者分流策略断言、v0.30 通用 agent 不落地断言、以及 BUG-2 placeholder 正则回归；计数随 v0.30 agent 切换而变动，实时计数见 `.harness/scripts/baseline.json`）
 - `test-real-project`（90 断言）— 真实 fixture 上 overlay（todo-fullstack、todo-backend），并在健康/悬空 hook 两种状态下实际运行生成的类型 `verify_all`（v0.31）
 

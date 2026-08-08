@@ -5,6 +5,66 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.51.0] - 2026-08-08
+
+### Added — P0's missing half: the control set is now RUN, and its answers are gated
+
+`evals/retrieval-eval.md` has held 36 control-set cases since P0. It had a scoring protocol
+and no runner, so every acceptance bar in P1–P4 was argued from a file nobody executed.
+
+- **`.harness/scripts/retrieval-eval.js`** — the batch runner the brief asks for. Three
+  configurations (`whole` / `grep` / `query`), scored with **no model in the loop**: a case is
+  a HIT when every backticked token of its Expected answer appears in the retrieved text.
+  `--json` omits timings so two runs of the same tree are byte-identical.
+- **`.harness/scripts/eval-set.js`** — parses the control set, and `--check` verifies every
+  backticked Expected token still occurs in that row's anchor file. Wired as **`verify_all`
+  D.7**, a FAIL (36 checks now).
+
+### Fixed — four of ten CODE items were false, with resolving anchors
+
+`eval-anchors` fails the build when a *citation* stops resolving. It was passing clean while:
+
+| Item | Claimed | Actually |
+|---|---|---|
+| C4 | `hostOs` in hook-spec's public surface | deleted at v0.49.0 with Windows support |
+| C5 | 32 checks | 35 at the time, 36 now |
+| C8 | agents ≤300 lines + 24 KB | ≤3 KB, and FAIL not WARN, since v0.50.0 |
+| C10 | Mapping 10's four compiled `.js` | six, plus Mapping 11's playbooks directory |
+
+Every one had a resolving anchor. **A resolving anchor says the FILE is still there and
+nothing about whether the ANSWER still is.** D.7 closes that half; the stated limit is that a
+number written as prose ("32 checks") is still invisible to it, because a bare integer cannot
+be resolved against a file without knowing what counts it.
+
+### Measured — the recorded P0 baseline, and grep is not the cheap option
+
+| Config | scored | score | mean bytes |
+|---|---:|---:|---:|
+| `whole` — read every anchor file | 18 | **1.000** | 60.7 KB |
+| `grep` — grep the repo for derived terms | 18 | **1.000** | 544.7 KB |
+| `query` — `doc-query` over the case's store | 18 | **0.750** | 27.8 KB |
+
+**grep matches whole-file accuracy at 9× the bytes.** The brief requires the grep baseline
+before any memory backend is adopted, on the strength of Letta's LoCoMo result. On this corpus
+grep is the *most expensive* configuration measured, not the frugal one — so a memory backend
+does not have to beat a cheap baseline here, it has to beat `query`, which holds 75% of the
+ceiling at 46% of its bytes.
+
+**Half the control set cannot be scored mechanically.** 18 of 36 Expected answers are prose.
+They are reported as `n/a` and excluded from the denominator, never folded into MISS: scoring
+them as misses pinned every configuration near 0.5 and made the ceiling read as the floor. An
+instrument that returns the same number for a good configuration and a bad one has stopped
+being one.
+
+**CODE under `query` measures an absence** — `doc-query` has memory, stage and rules classes
+and none indexes source. That gap is what P5 exists to close.
+
+### Gate and suites
+
+36 checks, 336 unit tests, and all eight regression drivers green: test-init 379,
+test-real-project 90, test-harness-upgrade 93, test-guard-rm 87, test-verify-i6 50,
+test-supervisor 46, test-language 39, test-archive-task 186.
+
 ## [0.50.0] - 2026-08-08
 
 ### Changed — P4: the agent contracts are ≤3 KB, and the procedure moved to a playbook

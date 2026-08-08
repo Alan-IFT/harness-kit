@@ -94,6 +94,41 @@ to ~25,270.
 
 ---
 
+## Measured baseline — `retrieval-eval.js --compare`, 2026-08-08, v0.51.0
+
+The brief's P0 asks for a repeatable batch runner and a recorded baseline. This is it. No model
+is in the loop: a case is a HIT when every backticked token of its Expected answer appears in
+the retrieved text, so two runs of the same tree agree exactly.
+
+| Config | scored | score | mean bytes | ~mean tok |
+|---|---:|---:|---:|---:|
+| `whole` — read every anchor file | 18 | **1.000** | 60.7 KB | 17,255 |
+| `grep` — grep the repo for the derived terms | 18 | **1.000** | 544.7 KB | 154,933 |
+| `query` — `doc-query` over the case's store | 18 | **0.750** | 27.8 KB | 7,916 |
+
+**Three findings, none of them the one the brief expects.**
+
+**1. grep is dominated, not cheap.** §5.3 requires the grep baseline before any memory backend
+is adopted, on the strength of Letta's LoCoMo result. On *this* corpus grep matches whole-file
+accuracy at **9× the bytes** — it is the most expensive configuration measured, not the frugal
+one. A memory backend does not have to beat a cheap baseline here; it has to beat `query`.
+
+**2. `query` holds 75% of the ceiling at 46% of its bytes**, and 5% of grep's. Its four losses
+are the honest cost of "query, don't read", and three of them are one cause:
+
+**3. Half the control set cannot be scored mechanically.** 18 of 36 Expected answers are prose,
+so no runner can check them and they are reported as `n/a` rather than folded into MISS —
+scoring them as misses pinned every configuration near 0.5 and made the ceiling read as the
+floor. Where a future case's answer matters, write the load-bearing part backticked so both
+`--check` and the runner can see it.
+
+**CODE under `query` is measuring an absence.** `doc-query` has memory, stage and rules
+classes; none indexes source. A CODE question scores only what happens to be restated in
+`.harness/rules/`. That gap is what P5 exists to close — and per the boxed note below, P5
+cannot be gated on this repo either.
+
+---
+
 ## CODE — structural questions (P2 gate)
 
 | ID | Question | Expected answer | Anchor |
@@ -101,13 +136,13 @@ to ~25,270.
 | C1 | Which function decides whether a target path lies inside the protected `.git/` ancestor? | `isDescendant` | `src/guard-rm.ts` |
 | C2 | Where does guard-rm split a command string into tokens? | `tokenize` | `src/guard-rm.ts` |
 | C3 | What is the top-level entry point that classifies a whole command string? | `classifyCommandString`, which delegates to `classifySegment` | `src/guard-rm.ts` |
-| C4 | What is hook-spec's complete public surface? | `TOOLS`, `EVENTS`, `isTool`, `matcherOf`, `semanticsOf`, `commandOf`, `hostOs`, `run` | `src/hook-spec.ts` |
-| C5 | How many checks does `verify_all` run, and how is the count derived? | 32. 31 ids of form `X.N` plus `E.4b`, whose letter suffix defeats a naive `[A-J]\.[0-9]+` scan | `verify_all.sh`; pin at `baseline.json:10` |
+| C4 | What is hook-spec's complete public surface? | `TOOLS`, `EVENTS`, `isTool`, `matcherOf`, `semanticsOf`, `commandOf`, `run`. Seven, not eight: hostOs went with Windows support at v0.49.0 (written bare — a name the file no longer contains is not a live reference), and `commandOf` lost its second parameter with it | `src/hook-spec.ts` |
+| C5 | How many checks does `verify_all` run, and how is the count derived? | 35. 34 ids of form `X.N` plus `E.4b`, whose letter suffix defeats a naive `[A-J]\.[0-9]+` scan | `verify_all.sh`; pin at `verify_all_checks` in `baseline.json` |
 | C6 | Which `verify_all` check must be recorded last, and what breaks otherwise? | `G.4` — its count derivation under-counts if any check is added after it; a tripwire FAILs when `G.4` is not last | `.harness/scripts/verify_all.sh:922` |
 | C7 | Which check validates `settings.json` schema integrity? | `J.1` | `.harness/scripts/verify_all.sh` |
-| C8 | Which checks are the doc-size guards? | `I.1`–`I.5` (AI-GUIDE ≤200 lines + 20 KB, rules ≤200 each, agents ≤300 lines + 24 KB each, insight-index ≤30 entries + 24 KB, tasks.md ≤300 lines + 24 KB); `I.6`/`I.7` are separate guards | `.harness/scripts/verify_all.sh` |
+| C8 | Which checks are the doc-size guards? | `I.1`–`I.5` (AI-GUIDE ≤200 lines + 20 KB, rules ≤200 each, agent contracts ≤3 KB each **and** each naming a playbook that exists, insight-index ≤30 entries + 24 KB, tasks.md ≤300 lines + 24 KB); `I.6`/`I.7` are separate guards. `I.3` is the only one that FAILs rather than WARNs | `.harness/scripts/verify_all.sh` |
 | C9 | If `isDescendant` changes, what is the blast radius? | Reached via `walkPaths` and `classifySegment` — every destructive-verb path decision — plus the unit suite | `src/guard-rm.ts` |
-| C10 | Which script pairs does `sync-self` hold byte-identical with `templates/common/`? | 8 shell pairs — `harness-sync`, `install-hooks`, `archive-task`, `guard-rm`, `migrate-scripts-layout`, `upgrade-project`, `language-policy`, `hook-spec` — plus Mapping 10's four compiled `.js` files. It does **not** sync `.harness/rules/` or agents. | `.harness/scripts/sync-self.sh` |
+| C10 | Which script pairs does `sync-self` hold byte-identical with `templates/common/`? | 8 shell pairs — `harness-sync`, `install-hooks`, `archive-task`, `guard-rm`, `migrate-scripts-layout`, `upgrade-project`, `language-policy`, `hook-spec` — plus Mapping 10's six compiled `.js` files and Mapping 11's `.harness/playbooks/` directory (the only mapping with an orphan arm). It does **not** sync `.harness/rules/` or agents. | `.harness/scripts/sync-self.sh` |
 
 **C-category note.** These are the questions a Solution Architect or Code Reviewer asks.
 

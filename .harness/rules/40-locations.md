@@ -33,6 +33,8 @@
 | Which role reads which section of which stage contract | `.harness/scripts/stage-schema.js` — `--map`, `--lint --task <slug>` (PM runs it at every stage boundary), `--check` (verify_all D.6) reads the `\| Section \| Shape \|` table back out of `.harness/playbooks/<role>.md` |
 | Per-task ledger: stage, rollback counts, verdicts | `.harness/scripts/task-state.js` → `.harness/state/<slug>.json`. PM writes; everyone else reads |
 | Contract instructions vs granted tools | `.harness/scripts/capability-audit.js` (verify_all D.4) |
+| The P0 control set, parsed; and whether its expected ANSWERS are still true | `.harness/scripts/eval-set.js` — `--list`, `--check` (verify_all D.7). `eval-anchors` checks the citation resolves; this checks the answer behind it |
+| Score a retrieval configuration against the control set, no model in the loop | `.harness/scripts/retrieval-eval.js` — `--compare` runs whole / grep / query and prints score against mean bytes |
 | Skill mechanical layers (`entropy-cadence`, `ambient-prompt`, `ambient-reset`, `language-policy`, `upgrade-project`, `migrate-scripts-layout`) | `.harness/scripts/<name>.sh`, one per like-named skill |
 | Regression drivers, one per subject (out of scope for verify_all) | `.harness/scripts/test-<name>.sh` |
 
@@ -57,7 +59,7 @@ copy overwrites your fresh build with the stale template one — build, copy, th
 
 ## Verify before declaring done
 
-`.harness/scripts/verify_all` checks (35 checks, all must PASS — count grows with releases):
+`.harness/scripts/verify_all` checks (36 checks, all must PASS — count grows with releases):
 
 - No secrets / committed env files
 - `参考/` not tracked

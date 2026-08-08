@@ -4,7 +4,6 @@
   "_hooks_moved": "Dogfood hooks (Stop/PreToolUse/UserPromptSubmit/SessionStart) live in .claude/settings.local.json (gitignored, same load precedence for local dev) so the published plugin ships no leakable hooks. They use the resilient form harness-init ships. See docs/features/_archived/resilient-hooks/ (T-12, v0.44.0).",
   "permissions": {
     "allow": [
-      "Bash(pwsh:*)",
       "Bash(bash .harness/scripts/harness-sync.sh:*)",
       "Bash(git status:*)",
       "Bash(git diff:*)",

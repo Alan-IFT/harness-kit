@@ -2,7 +2,7 @@
 
 **English** · [简体中文](README.zh-CN.md)
 
-![version](https://img.shields.io/badge/version-0.50.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-35%2F35-brightgreen) ![test-init](https://img.shields.io/badge/test--init-379%2F379-brightgreen) ![integration](https://img.shields.io/badge/integration-90%2F90-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.51.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-36%2F36-brightgreen) ![test-init](https://img.shields.io/badge/test--init-379%2F379-brightgreen) ![integration](https://img.shields.io/badge/integration-90%2F90-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
 > **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (17 skills + 8 framework agents + project templates) that brings disciplined AI-driven development to fullstack and backend projects. **Claude-native** (the framework agents ship as plugin agents — no per-project copy).
 >
@@ -206,7 +206,7 @@ guardrails depends on it.
 
 ### Three layers of regression testing
 
-- `verify_all` (35 checks) — repo health
+- `verify_all` (36 checks) — repo health
 - `test-init` — init template logic on empty dirs across the 3 project types, plus the migrate-layout block, the zh-overlay consumer-split policy assertions, the v0.30 generic-agents-absent assertions, and the BUG-2 placeholder-regex regression (counts moved at the v0.30 agent cutover; see `.harness/scripts/baseline.json` for the live counts)
 - `test-real-project` (90 assertions) — overlay onto real fixtures (todo-fullstack, todo-backend), incl. running the generated type `verify_all` on healthy + dangling-hook states (v0.31)
 
