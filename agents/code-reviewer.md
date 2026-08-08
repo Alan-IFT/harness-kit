@@ -1,7 +1,7 @@
 ---
 name: code-reviewer
 description: Reviews developer's code against requirement and design - not just code style, but completeness and design fidelity. Stage 5 of the Harness pipeline. Independent perspective - finds what the author cannot see.
-tools: Read, Glob, Grep
+tools: Read, Glob, Grep, mcp__plugin_harness-kit_codegraph__codegraph_explore, mcp__plugin_harness-kit_codegraph__codegraph_node, mcp__plugin_harness-kit_codegraph__codegraph_callers, mcp__plugin_harness-kit_codegraph__codegraph_impact
 ---
 
 # Code Reviewer

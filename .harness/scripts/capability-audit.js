@@ -46,6 +46,9 @@ exports.exemptions = exemptions;
 exports.demandsOf = demandsOf;
 exports.auditContract = auditContract;
 exports.auditDir = auditDir;
+exports.knownMcpTools = knownMcpTools;
+exports.auditMcpGrants = auditMcpGrants;
+exports.auditMcpDir = auditMcpDir;
 exports.run = run;
 const fs = require("node:fs");
 const path = require("node:path");
@@ -134,22 +137,111 @@ function auditDir(dir) {
     const files = fs.readdirSync(dir).filter((f) => f.endsWith('.md')).sort();
     return files.flatMap((f) => auditContract(f.replace(/\.md$/, ''), fs.readFileSync(path.join(dir, f), 'utf8')));
 }
+// ---------------------------------------------------------------- MCP tool names
+/**
+ * The MCP tool names a plugin's `.mcp.json` makes addressable.
+ *
+ * Derived, never listed: the server names come from `mcpServers`, the plugin prefix from
+ * `.claude-plugin/plugin.json`, and each server's tool set from the env var that server uses
+ * to publish one. Only `CODEGRAPH_MCP_TOOLS` is understood today; a server that advertises no
+ * such list contributes its name for the server-level check and nothing for the tool-level
+ * one, so an unknown server can never turn into a false accusation about its tools.
+ */
+function knownMcpTools(root) {
+    const servers = new Set();
+    const tools = new Set();
+    let plugin = '';
+    try {
+        plugin = JSON.parse(fs.readFileSync(path.join(root, '.claude-plugin', 'plugin.json'), 'utf8')).name ?? '';
+    }
+    catch {
+        /* not a plugin repo: the prefix is empty and only bare server names resolve */
+    }
+    let cfg;
+    try {
+        cfg = JSON.parse(fs.readFileSync(path.join(root, '.mcp.json'), 'utf8'));
+    }
+    catch {
+        return { servers, tools };
+    }
+    for (const [server, spec] of Object.entries(cfg.mcpServers ?? {})) {
+        const addressed = plugin === '' ? server : `plugin_${plugin}_${server}`;
+        servers.add(addressed);
+        const list = spec.env?.[`${server.toUpperCase()}_MCP_TOOLS`];
+        if (list === undefined)
+            continue;
+        for (const t of list.split(',').map((s) => s.trim()).filter((s) => s !== '')) {
+            // A server publishes short names; it exposes them prefixed with its own.
+            tools.add(`mcp__${addressed}__${server}_${t}`);
+        }
+    }
+    return { servers, tools };
+}
+/** Granted `mcp__…` names that no configured server provides. */
+function auditMcpGrants(name, contract, known) {
+    const granted = grantedTools(contract);
+    if (granted === null)
+        return [];
+    const out = [];
+    for (const t of granted) {
+        if (!t.startsWith('mcp__'))
+            continue;
+        const server = t.slice('mcp__'.length).split('__')[0] ?? '';
+        if (!known.servers.has(server)) {
+            out.push({ agent: name, tool: t, reason: 'unknown-server', known: [...known.servers].sort() });
+            continue;
+        }
+        // A server-level grant (`mcp__server` or `mcp__server__*`) names no single tool.
+        if (t === `mcp__${server}` || t === `mcp__${server}__*`)
+            continue;
+        if (known.tools.size > 0 && !known.tools.has(t)) {
+            out.push({ agent: name, tool: t, reason: 'unknown-tool', known: [...known.tools].sort() });
+        }
+    }
+    return out;
+}
+function auditMcpDir(dir, root) {
+    const known = knownMcpTools(root);
+    const files = fs.readdirSync(dir).filter((f) => f.endsWith('.md')).sort();
+    return files.flatMap((f) => auditMcpGrants(f.replace(/\.md$/, ''), fs.readFileSync(path.join(dir, f), 'utf8'), known));
+}
 function run(argv, root, out) {
     const dir = path.join(root, 'agents');
     let findings;
+    let mcp;
     try {
         findings = auditDir(dir);
+        mcp = auditMcpDir(dir, root);
     }
     catch {
         out(`capability-audit: cannot read ${dir}`);
         return 2;
     }
     if (argv.includes('--json')) {
-        out(JSON.stringify(findings, null, 2));
-        return findings.length === 0 ? 0 : 1;
+        out(JSON.stringify({ demands: findings, mcpGrants: mcp }, null, 2));
+        return findings.length === 0 && mcp.length === 0 ? 0 : 1;
+    }
+    if (mcp.length > 0) {
+        out(`capability-audit: ${mcp.length} granted MCP tool name(s) resolve to nothing.`);
+        out('');
+        for (const f of mcp) {
+            out(`  ${f.agent}.md grants ${f.tool} — ${f.reason}`);
+        }
+        const known = mcp[0]?.known ?? [];
+        if (known.length > 0) {
+            out('');
+            out('  Addressable today:');
+            for (const k of known)
+                out(`    ${k}`);
+        }
+        out('');
+        out('An unresolvable name is DROPPED silently: the subagent starts and the capability is');
+        out('simply absent. Fix the name, or remove the grant.');
+        return 1;
     }
     if (findings.length === 0) {
-        out('capability-audit: every instruction is within its agent\'s granted tools.');
+        out('capability-audit: every instruction is within its agent\'s granted tools, and every');
+        out('granted MCP tool name resolves.');
         return 0;
     }
     out(`capability-audit: ${findings.length} instruction(s) demand a tool the agent does not hold.`);

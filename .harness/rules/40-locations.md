@@ -37,6 +37,16 @@
 
 Every script's header states its own contract. The table is the index, not a restatement.
 
+**Code questions go to the graph, not to grep.** Where a symbol is, who calls it, what changes
+if it changes, and its verbatim source all come from one `mcp__plugin_harness-kit_codegraph__*`
+call — the index is pre-computed and its answer carries the blast radius, which a grep does not.
+Five roles hold it (architect, gate reviewer, developer, code reviewer, QA); the analyst and the
+orchestrator deliberately do not — one is barred from `file:line` anchoring and the other routes
+rather than reads code. It is a **dependency, not a precondition**: the server is a rented
+component and an unresolvable tool name is dropped silently, so every contract that holds it also
+holds `Read` / `Glob` / `Grep` and degrades to them. `verify_all` D.4 rejects a granted MCP tool
+name that no configured server provides — see `capability-audit.js`.
+
 **TypeScript.** Every `.harness/scripts/*.js` is implemented in `src/*.ts`, compiled to
 `.harness/scripts/` and committed; where a `.sh` / `.ps1` stands beside one it is a two-line
 launcher holding no logic. After editing `src/`: `npm run build`, then `npm test`, then copy any

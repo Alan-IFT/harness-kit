@@ -13,7 +13,16 @@
 import { describe, expect, it } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { auditContract, demandsOf, grantedTools, exemptions } from '../../src/capability-audit';
+import * as os from 'node:os';
+import {
+  auditContract,
+  auditMcpDir,
+  auditMcpGrants,
+  demandsOf,
+  exemptions,
+  grantedTools,
+  knownMcpTools,
+} from '../../src/capability-audit';
 
 const contract = (tools: string | null, body: string): string =>
   ['---', 'name: x', ...(tools === null ? [] : [`tools: ${tools}`]), '---', '', body].join('\n');
@@ -142,5 +151,83 @@ describe('the shipped contracts', () => {
       expect(granted?.has('Edit'), f).toBe(false);
       expect(granted?.has('Bash'), f).toBe(false);
     }
+  });
+});
+
+describe('granted MCP tool names', () => {
+  // The mirror direction, and the quieter one: an unresolvable name is DROPPED, the subagent
+  // starts, and the capability is simply absent. Nothing errors, so nothing is noticed.
+  const sandbox = (mcp: unknown, plugin: string | null): string => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-audit-test-'));
+    fs.writeFileSync(path.join(dir, '.mcp.json'), JSON.stringify(mcp));
+    if (plugin !== null) {
+      fs.mkdirSync(path.join(dir, '.claude-plugin'));
+      fs.writeFileSync(path.join(dir, '.claude-plugin', 'plugin.json'), JSON.stringify({ name: plugin }));
+    }
+    return dir;
+  };
+  const cfg = {
+    mcpServers: { codegraph: { env: { CODEGRAPH_MCP_TOOLS: 'explore,node,status' } } },
+  };
+
+  it('addresses a plugin server as mcp__plugin_<plugin>_<server>__<tool>', () => {
+    const root = sandbox(cfg, 'harness-kit');
+    const known = knownMcpTools(root);
+    expect(known.servers).toContain('plugin_harness-kit_codegraph');
+    expect(known.tools).toContain('mcp__plugin_harness-kit_codegraph__codegraph_explore');
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  it('rejects the bare mcp__<server>__<tool> form the migration brief specifies', () => {
+    const root = sandbox(cfg, 'harness-kit');
+    const f = auditMcpGrants('dev', contract('Read, mcp__codegraph__codegraph_explore', 'x'), knownMcpTools(root));
+    expect(f).toHaveLength(1);
+    expect(f[0]?.reason).toBe('unknown-server');
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  it('rejects a tool the server does not publish', () => {
+    const root = sandbox(cfg, 'harness-kit');
+    const g = 'Read, mcp__plugin_harness-kit_codegraph__codegraph_callers';
+    const f = auditMcpGrants('dev', contract(g, 'x'), knownMcpTools(root));
+    expect(f[0]?.reason).toBe('unknown-tool');
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  it('rejects the short tool name, which omits the server prefix inside it', () => {
+    const root = sandbox(cfg, 'harness-kit');
+    const f = auditMcpGrants('dev', contract('Read, mcp__plugin_harness-kit_codegraph__explore', 'x'), knownMcpTools(root));
+    expect(f[0]?.reason).toBe('unknown-tool');
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  it('accepts a server-level grant, which names no single tool', () => {
+    const root = sandbox(cfg, 'harness-kit');
+    const known = knownMcpTools(root);
+    expect(auditMcpGrants('dev', contract('Read, mcp__plugin_harness-kit_codegraph', 'x'), known)).toEqual([]);
+    expect(auditMcpGrants('dev', contract('Read, mcp__plugin_harness-kit_codegraph__*', 'x'), known)).toEqual([]);
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  it('says nothing about the tools of a server that publishes no list', () => {
+    // Silence beats a false accusation: an unknown tool set cannot disprove a name.
+    const root = sandbox({ mcpServers: { other: {} } }, 'harness-kit');
+    const known = knownMcpTools(root);
+    expect(known.tools.size).toBe(0);
+    expect(auditMcpGrants('dev', contract('Read, mcp__plugin_harness-kit_other__anything', 'x'), known)).toEqual([]);
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  it('leaves non-MCP tools and an inheriting contract alone', () => {
+    const root = sandbox(cfg, 'harness-kit');
+    const known = knownMcpTools(root);
+    expect(auditMcpGrants('dev', contract('Read, Write, Bash', 'x'), known)).toEqual([]);
+    expect(auditMcpGrants('dev', contract(null, 'x'), known)).toEqual([]);
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  it('is clean against this repo — every granted codegraph name resolves', () => {
+    const repo = path.resolve(__dirname, '../..');
+    expect(auditMcpDir(path.join(repo, 'agents'), repo)).toEqual([]);
   });
 });

@@ -164,6 +164,25 @@ v0.30 起框架 agent 由 plugin 提供（`harness-kit:<name>`），不再拷贝
 
 Claude Code 5 小时额度用完？切到 VS Code + GitHub Copilot 继续，额度恢复后切回。任务状态全部持久化在文件里（`docs/tasks.md`、`docs/features/<task>/`、`PM_LOG.md`），不在会话记忆里 — resume 只需要读这些文件。两个工具的 binding 都包含 `.harness/rules/60-tool-handoff.md` 定义的切换协议。
 
+### 代码理解能力：租用而非自建（可选）
+
+五个角色 —— 架构师、准入评审员、开发、代码评审员、测试 —— 可以向一张预先算好的代码图谱提问：
+某个符号在哪、谁调用它、改它会波及什么，而不必满仓库 grep。它以 MCP server 的形式接在插件根
+目录的 `.mcp.json` 里，**遥测与每日版本检查都已关闭** —— 任何一个不关，等于替用户做了对外上报
+的决定。
+
+**它是依赖，不是前置条件。** 自行安装 [CodeGraph](https://github.com/entrepeneur4lyf/codegraph)
+（`npm i -g @entrepeneur4lyf/codegraph`）并在项目里跑 `codegraph init`；不装也可以，那五份契约
+会退回 `Read` / `Glob` / `Grep`，因为解析不到的 MCP 工具名会被静默丢弃。`verify_all` D.4 会对
+「授予了一个没有任何已配置 server 提供的工具名」判 FAIL，所以这些授权不会烂成无声的空操作。
+
+安装前先算磁盘：CLI 本体 **283 MB**（原生内核 + WASM 语法），外加每个仓库一份 SQLite 索引。
+本仓实测（排除分发副本后 24 个源文件）索引 **2.1 MB**；一个 1,500 文件的项目实测 180 MB、双核
+下墙钟不到 4 分钟。它按项目起 daemon，**只索引本地目录**，零 LLM、零 embedding、零外部网络调用。
+
+一条明写出来而不是藏起来的依赖风险：CodeGraph 是 MIT，但提交历史里 89% 出自同一位作者。MIT 意味
+着真出问题可以 vendor 兜底；harness-kit 自己的护栏没有一处依赖它。
+
 ### 三层回归测试
 
 - `verify_all`（35 项检查）— 仓库本身健康度

@@ -164,6 +164,30 @@ Single developer mode available for small projects.
 
 Hit Claude Code's rate limit mid-task? Switch to GitHub Copilot in VS Code and keep going. Switch back when quota refreshes. All task state lives in files (`docs/tasks.md`, `docs/features/<task>/`, `PM_LOG.md`), not in chat memory — so resume is just reading those files. Both tools' bindings include `.harness/rules/60-tool-handoff.md` which defines the resume protocol.
 
+### Code intelligence, rented not built (optional)
+
+Five roles — architect, gate reviewer, developer, code reviewer, QA — can ask a pre-computed
+code graph where a symbol is, who calls it, and what breaks if it changes, instead of grepping
+the repository. It is wired as an MCP server in the plugin-root `.mcp.json`, with telemetry and
+the daily update check switched **off**: leaving either on would decide an outbound report on
+the user's behalf.
+
+**It is a dependency, not a precondition.** Install [CodeGraph](https://github.com/entrepeneur4lyf/codegraph)
+yourself (`npm i -g @entrepeneur4lyf/codegraph`) and run `codegraph init` in your project; skip
+it and every one of those five contracts falls back to `Read` / `Glob` / `Grep`, because an MCP
+tool name that resolves to nothing is dropped silently. `verify_all` D.4 fails on a granted tool
+name no configured server provides, so the grants cannot rot into a silent no-op.
+
+Budget before you install: **283 MB** for the CLI (native kernel + WASM grammars), plus a
+per-repository SQLite index. Measured on this repo — 24 source files after excluding the
+distribution copies — the index is **2.1 MB**; a 1,500-file project measured 180 MB and took
+under 4 minutes of wall clock on two cores. It runs a per-project daemon, indexes **local
+directories only**, and makes zero LLM, embedding or network calls.
+
+One dependency risk, stated rather than buried: CodeGraph is MIT but its commit history is 89%
+one author. MIT means it can be vendored if that becomes a problem; nothing in harness-kit's own
+guardrails depends on it.
+
 ### Three layers of regression testing
 
 - `verify_all` (35 checks) — repo health

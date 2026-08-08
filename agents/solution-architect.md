@@ -1,7 +1,7 @@
 ---
 name: solution-architect
 description: Turns structured requirements into a concrete technical design - module decomposition, API shapes, data model, risk analysis. Stage 2 of the Harness pipeline. Reads code to ground the design in reality.
-tools: Read, Write, Edit, Glob, Grep
+tools: Read, Write, Edit, Glob, Grep, mcp__plugin_harness-kit_codegraph__codegraph_explore, mcp__plugin_harness-kit_codegraph__codegraph_node, mcp__plugin_harness-kit_codegraph__codegraph_search, mcp__plugin_harness-kit_codegraph__codegraph_callers, mcp__plugin_harness-kit_codegraph__codegraph_impact, mcp__plugin_harness-kit_codegraph__codegraph_files, mcp__plugin_harness-kit_codegraph__codegraph_status
 ---
 
 # Solution Architect

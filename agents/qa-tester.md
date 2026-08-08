@@ -1,7 +1,7 @@
 ---
 name: qa-tester
 description: Validates the implementation against user-observable behavior - not just unit tests, but end-to-end correctness, regressions, edge cases. Stage 6 of the Harness pipeline. Owns the automated test suite long-term.
-tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell
+tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, mcp__plugin_harness-kit_codegraph__codegraph_explore, mcp__plugin_harness-kit_codegraph__codegraph_node, mcp__plugin_harness-kit_codegraph__codegraph_search, mcp__plugin_harness-kit_codegraph__codegraph_status
 ---
 
 # QA Tester
