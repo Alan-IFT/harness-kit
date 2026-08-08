@@ -5,6 +5,111 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.48.0] - 2026-08-08
+
+### Changed — v2 migration, second landing: the schema binds, retrieval has a budget, and the rented layer reaches the roles
+
+Where 0.47.0 built the instruments, this release makes them bind. Its through-line is that
+**a rule with no reader is not a rule**, and every item below either gives one a reader or
+prices what it costs.
+
+#### The typed stage contract finally binds
+
+T-18 declared an exact section list per stage document and `requirement-analyst.md` said "never
+invent a section". Nothing read it back. Measured across 44 archived tasks plus the live one:
+**0/44** requirement documents and **0/43** designs used only their declared sections, and 115 of
+692 design headings were declared at all.
+
+`src/stage-schema.ts` makes the list machine-readable and gives every section its READERS — the
+roles that must obey it. `doc-query --for <role> --task <slug>` returns those sections verbatim,
+and the Developer and QA contracts now open with it. PM lints each document's shape at the stage
+boundary it already owns, because four of the six authoring roles hold no `Bash`.
+
+**An unrecognised heading is returned, not dropped.** A section is withheld only on a positive
+statement that another role owns it. That asymmetry is what let this ship against a corpus where
+nothing conforms — an off-schema document costs the saving, never the completeness — and it makes
+conformance an incentive rather than a precondition. Measured over 255 archived stage documents,
+role=developer: **1.17x** cheaper on off-schema documents, **3.67x** on the 9 that conform.
+
+`verify_all` D.6 reads the authoring contracts back and FAILs on divergence: the routing table and
+the schema tables are one fact written twice.
+
+#### Retrieval had no budget, and one query could destroy a context
+
+`doc-query --in stage <term>` searched all 7.4 MB of finished tasks with no ceiling on output:
+`rollback` returned **868 KB**, `baseline` **1.73 MB** — around 400k tokens. Worse than finding
+too little, because too little is visible.
+
+- A finished task is searchable by its `07_DELIVERY.md` (6.8 KB average, and the only part with a
+  cross-task reader); `--task <slug>` or `--archived` opens the rest. Same rule for `--list`.
+- A term search spends at most **32 KB** and reports what it did not print. It stops on a unit
+  boundary, always prints the first match however large — a budget that can return nothing reads
+  as "no such fact" — and names the flags that would narrow it.
+- Same class, found the same way: `CONTEXT.md` carries 42 glossary terms under one heading, so any
+  query matching any of them returned all 13.1 KB. The unit boundary is now the term.
+- `--doc <path-substring>` narrows to one store, so "query the insight index" is expressible:
+  `hook` cost 42.6 KB across five stores and costs 3.8 KB scoped.
+
+#### codegraph reaches the roles
+
+The MCP server was declared, the daemon was running, the index was 2.1 MB — and **no agent could
+reach it**. Five contracts now grant it per the permission matrix; the analyst and the
+orchestrator deliberately do not.
+
+The tool name is `mcp__plugin_harness-kit_codegraph__codegraph_<tool>`, verified against a live
+`tools/list` — the plugin prefix and the repeated server prefix are two independent ways to get it
+wrong, and **neither errors**: an unresolvable name is dropped, the subagent starts, the
+capability is absent. `capability-audit` (D.4) gained the mirror of its existing direction and now
+rejects a granted name no configured server provides, deriving the known set from `.mcp.json`
+rather than listing it.
+
+`codegraph.json` excludes the distribution tree — the first live `explore` returned every symbol
+twice, once from `src/` and once from its compiled copy under `templates/`.
+
+#### The bar became arithmetic
+
+`measure-context.sh` was modelling a whole-file read of a store the contracts had already moved to
+queries. Both patterns now print, the queried cost is measured, and the remaining distance is
+priced: current **23,556 tok**, minus **12,778** if stage documents conformed, minus **1,344** at
+the P4 agent-size target, leaving **9,435 tok** — under the 10,000 bar, conditionally and stated
+as such.
+
+That block first reported 892 tok OVER, and named the residue: `AI-GUIDE.md` read whole at every
+task start. Four of its nine sections were second copies of indexes that already exist — the
+script table, the document list, the agent list, the tool-flow modes. Each moved to the fragment
+whose read-trigger already fires for it (`40-locations.md`, `60-tool-handoff.md`). AI-GUIDE
+13,392 B -> 8,924 B.
+
+#### Cross-session task state, and two contracts that misinformed their agents
+
+- `.harness/state/<slug>.json` (`task-state.js`): stage, rollback counts, verdicts. The
+  three-rollbacks-at-one-stage rule stops resetting at session boundaries.
+- `pm-orchestrator.md` carried a private copy of the intervention keyword table that had gone
+  stale — an operator writing `ADD` hit the one agent that owns the pool and got the
+  unrecognized-keyword fallback. The copy is gone; `I.3` gained a byte arm.
+- The same contract told PM "You hold no `Bash`" at the insight-query step while granting it. PM
+  is the one role that can query on behalf of the four that cannot.
+
+#### Measured, not asserted: the hook latency
+
+`guard-rm` runs on every Bash tool call. The recorded figure was `0.01 s` from a single coarse
+run; re-derived over 60 runs per path it is **19 ms** (allow) and **20 ms** (block) — ON the
+brief's 20 ms ceiling, not at half of it. ~18 ms is Node's own start-up; the `bash` launcher adds
+~1 ms. `evals/measure-hook-latency.sh` re-derives it and exits non-zero above the ceiling. Both
+READMEs carry the table; the proposal keeps its original figure beside the correction.
+
+#### Declined, on the record
+
+The brief's "strip `_qa_note_*` prose from `baseline.json`" is declined in
+`.harness/rejected-decisions.md`: 19 operator obligations name those notes as their enumerating
+source, T-24 deliberately kept the pin-writing constraint in band with the key it constrains, and
+the file is on no always-read path — so the deletion buys no context and costs 19 provenance
+anchors.
+
+#### Gate and suite
+
+35 checks (D.6 added), 293 unit tests (231 -> 293).
+
 ## [0.47.0] - 2026-08-07
 
 ### Changed — v2 migration, first landing: a query layer, a TypeScript core, and two gates that close defect classes

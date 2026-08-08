@@ -2,7 +2,7 @@
 
 **English** · [简体中文](README.zh-CN.md)
 
-![version](https://img.shields.io/badge/version-0.47.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-35%2F35-brightgreen) ![test-init](https://img.shields.io/badge/test--init-316%2F316-brightgreen) ![integration](https://img.shields.io/badge/integration-90%2F90-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+![version](https://img.shields.io/badge/version-0.48.0-blue) ![verify_all](https://img.shields.io/badge/verify__all-35%2F35-brightgreen) ![test-init](https://img.shields.io/badge/test--init-316%2F316-brightgreen) ![integration](https://img.shields.io/badge/integration-90%2F90-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
 > **Harness Engineering toolkit for Claude Code** — a Claude Code Plugin (17 skills + 8 framework agents + project templates) that brings disciplined AI-driven development to fullstack and backend projects. **Claude-native** (the framework agents ship as plugin agents — no per-project copy).
 >
