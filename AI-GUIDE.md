@@ -41,7 +41,7 @@ Stack: Markdown (skills, agent definitions, docs) + TypeScript compiled to `.har
 - **`.harness/rejected-decisions.md`** — deliberately-declined requests/approaches + why (the fourth memory kind: declined options, distinct from truths / autonomy principles / glossary). Read it at a non-trivial decide-point before proposing a new approach/feature; append a record when something is deliberately declined. The habit is governed by `25-decision-policy.md`. Absent is fine — a convenience, not a gate.
 - **`.harness/operator-obligations.md`** — the release-gating **operator obligations** (the fifth memory kind: outstanding human duties). Each entry carries one step a human operator must perform on a host this repo's agents cannot reach, with its artifacts, pass observable, security marking, origin and discharge record. **The set is currently empty**: all 28 entries were retired by the v0.49.0 Windows removal, since every one of them named a `pwsh` step against an artifact that no longer exists. Not on any always-read path: read it before a release tag, and append a new obligation there with the next unused id — never into `.harness/scripts/baseline.json`, which pins numeric baselines only.
 
-Before declaring any task complete, run `.harness/scripts/verify_all` and confirm all 36 checks are green (36/36; the count grows with releases) — this is the gate, not a rule fragment.
+Before declaring any task complete, run `.harness/scripts/verify_all` and confirm all 37 checks are green (37/37; the count grows with releases) — this is the gate, not a rule fragment.
 
 If you add a new fragment to `.harness/rules/`, append a line above with its filename, a 1-line description, and the trigger condition.
 

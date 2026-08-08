@@ -18,7 +18,11 @@ step() {
     local id="$1" name="$2" status="$3" detail="${4:-}"
     case "$status" in
         PASS) echo "[$id] $name ... PASS" ;;
-        WARN) echo "[$id] $name ... WARN"; ((warns++)) ;;
+        # A WARN prints its detail for the same reason a FAIL does: every WARN in this file
+        # passes one (which file, over which cap, by how much), and dropping it left the
+        # reader a status word with nothing to act on. A warning you cannot act on is one you
+        # learn to scroll past.
+        WARN) echo "[$id] $name ... WARN"; [[ -n "$detail" ]] && echo "      $detail"; ((warns++)) ;;
         FAIL) echo "[$id] $name ... FAIL"; [[ -n "$detail" ]] && echo "      $detail"; ((errors++)) ;;
     esac
     report+=("$id|$name|$status")
@@ -751,6 +755,40 @@ if [[ -n "$i7_stale" ]]; then
     step "I.7" "Ignored INTERVENE supervision reports (WARN if >48h old on active task)" "WARN" "stale:$i7_stale"
 else
     step "I.7" "Ignored INTERVENE supervision reports (WARN if >48h old on active task)" "PASS"
+fi
+
+# I.8 — ACTIVE-task stage contracts within 500 lines AND 48 KB.
+#
+# `70-doc-size.md` has capped a stage doc at 500 lines since the rule was written, and until
+# v0.52.0 nothing checked it — the cap existed only as prose. Worse, it was the ONE cap in that
+# table with no byte arm, in the one document class the stage-4 opening actually pays for.
+# Measured across 302 archived stage documents: the median rate is 94 bytes per line, so
+# 500 lines already intended ~46 KB; and `03_GATE_REVIEW` for `guard-cmd-chain` passed the cap
+# at 475 lines while weighing 68.3 KB. Same wrong-unit hole the byte arms on I.1/I.3/I.4/I.5
+# close for every other document here.
+#
+# ACTIVE tasks only. The archive is history: 8 of its documents exceed the byte arm, and
+# re-litigating a delivered task is not what a gate is for.
+#
+# WARN, not FAIL. These are declared SOFT caps, and the document is in flight — failing the
+# repo gate on an over-length in-progress design pressures whoever hits it to cut content to
+# clear a build, which is the shape of decision this project reserves for a human.
+i8_over=""
+if [[ -d docs/features ]]; then
+    while IFS= read -r f; do
+        n=$(wc -l < "$f")
+        b=$(wc -c < "$f")
+        over=""
+        (( n > 500 )) && over="${n}L"
+        (( b > 49152 )) && over="${over:+$over/}$(( b / 1024 ))KB"
+        [[ -n "$over" ]] && i8_over="$i8_over ${f#docs/features/}:$over"
+    done < <(find docs/features -mindepth 2 -maxdepth 2 -type f -name '0[1-7]_*.md' \
+                  -not -name '*_RATIONALE.md' -not -path 'docs/features/_*' 2>/dev/null)
+fi
+if [[ -n "$i8_over" ]]; then
+    step "I.8" "Active-task stage contracts ≤500 lines and ≤48 KB" "WARN" "over cap:$i8_over"
+else
+    step "I.8" "Active-task stage contracts ≤500 lines and ≤48 KB" "PASS"
 fi
 
 # I.6 — Retired-claim guard (gap-tolerant since v0.18.0). Phrases that used to be

@@ -5,6 +5,65 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.52.0] - 2026-08-08
+
+### Fixed — the remaining lever was 3.5× overstated, and it was the wrong lever
+
+v0.50.0 and v0.51.0 both named stage-doc **conformance** as what stands between the stage-4
+opening and the 10,000-token bar, at **12,778 tok of a ~14,000 tok gap**. That figure came from
+applying `measure-stage-query.sh`'s measured **3.67×** to the Developer's `01+02+03` read.
+
+The 3.67× is real and it is about different documents. It is derived from the stage documents
+in the entire archive that conform — there are **nine**, and **not one is a `01` or a `02`**.
+They are two `03`s, two `04`s, two `05`s and three `06`s, from four tasks, three of which are
+the tasks that built this machinery. `02` alone is over half the quantity the factor was being
+applied to, and no `02` has ever conformed.
+
+What conformance changes is the **addressed fraction**, which the schema states exactly with no
+sample needed: `01` addresses **7 of 8** sections to the Developer, `02` **10 of 12**, `03`
+**2 of 5**. The requirement and the design are *written for the Developer* — routing them
+perfectly still delivers nearly all of them.
+
+| | tok |
+|---|---:|
+| Stage-4 opening today | 23,991 |
+| What perfect conformance withholds — **claimed** | 12,778 |
+| What perfect conformance withholds — **measured** | **3,697** |
+| Floor under perfect conformance | **20,294** — still 2× the bar |
+
+`measure-context.sh` now computes that bound live from the schema instead of carrying a
+cross-type extrapolation, so the section counts and the bound move together.
+
+### Added — the stage-doc cap gets a byte arm, and a checker
+
+The remaining term is document size, and the cap on it was **500 lines, no byte arm, and no
+check anywhere**. It had been prose since the rule was written.
+
+- **`70-doc-size.md`**: per-task stage doc is now **500 lines and 48 KB**. 48 KB is the byte
+  equivalent of the line cap that was already there — across 302 archived stage documents the
+  median rate is 94 bytes per line, so 500 lines already intended ~46 KB. Stating it in bytes
+  changes no intent; it stops `03_GATE_REVIEW` for `guard-cmd-chain` passing at **68.3 KB in
+  475 lines**. Same wrong-unit hole the table already names three times for other documents,
+  sitting on the one class the stage-4 opening actually pays for.
+- **`verify_all` I.8** enforces it on **active** tasks only (37 checks now). WARN, not FAIL:
+  these are declared soft caps and the document is in flight — failing the repo gate on an
+  over-length in-progress design pressures whoever hits it to cut content to clear a build.
+
+### Fixed — a WARN now says what tripped it
+
+`step()` printed the detail line for FAIL and dropped it for WARN, so every capacity warning in
+this file reported a status word and nothing to act on. I.8 found its first violation
+immediately: **T-24 `operator-obligation-home` at 510 lines** — a task marked `Delivered` in
+`docs/tasks.md` on 2026-08-02 whose stage docs never left `docs/features/`. That is the
+supervisor's own **AP-4, ALERT severity**, and nothing had reported it in six days. Archived via
+`archive-task`, and the `docs/tasks.md` row repointed.
+
+### Gate and suites
+
+37 checks, 336 unit tests, and all eight regression drivers green: test-init 379,
+test-real-project 90, test-harness-upgrade 93, test-guard-rm 87, test-verify-i6 50,
+test-supervisor 46, test-language 39, test-archive-task 186.
+
 ## [0.51.0] - 2026-08-08
 
 ### Added — P0's missing half: the control set is now RUN, and its answers are gated

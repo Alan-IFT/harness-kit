@@ -212,24 +212,49 @@ if [ -f .harness/scripts/doc-query.js ] && command -v node >/dev/null 2>&1; then
     # line is a measured quantity from this run, not an estimate of future work: the point is
     # that the remaining distance is arithmetic, so a change either moves it or does not.
     bar=$(awk -v c="$CPT" 'BEGIN{printf "%.0f", 10000*c}')
-    conform=$(awk -v a="$s4_addr" 'BEGIN{printf "%.0f", a/3.67}')
+
+    # THE CEILING CONFORMANCE CAN REACH, computed structurally rather than extrapolated.
+    #
+    # This block used to price one lever: "if 01/02/03 conformed (3.67x, measured)". That
+    # factor is real and it is about the wrong documents. `measure-stage-query.sh` derives it
+    # from the nine stage documents in the whole archive that conform — and NOT ONE of them is
+    # a 01 or a 02. They are two 03s, two 04s, two 05s and three 06s, from four tasks, three of
+    # which are the tasks that built this machinery. Applying it to a quantity made of 01+02+03
+    # extrapolated across document types, and 02 alone is over half that quantity.
+    #
+    # What conformance actually changes is the ADDRESSED FRACTION: how many of a document's
+    # declared sections the schema routes to this role. That is knowable exactly, from the
+    # schema, with no sample at all — and for the Developer it is nearly everything, because
+    # the requirement and the design are written FOR the developer:
+    #
+    #     01  7 of 8 sections addressed        02  10 of 12        03  2 of 5
+    #
+    # So a perfectly conforming 01+02+03 still reaches the Developer nearly whole. The section
+    # counts below are read live from the schema, so this bound moves when the routing does.
+    b01=$(node .harness/scripts/stage-schema.js --map 2>/dev/null | awk '/^01_/{f=1;next} /^$/{f=0} f&&/^  ##/{n++} END{print n+0}')
+    d01=$(node .harness/scripts/stage-schema.js --map --for developer 2>/dev/null | awk '/^01_/{f=1;next} /^$/{f=0} f&&/^  ##/{n++} END{print n+0}')
+    b02=$(node .harness/scripts/stage-schema.js --map 2>/dev/null | awk '/^02_/{f=1;next} /^$/{f=0} f&&/^  ##/{n++} END{print n+0}')
+    d02=$(node .harness/scripts/stage-schema.js --map --for developer 2>/dev/null | awk '/^02_/{f=1;next} /^$/{f=0} f&&/^  ##/{n++} END{print n+0}')
+    b03=$(node .harness/scripts/stage-schema.js --map 2>/dev/null | awk '/^03_/{f=1;next} /^$/{f=0} f&&/^  ##/{n++} END{print n+0}')
+    d03=$(node .harness/scripts/stage-schema.js --map --for developer 2>/dev/null | awk '/^03_/{f=1;next} /^$/{f=0} f&&/^  ##/{n++} END{print n+0}')
+    frac=$(awk -v a="$d01" -v b="$b01" -v c="$d02" -v d="$b02" -v e="$d03" -v f="$b03" \
+      'BEGIN{ if(b*d*f==0){print "1.00"} else {print (a/b*0.30 + c/d*0.57 + e/f*0.13)} }')
+    conformed=$(awk -v a="$s4_addr" -v f="$frac" 'BEGIN{printf "%.0f", a*f}')
+
     echo "  GAP TO THE BAR — ${bar} B is 10,000 tok at ${CPT} chars/token"
     row "  current" "$current"
-    row "  - if 01/02/03 conformed (3.67x, measured)" "$((s4_addr - conform))"
+    echo "      sections the schema addresses to the Developer: 01 ${d01}/${b01} · 02 ${d02}/${b02} · 03 ${d03}/${b03}"
+    row "  - the most perfect conformance can withhold" "$((s4_addr - conformed))"
     echo "  ---"
-    remaining=$((current - (s4_addr - conform)))
-    row "  would remain" "$remaining"
-    # Only one lever is priced, because only one is left. The P4 agent-slimming line used to
-    # sit here; it is retired rather than zeroed, because a line reading 0 B reads as headroom
-    # spent well when what it actually records is a lever that never moved this number. The
-    # contract shed $(( 8268 - dev )) B and the playbook it now Reads is ${pb} B — a relocation, not a
-    # saving, at the opening. What the split does buy is real but is not this metric: it is
-    # every dispatch that returns BLOCKED before reaching the deferred half, and eight
-    # contracts that no longer restate their own rules as adjectives.
+    remaining=$((current - (s4_addr - conformed)))
+    row "  floor under perfect conformance" "$remaining"
     if [ "$remaining" -gt "$bar" ]; then
-      row "  still over the bar by" "$((remaining - bar))"
-      echo "      The residue is AI-GUIDE.md + CLAUDE.md + 00-core.md, read whole at every task"
-      echo "      start. Nothing measured so far reduces it; naming it is the honest position."
+      row "  STILL over the bar by" "$((remaining - bar))"
+      echo "      Routing cannot close this. The requirement and the design are written FOR the"
+      echo "      Developer, so the schema addresses almost all of them to it however well they"
+      echo "      conform. What is left is DOCUMENT SIZE: median 02 is 35.4 KB, and its cap was"
+      echo "      500 lines with no byte arm until v0.52.0 — the wrong-unit hole that the caps"
+      echo "      table already names three times for other documents."
     else
       echo "      Under the bar. Re-measure live before claiming it."
     fi

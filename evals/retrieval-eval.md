@@ -89,6 +89,36 @@ read into the conversation** — `AI-GUIDE.md`, rule fragments, `insight-index.m
 > Baseline for that quantity is ~32,250 tok (see `evals/measure-context.sh`).
 > Secondary, exactly reproducible: the byte total of that ingest set falls ≥6×.
 
+### That bar is not reachable by routing either. Measured 2026-08-08.
+
+Two releases named stage-doc **conformance** as the remaining lever, at 12,778 tok of a ~14,000
+tok gap. That number was extrapolated, and the extrapolation crossed document types.
+
+`measure-stage-query.sh` derives its **3.67×** from the stage documents in the whole archive
+that conform. There are **nine**, and **not one of them is a `01` or a `02`** — they are two
+`03`s, two `04`s, two `05`s and three `06`s, drawn from four tasks, three of which are the
+tasks that built this machinery. The Developer's opening read is `01+02+03`, of which `02`
+alone is over half. A factor measured on `04/05/06` was being applied to documents that have
+never once conformed.
+
+What conformance actually changes is the **addressed fraction**, and that is knowable exactly
+from the schema with no sample at all:
+
+| Document | Sections | Addressed to the Developer |
+|---|---:|---:|
+| `01_REQUIREMENT_ANALYSIS` | 8 | **7** |
+| `02_SOLUTION_DESIGN` | 12 | **10** |
+| `03_GATE_REVIEW` | 5 | **2** |
+
+**The requirement and the design are written FOR the Developer**, so the routing addresses
+almost all of them to it however perfectly they conform. Measured: perfect conformance
+withholds **3,697 tok**, not 12,778, leaving a floor of **20,294 tok — still 2× the bar.**
+
+So the remaining term is not routing, it is **document size**. Median `02_SOLUTION_DESIGN` is
+35.4 KB and the largest is 125.3 KB. Its cap was *500 lines with no byte arm* and no checker at
+all until v0.52.0 — the same wrong-unit hole the caps table already names three times for other
+documents, sitting on the one class the stage-4 opening actually pays for.
+
 Re-measure the floor with the same command after P1 — the 7 deleted skills should move it
 to ~25,270.
 

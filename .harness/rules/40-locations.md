@@ -59,7 +59,7 @@ copy overwrites your fresh build with the stale template one — build, copy, th
 
 ## Verify before declaring done
 
-`.harness/scripts/verify_all` checks (36 checks, all must PASS — count grows with releases):
+`.harness/scripts/verify_all` checks (37 checks, all must PASS — count grows with releases):
 
 - No secrets / committed env files
 - `参考/` not tracked

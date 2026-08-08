@@ -17,7 +17,7 @@
 
 | ID | Slug | Outcome | Completed | Doc folder |
 |---|---|---|---|---|
-| T-24 | operator-obligation-home | Delivered v0.46.0 — release-gating operator obligations get one home | 2026-08-02 | `docs/features/operator-obligation-home/` |
+| T-24 | operator-obligation-home | Delivered v0.46.0 — release-gating operator obligations get one home | 2026-08-02 | `docs/features/_archived/operator-obligation-home/` |
 | T-23 | review-write-path | Delivered v0.46.0 (1 rollback) — the two review roles no longer name an output they cannot produce | 2026-08-02 | `docs/features/_archived/review-write-path/` |
 | T-22 | stage-model-tiering | **Delivered as a decline** (2 rollbacks) — model-swap declined, reasoning-effort deferred | 2026-08-02 | `docs/features/_archived/stage-model-tiering/` |
 | T-20 | harvest-wrapped-insight | Delivered v0.46.0 (3 rollbacks + 1 doc-correction return) — a wrapped `## Insight` bullet no longer loses continuation lines | 2026-08-01 | `docs/features/_archived/harvest-wrapped-insight/` |
