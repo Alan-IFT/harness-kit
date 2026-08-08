@@ -169,8 +169,8 @@ These are the questions that today force an agent to read `insight-index.md` (21
 |---|---|---|---|
 | R1 | What decision mode does this repo run, and what does it imply? | **Mode 2 (balanced)** — decide per `.harness/decision-rubric.md` Preset section, escalate the red lines, log each autonomous call. | `AI-GUIDE.md:27` |
 | R2 | How is the destructive-command guard overridden? | `HARNESS_ALLOW_OUTSIDE_RM=1` | `.harness/rules/75-safety-hook.md` |
-| R3 | Is guard-rm fail-open or fail-closed? | **fail-CLOSED** — and it is the one hook declared so in `hook-spec`. | `.harness/scripts/hook-spec.sh`; `AI-GUIDE.md:78` |
-| R4 | What is the declare-done gate for all non-trivial modes? | `verify_all` PASS **plus**, for 7-stage or goal mode, an `## Adversarial tests` section in `06_TEST_REPORT.md`. | `AI-GUIDE.md:106` |
+| R3 | Is guard-rm fail-open or fail-closed? | **fail-CLOSED** — and it is the one hook declared so in `hook-spec`. | `.harness/scripts/hook-spec.sh`; `.harness/rules/40-locations.md:28` |
+| R4 | What is the declare-done gate for all non-trivial modes? | `verify_all` PASS **plus**, for 7-stage or goal mode, an `## Adversarial tests` section in `06_TEST_REPORT.md`. | `AI-GUIDE.md:59` |
 | R5 | What happens after three rollbacks at the same stage? | Stop and ask the human. It is a hard rule, not a heuristic. | `agents/pm-orchestrator.md` |
 | R6 | What are the doc-size caps? | AI-GUIDE ≤200 lines **and** 20 KB; each rule fragment ≤200 lines; each agent ≤300 lines **and** 24 KB; insight-index ≤30 entries **and** 24 KB; `tasks.md` ≤300 lines **and** 24 KB. Four of the five carry a byte arm because the unit that is paid is bytes. All are gated at WARN, which exits 1 (see M3). | `.harness/rules/70-doc-size.md`; `verify_all` `I.1`–`I.5` |
 | R7 | Which agent is permitted to write production code? | `developer`, and only it. Reviewers hold no `Write`; the architect holds `Write` for design docs only. | `agents/developer.md` |

@@ -347,3 +347,27 @@
   and reads the pin file. One recurrence measures the design lever as having failed and makes a
   check justified.
 - **Origin:** T-24 `operator-obligation-home` (architect, OQ-8; developer stage 4).
+
+## baseline-json-prose-excision
+
+- **Request:** the v2 migration brief's P1 line item — `.harness/scripts/baseline.json` is 14.8 KB
+  of which ~90% is `_qa_note_*` prose; delete all of it and keep only numbers.
+- **Decision:** DECLINED as written. The prose is not the defect the brief describes.
+- **Why:** T-24 `operator-obligation-home` already excised the *obligations* out of those notes into
+  `.harness/operator-obligations.md`, and made two rulings that a blanket deletion would reverse.
+  **(a)** 19 obligation entries carry `Origin: … .harness/scripts/baseline.json:_qa_note_tNN` as
+  their **enumerating source**; deleting the notes leaves 19 provenance anchors pointing at nothing,
+  which is worse than the prose, because an obligation whose origin cannot be read is one nobody can
+  audit. **(b)** T-24 ruled explicitly that the *pin-writing constraint* — "only after (a)–(e) may a
+  PowerShell tally be recorded, transcribed from that run" — **stays in band with the key it
+  constrains**. A constraint on a key that lives away from the key is the failure
+  `stage-doc-summary-header` names, in the other direction.
+  Measured against the brief's own test: the file is on no always-read path (`evals/measure-context.sh`
+  places it in neither tier), so the deletion buys no context. It costs 19 anchors and one settled
+  ruling to buy repository bytes nothing pays for.
+- **Adopted instead:** nothing. The notes stay until something reads them wrongly.
+- **Re-surface condition:** the notes acquiring a *reader* that must not see prose — a check that
+  parses the file structurally, or an agent contract that instructs reading it whole. Either makes
+  the shape a real cost rather than an aesthetic one, and the excision can then be designed with the
+  19 anchors re-pointed at `docs/features/_archived/<slug>/` in the same change.
+- **Origin:** v2 migration, P1 line item, evaluated 2026-08-08.

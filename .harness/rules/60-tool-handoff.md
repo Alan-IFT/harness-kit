@@ -6,6 +6,21 @@ when a contributor uses a different IDE. Any AI agent reading this — Claude
 Code's PM Orchestrator, a Claude Code sub-agent, or GitHub Copilot — must
 follow this protocol to keep work continuous across tool switches.
 
+### Which flows are first-class
+
+The **7 framework agents (+ supervisor)** are provided by the harness-kit plugin as
+`harness-kit:<name>`; the top-level `agents/*.md` is the single source, edited directly with no
+sync step. Only project-specific partition `dev-*` agents live in `.harness/agents/`.
+
+- **Claude Code automatic sub-agent dispatch** — the supported flow. PM Orchestrator hands off
+  through stages 1 → 7 via the `Task` tool; no user intervention between stages.
+- **Non-Claude tools (Copilot / Cursor)** — **not first-class for the framework agents.** Since
+  v0.30 they are not materialised into a project's local `.harness/agents/`, so the old "read
+  `.harness/agents/<role>.md` and play the role manually" flow no longer works for them, and no
+  other tool has an equivalent dispatch API. A generated project still gives these tools its
+  rules, skills and partition `dev-*` agents; the multi-stage framework pipeline is a Claude
+  Code feature. The protocol below is what keeps a switch survivable anyway.
+
 ### Core principle
 
 **All task state lives in files, not in chat session memory.** The complete

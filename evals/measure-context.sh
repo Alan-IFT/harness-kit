@@ -30,10 +30,18 @@ row() { printf "  %-46s %9s KB  ~%7s tok\n" "$1" "$(kb "$2")" "$(tok "$2")"; }
 
 # ---------------------------------------------------------------- 1. resident
 # TIER 1 — unconditional. Every session pays these, per CLAUDE.md + AI-GUIDE.md:22-23.
+#
+# `.harness/insight-index.md` was a TIER 1 member when this instrument was written and is not
+# one now: `.harness/rules/05-insight-index.md` says "never a whole-file read", and three
+# contracts carry the query form. The file is 20.6 KB and a scoped query over it is measured
+# below, so counting it whole overstates the opening by the difference. Both figures print —
+# the instrument states which access pattern it is modelling rather than picking one silently.
 tier1_files=(
   "CLAUDE.md"
   "AI-GUIDE.md"
   ".harness/rules/00-core.md"
+)
+queried_files=(
   ".harness/insight-index.md"
 )
 # TIER 2 — conditional. Loaded only when a stated trigger fires. AI-GUIDE.md is
@@ -50,6 +58,24 @@ tier2_files=(
 tier1_total=0; tier2_total=0
 rules_total=$(dirsz ".harness/rules")
 rules_rest=$((rules_total - $(sz ".harness/rules/00-core.md")))
+
+# What a queried store actually costs, measured rather than assumed. Terms are drawn from the
+# index's own entries so the probe is representative of a real lookup, and the MEDIAN is taken
+# because a query cost has a long tail — one broad term is not the typical case and one narrow
+# term is not either.
+queried_cost=0
+queried_whole=0
+for f in "${queried_files[@]}"; do queried_whole=$((queried_whole + $(sz "$f"))); done
+if command -v node >/dev/null 2>&1 && [ -f .harness/scripts/doc-query.js ]; then
+  qtmp=$(mktemp)
+  for term in verify_all placeholder hook template insight PowerShell; do
+    node .harness/scripts/doc-query.js --in memory --doc insight-index "$term" 2>/dev/null | wc -c >> "$qtmp"
+  done
+  sort -n "$qtmp" -o "$qtmp"
+  qn=$(wc -l < "$qtmp")
+  [ "$qn" -gt 0 ] && queried_cost=$(awk -v n="$qn" 'NR==int((n+1)/2){print $1}' "$qtmp")
+  rm -f "$qtmp"
+fi
 
 # ------------------------------------------------------- 2. agent dispatch cost
 agent_total=0
@@ -99,8 +125,9 @@ if [ "$JSON" = "1" ]; then
     "$agent_total" "$agent_n" "$agent_max"
   printf '"stage4_median_bytes":%d,"stage4_mean_bytes":%d,"stage4_max_bytes":%d,' \
     "$s4_median" "$s4_mean" "$s4_max"
-  printf '"archive_bytes":%d,"delivery_bytes":%d,"chars_per_token":%s}\n' \
-    "$archive_total" "$delivery_total" "$CPT"
+  printf '"archive_bytes":%d,"delivery_bytes":%d,' "$archive_total" "$delivery_total"
+  printf '"queried_whole_bytes":%d,"queried_cost_bytes":%d,"chars_per_token":%s}\n' \
+    "$queried_whole" "$queried_cost" "$CPT"
   exit 0
 fi
 
@@ -112,7 +139,11 @@ for f in "${tier1_files[@]}"; do row "$f" "$(sz "$f")"; done
 echo "  ---"
 row "TIER 1 TOTAL" "$tier1_total"
 echo
-echo "1b. TIER 2 — CONDITIONAL (only when a trigger fires)"
+echo "1b. QUERIED, NOT READ (the contracts forbid the whole-file read)"
+for f in "${queried_files[@]}"; do row "  $f whole" "$(sz "$f")"; done
+row "  one scoped query, median of 6 real terms" "$queried_cost"
+echo
+echo "1c. TIER 2 — CONDITIONAL (only when a trigger fires)"
 for f in "${tier2_files[@]}"; do row "$f" "$(sz "$f")"; done
 row ".harness/rules/ (12 remaining fragments)" "$rules_rest"
 echo "  ---"
@@ -135,13 +166,14 @@ row "  of which 02_SOLUTION_DESIGN (drop)" "$design_total"
 echo
 echo "=== P1 acceptance proxy ==="
 dev=$(sz agents/developer.md)
-opening=$((always_read + dev + s4_median))
-echo "  Developer stage-4 opening = tier1 + developer contract + 01/02/03 median"
-row "  tier 1 (unconditional)" "$always_read"
+legacy_tier1=$((always_read + queried_whole))
+opening=$((legacy_tier1 + dev + s4_median))
+echo "  LEGACY pattern — read every store and every upstream contract whole"
+row "  tier 1 + insight-index read whole" "$legacy_tier1"
 row "  developer.md" "$dev"
 row "  01+02+03 median" "$s4_median"
 echo "  ---"
-row "  STAGE-4 OPENING" "$opening"
+row "  STAGE-4 OPENING (legacy)" "$opening"
 echo
 
 # The Developer no longer reads 01/02/03 whole — its contract opens with
@@ -161,16 +193,39 @@ if [ -f .harness/scripts/doc-query.js ] && command -v node >/dev/null 2>&1; then
   an=$(wc -l < "$addr_tmp")
   if [ "$an" -gt 0 ]; then
     s4_addr=$(awk -v n="$an" 'NR==int((n+1)/2){print $1}' "$addr_tmp")
-    echo "  As the contract now reads it: 01/02/03 addressed to developer, n=${an}"
-    row "  01+02+03 addressed median" "$s4_addr"
-    row "  STAGE-4 OPENING (addressed)" "$((always_read + dev + s4_addr))"
+    current=$((always_read + queried_cost + dev + s4_addr))
+    echo "  AS THE CONTRACTS NOW SPECIFY IT — query the index, read the addressed sections"
+    row "  tier 1 (read whole)" "$always_read"
+    row "  one insight query (median)" "$queried_cost"
+    row "  developer.md" "$dev"
+    row "  01+02+03 addressed median, n=${an}" "$s4_addr"
+    echo "  ---"
+    row "  STAGE-4 OPENING (current)" "$current"
+    echo
+
+    # What still stands between the current figure and the bar, priced item by item. Every
+    # line is a measured quantity from this run, not an estimate of future work: the point is
+    # that the remaining distance is arithmetic, so a change either moves it or does not.
+    bar=$(awk -v c="$CPT" 'BEGIN{printf "%.0f", 10000*c}')
+    conform=$(awk -v a="$s4_addr" 'BEGIN{printf "%.0f", a/3.67}')
+    agent_target=3072
+    echo "  GAP TO THE BAR — ${bar} B is 10,000 tok at ${CPT} chars/token"
+    row "  current" "$current"
+    row "  - if 01/02/03 conformed (3.67x, measured)" "$((s4_addr - conform))"
+    row "  - if developer.md reached the 3 KB P4 target" "$(( dev > agent_target ? dev - agent_target : 0 ))"
+    echo "  ---"
+    remaining=$((current - (s4_addr - conform) - (dev > agent_target ? dev - agent_target : 0)))
+    row "  would remain" "$remaining"
+    if [ "$remaining" -gt "$bar" ]; then
+      row "  still over the bar by" "$((remaining - bar))"
+      echo "      The residue is AI-GUIDE.md + CLAUDE.md + 00-core.md, read whole at every task"
+      echo "      start. Nothing measured so far reduces it; naming it is the honest position."
+    else
+      echo "      Under the bar. Re-measure live before claiming it."
+    fi
   fi
   rm -f "$addr_tmp"
 fi
-echo
-echo "  Which lever is bigger, per task:"
-row "  §9 delete rules/ (once per session)" "$rules_total"
-row "  §8 handoff card replaces 01/02/03 (EVERY task)" "$s4_median"
 echo
 echo "  Brief's measured resident prompt: 60804 tok (live session, authoritative)"
 echo "  Target after P1:                  <10000 tok  (6.1x reduction)"
