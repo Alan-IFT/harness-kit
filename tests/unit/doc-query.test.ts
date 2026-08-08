@@ -91,8 +91,10 @@ describe('scopes', () => {
   const seed = (): void => {
     write('.harness/insight-index.md', ['# I', '', '- a WIDGET fact', '  continued'].join('\n'));
     write('.harness/rules/70-doc-size.md', ['# R', '', '## Widget caps', 'body'].join('\n'));
-    write('docs/features/_archived/task-a/02_SOLUTION_DESIGN.md', ['# D', '', '## Widget design', 'body'].join('\n'));
-    write('docs/features/_archived/task-b/02_SOLUTION_DESIGN.md', ['# D', '', '## Widget design', 'other'].join('\n'));
+    // Live tasks: an archived one is searchable only by its delivery record unless named,
+    // which the "archive is visible by its delivery record" suite covers separately.
+    write('docs/features/task-a/02_SOLUTION_DESIGN.md', ['# D', '', '## Widget design', 'body'].join('\n'));
+    write('docs/features/task-b/02_SOLUTION_DESIGN.md', ['# D', '', '## Widget design', 'other'].join('\n'));
   };
 
   it('searches every class by default', () => {
@@ -263,6 +265,77 @@ describe('--doc: narrowing to one store', () => {
     const r = invoke('--in', 'memory', '--doc', 'rejected', 'fact');
     expect(r.code).toBe(1);
     expect(r.out).toContain('Widen by dropping --doc');
+  });
+});
+
+describe('the archive is visible by its delivery record', () => {
+  // A bare `--in stage <term>` searched 7.4 MB of finished tasks and returned 1.4-1.7 MB.
+  // A finished task's cross-task reader is 07_DELIVERY.md; the other six are addressed to
+  // stages that have already run.
+  beforeEach(() => {
+    write('docs/features/_archived/old/07_DELIVERY.md', '## Summary\nthe widget shipped');
+    write('docs/features/_archived/old/02_SOLUTION_DESIGN.md', '## Architecture summary\nthe widget design');
+    write('docs/features/live/02_SOLUTION_DESIGN.md', '## Architecture summary\nthe widget in flight');
+  });
+
+  it('searches a live task whole and an archived task by its delivery record', () => {
+    const r = invoke('--in', 'stage', 'widget');
+    expect(r.out).toContain('the widget in flight');
+    expect(r.out).toContain('the widget shipped');
+    expect(r.out).not.toContain('the widget design');
+  });
+
+  it('opens the whole archived task when the query names it', () => {
+    expect(invoke('--in', 'stage', '--task', 'old', 'widget').out).toContain('the widget design');
+  });
+
+  it('opens the whole archive on --archived', () => {
+    expect(invoke('--in', 'stage', '--archived', 'widget').out).toContain('the widget design');
+  });
+
+  it('applies the same scope to --list, so the listing matches what is searched', () => {
+    const listed = invoke('--in', 'stage', '--list').out;
+    expect(listed).toContain('_archived/old/07_DELIVERY.md');
+    expect(listed).not.toContain('_archived/old/02_SOLUTION_DESIGN.md');
+  });
+});
+
+describe('the output budget', () => {
+  const big = (n: number): string => 'x'.repeat(n);
+
+  it('stops on a unit boundary and reports what it did not print', () => {
+    write('.harness/insight-index.md', ['- needle ' + big(400), '- needle ' + big(400)].join('\n'));
+    const r = invoke('--budget', '500', 'needle');
+    expect(r.code).toBe(0);
+    expect(r.out).toContain('1 of 2 units shown');
+    expect(r.out).toContain('--budget');
+  });
+
+  it('prints the first match however large, so a budget can never read as no-such-fact', () => {
+    write('.harness/insight-index.md', '- needle ' + big(5000));
+    const r = invoke('--budget', '100', 'needle');
+    expect(r.out).toContain(big(5000));
+    expect(r.out).not.toContain('units shown');
+  });
+
+  it('says nothing about a budget it did not reach', () => {
+    write('.harness/insight-index.md', '- needle');
+    expect(invoke('needle').out).not.toContain('budget');
+  });
+
+  it('--budget 0 removes the ceiling', () => {
+    write('.harness/insight-index.md', ['- needle ' + big(400), '- needle ' + big(400)].join('\n'));
+    expect(invoke('--budget', '0', 'needle').out).toContain('2 units match');
+    expect(invoke('--budget', '0', 'needle').out).not.toContain('units shown');
+  });
+
+  it('rejects a budget that is not a byte count', () => {
+    expect(invoke('--budget', 'lots', 'needle').code).toBe(2);
+  });
+
+  it('does not take the budget value as part of the term', () => {
+    write('.harness/insight-index.md', '- a fact');
+    expect(invoke('--budget', '4096', 'fact').code).toBe(0);
   });
 });
 

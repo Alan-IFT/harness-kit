@@ -81,7 +81,7 @@ Every script's header states its own contract. This is the index, not a restatem
 - `harness-sync.{ps1,sh}` — copy `.harness/agents/` + `.harness/skills/` into `.claude/`.
 - `sync-self.{ps1,sh}` — hold this repo dogfood scripts byte-identical with `templates/common/`. Does **not** sync `.harness/rules/` — those are bespoke per repo.
 - `archive-task.{ps1,sh}` — archive a completed task: harvest its `## Insight` section into `.harness/insight-index.md`, rotate past 30 entries into `docs/features/_archived/insight-history.md`, move the stage docs.
-- `doc-query.js` — return the UNITS of a document that answer a question, never the document: `--in memory|stage|rules` for a term, `--for <role> --task <slug>` for the stage-contract sections addressed to a role.
+- `doc-query.js` — return the UNITS of a document that answer a question, never the document: `--in memory|stage|rules` for a term, `--for <role> --task <slug>` for the stage-contract sections addressed to a role. A term search spends at most 32 KB and reports the units it did not print; a finished task is searchable by its `07_DELIVERY.md` until `--task <slug>` or `--archived` opens the rest of it.
 - `stage-schema.js` — which section of which stage contract each role reads (`--map`), whether a task's stage documents use only their declared sections (`--lint`), and whether the table still matches the authoring contracts (`--check`, `verify_all` D.6).
 - `task-state.js` — the per-task ledger (`.harness/state/<slug>.json`): stage, rollback counts, verdicts. PM writes; everyone else reads.
 - `capability-audit.js` — cross-check what each agent contract instructs against what its `tools:` line grants (`verify_all` D.4).

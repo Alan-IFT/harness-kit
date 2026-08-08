@@ -139,7 +139,9 @@ harness-kit/
 │   ├── hook-spec.ts                    ← (hook tool × target OS) → command byte-form
 │   ├── install-hooks.ts                ← pre-commit installer + settings.local.json bootstrap
 │   ├── doc-query.ts                    ← Return the UNITS of a document, never the document:
-│   │                                      `--in memory|stage|rules <term>` and `--for <role> --task <slug>`
+│   │                                      `--in memory|stage|rules <term>` and `--for <role> --task <slug>`.
+│   │                                      A term search is budgeted (32 KB, unit-boundary, reports the
+│   │                                      remainder); a finished task is searchable by its 07_DELIVERY.md
 │   ├── stage-schema.ts                 ← Which role reads which section of which stage contract:
 │   │                                      `--map` / `--lint` (PM runs it at each stage boundary) /
 │   │                                      `--check` (verify_all D.6, against the authoring contracts)

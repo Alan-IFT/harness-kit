@@ -46,7 +46,8 @@
  *   node .harness/scripts/doc-query.js --for <role> --task <slug>
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DOC_CLASSES = void 0;
+exports.DEFAULT_BUDGET = exports.DOC_CLASSES = void 0;
+exports.stageScopeAllows = stageScopeAllows;
 exports.splitUnits = splitUnits;
 exports.filesOf = filesOf;
 exports.query = query;
@@ -94,6 +95,44 @@ exports.DOC_CLASSES = [
         recursive: false,
     },
 ];
+/**
+ * What an archived task is still visible as, when the query did not ask for it.
+ *
+ * `docs/features/_archived/` holds 7.4 MB across 44 tasks. A bare `--in stage <term>` searched
+ * all of it and returned **1.4–1.7 MB** — around 400k tokens — for terms as ordinary as
+ * `rollback` or `baseline`. A retrieval tool whose failure mode is destroying the context of
+ * the agent that called it is worse than one that finds too little, and nothing in the tool
+ * said so.
+ *
+ * A finished task's cross-task reader is its delivery record: `07_DELIVERY.md` averages 6.8 KB
+ * and carries the verdicts, the rollback causes and the insight. The other six documents are
+ * addressed to the stages of a pipeline that has already finished. So an archived task is
+ * visible by its delivery record by default, and whole when the query names it — `--task
+ * <slug>` — or asks for the archive explicitly with `--archived`.
+ */
+function stageScopeAllows(rel, opts) {
+    if (!rel.includes('/_archived/'))
+        return true;
+    if (opts.archived === true)
+        return true;
+    if (opts.task !== undefined && rel.includes(`/${opts.task}/`))
+        return true;
+    return /07_DELIVERY\.md$/.test(rel);
+}
+/**
+ * Default byte budget for a TERM search.
+ *
+ * A budget is not a cap on what matched — it is a cap on what is printed in one answer, and
+ * the count of what was not printed is printed instead. Silence about the remainder would be
+ * the same defect in a different place: an agent cannot narrow a query it does not know was
+ * over-broad.
+ *
+ * 32 KB is ~9k tokens at the divisor `evals/measure-context.sh` uses — large enough that every
+ * arm of the 12-item MEM control set fits whole, small enough that no single query can consume
+ * a stage's opening budget. `--for` is exempt: it is a directed read of named sections, not a
+ * search, and truncating it would drop binding text.
+ */
+exports.DEFAULT_BUDGET = 32768;
 /** Split a document into units. Text before the first opener is the header and is dropped. */
 function splitUnits(content, opens) {
     const lines = content.split('\n');
@@ -155,6 +194,8 @@ function query(term, root, opts) {
     for (const cls of classes) {
         for (const rel of filesOf(cls, root)) {
             if (cls.scope === 'stage' && opts.task !== undefined && !rel.includes(`/${opts.task}/`))
+                continue;
+            if (cls.scope === 'stage' && !stageScopeAllows(rel, opts))
                 continue;
             if (opts.doc !== undefined && !rel.includes(opts.doc))
                 continue;
@@ -273,7 +314,7 @@ function run(argv, root, out) {
     const consumed = new Set();
     for (let i = 0; i < argv.length; i++) {
         const a = argv[i];
-        if (a === '--in' || a === '--task' || a === '--for' || a === '--doc') {
+        if (a === '--in' || a === '--task' || a === '--for' || a === '--doc' || a === '--budget') {
             consumed.add(i);
             consumed.add(i + 1);
         }
@@ -283,19 +324,28 @@ function run(argv, root, out) {
     }
     const term = argv.filter((_, i) => !consumed.has(i)).join(' ');
     if (flags.has('--list')) {
+        const listOpts = { task, archived: flags.has('--archived') };
         for (const cls of exports.DOC_CLASSES.filter((c) => scope === 'all' || c.scope === scope)) {
-            for (const f of filesOf(cls, root))
+            for (const f of filesOf(cls, root)) {
+                if (cls.scope === 'stage' && !stageScopeAllows(f, listOpts))
+                    continue;
                 out(`${cls.scope}\t${f}`);
+            }
         }
         return 0;
     }
     if (term === '') {
         out('usage: doc-query <term> [--in memory|stage|rules|all] [--doc <path-substring>]');
-        out('                         [--task <slug>] [--heading] [--files] [--list]');
+        out('                         [--task <slug>] [--archived] [--budget <bytes>]');
+        out('                         [--heading] [--files] [--list]');
         out('       doc-query --for <role> --task <slug>');
         out('');
         out('Returns whole UNITS — an insight entry, a decision record, a stage-doc section —');
         out('never a line window and never the whole document.');
+        out('');
+        out(`A term search prints at most ${exports.DEFAULT_BUDGET} bytes and says how many units it did`);
+        out('not print. An archived task is searchable by its 07_DELIVERY.md; --task <slug> or');
+        out('--archived opens the rest of it.');
         out('');
         out('--heading matches the unit\'s opening line only. Use it to ask WHICH SECTION IS X;');
         out('omit it to ask WHERE IS X MENTIONED. On stage documents the first is 6x cheaper.');
@@ -310,7 +360,15 @@ function run(argv, root, out) {
     }
     const docIdx = argv.indexOf('--doc');
     const doc = docIdx >= 0 ? argv[docIdx + 1] : undefined;
-    const hits = query(term, root, { scope, task, doc, heading: flags.has('--heading') });
+    const archived = flags.has('--archived');
+    const budgetIdx = argv.indexOf('--budget');
+    const budgetRaw = budgetIdx >= 0 ? argv[budgetIdx + 1] : undefined;
+    const budget = budgetRaw === undefined ? exports.DEFAULT_BUDGET : Number(budgetRaw);
+    if (!Number.isFinite(budget) || budget < 0) {
+        out('--budget takes a byte count; 0 means no budget.');
+        return 2;
+    }
+    const hits = query(term, root, { scope, task, doc, archived, heading: flags.has('--heading') });
     if (hits.length === 0) {
         // Naming what was searched is the point. A bare "no results" is indistinguishable from
         // having searched the wrong place, which is exactly how an unscoped search scores 0/12
@@ -325,12 +383,34 @@ function run(argv, root, out) {
             out('Widen with --in all.');
         return 1;
     }
+    const filesOnly = flags.has('--files');
     out(`${hits.length} unit${hits.length === 1 ? '' : 's'} match ${JSON.stringify(term)}:`);
+    let spent = 0;
+    let shown = 0;
     for (const hit of hits) {
+        // The budget is checked BEFORE printing, so truncation always lands on a unit boundary.
+        // Half a fact is worse than a named absence — that is the same property the whole-unit
+        // return exists for, applied to the answer as a whole.
+        // Everything printed for this hit counts, separator included, so the reported spend is the
+        // answer's real size rather than its body's.
+        const sep = `--- ${hit.file}:${hit.line}`;
+        const cost = Buffer.byteLength(sep) + 2 + (filesOnly ? 0 : Buffer.byteLength(hit.text) + 1);
+        // `shown > 0` guarantees the first match is always printed, however large it is. A budget
+        // that can return nothing reads as "no such fact", which is the failure an unscoped search
+        // already makes and the one this tool exists to stop making.
+        if (budget > 0 && shown > 0 && spent + cost > budget)
+            break;
+        spent += cost;
+        shown += 1;
         out('');
-        out(`--- ${hit.file}:${hit.line}`);
-        if (!flags.has('--files'))
+        out(sep);
+        if (!filesOnly)
             out(hit.text);
+    }
+    if (shown < hits.length) {
+        out('');
+        out(`# ${shown} of ${hits.length} units shown; ${spent} B of the ${budget} B budget spent.`);
+        out('# Narrow with --doc / --task / --heading, or raise it with --budget <bytes> (0 = none).');
     }
     return 0;
 }
