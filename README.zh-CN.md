@@ -164,6 +164,24 @@ v0.30 起框架 agent 由 plugin 提供（`harness-kit:<name>`），不再拷贝
 
 Claude Code 5 小时额度用完？切到 VS Code + GitHub Copilot 继续，额度恢复后切回。任务状态全部持久化在文件里（`docs/tasks.md`、`docs/features/<task>/`、`PM_LOG.md`），不在会话记忆里 — resume 只需要读这些文件。两个工具的 binding 都包含 `.harness/rules/60-tool-handoff.md` 定义的切换协议。
 
+### 破坏性命令护栏，以及它的代价
+
+`guard-rm` 是挂在每一次 Bash 工具调用上的 `PreToolUse` hook：它解析命令 —— 包括 `xargs`、
+`bash -c`、`find -exec` 和进程替换 —— 并拦截指向工作目录 `.git/` 祖先之外的破坏性动词。它是
+**fail-CLOSED** 的：node 缺失会让 launcher 非零退出，那就是一次拦截。
+
+因为它每次调用都跑，启动开销是每个任务都要交的税，所以这个数字是实测的而不是断言的 ——
+`bash evals/measure-hook-latency.sh` 会重新测一遍，超过 20 ms 天花板即非零退出：
+
+| 路径 | 中位数 | 均值 | 最小 | 最大 |
+|---|---:|---:|---:|---:|
+| allow（无害命令） | **19 ms** | 19.2 ms | 16 ms | 29 ms |
+| block（走完整扫描器） | **20 ms** | 20.6 ms | 18 ms | 25 ms |
+
+每条路径 60 次，每次一个完整进程启动。其中约 18 ms 是 Node 自身的冷启动 —— 直接跑
+`node guard-rm.js` 实测 18 ms，`bash` launcher 只多约 1 ms。要再明显往下压就得发编译好的单
+二进制：每次调用省约 10 ms，代价是引入一套构建工具链。目前不做；等仪器报告超过天花板时再议。
+
 ### 代码理解能力：租用而非自建（可选）
 
 五个角色 —— 架构师、准入评审员、开发、代码评审员、测试 —— 可以向一张预先算好的代码图谱提问：

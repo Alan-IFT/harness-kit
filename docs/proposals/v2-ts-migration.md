@@ -19,6 +19,17 @@
 The latency figure is the one that could have vetoed this and did not: `guard-rm` runs on
 every Bash tool call, and Node starts faster than the 968-line shell scanner it replaces.
 
+> **Correction, measured 2026-08-08 over 60 runs per path** (`evals/measure-hook-latency.sh`,
+> which now re-derives this instead of citing it): the real cost is **19 ms median on the allow
+> path and 20 ms on the block path**, not 0.01 s. The original figure was taken from a coarse
+> single-run `time` and understated it by roughly half. The decision does not change — the
+> shell twin measured worse on the same box — but the margin does: the guard now sits **on**
+> the brief's 20 ms ceiling rather than comfortably under it. The launcher is not the cause;
+> `node guard-rm.js` invoked directly measures 18 ms, so ~18 ms is Node's own start-up and the
+> `bash` launcher adds ~1 ms. Getting materially below this needs the single-binary option the
+> brief lists, which trades a build toolchain for ~10 ms per call — not taken, and re-openable
+> the moment the instrument reports over the ceiling, which it exits non-zero to say.
+
 Node is already a hard dependency — Claude Code is a Node application — so requiring it
 costs nothing, while requiring `bash` *and* `pwsh` costs two implementations of everything.
 

@@ -164,6 +164,27 @@ Single developer mode available for small projects.
 
 Hit Claude Code's rate limit mid-task? Switch to GitHub Copilot in VS Code and keep going. Switch back when quota refreshes. All task state lives in files (`docs/tasks.md`, `docs/features/<task>/`, `PM_LOG.md`), not in chat memory — so resume is just reading those files. Both tools' bindings include `.harness/rules/60-tool-handoff.md` which defines the resume protocol.
 
+### The destructive-command guard, and what it costs
+
+`guard-rm` is a `PreToolUse` hook on every Bash tool call: it parses the command — including
+`xargs`, `bash -c`, `find -exec` and process substitution — and blocks a destructive verb aimed
+outside the `.git/` ancestor of the working directory. It is **fail-CLOSED**: a missing `node`
+makes the launcher exit non-zero, which is a block.
+
+Because it runs on every call, its start-up cost is a tax on every task, so it is measured
+rather than asserted — `bash evals/measure-hook-latency.sh` re-derives it and exits non-zero
+above the 20 ms ceiling:
+
+| path | median | mean | min | max |
+|---|---:|---:|---:|---:|
+| allow (benign command) | **19 ms** | 19.2 ms | 16 ms | 29 ms |
+| block (full scanner walk) | **20 ms** | 20.6 ms | 18 ms | 25 ms |
+
+60 runs per path, one full process start each. Roughly 18 ms of that is Node's own start-up —
+invoking `node guard-rm.js` directly measures 18 ms, so the `bash` launcher adds about 1 ms.
+Going materially lower means shipping a compiled binary, which buys ~10 ms per call at the cost
+of a build toolchain; not taken, and re-openable when the instrument reports over the ceiling.
+
 ### Code intelligence, rented not built (optional)
 
 Five roles — architect, gate reviewer, developer, code reviewer, QA — can ask a pre-computed
