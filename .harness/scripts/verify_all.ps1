@@ -226,6 +226,18 @@ Step "D.5" "TypeScript unit suite" {
         return $false
     }
 }
+# D.6 — the stage-section routing table still agrees with the contracts that declare it.
+# See the bash twin: the section lists live in the authoring agents' schema tables, and this
+# reads them back so the duplication cannot drift silently.
+Step "D.6" "Stage-section routing matches the authoring contracts" {
+    if (-not (Test-Path ".harness/scripts/stage-schema.js")) { return $false }
+    $out = @(& node .harness/scripts/stage-schema.js --check 2>&1 | ForEach-Object { [string]$_ }) -join "`n"
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host ""
+        Write-Host $out -ForegroundColor Red
+        return $false
+    }
+}
 Step "E.1" "Layer 1: .harness/ matches templates/common/.harness/" {
     & (Join-Path $PSScriptRoot "sync-self.ps1") -Check
     if ($LASTEXITCODE -ne 0) { throw "Layer 1 drift — run .harness/scripts/sync-self.ps1 to fix" }

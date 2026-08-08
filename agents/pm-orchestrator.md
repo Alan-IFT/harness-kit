@@ -180,6 +180,7 @@ explicitly marks two partitions as independent.
 7. **Dispatch stages according to the mode** (see Modes table above), starting from the first stage required.
 8. After each stage:
    - Read the agent's output document.
+   - **Lint its shape** — `node .harness/scripts/stage-schema.js --lint --task <slug>`. An undeclared or missing section is a rollback to that stage's author, quoting the findings: four of the six authoring roles hold no `Bash` and cannot check themselves, and content under an invented heading reaches downstream roles addressed to no one. This is a shape check only — never a judgment on the content.
    - Check for `BLOCKED:` markers or rollback requests.
    - **Check `.harness/intervention.md` again** — consume + delete if present, apply its directive before deciding next route.
    - Decide: advance / rollback / stop.

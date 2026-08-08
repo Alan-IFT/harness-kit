@@ -208,3 +208,80 @@ describe('cli', () => {
     expect(invoke('anything').code).toBe(1);
   });
 });
+
+describe('--for: the addressed read', () => {
+  const gateReview = [
+    '> Contract portion. Rationale: 03_RATIONALE.md (absent = none written).',
+    '',
+    '## Dimension audit',
+    'audit body',
+    '',
+    '## Findings',
+    'findings body',
+    '',
+    '## Binding conditions',
+    'C-1 do the thing',
+    '',
+    '## Pre-answered developer questions',
+    'Q-1 answered',
+    '',
+    '## 9. Round-1 closure',
+    'invented section body',
+    '',
+    '## Verdict',
+    'APPROVED',
+  ].join('\n');
+
+  it('returns the addressed sections and withholds the ones addressed elsewhere', () => {
+    write('docs/features/t/03_GATE_REVIEW.md', gateReview);
+    const r = invoke('--for', 'developer', '--task', 't');
+    expect(r.code).toBe(0);
+    expect(r.out).toContain('C-1 do the thing');
+    expect(r.out).toContain('Q-1 answered');
+    expect(r.out).not.toContain('findings body');
+    expect(r.out).not.toContain('audit body');
+  });
+
+  it('returns an unrecognised section in full and names it', () => {
+    write('docs/features/t/03_GATE_REVIEW.md', gateReview);
+    const r = invoke('--for', 'developer', '--task', 't');
+    expect(r.out).toContain('invented section body');
+    expect(r.out).toContain('not in the declared schema');
+    expect(r.out).toContain('"9. Round-1 closure"');
+  });
+
+  it('keeps a subheading with the section that addresses it', () => {
+    write('docs/features/t/03_GATE_REVIEW.md', ['## Binding conditions', '### C-1', 'detail'].join('\n'));
+    expect(invoke('--for', 'developer', '--task', 't').out).toContain('### C-1');
+  });
+
+  it('skips a document with no in-pipeline consumer', () => {
+    write('docs/features/t/07_DELIVERY.md', '## Summary\nx');
+    write('docs/features/t/PM_LOG.md', '## Round 1\nx');
+    write('docs/features/t/03_GATE_REVIEW.md', gateReview);
+    const r = invoke('--for', 'developer', '--task', 't');
+    expect(r.out).not.toContain('07_DELIVERY');
+    expect(r.out).not.toContain('PM_LOG');
+  });
+
+  it('reads an archived task as readily as a live one', () => {
+    write('docs/features/_archived/t/03_GATE_REVIEW.md', gateReview);
+    expect(invoke('--for', 'developer', '--task', 't').code).toBe(0);
+  });
+
+  it('refuses without a task, because addressing is per task', () => {
+    const r = invoke('--for', 'developer');
+    expect(r.code).toBe(2);
+    expect(r.out).toContain('--task');
+  });
+
+  it('refuses an unknown role rather than returning nothing', () => {
+    expect(invoke('--for', 'nobody', '--task', 't').code).toBe(2);
+  });
+
+  it('reports that the task has no stage contract instead of printing an empty read', () => {
+    const r = invoke('--for', 'developer', '--task', 'absent');
+    expect(r.code).toBe(1);
+    expect(r.out).toContain('No stage contract');
+  });
+});

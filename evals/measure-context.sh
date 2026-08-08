@@ -143,6 +143,31 @@ row "  01+02+03 median" "$s4_median"
 echo "  ---"
 row "  STAGE-4 OPENING" "$opening"
 echo
+
+# The Developer no longer reads 01/02/03 whole — its contract opens with
+# `doc-query --for developer`, which returns the sections addressed to it and returns any
+# heading the schema does not recognise. So the figure above is the LEGACY pattern, and this
+# one is what the current contract costs. The gap between them is conformance, nothing else:
+# `evals/measure-stage-query.sh` splits the same corpus by whether a document obeys its schema.
+if [ -f .harness/scripts/doc-query.js ] && command -v node >/dev/null 2>&1; then
+  addr_tmp=$(mktemp)
+  for d in docs/features/_archived/*/ docs/features/*/; do
+    slug=$(basename "$d")
+    case "$slug" in _archived|_supervision|_template) continue;; esac
+    node .harness/scripts/doc-query.js --for developer --task "$slug" --files 2>/dev/null |
+      awk '/^--- /{ gsub(/[(,]/,"",$0); if ($2 ~ /0[123]_/) a+=$5 } END{ if (a>0) print a }' >> "$addr_tmp"
+  done
+  sort -n "$addr_tmp" -o "$addr_tmp"
+  an=$(wc -l < "$addr_tmp")
+  if [ "$an" -gt 0 ]; then
+    s4_addr=$(awk -v n="$an" 'NR==int((n+1)/2){print $1}' "$addr_tmp")
+    echo "  As the contract now reads it: 01/02/03 addressed to developer, n=${an}"
+    row "  01+02+03 addressed median" "$s4_addr"
+    row "  STAGE-4 OPENING (addressed)" "$((always_read + dev + s4_addr))"
+  fi
+  rm -f "$addr_tmp"
+fi
+echo
 echo "  Which lever is bigger, per task:"
 row "  §9 delete rules/ (once per session)" "$rules_total"
 row "  §8 handoff card replaces 01/02/03 (EVERY task)" "$s4_median"

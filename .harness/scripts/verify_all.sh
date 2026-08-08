@@ -239,6 +239,26 @@ else
     step "D.5" "TypeScript unit suite" "WARN" "node_modules absent — run 'npm install' to gate the suite"
 fi
 
+# D.6 — the stage-section routing table still agrees with the contracts that declare it
+#
+# `src/stage-schema.ts` holds which role reads which section of which stage contract. The
+# section LISTS it routes are declared in the authoring agents' own `| Section | Shape |`
+# tables, so the two are the same fact written twice — the arrangement `stage-doc-summary-header`
+# names as the failure mode. This check reads the contracts back and rejects any divergence,
+# which is what makes the duplication safe rather than merely convenient.
+#
+# FAIL, not WARN: a section that drifted out of the table is one `doc-query --for` withholds
+# from a role that must obey it, and the withholding is silent.
+if [[ -f .harness/scripts/stage-schema.js ]] && command -v node >/dev/null 2>&1; then
+    if d6_out=$(node .harness/scripts/stage-schema.js --check 2>&1); then
+        step "D.6" "Stage-section routing matches the authoring contracts" "PASS"
+    else
+        step "D.6" "Stage-section routing matches the authoring contracts" "FAIL" "$d6_out"
+    fi
+else
+    step "D.6" "Stage-section routing matches the authoring contracts" "WARN" "stage-schema.js or node unavailable"
+fi
+
 # E.1 — Layer 1: templates/common/ → repo .harness/ + harness-sync
 if bash "$repo_root/.harness/scripts/sync-self.sh" --check &>/dev/null; then
     step "E.1" "Layer 1: .harness/ matches templates/common/.harness/" "PASS"

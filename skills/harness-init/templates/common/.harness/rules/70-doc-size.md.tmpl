@@ -105,6 +105,20 @@ row 8 — it lands in the contract as **current state**, and the separate fact *
 row 8. Row 10 is why no per-document summary header exists: a stage contract is the original
 binding text addressed directly to its consumers, never a distilled copy of a fuller body.
 
+**Every section is addressed to a role, and the section list is closed.** A schema nothing
+reads back binds nothing: measured on the project that ships this file, 0 of 44 archived
+requirement documents and 0 of 43 designs used only their declared sections, and 115 of 692
+design headings were declared at all. Three commands close that:
+
+- `node .harness/scripts/stage-schema.js --map [--for <role>]` — who reads which section.
+- `node .harness/scripts/doc-query.js --for <role> --task <slug>` — the sections of this
+  task's stage contracts that role must obey, verbatim. A section is withheld only when the
+  schema addresses it elsewhere; **an unrecognised heading is returned in full**, so an
+  off-schema document costs the saving, never the completeness. Measured over 255 archived
+  stage documents: 1.17x cheaper off-schema, **3.67x on the documents that conform**.
+- `node .harness/scripts/stage-schema.js --lint --task <slug>` — PM runs this at every stage
+  boundary. An invented heading is a rollback, because content under one is addressed to no one.
+
 **No stage document carries a changelog, round-record, or superseded-finding section.** On
 completing a rework round, a stage agent returns the round record — `round N · what changed · why ·
 which finding id` — to the PM in its final message, and the PM writes it into `PM_LOG.md`. The

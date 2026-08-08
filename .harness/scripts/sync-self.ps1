@@ -71,6 +71,7 @@ $mappings = @(
     @{ from = ".harness/scripts/guard-rm.js"; to = ".harness/scripts/guard-rm.js"; type = "file" }
     @{ from = ".harness/scripts/install-hooks.js"; to = ".harness/scripts/install-hooks.js"; type = "file" }
     @{ from = ".harness/scripts/doc-query.js"; to = ".harness/scripts/doc-query.js"; type = "file" }
+    @{ from = ".harness/scripts/stage-schema.js"; to = ".harness/scripts/stage-schema.js"; type = "file" }
     @{ from = ".harness/scripts/task-state.js"; to = ".harness/scripts/task-state.js"; type = "file" }
 )
 

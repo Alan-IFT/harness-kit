@@ -23,9 +23,11 @@
  * copy is one nothing keeps in sync, and that decline applies to every document class here.
  *
  * It also requires **no authoring change**. Stage documents already carry `## ` sections and
- * the memory stores already carry entries, so the unit boundary exists today. Marking each
- * section with its intended consumer would narrow results further, but it is a refinement,
- * not a precondition — which is what makes this shippable without touching seven contracts.
+ * the memory stores already carry entries, so the unit boundary exists today. The refinement
+ * this left open — marking each section with its intended consumer — has since landed in
+ * `stage-schema.ts` and is reached from here as `--for <role>`, which returns the sections of
+ * a task's stage contracts that the role must obey. It stayed a refinement rather than a
+ * precondition: a heading the schema does not recognise is still returned.
  *
  * ## Measured properties it exists to preserve
  *
@@ -41,15 +43,18 @@
  * Usage:
  *   node .harness/scripts/doc-query.js <term> [--in memory|stage|rules|all] [--task <slug>]
  *                                             [--files] [--list]
+ *   node .harness/scripts/doc-query.js --for <role> --task <slug>
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DOC_CLASSES = void 0;
 exports.splitUnits = splitUnits;
 exports.filesOf = filesOf;
 exports.query = query;
+exports.addressedRead = addressedRead;
 exports.run = run;
 const fs = require("node:fs");
 const path = require("node:path");
+const stage_schema_1 = require("./stage-schema");
 const MEMORY_FILES = new Set([
     '.harness/insight-index.md',
     '.harness/rejected-decisions.md',
@@ -162,6 +167,75 @@ function query(term, root, opts) {
     }
     return hits;
 }
+/**
+ * The sections of a task's stage contracts that `role` must obey.
+ *
+ * A `## ` section is the unit here, not the `^#{2,3} ` the term search uses: a `### `
+ * subheading is part of the section it sits under, and returning it separately would let a
+ * declared section arrive without the heading that addresses it.
+ */
+function addressedRead(root, role, task) {
+    const cls = exports.DOC_CLASSES.find((c) => c.scope === 'stage');
+    const out = [];
+    for (const rel of filesOf(cls, root)) {
+        if (!rel.includes(`/${task}/`))
+            continue;
+        const doc = path.basename(rel, '.md');
+        if ((0, stage_schema_1.specFor)(doc) === null)
+            continue; // PM_LOG and 07_DELIVERY have no downstream reader
+        let content;
+        try {
+            content = fs.readFileSync(path.join(root, rel), 'utf8');
+        }
+        catch {
+            continue;
+        }
+        const kept = [];
+        const droppedSections = [];
+        const undeclared = [];
+        for (const unit of splitUnits(content, /^## /)) {
+            const heading = (unit.text.split('\n')[0] ?? '').replace(/^##\s*/, '').trim();
+            const verdict = (0, stage_schema_1.select)(doc, heading, role);
+            if (verdict.undeclared)
+                undeclared.push(heading);
+            if (verdict.keep)
+                kept.push({ ...unit, file: rel });
+            else
+                droppedSections.push(heading);
+        }
+        if (kept.length > 0 || droppedSections.length > 0) {
+            out.push({ file: rel, kept, droppedSections, undeclared, wholeBytes: Buffer.byteLength(content) });
+        }
+    }
+    return out;
+}
+function runAddressed(root, role, task, out, filesOnly) {
+    const docs = addressedRead(root, role, task);
+    if (docs.length === 0) {
+        out(`No stage contract for task ${JSON.stringify(task)} under docs/features/.`);
+        return 1;
+    }
+    let whole = 0;
+    let addressed = 0;
+    for (const d of docs) {
+        const bytes = d.kept.reduce((n, u) => n + Buffer.byteLength(u.text) + 1, 0);
+        whole += d.wholeBytes;
+        addressed += bytes;
+        out('');
+        out(`--- ${d.file}  (${d.kept.length} section(s), ${bytes} of ${d.wholeBytes} bytes addressed to ${role}${d.droppedSections.length > 0 ? `; ${d.droppedSections.length} addressed elsewhere` : ''})`);
+        if (d.undeclared.length > 0) {
+            // Named, not hidden: an undeclared section was returned in full, so the reader is
+            // complete, but the document is off-schema and its author is the one who can fix it.
+            out(`    note: not in the declared schema, returned in full: ${d.undeclared.map((h) => `"${h}"`).join(', ')}`);
+        }
+        if (!filesOnly)
+            for (const u of d.kept)
+                out(u.text);
+    }
+    out('');
+    out(`# ${addressed} of ${whole} bytes addressed to ${role}${whole > 0 ? ` (${((addressed / whole) * 100).toFixed(0)}%)` : ''}`);
+    return 0;
+}
 function parseScope(argv) {
     const i = argv.indexOf('--in');
     const v = i >= 0 ? argv[i + 1] : undefined;
@@ -174,11 +248,25 @@ function run(argv, root, out) {
     const scope = parseScope(argv);
     const taskIdx = argv.indexOf('--task');
     const task = taskIdx >= 0 ? argv[taskIdx + 1] : undefined;
+    const forIdx = argv.indexOf('--for');
+    if (forIdx >= 0) {
+        const raw = argv[forIdx + 1];
+        const role = raw === undefined ? null : (0, stage_schema_1.resolveRole)(raw);
+        if (role === null) {
+            out(`--for takes a role. Known: ${stage_schema_1.ROLES.join(', ')}.`);
+            return 2;
+        }
+        if (task === undefined) {
+            out('--for needs --task <slug>: addressing is per task, not per repository.');
+            return 2;
+        }
+        return runAddressed(root, role, task, out, flags.has('--files'));
+    }
     // Positional terms only: drop flags and the values that belong to them.
     const consumed = new Set();
     for (let i = 0; i < argv.length; i++) {
         const a = argv[i];
-        if (a === '--in' || a === '--task') {
+        if (a === '--in' || a === '--task' || a === '--for') {
             consumed.add(i);
             consumed.add(i + 1);
         }
@@ -197,12 +285,17 @@ function run(argv, root, out) {
     if (term === '') {
         out('usage: doc-query <term> [--in memory|stage|rules|all] [--task <slug>]');
         out('                         [--heading] [--files] [--list]');
+        out('       doc-query --for <role> --task <slug>');
         out('');
         out('Returns whole UNITS — an insight entry, a decision record, a stage-doc section —');
         out('never a line window and never the whole document.');
         out('');
         out('--heading matches the unit\'s opening line only. Use it to ask WHICH SECTION IS X;');
         out('omit it to ask WHERE IS X MENTIONED. On stage documents the first is 6x cheaper.');
+        out('');
+        out('--for returns the sections of a task\'s stage contracts addressed to that role, in');
+        out('document order. A section is dropped only when the schema addresses it elsewhere;');
+        out('an unrecognised heading is returned. See `stage-schema.js --map`.');
         return 2;
     }
     const hits = query(term, root, { scope, task, heading: flags.has('--heading') });

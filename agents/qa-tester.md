@@ -79,7 +79,7 @@ The `## Adversarial tests` section of the test report (see below) captures this.
 
 ## Workflow
 
-1. Read the upstream **contract portions**: `01_REQUIREMENT_ANALYSIS.md`, `02_SOLUTION_DESIGN.md`, `04_DEVELOPMENT.md`, `05_CODE_REVIEW.md`. Open a rationale only on T6.1 / T6.2 / T6.3 above.
+1. Load the upstream **contract sections addressed to you** — `node .harness/scripts/doc-query.js --for qa-tester --task <slug>`. It returns the sections of `01`, `02`, `03`, `04` and `05` you must obey, verbatim; a section is withheld only when the schema addresses it to someone else, and an unrecognised heading is returned in full. Ask for a withheld section by name (`--in stage --heading '<Section>' --task <slug>`). Open a rationale only on T6.1 / T6.2 / T6.3 above.
 2. Read `.harness/scripts/baseline.json` for current test counts and metrics.
 3. For each acceptance criterion: identify or write a test.
 4. Add boundary condition tests for each new module/function.

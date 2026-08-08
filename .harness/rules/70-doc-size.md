@@ -106,6 +106,23 @@ row 8 — it lands in the contract as **current state**, and the separate fact *
 row 8. Row 10 is why no per-document summary header exists: a stage contract is the original
 binding text addressed directly to its consumers, never a distilled copy of a fuller body.
 
+**Every section is addressed to a role, and the section list is closed.** T-18 typed each stage
+document but gave the schema no reader, so nothing could tell whether a document obeyed it:
+0 of 44 archived `01`s and 0 of 43 `02`s used only their declared sections, and 115 of 692 `02`
+headings were declared at all. An invented section is now not *forbidden* — it is unreachable by
+the reader that needed it, the direction `stage-bloat-prohibitions-only` demands over a prohibition.
+
+- `stage-schema.js --map [--for <role>]` — who reads which section. The table lives in
+  `src/stage-schema.ts`, gated against the authoring contracts by `verify_all` D.6; restating it
+  anywhere is the `stage-doc-summary-header` failure.
+- `doc-query.js --for <role> --task <slug>` — the sections of a task's stage contracts that role
+  must obey, verbatim. A section is withheld only when the schema addresses it elsewhere; **an
+  unrecognised heading is returned in full**, so an off-schema document costs the saving, never the
+  completeness. Over 255 archived stage documents (`evals/measure-stage-query.sh`): 1.17x cheaper
+  off-schema, **3.67x on the 9 that conform**.
+- `stage-schema.js --lint --task <slug>` — PM runs it at every stage boundary; an invented heading
+  is a rollback.
+
 **No stage document carries a changelog, round-record, or superseded-finding section.** On
 completing a rework round, a stage agent returns the round record — `round N · what changed · why ·
 which finding id` — to the PM in its final message, and the PM writes it into `PM_LOG.md`. The
