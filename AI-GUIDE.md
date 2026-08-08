@@ -11,6 +11,7 @@ Stack: Markdown (skills, agent definitions, docs) + TypeScript compiled to `.har
 ## Source of truth (in this repo, version-controlled)
 
 - `agents/*.md` — the 7 framework agents + 1 auxiliary (supervisor), shipped **plugin-native** (auto-discovered, dispatched as `harness-kit:<name>`); this is the single source — edit here directly (no sync)
+- `.harness/playbooks/*.md` — one per agent: the procedure, output schema and worked examples that agent reads on dispatch. An agent contract is ≤3 KB because a subagent's system prompt IS its contract body; anything needed once per dispatch lives here instead
 - `.harness/rules/*.md` — rule fragments (project-specific dogfood rules)
 - `.harness/agents/*.md` — **only** project-specific partition `dev-*` agents (empty in this repo; partition agents live under `skills/harness-init/templates/<type>/.harness/agents/dev-*.md.tmpl`)
 - `skills/harness-init/templates/` — the distribution: what users get when they install the plugin

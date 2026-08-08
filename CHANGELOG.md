@@ -5,6 +5,63 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.50.0] - 2026-08-08
+
+### Changed — P4: the agent contracts are ≤3 KB, and the procedure moved to a playbook
+
+A subagent's system prompt **is** its `agents/<name>.md` body, so every byte in it is paid on
+every dispatch. The eight contracts held 93.5 KB of workflow, output schemas, dimension tables
+and worked examples. They now hold **23.0 KB** — identity, tool grants, 4–6 hard rules that
+survive every dependency being absent, retrieval discipline, and the verdict vocabulary the PM
+routes on. Nothing else.
+
+Everything else lives in `.harness/playbooks/<role>.md`, which the agent Reads as its first
+action. The contracts each carry a degradation clause naming the minimum document they still
+produce if the playbook is missing (an older project), so the split can never wedge a pipeline.
+
+- **`verify_all` I.3 is now a FAIL at 3072 bytes**, up from a WARN at 24 KB, and it grew a
+  second arm: an agent naming a playbook that does not exist fails the gate. A contract pointing
+  at a missing file is worse than one that never split — the agent loses the procedure *and* the
+  degradation clause never fires, because that clause is written for an older project, not for a
+  typo.
+- **`stage-schema --check` follows the table.** The `| Section | Shape |` tables moved with
+  everything else, so `--check` reads them back out of `.harness/playbooks/` instead of
+  `agents/`. A new unit test asserts the old location now reports `no-table` rather than passing
+  on an empty read — a gate that silently un-gates itself is the failure mode here.
+- **`upgrade-project.sh` gained stage S2b**, which refreshes the playbooks into an upgraded
+  project. It iterates what the *template* ships rather than a literal array, so a playbook added
+  upstream needs no second list. Four new assertions in `test-harness-upgrade` (89 → 93), two of
+  them on content rather than on the emitted line.
+
+### Measured — the slimming did not move the stage-4 opening, and the instrument now says so
+
+`evals/measure-context.sh` charges both `agents/developer.md` **and**
+`.harness/playbooks/developer.md` to the stage-4 opening. Under that honest accounting the
+figure is **23,991 tok**, against 23,747 before the split: the contract shed 1,451 tok and the
+playbook it now Reads costs 1,622. At the opening this is a **relocation, not a saving**, and
+reporting it any other way would have required not counting the read.
+
+What the split does buy is real and is not this metric: every dispatch that returns `BLOCKED`
+before reaching the deferred half pays nothing for it, and eight contracts stopped restating
+their own rules as adjectives — the "what good looks like" / "what bad looks like" pairs are
+deleted, not moved.
+
+The bar is a different lever. `measure-context.sh` prices **12,778 of the remaining ~14,000 tok
+against stage-doc conformance** — the `01+02+03` read is 17,563 tok of the 23,991. The
+P4 acceptance criterion the brief actually wrote (`每个 agents/*.md < 3 KB`) is met and gated;
+the 10,000-token bar is not, and no agent-file edit was ever going to reach it.
+
+`.harness/rejected-decisions.md` gains **`playbook-schema-second-file`**: splitting each playbook
+again so the output schema defers to write time was priced at 2.3% of the opening, and declined
+for adding a "which of my two playbooks is this" question to buy it.
+
+### Gate and suites
+
+35 checks, 288 unit tests, and all eight regression drivers green: test-init 379,
+test-real-project 90, test-harness-upgrade 93, test-guard-rm 87, test-verify-i6 50,
+test-supervisor 46, test-language 39, test-archive-task 186. `test-init` gained two assertions
+per project type: the eight playbooks land, and the developer one carries its schema.
+
 ## [0.49.0] - 2026-08-08
 
 ### Removed — Windows support

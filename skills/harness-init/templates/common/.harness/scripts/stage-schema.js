@@ -27,11 +27,13 @@
  * ORIGINAL section (so nothing needs keeping in sync, and `stage-doc-summary-header` does
  * not attach), and the routing is checkable rather than requested.
  *
- * Readers are declared HERE and not as a column in the agent contracts. A subagent's system
- * prompt is its contract's body, so a column that no authoring agent needs — the author
- * writes every section of its own schema regardless of who reads it — would be paid on every
- * dispatch to buy nothing. What the contracts do carry is the section list, and `--check`
- * gates this file against it, so the two cannot drift silently.
+ * Readers are declared HERE and not beside the section list. A subagent's system prompt is
+ * its agent file's body, so a column that no authoring agent needs — the author writes every
+ * section of its own schema regardless of who reads it — would be paid on every dispatch to
+ * buy nothing. The same argument moved the section list itself out of `agents/<role>.md` and
+ * into `.harness/playbooks/<role>.md` at P4: a schema table is needed once, when the document
+ * is written. `--check` gates this file against whichever file carries the table, so the two
+ * still cannot drift silently.
  *
  * ## Why an unknown heading is KEPT, not dropped
  *
@@ -46,7 +48,7 @@
  * Usage:
  *   node .harness/scripts/stage-schema.js --map [--for <role>]
  *   node .harness/scripts/stage-schema.js --lint --task <slug>
- *   node .harness/scripts/stage-schema.js --check          # repo-only: needs agents/*.md
+ *   node .harness/scripts/stage-schema.js --check          # needs .harness/playbooks/*.md
  * Exit: 0 clean, 1 findings, 2 usage error.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -343,8 +345,16 @@ function sectionsDeclaredBy(contract) {
     }
     return out;
 }
-/** Cross-check `STAGE_SCHEMA` against the contracts that declare the same lists. */
-function checkAgainstContracts(agentsDir) {
+/**
+ * Cross-check `STAGE_SCHEMA` against the documents that declare the same lists.
+ *
+ * Those lists used to live in `agents/<role>.md`. At the P4 slimming they moved to
+ * `.harness/playbooks/<role>.md`, because a subagent's system prompt IS its agent file and a
+ * schema table is only needed at the moment the document is written — not on every dispatch.
+ * The gate follows the table: whichever file carries the `| Section | Shape |` table is the
+ * file this reads back, so the two still cannot drift silently.
+ */
+function checkAgainstContracts(playbooksDir) {
     const findings = [];
     for (const spec of exports.STAGE_SCHEMA) {
         for (const s of spec.sections) {
@@ -353,7 +363,7 @@ function checkAgainstContracts(agentsDir) {
         }
         let contract;
         try {
-            contract = fs.readFileSync(path.join(agentsDir, `${spec.agent}.md`), 'utf8');
+            contract = fs.readFileSync(path.join(playbooksDir, `${spec.agent}.md`), 'utf8');
         }
         catch {
             findings.push({ doc: spec.doc, kind: 'contract-missing', section: `${spec.agent}.md` });
@@ -437,11 +447,11 @@ function run(argv, root, out) {
         return 1;
     }
     if (flags.has('--check')) {
-        const agentsDir = valueOf('--agents') ?? path.join(root, 'agents');
-        const findings = checkAgainstContracts(agentsDir);
+        const playbooksDir = valueOf('--playbooks') ?? path.join(root, '.harness', 'playbooks');
+        const findings = checkAgainstContracts(playbooksDir);
         if (findings.length === 0) {
             const n = exports.STAGE_SCHEMA.reduce((a, s) => a + s.sections.length, 0);
-            out(`${n} sections across ${exports.STAGE_SCHEMA.length} stage contracts; schema and contracts agree.`);
+            out(`${n} sections across ${exports.STAGE_SCHEMA.length} stage contracts; schema and playbooks agree.`);
             return 0;
         }
         for (const f of findings)
@@ -450,11 +460,11 @@ function run(argv, root, out) {
     }
     out('usage: stage-schema --map [--for <role>]');
     out('       stage-schema --lint --task <slug>');
-    out('       stage-schema --check [--agents <dir>]');
+    out('       stage-schema --check [--playbooks <dir>]');
     out('');
     out('--map   who reads which section of which stage contract');
     out('--lint  does a task\'s stage contracts use only their declared sections');
-    out('--check does this table still agree with the agent contracts that declare it');
+    out('--check does this table still agree with the playbooks that declare it');
     return 2;
 }
 if (require.main === module) {

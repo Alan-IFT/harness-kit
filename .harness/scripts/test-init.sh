@@ -190,6 +190,12 @@ test_type() {
         assert ".harness/agents/$p.md placeholder substituted" "! grep -qE '\{\{[A-Z_]+\}\}' '$tmp/.harness/agents/$p.md' && grep -q 'test-project' '$tmp/.harness/agents/$p.md'"
     done
     assert ".harness/rules/00-core.md (composed base)" "[[ -f '$tmp/.harness/rules/00-core.md' ]]"
+    # v0.50.0 — the eight stage playbooks. A fresh project without them runs every agent on its
+    # degradation clause, which is a floor for an un-upgraded project, not an acceptable init.
+    assert ".harness/playbooks/ has all 8 (P4 distribution)" \
+        "[[ \$(find '$tmp/.harness/playbooks' -maxdepth 1 -name '*.md' -type f 2>/dev/null | wc -l) -eq 8 ]]"
+    assert ".harness/playbooks/developer.md carries its output schema" \
+        "grep -q 'Insight to surface' '$tmp/.harness/playbooks/developer.md'"
     assert ".harness/rules/25-decision-policy.md (shipped, generic)" "[[ -f '$tmp/.harness/rules/25-decision-policy.md' ]]"
     assert ".harness/rules/25-decision-policy.md defaults to Mode 1" "grep -q 'Active mode: 1' '$tmp/.harness/rules/25-decision-policy.md'"
     assert ".harness/decision-rubric.md (shipped, generic)" "[[ -f '$tmp/.harness/decision-rubric.md' ]]"

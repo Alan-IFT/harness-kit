@@ -210,12 +210,23 @@ assert "A: verify_all.sh has no unsubstituted {{...}} (AC-4)" "$(echo "$va_conte
 assert "A: migrate-scripts-layout.sh present after upgrade (AC-9)" "$([[ -f "$a/.harness/scripts/migrate-scripts-layout.sh" ]] && echo 0 || echo 1)"
 assert "A: upgrade SUMMARY line emitted" "$(contains 'SUMMARY|added=' "$RUN_OUT" && echo 0 || echo 1)"
 
+# S2b (v0.50.0): the stage playbooks reach an upgraded project. Asserted on CONTENT, not on
+# the emitted line: an old fixture has no .harness/playbooks/ at all, so a stage that emitted
+# REFRESH and copied nothing would pass a log-only check and leave all eight agents running on
+# their degradation clause — the same shape as fixture Z's guard-rm launcher-without-runtime.
+assert "A: playbooks REFRESH emitted (S2b)" "$(contains 'REFRESH|.harness/playbooks/developer.md' "$RUN_OUT" && echo 0 || echo 1)"
+pb_n=$(find "$a/.harness/playbooks" -maxdepth 1 -name '*.md' -type f 2>/dev/null | wc -l)
+assert "A: all 8 playbooks landed on disk (S2b)" "$([[ "$pb_n" -eq 8 ]] && echo 0 || echo 1)"
+assert "A: developer playbook carries its output schema (S2b content, not just the file)" \
+    "$(contains 'Insight to surface' "$(cat "$a/.harness/playbooks/developer.md" 2>/dev/null)" && echo 0 || echo 1)"
+
 # --- Fixture A re-run: idempotence (AC-6) ---
 echo ""
 echo "--- Fixture A re-run: idempotence ---"
 invoke_upgrade "$a"
 assert "A2: 2nd run exits 0 (AC-6)" "$([[ "$RUN_CODE" -eq 0 ]] && echo 0 || echo 1)"
 assert "A2: 2nd run reports NOOP for verify_all (AC-6)" "$(contains 'NOOP|verify_all' "$RUN_OUT" && echo 0 || echo 1)"
+assert "A2: 2nd run reports NOOP for the playbooks (S2b idempotence)" "$(contains 'NOOP|.harness/playbooks/developer.md' "$RUN_OUT" && echo 0 || echo 1)"
 
 # --- Fixture B: dry-run leaves fixture unchanged (AC-7) ---
 echo ""

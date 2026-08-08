@@ -64,7 +64,14 @@ harness-kit/
 ├── agents/                              ← Plugin-native framework agents (v0.30+): 7 canonical
 │   │                                       + 1 auxiliary supervisor.md; auto-discovered, dispatched
 │   │                                       as harness-kit:<name>. SINGLE SOURCE — edit here, no sync.
+│   │                                       Each ≤3 KB (verify_all I.3); the procedure and output
+│   │                                       schema live in .harness/playbooks/<name>.md.
 ├── .harness/                            ← THIS repo's project SOT (dogfood)
+│   ├── playbooks/                      ← v0.50+: one per agent. The procedure, output schema and
+│   │                                      worked examples the agent Reads on dispatch, so its
+│   │                                      contract stays ≤3 KB. Mirrored from templates/common/
+│   │                                      by sync-self; stage-schema --check reads the section
+│   │                                      tables back out of here.
 │   ├── agents/                         ← partition dev-* agents ONLY (empty in this repo;
 │   │                                      framework agents moved to top-level agents/ at v0.30)
 │   ├── rules/                          ← repo-specific rule fragments

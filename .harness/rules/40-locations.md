@@ -4,7 +4,8 @@
 |---|---|
 | Distributed skills | `skills/<name>/SKILL.md` |
 | Project templates (distribution source of truth) | `skills/harness-init/templates/` |
-| Framework agent definitions (7 + supervisor) | plugin-native — top-level `agents/`, dispatched as `harness-kit:<name>` |
+| Framework agent definitions (7 + supervisor) | plugin-native — top-level `agents/`, dispatched as `harness-kit:<name>`. Each is ≤3 KB and carries identity, tool grants, 4–6 degradation-proof hard rules and its verdict vocabulary — nothing else (verify_all I.3) |
+| Stage playbooks — the procedure, output schema and worked examples each agent reads on dispatch | `.harness/playbooks/<role>.md` (distributed from `templates/common/`, mirrored by `sync-self`). A subagent's system prompt IS its agent file, so anything needed once per dispatch lives here instead of being resident in every one |
 | Partition agent definitions (`dev-*`, project-specific) | `.harness/agents/` (empty in this repo; templates under `skills/harness-init/templates/<type>/.harness/agents/`) |
 | Rule source files (this repo's source of truth) | `.harness/rules/` |
 | Stub CLAUDE.md (do not edit; ~15 lines, references AI-GUIDE.md) | `CLAUDE.md` |
@@ -29,7 +30,7 @@
 | Git pre-commit installer + `settings.local.json` bootstrap from `hook-spec` | `.harness/scripts/install-hooks.sh` — never overwrites an existing file |
 | Task archive + insight harvest / rotation | `.harness/scripts/archive-task.sh` |
 | Return the UNITS of a document that answer a question, never the document | `.harness/scripts/doc-query.js` — `--in memory\|stage\|rules [--doc <path>] <term>` for a term, `--for <role> --task <slug>` for the stage-contract sections addressed to a role. A term search spends ≤32 KB and reports what it did not print; a finished task is searchable by its `07_DELIVERY.md` until `--task` / `--archived` opens the rest |
-| Which role reads which section of which stage contract | `.harness/scripts/stage-schema.js` — `--map`, `--lint --task <slug>` (PM runs it at every stage boundary), `--check` (verify_all D.6) |
+| Which role reads which section of which stage contract | `.harness/scripts/stage-schema.js` — `--map`, `--lint --task <slug>` (PM runs it at every stage boundary), `--check` (verify_all D.6) reads the `\| Section \| Shape \|` table back out of `.harness/playbooks/<role>.md` |
 | Per-task ledger: stage, rollback counts, verdicts | `.harness/scripts/task-state.js` → `.harness/state/<slug>.json`. PM writes; everyone else reads |
 | Contract instructions vs granted tools | `.harness/scripts/capability-audit.js` (verify_all D.4) |
 | Skill mechanical layers (`entropy-cadence`, `ambient-prompt`, `ambient-reset`, `language-policy`, `upgrade-project`, `migrate-scripts-layout`) | `.harness/scripts/<name>.sh`, one per like-named skill |
@@ -51,7 +52,8 @@ name that no configured server provides — see `capability-audit.js`.
 `.harness/scripts/` and committed; where a `.sh` stands beside one it is a two-line
 launcher holding no logic. After editing `src/`: `npm run build`, then `npm test`, then copy any
 changed `.js` into `skills/harness-init/templates/common/.harness/scripts/` for the ones that
-ship. Rationale and the latency measurement that chose Node: `docs/proposals/v2-ts-migration.md`.
+ship. **The copy is that direction and `sync-self` runs the other**, so a `sync-self` before the
+copy overwrites your fresh build with the stale template one — build, copy, then sync. Rationale and the latency measurement that chose Node: `docs/proposals/v2-ts-migration.md`.
 
 ## Verify before declaring done
 

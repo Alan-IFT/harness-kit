@@ -166,11 +166,15 @@ row "  of which 02_SOLUTION_DESIGN (drop)" "$design_total"
 echo
 echo "=== P1 acceptance proxy ==="
 dev=$(sz agents/developer.md)
+# P4 moved the procedure and the output schema out of the contract and into a playbook the
+# agent Reads as its first action. Both are counted. Charging only the contract would report
+# a saving that is a relocation: the bytes still arrive in the same context, in the same turn.
+pb=$(sz .harness/playbooks/developer.md)
 legacy_tier1=$((always_read + queried_whole))
-opening=$((legacy_tier1 + dev + s4_median))
+opening=$((legacy_tier1 + dev + pb + s4_median))
 echo "  LEGACY pattern — read every store and every upstream contract whole"
 row "  tier 1 + insight-index read whole" "$legacy_tier1"
-row "  developer.md" "$dev"
+row "  developer.md + its playbook" "$((dev + pb))"
 row "  01+02+03 median" "$s4_median"
 echo "  ---"
 row "  STAGE-4 OPENING (legacy)" "$opening"
@@ -193,11 +197,12 @@ if [ -f .harness/scripts/doc-query.js ] && command -v node >/dev/null 2>&1; then
   an=$(wc -l < "$addr_tmp")
   if [ "$an" -gt 0 ]; then
     s4_addr=$(awk -v n="$an" 'NR==int((n+1)/2){print $1}' "$addr_tmp")
-    current=$((always_read + queried_cost + dev + s4_addr))
+    current=$((always_read + queried_cost + dev + pb + s4_addr))
     echo "  AS THE CONTRACTS NOW SPECIFY IT — query the index, read the addressed sections"
     row "  tier 1 (read whole)" "$always_read"
     row "  one insight query (median)" "$queried_cost"
-    row "  developer.md" "$dev"
+    row "  developer.md (contract, resident in every dispatch)" "$dev"
+    row "  .harness/playbooks/developer.md (read once, on dispatch)" "$pb"
     row "  01+02+03 addressed median, n=${an}" "$s4_addr"
     echo "  ---"
     row "  STAGE-4 OPENING (current)" "$current"
@@ -208,14 +213,19 @@ if [ -f .harness/scripts/doc-query.js ] && command -v node >/dev/null 2>&1; then
     # that the remaining distance is arithmetic, so a change either moves it or does not.
     bar=$(awk -v c="$CPT" 'BEGIN{printf "%.0f", 10000*c}')
     conform=$(awk -v a="$s4_addr" 'BEGIN{printf "%.0f", a/3.67}')
-    agent_target=3072
     echo "  GAP TO THE BAR — ${bar} B is 10,000 tok at ${CPT} chars/token"
     row "  current" "$current"
     row "  - if 01/02/03 conformed (3.67x, measured)" "$((s4_addr - conform))"
-    row "  - if developer.md reached the 3 KB P4 target" "$(( dev > agent_target ? dev - agent_target : 0 ))"
     echo "  ---"
-    remaining=$((current - (s4_addr - conform) - (dev > agent_target ? dev - agent_target : 0)))
+    remaining=$((current - (s4_addr - conform)))
     row "  would remain" "$remaining"
+    # Only one lever is priced, because only one is left. The P4 agent-slimming line used to
+    # sit here; it is retired rather than zeroed, because a line reading 0 B reads as headroom
+    # spent well when what it actually records is a lever that never moved this number. The
+    # contract shed $(( 8268 - dev )) B and the playbook it now Reads is ${pb} B — a relocation, not a
+    # saving, at the opening. What the split does buy is real but is not this metric: it is
+    # every dispatch that returns BLOCKED before reaching the deferred half, and eight
+    # contracts that no longer restate their own rules as adjectives.
     if [ "$remaining" -gt "$bar" ]; then
       row "  still over the bar by" "$((remaining - bar))"
       echo "      The residue is AI-GUIDE.md + CLAUDE.md + 00-core.md, read whole at every task"

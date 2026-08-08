@@ -523,24 +523,35 @@ else
     step "I.2" "Rule fragments ≤200 lines each" "PASS"
 fi
 
-# I.3 — Each plugin agents/*.md ≤300 lines AND ≤24576 bytes.
-# A subagent's system prompt IS this file's body, so the cost is paid on every dispatch
-# and it is paid in BYTES. A line cap cannot see line length: a 150-line contract of
-# 200-char paragraphs passes it while costing more than a 300-line one. Same wrong-unit
-# hole the byte arms on I.1/I.4/I.5 close.
+# I.3 — Each plugin agents/*.md ≤3072 bytes, and each names a playbook that exists.
+#
+# A subagent's system prompt IS this file's body, so the cost is paid on every dispatch and it
+# is paid in BYTES — a line cap cannot see line length, which is why the byte arm is the real
+# one here as on I.1/I.4/I.5. The cap was 24 KB and the contracts sat at 8–21 KB; at P4 the
+# procedure, output schema and worked examples moved to `.harness/playbooks/<name>.md`, read
+# once on dispatch instead of resident in every prompt, and the cap came down to 3 KB to hold
+# that. This is a FAIL, not a WARN: a contract creeping back past 3 KB is the exact regression
+# the split exists to prevent, and a WARN is a regression nobody blocks on.
+#
+# The second arm is what keeps the split honest. A contract that points at a playbook which
+# does not exist is worse than one that never split: the agent loses the procedure AND the
+# degradation clause never fires, because the clause is written for an older PROJECT, not for
+# a typo here.
 i3_over=""
+i3_dangling=""
 if [[ -d agents ]]; then
     while IFS= read -r f; do
-        n=$(wc -l < "$f")
-        (( n > 300 )) && i3_over="$i3_over $f:${n}L"
         b=$(wc -c < "$f")
-        (( b > 24576 )) && i3_over="$i3_over $f:${b}B"
+        (( b > 3072 )) && i3_over="$i3_over $(basename "$f"):${b}B"
+        while IFS= read -r pb; do
+            [[ -f ".harness/playbooks/$pb" ]] || i3_dangling="$i3_dangling $(basename "$f")->$pb"
+        done < <(grep -oE '\.harness/playbooks/[A-Za-z0-9._-]+\.md' "$f" | sed 's|.*/||' | sort -u)
     done < <(find agents -maxdepth 1 -name '*.md' -type f)
 fi
-if [[ -n "$i3_over" ]]; then
-    step "I.3" "Agent definitions ≤300 lines and ≤24 KB each" "WARN" "over cap:$i3_over"
+if [[ -n "$i3_over" || -n "$i3_dangling" ]]; then
+    step "I.3" "Agent contracts ≤3 KB each and their playbooks exist" "FAIL" "over cap:$i3_over dangling:$i3_dangling"
 else
-    step "I.3" "Agent definitions ≤300 lines and ≤24 KB each" "PASS"
+    step "I.3" "Agent contracts ≤3 KB each and their playbooks exist" "PASS"
 fi
 
 # I.4 — insight-index ≤30 insight ENTRIES (defense-in-depth; archive-task normally rotates)

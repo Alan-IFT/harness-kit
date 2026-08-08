@@ -143,8 +143,17 @@ describe('sectionsDeclaredBy', () => {
 });
 
 describe('checkAgainstContracts', () => {
-  it('is clean against this repo — the table and the contracts agree', () => {
-    expect(checkAgainstContracts(path.join(repoRoot, 'agents'))).toEqual([]);
+  it('is clean against this repo — the table and the playbooks agree', () => {
+    expect(checkAgainstContracts(path.join(repoRoot, '.harness', 'playbooks'))).toEqual([]);
+  });
+
+  // The gate follows the table. At P4 the schema tables moved from `agents/<role>.md` to
+  // `.harness/playbooks/<role>.md`; pointing `--check` at the old home has to report the loss
+  // rather than pass on an empty read, or the split silently un-gates itself.
+  it('reports the slimmed agent contracts as tableless, not as clean', () => {
+    const findings = checkAgainstContracts(path.join(repoRoot, 'agents'));
+    expect(findings.every((f) => f.kind === 'no-table')).toBe(true);
+    expect(findings).toHaveLength(STAGE_SCHEMA.length);
   });
 
   it('reports a section a contract declares and the table does not', () => {

@@ -95,6 +95,12 @@ sync_file "$template_common/.harness/scripts/doc-query.js"     "$repo_root/.harn
 sync_file "$template_common/.harness/scripts/stage-schema.js"  "$repo_root/.harness/scripts/stage-schema.js"  ".harness/scripts/stage-schema.js"
 sync_file "$template_common/.harness/scripts/task-state.js"    "$repo_root/.harness/scripts/task-state.js"    ".harness/scripts/task-state.js"
 
+# Mapping 11: the stage playbooks (P4). A plugin agent's .md is its system prompt, so the
+# procedure, output schema and worked examples live here and are read on dispatch instead of
+# being paid for on every one. The template copy is the source; this mirror is what the
+# dogfood agents actually read, and the orphan arm means a retired playbook cannot linger.
+sync_dir_of_md "$template_common/.harness/playbooks" "$repo_root/.harness/playbooks" ".harness/playbooks"
+
 if [[ "$CHECK" == true ]]; then
     if (( ${#drift[@]} > 0 )); then
         echo "Drift detected:" >&2

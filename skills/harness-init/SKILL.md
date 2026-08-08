@@ -87,8 +87,9 @@ Ask **six questions** in a single `AskUserQuestion` call:
 Templates live alongside this skill:
 
 - `<skill-root>/templates/common/` — shared assets (rule fragments in `.harness/rules/`,
-  harness-sync scripts, docs, evals). The framework agents are **not** here anymore — they
-  are plugin-provided (`harness-kit:<name>`).
+  stage playbooks in `.harness/playbooks/`, harness-sync scripts, docs, evals). The framework
+  agents are **not** here anymore — they are plugin-provided (`harness-kit:<name>`); their
+  playbooks are, because an agent Reads its playbook from the PROJECT.
 - `<skill-root>/templates/fullstack/` — fullstack-specific overlays.
 - `<skill-root>/templates/backend/` — backend-specific overlays.
 - `<skill-root>/templates/generic/` — generic project overlay (single `50-generic.md` stub).
@@ -151,7 +152,8 @@ only the project-specific partition `dev-*` agents are local:
   - Backend: `dev-api.md`, `dev-services.md`, `dev-db.md`
 
 Note: templates/common contains:
-- `.harness/` (the source of truth content)
+- `.harness/` (the source of truth content, including `.harness/playbooks/` — one per framework
+  agent, holding the procedure and output schema that agent Reads on dispatch)
 - `.claude/settings.json.tmpl` (Claude Code binding glue — permissions + hooks)
 - `AI-GUIDE.md.tmpl` (tool-agnostic entry, indexes `.harness/rules/`)
 - `CLAUDE.md.tmpl` (~15-line bootstrap stub pointing at `AI-GUIDE.md`)

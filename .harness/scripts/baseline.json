@@ -8,19 +8,20 @@
   "project_template_count_baseline": 2,
   "last_verify": "2026-08-08",
   "verify_all_checks": 35,
-  "vitest_unit_tests": 287,
-  "test_init_bash_no_python3_assertions": 373,
+  "vitest_unit_tests": 288,
+  "test_init_bash_no_python3_assertions": 379,
   "test_real_project_bash_assertions": 90,
   "test_supervisor_bash_no_python3_assertions": 46,
   "test_verify_i6_bash_assertions": 50,
-  "test_harness_upgrade_bash_assertions": 89,
+  "test_harness_upgrade_bash_assertions": 93,
   "test_language_bash_assertions": 39,
   "test_guard_rm_bash_assertions": 87,
   "test_archive_task_bash_assertions": 186,
   "_constraints": {
-    "test_init_bash_no_python3_assertions": "Transcribed from a python3-PRESENT run at v0.49.0 (373). The AI-native block is gated on python3, so a host without it reads lower; re-transcribe from your own run rather than adjusting this one.",
+    "test_init_bash_no_python3_assertions": "Transcribed from a python3-PRESENT run at v0.50.0 (379; 373 + two playbook-distribution assertions per project type). The AI-native block is gated on python3, so a host without it reads lower; re-transcribe from your own run rather than adjusting this one.",
     "test_archive_task_bash_assertions": "AC-15's corpus rows are FLOORS and do NOT rise with the archive. The reason lives in test-archive-task.sh's own AC-15 block, which is the only reader; raising a floor to match a grown corpus re-opens the trap one commit later.",
     "windows-removal": "v0.49.0 removed Windows support. Every *_ps_assertions key is gone with the .ps1 driver it pinned, and the 28 operator obligations those keys' notes enumerated were retired with them — see .harness/operator-obligations.md. Do not re-add a PowerShell key; there is no PowerShell driver to transcribe one from.",
-    "test_verify_i6_bash_assertions": "50 after v0.49.0 retired the 2x2 cross-shell lockstep rows — there is one list now, so the eight rows that compared two of them measured nothing and were removed, not disabled."
+    "test_verify_i6_bash_assertions": "50 after v0.49.0 retired the 2x2 cross-shell lockstep rows — there is one list now, so the eight rows that compared two of them measured nothing and were removed, not disabled.",
+    "test_harness_upgrade_bash_assertions": "93 after v0.50.0 added the S2b playbook-refresh rows to fixture A and its re-run. Two of the four assert on CONTENT (eight files on disk, the developer playbook carrying its schema) rather than on the emitted REFRESH line: a stage that logs a copy it never made would pass a log-only check and leave every agent on its degradation clause."
   }
 }

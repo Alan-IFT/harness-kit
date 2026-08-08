@@ -57,7 +57,7 @@ If any of 1-3 is missing, the skill asks the user before running.
    c. Run the success criterion command. Append `(iteration_n, measurement, change_summary)` to goal_state.json's history.
    d. If criterion met → break out, write 07_DELIVERY.md with verdict `GOAL ACHIEVED`.
    e. If `iterations_used >= max_iterations` (or time elapsed) → break out, write 07_DELIVERY.md with verdict `BUDGET EXHAUSTED` and current state.
-5. **Dispatch `harness-kit:qa-tester`** at the end (only once, on the final state) with the **adversarial verification contract** (`## Adversarial tests` section required, see the `harness-kit:qa-tester` agent).
+5. **Dispatch `harness-kit:qa-tester`** at the end (only once, on the final state) with the **adversarial verification contract** (`## Adversarial tests` section required, see `.harness/playbooks/qa-tester.md`).
 6. **Update tasks.md** `stage: goal-done` and report to user.
 
 ## Output

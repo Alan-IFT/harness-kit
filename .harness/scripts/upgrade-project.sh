@@ -280,6 +280,41 @@ for name in "${refresh_set[@]}"; do
     fi
 done
 
+# --- S2b playbooks refresh (v0.50.0) ---
+# The stage playbooks are framework-owned content, like the scripts above: a project never
+# authors them, so an unconditional refresh is correct and a hand-customized copy is not a
+# case that exists. Unlike the scripts this iterates whatever the TEMPLATE ships rather than a
+# literal array — a playbook added upstream then reaches upgraded projects with no second list
+# to remember. A project that never gets this stage still runs: every agent contract carries a
+# degradation clause for a missing playbook. That clause is a floor for a project nobody
+# upgraded, not a reason to ship an upgrade that leaves all eight agents degraded.
+template_playbooks="$TEMPLATE_ROOT/skills/harness-init/templates/common/.harness/playbooks"
+playbooks_dst="$root/.harness/playbooks"
+if [[ -d "$template_playbooks" ]]; then
+    for tmpl_file in "$template_playbooks"/*.md; do
+        [[ -f "$tmpl_file" ]] || continue
+        name=$(basename "$tmpl_file")
+        dst_file="$playbooks_dst/$name"
+        if [[ -f "$dst_file" ]] && cmp -s "$tmpl_file" "$dst_file"; then
+            emit "$(verb_prefix)|NOOP|.harness/playbooks/$name (already current)"
+            continue
+        fi
+        is_new=false
+        [[ -f "$dst_file" ]] || is_new=true
+        emit "$(verb_prefix)|REFRESH|.harness/playbooks/$name (from current template)"
+        if [[ "$is_new" == true ]]; then n_added=$((n_added + 1)); else n_rewritten=$((n_rewritten + 1)); fi
+        if [[ "$DRY_RUN" == false ]]; then
+            mkdir -p "$playbooks_dst"
+            if ! cp "$tmpl_file" "$dst_file" 2>/dev/null || ! cmp -s "$tmpl_file" "$dst_file"; then
+                emit "CONFLICT|refresh|.harness/playbooks/$name copy failed (template -> project copy did not land)"
+                n_conflicts=$((n_conflicts + 1))
+            fi
+        fi
+    done
+else
+    emit "GAP|template-missing|absent|.harness/playbooks/ (agents will run on their degradation clause)"
+fi
+
 # --- S3 settings rewire (verbatim raw-text replace; NEVER re-serialize — DO-3) ---
 # target_present <name>: is .harness/scripts/<name> on disk (apply mode: S1 moves +
 # S2 refresh already ran, disk is ground truth) or projected to land there (dry-run:

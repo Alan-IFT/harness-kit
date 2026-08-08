@@ -371,3 +371,27 @@
   the shape a real cost rather than an aesthetic one, and the excision can then be designed with the
   19 anchors re-pointed at `docs/features/_archived/<slug>/` in the same change.
 - **Origin:** v2 migration, P1 line item, evaluated 2026-08-08.
+
+## playbook-schema-second-file
+
+- **Request:** split each `.harness/playbooks/<role>.md` a second time, so the `## Output schema`
+  and the worked example sit in a sibling the agent reads at write time instead of on dispatch.
+  Motivated by the measurement below: the P4 slimming, on its own, did not move the stage-4 opening.
+- **Decision:** DECLINED.
+- **Why:** it was priced, not guessed. The developer's schema half is ~2.8 KB, so deferring it moves
+  the stage-4 opening from **23,991 to ~23,201 tok — 2.3%** of a figure whose largest term is the
+  17,563-tok `01+02+03` read. It buys that with eight more files and, worse, with a question the
+  agent must answer at every step: *which* of my two playbooks is this. Under the migration brief's
+  own test — does a change remove a decision point or add one — it adds one, to buy 2.3% of the
+  wrong term.
+  The honest framing is that P4's agent-slimming and the 10,000-token bar were never the same
+  lever. The contracts went 93.5 KB → 23.0 KB and the cap is enforced at 3 KB (`verify_all` I.3),
+  which is the acceptance criterion the brief actually wrote. The bar is a stage-doc conformance
+  problem: 12,778 of the remaining ~14,000 tok are priced against it in `evals/measure-context.sh`.
+- **Adopted instead:** one playbook per role, read whole on dispatch, and an instrument that
+  **counts it**. `measure-context.sh` charges `agents/developer.md` *and*
+  `.harness/playbooks/developer.md` to the opening, so the relocation cannot ever read as a saving.
+- **Re-surface condition:** the `01+02+03` term falling below the playbook term — i.e. stage-doc
+  conformance landing. At that point the schema half stops being 2.3% of the wrong number and the
+  split can be designed against a figure it actually dominates.
+- **Origin:** v2 migration, P4, measured 2026-08-08.

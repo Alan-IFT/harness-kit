@@ -53,7 +53,7 @@ The 7 framework agents are provided by the harness-kit plugin — dispatch as `h
 - `harness-kit:code-reviewer` — authors `05_CODE_REVIEW.md`; the PM Orchestrator writes it
 - `harness-kit:qa-tester` — writes `06_TEST_REPORT.md`
 
-**Claude Code sub-agent dispatch — already implemented.** PM Orchestrator uses Claude Code's `Task` tool to spawn each downstream role in its own context (`harness-kit:<name>`); see the `harness-kit:pm-orchestrator` contract for the exact dispatch contract. Non-Claude tools (Copilot/Cursor) are not currently first-class for the framework agents (they're plugin-provided).
+**Claude Code sub-agent dispatch — already implemented.** PM Orchestrator uses Claude Code's `Task` tool to spawn each downstream role in its own context (`harness-kit:<name>`); see `.harness/playbooks/pm-orchestrator.md` for the exact dispatch contract. Non-Claude tools (Copilot/Cursor) are not currently first-class for the framework agents (they're plugin-provided).
 
 ## AI tool flow modes
 
