@@ -172,7 +172,7 @@ cannot be gated on this repo either.
 | C7 | Which check validates `settings.json` schema integrity? | `J.1` | `.harness/scripts/verify_all.sh` |
 | C8 | Which checks are the doc-size guards? | `I.1`–`I.5` (AI-GUIDE ≤200 lines + 20 KB, rules ≤200 each, agent contracts ≤3 KB each **and** each naming a playbook that exists, insight-index ≤30 entries + 24 KB, tasks.md ≤300 lines + 24 KB); `I.6`/`I.7` are separate guards. `I.3` is the only one that FAILs rather than WARNs | `.harness/scripts/verify_all.sh` |
 | C9 | If `isDescendant` changes, what is the blast radius? | Reached via `walkPaths` and `classifySegment` — every destructive-verb path decision — plus the unit suite | `src/guard-rm.ts` |
-| C10 | Which script pairs does `sync-self` hold byte-identical with `templates/common/`? | 8 shell pairs — `harness-sync`, `install-hooks`, `archive-task`, `guard-rm`, `migrate-scripts-layout`, `upgrade-project`, `language-policy`, `hook-spec` — plus Mapping 10's six compiled `.js` files and Mapping 11's `.harness/playbooks/` directory (the only mapping with an orphan arm). It does **not** sync `.harness/rules/` or agents. | `.harness/scripts/sync-self.sh` |
+| C10 | Which script pairs does `sync-self` hold byte-identical with `templates/common/`? | 8 shell pairs — `harness-sync`, `install-hooks`, `archive-task`, `guard-rm`, `migrate-scripts-layout`, `upgrade-project`, `language-policy`, `hook-spec` — plus Mapping 10's nine compiled `.js` files and Mapping 11's `.harness/playbooks/` directory (the only mapping with an orphan arm). It does **not** sync `.harness/rules/` or agents. | `.harness/scripts/sync-self.sh` |
 
 **C-category note.** These are the questions a Solution Architect or Code Reviewer asks.
 

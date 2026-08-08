@@ -141,6 +141,6 @@ describe('cli', () => {
   });
 
   it('names every configuration in its usage surface', () => {
-    expect([...CONFIGS]).toEqual(['whole', 'grep', 'query']);
+    expect([...CONFIGS]).toEqual(['whole', 'grep', 'query', 'memory']);
   });
 });

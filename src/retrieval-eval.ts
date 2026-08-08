@@ -56,7 +56,7 @@ import {
   loadCases,
 } from './eval-set';
 
-export const CONFIGS = ['whole', 'grep', 'query'] as const;
+export const CONFIGS = ['whole', 'grep', 'query', 'memory'] as const;
 export type Config = (typeof CONFIGS)[number];
 
 export interface CaseResult {
@@ -174,6 +174,12 @@ export function retrieve(c: EvalCase, config: Config, root: string, terms: reado
       .join('\n');
   }
   if (config === 'grep') return runGrep(root, terms);
+  if (config === 'memory') {
+    // The seeded memory layer, asked the WHOLE question rather than the extracted terms: FTS5
+    // ranks by how many of a question's words a record carries, so splitting the question into
+    // separate single-term calls throws away the ranking signal the other configs cannot use.
+    return runNode(root, ['.harness/scripts/memory.js', 'search', c.question, '--limit', '10', '--budget', '4000']);
+  }
   let acc = '';
   for (const t of terms) {
     acc += runNode(root, ['.harness/scripts/doc-query.js', '--in', STORE_OF[c.category], t]);

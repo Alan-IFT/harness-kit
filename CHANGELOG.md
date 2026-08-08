@@ -5,6 +5,96 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.53.0] - 2026-08-08
+
+### Added — the project's decision trail is now queryable, and it cost 903 tokens a question
+
+44 archived tasks already hold the answers a new agent needs on day one: what this project
+decided, what it declined, what it learned the hard way. That was 6.9 MB of prose nothing could
+afford to read. `memory.js` extracts the load-bearing fraction into an indexed store.
+
+- **`src/memory-seed.ts`** — five parsers over Tier 1 + Tier 2 sources, no model in the loop.
+  **215 records**: 88 `insight`, 46 `outcome`, 41 `term`, 29 `rejection`, 11 `decision`.
+- **`src/memory-sink.ts`** — a `MemorySink` interface with a zero-dependency `SqliteSink`
+  (`node:sqlite` + FTS5) behind it. The record schema belongs to harness-kit; the backend is
+  replaceable. DB at `$HARNESS_MEMORY_DB` → `$CLAUDE_PLUGIN_DATA/memory.db` →
+  `.harness/state/memory.db`, and `resolveDbPath` **refuses** a path under
+  `$CLAUDE_PLUGIN_ROOT`, which a plugin update discards.
+- **`src/memory.ts`** — `seed` / `stats` / `search` / `recent` / `roles`. Seeding is idempotent:
+  a second run reports `inserted 0, updated 0, skipped 215`.
+
+Measured against the P0 control set, all four configurations:
+
+| config | score | mean tok/question | total ms |
+|---|---:|---:|---:|
+| `whole` | 1.000 | 17,779 | 37 |
+| `grep` | 1.000 | 155,607 | 1,201 |
+| `query` | 0.750 | 7,757 | 2,452 |
+| **`memory`** | **0.417** | **903** | **985** |
+
+**Read that honestly: it is the cheapest by 8.6× and the least accurate.** 7 of the 18 scorable
+cases are CODE questions about source, which a store of decisions has no business answering. On
+the question it exists for — the §3 role table, one opening question per role — **all seven roles
+return usable records at ~1,200 tok each**, where the same roles previously read a 20.6 KB index
+whole.
+
+### Fixed — three defects the acceptance run found, each with a measurement behind it
+
+- **Freshness cannot key on the task-slug number.** The specified rule (`T-042` → 42) inverts two
+  months of this repo's history, because the numbering restarted: `T-022` (2026-06-13) predates
+  `T-02` (2026-06-19), and `T-003` collides with `T-03` outright. `computeSeq` makes **date**
+  primary and the task number a within-day tiebreak. Same intent — a monotonic integer fixed at
+  parse time — on the field that actually is monotonic here.
+- **Porter stemming is load-bearing.** Without it the code reviewer's opening question returned
+  **zero rows** against a corpus full of `review` and `recurring`. One of seven role questions
+  found nothing at all. FTS5's default tokenizer matches whole words only.
+- **Text-level deduplication must not cross task identity.** `archive-task` copies an insight from
+  `07_DELIVERY.md` into `insight-index.md` and the copy gets hand-edited — a T-15 pair diverges at
+  character 238, on emphasis and punctuation alone. Collapsing on normalised text fixes that, and
+  applied to *every* kind it silently deleted a whole task: `agents-cutover` and
+  `decision-mode-skill` both delivered on 2026-06-10 with `PASS (32/0/0)` and appear on no board
+  row, so their outcome bodies are the same three generic fields. Text-collapse now applies to
+  `insight` only — the one kind whose text is its identity.
+
+### Fixed — a re-seed used to leave its own corrections behind
+
+`upsert` is additive, so records the harvester stopped emitting kept answering queries. The
+duplicate pair fixed above survived its own fix that way — merged in the harvest, still in the
+database. `seed` now prunes to the harvested id set and reports the count.
+
+### What the parse found in the corpus
+
+- **`07_DELIVERY.md` is not schema-conformant, and the schema is not to blame.** Across all 44:
+  `## Summary` **2/44**, `## Verdict` **2/44**, `- Task:` **5/44**, `## Insight` **37/44**. The
+  pm-orchestrator contract postdates almost every document it describes, so parsing is
+  shape-tolerant — headings are a hint. The one rule taken literally is the bare `^## Insights?$`
+  match, because `archive-task` harvests on exactly that; being more permissive would index
+  insights the project's own harvester never accepted.
+- **This project records what it declined far better than what it adopted.** Of 29 records in
+  `rejected-decisions.md`, exactly **2** carry an `Adopted instead:` field. That is why
+  `.harness/decision-rubric.md` was added as a source — it is the one Tier-1-shaped file stating
+  adopted positions in a fixed format. 11 decisions, not 60; the honest number.
+- **Two unparsed lines, both correct refusals**, and any third is a regression the unit suite
+  fails on: the template's own placeholder bullet, harvested verbatim into `insight-history.md`
+  once; and T-24 `operator-obligation-home`, which has no `07_DELIVERY.md` because it never wrote
+  stages 4-7 — though its output did ship, in `9036590`.
+
+### Known gap — four of the seven roles cannot reach this
+
+`memory.js` is a CLI, and **only developer, qa-tester and pm-orchestrator hold `Bash`**. The
+requirement-analyst, solution-architect, gate-reviewer and code-reviewer cannot run it — and three
+of those are exactly the roles the §3 table says need `rejection`, `decision` and `insight` most.
+`doc-query` has the same hole. This is recorded, not papered over: the resolution that fits this
+repo's precedent is the T-23 shape — the PM holds the capability and passes results in the
+dispatch — but wiring it touches seven contracts against a 3 KB cap and is its own decision.
+
+### Gate and suites
+
+37 checks, **397 unit tests** (+61), and all eight regression drivers green: test-init 379,
+test-real-project 90, test-harness-upgrade 93, test-guard-rm 87, test-verify-i6 50,
+test-supervisor 46, test-language 39, test-archive-task 186. `sync-self` in sync; Mapping 10 now
+carries nine compiled `.js` files.
+
 ## [0.52.0] - 2026-08-08
 
 ### Fixed — the remaining lever was 3.5× overstated, and it was the wrong lever

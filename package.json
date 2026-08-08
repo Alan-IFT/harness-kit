@@ -1,6 +1,6 @@
 {
   "name": "harness-kit",
-  "version": "0.52.0",
+  "version": "0.53.0",
   "private": true,
   "description": "Build tooling for harness-kit's TypeScript scripts. Not published; the plugin ships the compiled output under .harness/scripts/.",
   "license": "MIT",

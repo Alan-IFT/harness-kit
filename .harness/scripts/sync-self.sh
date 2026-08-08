@@ -94,6 +94,9 @@ sync_file "$template_common/.harness/scripts/install-hooks.js" "$repo_root/.harn
 sync_file "$template_common/.harness/scripts/doc-query.js"     "$repo_root/.harness/scripts/doc-query.js"     ".harness/scripts/doc-query.js"
 sync_file "$template_common/.harness/scripts/stage-schema.js"  "$repo_root/.harness/scripts/stage-schema.js"  ".harness/scripts/stage-schema.js"
 sync_file "$template_common/.harness/scripts/task-state.js"    "$repo_root/.harness/scripts/task-state.js"    ".harness/scripts/task-state.js"
+sync_file "$template_common/.harness/scripts/memory-seed.js"   "$repo_root/.harness/scripts/memory-seed.js"   ".harness/scripts/memory-seed.js"
+sync_file "$template_common/.harness/scripts/memory-sink.js"   "$repo_root/.harness/scripts/memory-sink.js"   ".harness/scripts/memory-sink.js"
+sync_file "$template_common/.harness/scripts/memory.js"        "$repo_root/.harness/scripts/memory.js"        ".harness/scripts/memory.js"
 
 # Mapping 11: the stage playbooks (P4). A plugin agent's .md is its system prompt, so the
 # procedure, output schema and worked examples live here and are read on dispatch instead of

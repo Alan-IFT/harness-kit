@@ -54,7 +54,7 @@ const node_child_process_1 = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 const eval_set_1 = require("./eval-set");
-exports.CONFIGS = ['whole', 'grep', 'query'];
+exports.CONFIGS = ['whole', 'grep', 'query', 'memory'];
 // ---------------------------------------------------------------------------- query terms
 /**
  * English words that carry no retrieval signal. Deliberately short: a long stop list is a
@@ -149,6 +149,12 @@ function retrieve(c, config, root, terms) {
     }
     if (config === 'grep')
         return runGrep(root, terms);
+    if (config === 'memory') {
+        // The seeded memory layer, asked the WHOLE question rather than the extracted terms: FTS5
+        // ranks by how many of a question's words a record carries, so splitting the question into
+        // separate single-term calls throws away the ranking signal the other configs cannot use.
+        return runNode(root, ['.harness/scripts/memory.js', 'search', c.question, '--limit', '10', '--budget', '4000']);
+    }
     let acc = '';
     for (const t of terms) {
         acc += runNode(root, ['.harness/scripts/doc-query.js', '--in', STORE_OF[c.category], t]);

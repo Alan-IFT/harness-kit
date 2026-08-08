@@ -33,8 +33,10 @@
 | Which role reads which section of which stage contract | `.harness/scripts/stage-schema.js` — `--map`, `--lint --task <slug>` (PM runs it at every stage boundary), `--check` (verify_all D.6) reads the `\| Section \| Shape \|` table back out of `.harness/playbooks/<role>.md` |
 | Per-task ledger: stage, rollback counts, verdicts | `.harness/scripts/task-state.js` → `.harness/state/<slug>.json`. PM writes; everyone else reads |
 | Contract instructions vs granted tools | `.harness/scripts/capability-audit.js` (verify_all D.4) |
+| What this project has DECIDED, declined, learned, and named | `.harness/scripts/memory.js` — `search <question>`, `recent --kind <k>`, `stats`, `roles`. SQLite + FTS5 at `$HARNESS_MEMORY_DB` → `$CLAUDE_PLUGIN_DATA/memory.db` → `.harness/state/memory.db`, **never** under `$CLAUDE_PLUGIN_ROOT` (version-scoped; a plugin update discards it) |
+| Rebuild that index from the project's own memory files and task archive | `.harness/scripts/memory.js seed [--dry-run]` — deterministic parse, idempotent by `contentHash`, prunes what the sources no longer say. Freshness is `max(seq)` **in code**; no model is ever asked which record is newer |
 | The P0 control set, parsed; and whether its expected ANSWERS are still true | `.harness/scripts/eval-set.js` — `--list`, `--check` (verify_all D.7). `eval-anchors` checks the citation resolves; this checks the answer behind it |
-| Score a retrieval configuration against the control set, no model in the loop | `.harness/scripts/retrieval-eval.js` — `--compare` runs whole / grep / query and prints score against mean bytes |
+| Score a retrieval configuration against the control set, no model in the loop | `.harness/scripts/retrieval-eval.js` — `--compare` runs whole / grep / query / memory and prints score against mean bytes |
 | Skill mechanical layers (`entropy-cadence`, `ambient-prompt`, `ambient-reset`, `language-policy`, `upgrade-project`, `migrate-scripts-layout`) | `.harness/scripts/<name>.sh`, one per like-named skill |
 | Regression drivers, one per subject (out of scope for verify_all) | `.harness/scripts/test-<name>.sh` |
 
